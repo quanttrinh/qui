@@ -1,0 +1,21 @@
+{
+    "name": "Bun",
+    "build": {
+        "dockerfile": "Containerfile",
+        "context": ".."
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": ["oven.bun-vscode", "bradlc.vscode-tailwindcss", "oxc.oxc-vscode"],
+            "settings": {
+                "editor.codeActionsOnSave": {
+                    "source.fixAll.oxc": "always"
+                },
+                "editor.defaultFormatter": "oxc.oxc-vscode",
+                "editor.formatOnSave": true
+            }
+        }
+    },
+    "initializeCommand": "echo $(doppler secrets get DOCKER_TOKEN --plain) | docker login dhi.io -u $(doppler secrets get DOCKER_USERNAME --plain) --password-stdin",
+    "postStartCommand": "bun install"
+}

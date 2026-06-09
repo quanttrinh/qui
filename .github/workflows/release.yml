@@ -1,0 +1,43 @@
+name: Release
+
+on:
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+    release:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            packages: write
+            pull-requests: write
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v7
+
+            - name: Setup Bun
+              uses: oven-sh/setup-bun@v2
+
+            - name: Configure GitHub Packages auth
+              run: |
+                  echo "@${{ github.repository_owner }}:registry=https://npm.pkg.github.com" > .npmrc
+                  echo "//npm.pkg.github.com/:_authToken=\${BUN_AUTH_TOKEN}" >> .npmrc
+
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
+              env:
+                  BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Create Release Pull Request or Publish
+              uses: changesets/action@v1
+              with:
+                  publish: bash -c "cd packages/solid-md3 && bun publish"
+                  version: bun run version
+                  createGithubReleases: false
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

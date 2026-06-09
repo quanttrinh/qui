@@ -1,0 +1,3 @@
+FROM dhi.io/bun:1-alpine-dev
+
+RUN apk --no-cache add git

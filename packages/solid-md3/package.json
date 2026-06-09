@@ -1,0 +1,98 @@
+{
+    "name": "@quanttrinh/solid-md3",
+    "version": "0.1.0",
+    "private": false,
+    "description": "SolidJS Material Design 3 component library",
+    "keywords": [
+        "components",
+        "material-3",
+        "material-design",
+        "md3",
+        "solid",
+        "solid-js",
+        "ui"
+    ],
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/quanttrinh/solid-md3.git"
+    },
+    "files": [
+        "src"
+    ],
+    "type": "module",
+    "sideEffects": [
+        "./src/styles.css"
+    ],
+    "main": "./src/index.ts",
+    "module": "./src/index.ts",
+    "types": "./src/index.ts",
+    "exports": {
+        ".": "./src/index.ts",
+        "./styles.css": "./src/styles.css"
+    },
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com"
+    },
+    "scripts": {
+        "lint": "oxlint --config oxlint.config.ts src",
+        "lint:fix": "oxlint --config oxlint.config.ts --fix src",
+        "fmt": "oxfmt --config oxfmt.config.ts",
+        "fmt:check": "oxfmt --config oxfmt.config.ts --check"
+    },
+    "devDependencies": {
+        "@ark-ui/solid": "^5.37.1",
+        "@iconify-solid/material-symbols": "^1.0.23",
+        "@tanstack/solid-virtual": "^3.13.31",
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
+        "eslint-plugin-solid": "^0.14.5",
+        "fuse.js": "^7.4.2",
+        "oxfmt": "^0.59.0",
+        "oxlint": "^1.74.0",
+        "oxlint-tsgolint": "^0.24.0",
+        "solid-js": "^1.9.13",
+        "tailwind-merge": "^3.6.0",
+        "tailwindcss": "^4.3.2"
+    },
+    "peerDependencies": {
+        "@ark-ui/solid": "^5.37.1",
+        "@iconify-solid/material-symbols": "^1.0.23",
+        "@quanttrinh/ts-helpers": "github:quanttrinh/ts-helpers",
+        "@tanstack/solid-virtual": "^3.13.31",
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
+        "fuse.js": "^7.4.2",
+        "solid-js": "^1.9.13",
+        "tailwind-merge": "^3.6.0"
+    },
+    "peerDependenciesMeta": {
+        "@ark-ui/solid": {
+            "optional": true
+        },
+        "@iconify-solid/material-symbols": {
+            "optional": true
+        },
+        "@quanttrinh/ts-helpers": {
+            "optional": true
+        },
+        "@tanstack/solid-virtual": {
+            "optional": true
+        },
+        "class-variance-authority": {
+            "optional": true
+        },
+        "clsx": {
+            "optional": true
+        },
+        "fuse.js": {
+            "optional": true
+        },
+        "solid-js": {
+            "optional": true
+        },
+        "tailwind-merge": {
+            "optional": true
+        }
+    }
+}
