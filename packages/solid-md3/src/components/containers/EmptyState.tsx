@@ -17,8 +17,11 @@ export function EmptyState(props: Readonly<EmptyStateProps>): JSX.Element {
       class={cn("flex flex-col items-center justify-center gap-3 py-12 text-center", props.class)}
     >
       <Show when={props.icon}>
-        <div class="flex h-12 w-12 items-center justify-center text-md3-on-surface-variant">
-          {props.icon ?? <Inbox />}
+        <div
+          class="flex h-12 w-12 items-center justify-center text-md3-on-surface-variant"
+          aria-hidden="true"
+        >
+          {props.icon}
         </div>
       </Show>
       <div class="flex flex-col gap-1">

@@ -5,7 +5,7 @@
         "packages/*"
     ],
     "scripts": {
-        "dev": "bun run --filter ./packages/solid-md3-demo dev",
+        "dev": "bun run --filter ./packages/demo dev",
         "lint": "bun run --filter ./packages/solid-md3 lint",
         "lint:fix": "bun run --filter ./packages/solid-md3 lint:fix",
         "fmt": "bun run --filter ./packages/solid-md3 fmt",
@@ -14,7 +14,7 @@
         "version": "changeset version"
     },
     "devDependencies": {
-        "@changesets/cli": "^2.31.0",
+        "@changesets/cli": "^2.31.1",
         "typescript": "^7.0.2"
     },
     "packageManager": "bun@1.3.14"

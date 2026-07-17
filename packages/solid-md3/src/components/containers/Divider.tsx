@@ -3,7 +3,7 @@ import { type JSX, splitProps } from "solid-js";
 
 import { cn } from "../../cn";
 
-const divider = cva("flex shrink-0", {
+const dividerVariants = cva("flex shrink-0", {
   defaultVariants: {
     orientation: "horizontal",
     weight: "regular",
@@ -20,7 +20,7 @@ const divider = cva("flex shrink-0", {
   },
 });
 
-type DividerProps = VariantProps<typeof divider> & {
+type DividerProps = VariantProps<typeof dividerVariants> & {
   class?: string;
 };
 
@@ -28,7 +28,10 @@ export function Divider(props: Readonly<DividerProps>): JSX.Element {
   const [local, rest] = splitProps(props, ["weight", "orientation", "class"]);
   return (
     <div
-      class={cn(divider({ orientation: local.orientation, weight: local.weight }), local.class)}
+      class={cn(
+        dividerVariants({ orientation: local.orientation, weight: local.weight }),
+        local.class,
+      )}
       {...rest}
     />
   );

@@ -3,7 +3,7 @@ import { type JSX, Show, splitProps } from "solid-js";
 
 import { cn } from "../../cn";
 
-const banner = cva("flex items-start gap-3 rounded-md3-md p-4 items-center", {
+const bannerVariants = cva("flex items-start gap-3 rounded-md3-md p-4 items-center", {
   defaultVariants: {
     variant: "info",
   },
@@ -17,7 +17,7 @@ const banner = cva("flex items-start gap-3 rounded-md3-md p-4 items-center", {
   },
 });
 
-const bannerIcon = cva("material-symbols-outlined text-lg leading-none mt-0.5", {
+const bannerIconVariants = cva("material-symbols-outlined text-lg leading-none mt-0.5", {
   defaultVariants: {
     variant: "info",
   },
@@ -31,7 +31,7 @@ const bannerIcon = cva("material-symbols-outlined text-lg leading-none mt-0.5", 
   },
 });
 
-type BannerProps = VariantProps<typeof banner> & {
+type BannerProps = VariantProps<typeof bannerVariants> & {
   text: JSX.Element;
   onClose?: () => void;
   class?: string;
@@ -40,15 +40,19 @@ type BannerProps = VariantProps<typeof banner> & {
 export function Banner(props: Readonly<BannerProps>): JSX.Element {
   const [local, rest] = splitProps(props, ["variant", "text", "onClose", "class"]);
   return (
-    <div class={cn(banner({ variant: local.variant }), local.class)} {...rest}>
-      <span class={cn(bannerIcon({ variant: local.variant }))} />
+    <div class={cn(bannerVariants({ variant: local.variant }), local.class)} {...rest}>
+      <span class={cn(bannerIconVariants({ variant: local.variant }))} aria-hidden="true" />
       <div class="flex-1 text-sm">{local.text}</div>
       <Show when={local.onClose}>
         <button
           onClick={() => local.onClose?.()}
+          aria-label="Dismiss"
           class="state-layer flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
         >
-          <span class="material-symbols-outlined text-base leading-none after:content-['close']" />
+          <span
+            class="material-symbols-outlined text-base leading-none after:content-['close']"
+            aria-hidden="true"
+          />
         </button>
       </Show>
     </div>

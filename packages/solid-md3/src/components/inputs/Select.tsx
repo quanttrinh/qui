@@ -2,6 +2,7 @@ import { Select as ArkSelect } from "@ark-ui/solid/select";
 import Check from "@iconify-solid/material-symbols/check";
 import UnfoldMore from "@iconify-solid/material-symbols/unfold-more";
 import { createVirtualizer } from "@tanstack/solid-virtual";
+import { type VariantProps, cva } from "class-variance-authority";
 import { Index, type JSX, Show, createEffect, createMemo, createSignal } from "solid-js";
 import { Portal } from "solid-js/web";
 
@@ -9,10 +10,27 @@ import { cn } from "../../cn";
 import { ScrollArea } from "../containers/ScrollArea";
 import { Text } from "../typography/Text";
 
+const selectVariants = cva(
+  "group flex w-full items-center justify-between rounded-md3-sm border border-md3-outline-variant bg-md3-surface-container-lowest py-1.5 pr-2 pl-3 text-md3-body-md text-md3-on-surface transition-colors outline-none hover:border-md3-outline focus:border-md3-primary focus:ring-1 focus:ring-md3-primary data-[state=open]:border-md3-primary",
+  {
+    defaultVariants: {
+      size: "md",
+    },
+    variants: {
+      size: {
+        lg: "h-12",
+        md: "h-10",
+        sm: "h-8",
+      },
+    },
+  },
+);
+
 export type SelectProps = {
   placeholder?: string;
   nonce?: string;
-} & Omit<ArkSelect.RootProps<string>, "scrollToIndexFn" | "asChild" | "positioning">;
+} & VariantProps<typeof selectVariants> &
+  Omit<ArkSelect.RootProps<string>, "scrollToIndexFn" | "asChild" | "positioning">;
 
 export function Select(props: Readonly<SelectProps>): JSX.Element {
   const [scrollElement, setScrollRef] = createSignal<HTMLDivElement | null>(null);
@@ -42,7 +60,7 @@ export function Select(props: Readonly<SelectProps>): JSX.Element {
       {...props}
     >
       <ArkSelect.Control class="relative">
-        <ArkSelect.Trigger class="group flex h-10 w-full items-center justify-between rounded-md3-sm border border-md3-outline-variant bg-md3-surface-container-lowest py-1.5 pr-2 pl-3 text-md3-body-md text-md3-on-surface transition-colors outline-none hover:border-md3-outline focus:border-md3-primary focus:ring-1 focus:ring-md3-primary data-[state=open]:border-md3-primary">
+        <ArkSelect.Trigger class={cn(selectVariants({ size: props.size }))}>
           <ArkSelect.ValueText
             class="text-left"
             placeholder={props.placeholder}

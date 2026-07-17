@@ -1,9 +1,26 @@
 import { Field as ArkField, useFieldContext } from "@ark-ui/solid/field";
+import { type VariantProps, cva } from "class-variance-authority";
 import { type JSX, Show } from "solid-js";
 
 import { cn } from "../../cn";
 
-interface TextInputProps {
+const textInputVariants = cva(
+  "w-full rounded-md3-sm border border-md3-outline-variant bg-md3-surface-container-lowest text-md3-on-surface transition-colors outline-none placeholder:text-md3-on-surface-variant hover:border-md3-outline focus:border-md3-primary focus:ring-1 focus:ring-md3-primary data-invalid:border-md3-error data-invalid:focus:border-md3-error data-invalid:focus:ring-md3-error",
+  {
+    defaultVariants: {
+      size: "md",
+    },
+    variants: {
+      size: {
+        lg: "h-12 px-4 py-2 text-base",
+        md: "h-10 px-3 py-1.5 text-sm",
+        sm: "h-8 px-2.5 py-1 text-sm",
+      },
+    },
+  },
+);
+
+interface TextInputProps extends VariantProps<typeof textInputVariants> {
   value?: string;
   placeholder?: string;
   readOnly?: boolean;
@@ -42,11 +59,7 @@ export function TextInput(props: Readonly<TextInputProps>): JSX.Element {
         type={props.type}
         onInput={(event) => props.onValueInput?.(event.target.value)}
         onChange={(event) => props.onValueChange?.(event.target.value)}
-        class={cn(
-          "h-10 w-full rounded-md3-sm border border-md3-outline-variant bg-md3-surface-container-lowest px-3 py-1.5 text-sm text-md3-on-surface transition-colors outline-none placeholder:text-md3-on-surface-variant",
-          "hover:border-md3-outline focus:border-md3-primary focus:ring-1 focus:ring-md3-primary",
-          "data-invalid:border-md3-error data-invalid:focus:border-md3-error data-invalid:focus:ring-md3-error",
-        )}
+        class={cn(textInputVariants({ size: props.size }), props.class)}
       />
     </ArkField.Root>
   );

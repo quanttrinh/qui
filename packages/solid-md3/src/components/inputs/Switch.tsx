@@ -43,7 +43,7 @@ export function Switch(props: Readonly<SwitchProps>): JSX.Element {
     >
       <ArkSwitch.Control
         class={cn(
-          "relative inline-flex h-6.5 w-12 shrink-0 items-center overflow-hidden rounded-full border-2 transition-colors duration-200",
+          "relative inline-flex h-6.5 w-12 shrink-0 items-center overflow-hidden rounded-full border-2 transition-colors",
           "data-[state=checked]:bg-md3-primary data-[state=unchecked]:bg-md3-surface-container-highest",
           "data-[state=checked]:border-md3-primary data-[state=unchecked]:border-md3-outline-variant",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-md3-primary",
@@ -51,7 +51,7 @@ export function Switch(props: Readonly<SwitchProps>): JSX.Element {
       >
         <ArkSwitch.Thumb
           class={cn(
-            "group pointer-events-none absolute flex items-center justify-center rounded-full transition-transform duration-200",
+            "group pointer-events-none absolute flex items-center justify-center rounded-full transition-transform",
             "data-[state=checked]:size-4.5 data-[state=unchecked]:size-3",
             "data-[state=checked]:translate-x-6 data-[state=unchecked]:translate-x-1.5",
             "data-[state=checked]:bg-md3-on-primary data-[state=unchecked]:bg-md3-outline",

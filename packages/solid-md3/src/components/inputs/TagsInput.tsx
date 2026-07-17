@@ -60,7 +60,10 @@ export function TagsInput(props: Readonly<TagsInputProps>): JSX.Element {
                         return (
                           <Pill {...pillProps} class="inline-flex items-center gap-1">
                             <ArkTagsInput.ItemText>{value()}</ArkTagsInput.ItemText>
-                            <ArkTagsInput.ItemDeleteTrigger class="flex items-center justify-center text-md3-on-secondary-container/60 hover:text-md3-on-secondary-container">
+                            <ArkTagsInput.ItemDeleteTrigger
+                              aria-label={`Remove ${value()}`}
+                              class="flex items-center justify-center text-md3-on-secondary-container/60 hover:text-md3-on-secondary-container"
+                            >
                               <Close />
                             </ArkTagsInput.ItemDeleteTrigger>
                           </Pill>

@@ -4,7 +4,7 @@ import { type JSX, Show, createMemo, splitProps } from "solid-js";
 
 import { cn } from "../../cn";
 
-const avatarSize = cva("rounded-full overflow-hidden", {
+const avatarVariants = cva("rounded-full overflow-hidden", {
   defaultVariants: {
     size: "md",
   },
@@ -17,7 +17,7 @@ const avatarSize = cva("rounded-full overflow-hidden", {
   },
 });
 
-interface AvatarProps extends VariantProps<typeof avatarSize> {
+interface AvatarProps extends VariantProps<typeof avatarVariants> {
   src?: string;
   name?: string;
   class?: string;
@@ -43,7 +43,7 @@ export function Avatar(props: Readonly<AvatarProps>): JSX.Element {
   return (
     <ArkAvatar.Root
       class={cn(
-        avatarSize({ size: local.size }),
+        avatarVariants({ size: local.size }),
         "inline-flex items-center justify-center bg-md3-primary-container font-medium text-md3-on-primary-container",
         local.class,
       )}

@@ -6,19 +6,22 @@ import { Portal } from "solid-js/web";
 
 import { cn } from "../../cn";
 
-const modalVariants = cva("", {
-  defaultVariants: {
-    width: "sm",
-  },
-  variants: {
-    width: {
-      lg: "sm:max-w-4xl",
-      md: "sm:max-w-2xl",
-      sm: "sm:max-w-md",
-      xs: "sm:max-w-xs",
+const modalVariants = cva(
+  "border-md3-outline-variant bg-md3-surface-container shadow-md3-elevation-3 relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-md3-lg border outline-none sm:rounded-md3-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=open]:fade-in data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+  {
+    defaultVariants: {
+      width: "sm",
+    },
+    variants: {
+      width: {
+        lg: "sm:max-w-4xl",
+        md: "sm:max-w-2xl",
+        sm: "sm:max-w-md",
+        xs: "sm:max-w-xs",
+      },
     },
   },
-});
+);
 
 type ModalVariants = VariantProps<typeof modalVariants>;
 
@@ -56,15 +59,7 @@ function ModalRoot(props: Readonly<ModalProps>): JSX.Element {
       <Portal>
         <ArkDialog.Backdrop class="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=open]:fade-in fixed inset-0 z-50 bg-black/40" />
         <ArkDialog.Positioner class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-          <ArkDialog.Content
-            class={cn(
-              "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=open]:fade-in data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-              "border-md3-outline-variant bg-md3-surface-container shadow-md3-elevation-3",
-              "relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-md3-lg border outline-none sm:rounded-md3-lg",
-              modalVariants({ width: local.width }),
-              local.class,
-            )}
-          >
+          <ArkDialog.Content class={cn(modalVariants({ width: local.width }), local.class)}>
             {local.children}
           </ArkDialog.Content>
         </ArkDialog.Positioner>

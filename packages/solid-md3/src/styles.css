@@ -199,6 +199,7 @@
 
     --animate-collapsible-open: collapsible-open 200ms ease-out;
     --animate-collapsible-close: collapsible-close 200ms ease-out;
+    --animate-pulse-dot: pulse-dot 1.2s var(--md-sys-motion-easing-standard) infinite;
 }
 
 @keyframes collapsible-open {
@@ -220,6 +221,18 @@
     to {
         height: 0;
         opacity: 0;
+    }
+}
+
+@keyframes pulse-dot {
+    0%,
+    100% {
+        transform: scale(0.6);
+        opacity: 0.4;
+    }
+    50% {
+        transform: scale(1);
+        opacity: 1;
     }
 }
 

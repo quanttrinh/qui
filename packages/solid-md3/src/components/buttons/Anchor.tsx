@@ -1,10 +1,9 @@
 import { type VariantProps, cva } from "class-variance-authority";
 import { type JSX, splitProps } from "solid-js";
-import { Dynamic } from "solid-js/web";
 
 import { cn } from "../../cn";
 
-const anchorBase = cva(
+const anchorVariants = cva(
   "state-layer inline-flex items-center justify-center rounded-full font-medium transition-all cursor-pointer select-none disabled:opacity-38 disabled:pointer-events-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-md3-primary",
   {
     compoundVariants: [
@@ -40,7 +39,7 @@ const anchorBase = cva(
 );
 
 type AnchorProps = Omit<JSX.AnchorHTMLAttributes<HTMLAnchorElement>, "classList"> &
-  VariantProps<typeof anchorBase> & {
+  VariantProps<typeof anchorVariants> & {
     href?: string;
   };
 
@@ -55,11 +54,10 @@ export function Anchor(props: Readonly<AnchorProps>): JSX.Element {
   ]);
 
   return (
-    <Dynamic
-      component="a"
+    <a
       href={local.href}
       class={cn(
-        anchorBase({
+        anchorVariants({
           iconOnly: local.iconOnly,
           size: local.size,
           variant: local.variant,
@@ -69,7 +67,7 @@ export function Anchor(props: Readonly<AnchorProps>): JSX.Element {
       {...rest}
     >
       {local.children}
-    </Dynamic>
+    </a>
   );
 }
 

@@ -29,7 +29,7 @@ export function Pagination(props: Readonly<PaginationProps>): JSX.Element {
       <div class="flex items-center gap-2">
         <ArkPagination.PrevTrigger
           class={cn(
-            "flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-38",
+            "flex h-10 w-10 items-center justify-center rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-38",
             props.page > 1 && "text-md3-on-surface-variant hover:bg-md3-surface-container-highest",
           )}
         >
@@ -45,7 +45,7 @@ export function Pagination(props: Readonly<PaginationProps>): JSX.Element {
                     return (
                       <ArkPagination.Ellipsis
                         index={index()}
-                        class="flex h-9 w-9 items-center justify-center text-sm text-md3-on-surface-variant"
+                        class="flex h-10 w-10 items-center justify-center text-sm text-md3-on-surface-variant"
                       >
                         ...
                       </ArkPagination.Ellipsis>
@@ -56,7 +56,7 @@ export function Pagination(props: Readonly<PaginationProps>): JSX.Element {
                       type="page"
                       value={page.value}
                       class={cn(
-                        "flex h-9 min-w-9 items-center justify-center rounded-lg px-2 text-sm font-medium transition-colors",
+                        "flex h-10 min-w-10 items-center justify-center rounded-lg px-2 text-sm font-medium transition-colors",
                         api().page === page.value
                           ? "bg-md3-primary-container text-md3-on-primary-container"
                           : "text-md3-on-surface-variant hover:bg-md3-surface-container-highest hover:text-md3-on-surface",
@@ -73,7 +73,7 @@ export function Pagination(props: Readonly<PaginationProps>): JSX.Element {
 
         <ArkPagination.NextTrigger
           class={cn(
-            "flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-38",
+            "flex h-10 w-10 items-center justify-center rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-38",
             props.page < totalPages() &&
               "text-md3-on-surface-variant hover:bg-md3-surface-container-highest",
           )}

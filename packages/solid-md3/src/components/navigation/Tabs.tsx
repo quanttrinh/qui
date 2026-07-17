@@ -64,9 +64,9 @@ function TabsTrigger(props: Readonly<TabsTriggerProps>): JSX.Element {
       value={local.value}
       disabled={local.disabled}
       class={cn(
-        "state-layer -mb-px border-b-2 border-md3-primary text-md3-label-lg",
+        "state-layer -mb-px border-b-2 border-transparent text-md3-label-lg",
         "px-3 py-2 font-medium transition-colors",
-        "data-[state=active]:border-b-2 data-[state=active]:border-md3-primary data-[state=active]:text-md3-primary",
+        "data-[state=active]:border-md3-primary data-[state=active]:text-md3-primary",
         "data-[state=inactive]:border-transparent data-[state=inactive]:text-md3-on-surface-variant",
         "disabled:pointer-events-none disabled:opacity-38",
         local.class,

@@ -3,7 +3,7 @@ import { type JSX, splitProps } from "solid-js";
 
 import { cn } from "../../cn";
 
-const pill = cva("rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase", {
+const pillVariants = cva("rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase", {
   defaultVariants: {
     variant: "tonal",
   },
@@ -19,7 +19,7 @@ const pill = cva("rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase", {
   },
 });
 
-export type PillProps = VariantProps<typeof pill> & {
+export type PillProps = VariantProps<typeof pillVariants> & {
   class?: string;
   children: JSX.Element;
 };
@@ -28,7 +28,7 @@ export function Pill(props: Readonly<PillProps>): JSX.Element {
   const [local, rest] = splitProps(props, ["variant", "class", "children"]);
 
   return (
-    <span class={cn(pill({ variant: local.variant }), local.class)} {...rest}>
+    <span class={cn(pillVariants({ variant: local.variant }), local.class)} {...rest}>
       {local.children}
     </span>
   );

@@ -3,7 +3,7 @@ import { type JSX, splitProps } from "solid-js";
 
 import { cn } from "../../cn";
 
-const button = cva(
+const buttonVariants = cva(
   "state-layer inline-flex items-center justify-center rounded-full font-medium transition-all cursor-pointer select-none disabled:opacity-38 disabled:pointer-events-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-md3-primary",
   {
     compoundVariants: [
@@ -38,7 +38,8 @@ const button = cva(
   },
 );
 
-type ButtonProps = JSX.ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof button>;
+type ButtonProps = JSX.ButtonHTMLAttributes<HTMLButtonElement> &
+  VariantProps<typeof buttonVariants>;
 
 export function Button(props: Readonly<ButtonProps>): JSX.Element {
   const [local, rest] = splitProps(props, ["variant", "size", "iconOnly", "class", "children"]);
@@ -46,7 +47,7 @@ export function Button(props: Readonly<ButtonProps>): JSX.Element {
   return (
     <button
       class={cn(
-        button({
+        buttonVariants({
           iconOnly: local.iconOnly,
           size: local.size,
           variant: local.variant,

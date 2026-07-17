@@ -1,11 +1,28 @@
 import { NumberInput as ArkNumberInput } from "@ark-ui/solid/number-input";
 import Add from "@iconify-solid/material-symbols/add";
 import Remove from "@iconify-solid/material-symbols/remove";
+import { type VariantProps, cva } from "class-variance-authority";
 import { type JSX, Show, splitProps } from "solid-js";
 
 import { cn } from "../../cn";
 
-interface NumberInputProps {
+const numberInputVariants = cva(
+  "flex items-stretch rounded-md3-sm border border-md3-outline-variant bg-md3-surface-container-lowest text-md3-on-surface transition-colors focus-within:border-md3-primary focus-within:ring-1 focus-within:ring-md3-primary hover:border-md3-outline",
+  {
+    defaultVariants: {
+      size: "md",
+    },
+    variants: {
+      size: {
+        lg: "h-12",
+        md: "h-10",
+        sm: "h-8",
+      },
+    },
+  },
+);
+
+interface NumberInputProps extends VariantProps<typeof numberInputVariants> {
   value?: string;
   defaultValue?: string;
   readOnly?: boolean;
@@ -42,6 +59,7 @@ export function NumberInput(props: Readonly<NumberInputProps>): JSX.Element {
     "label",
     "allowMouseWheel",
     "formatOptions",
+    "size",
   ]);
 
   return (
@@ -67,7 +85,7 @@ export function NumberInput(props: Readonly<NumberInputProps>): JSX.Element {
           {local.label}
         </ArkNumberInput.Label>
       </Show>
-      <ArkNumberInput.Control class="flex h-10 items-stretch rounded-md3-sm border border-md3-outline-variant bg-md3-surface-container-lowest text-md3-on-surface transition-colors focus-within:border-md3-primary focus-within:ring-1 focus-within:ring-md3-primary hover:border-md3-outline">
+      <ArkNumberInput.Control class={cn(numberInputVariants({ size: local.size }))}>
         <ArkNumberInput.DecrementTrigger
           class="state-layer flex w-9 items-center justify-center text-md3-on-surface-variant transition-colors disabled:cursor-not-allowed disabled:opacity-38"
           aria-label="Decrement"

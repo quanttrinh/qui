@@ -4,7 +4,7 @@ import { Dynamic } from "solid-js/web";
 
 import { cn } from "../../cn";
 
-const text = cva("", {
+const textVariants = cva("", {
   defaultVariants: {
     secondary: false,
     size: "sm",
@@ -30,7 +30,7 @@ const text = cva("", {
   },
 });
 
-export type TextProps = VariantProps<typeof text> & {
+export type TextProps = VariantProps<typeof textVariants> & {
   as?: "span" | "p" | "div" | "strong";
   class?: string;
   children?: JSX.Element;
@@ -51,7 +51,7 @@ export function Text(props: Readonly<TextProps>): JSX.Element {
     <Dynamic
       component={local.as ?? "span"}
       class={cn(
-        text({
+        textVariants({
           mono: local.mono,
           secondary: local.secondary,
           size: local.size,

@@ -43,6 +43,7 @@
     "devDependencies": {
         "@ark-ui/solid": "^5.37.1",
         "@iconify-solid/material-symbols": "^1.0.23",
+        "@tanstack/solid-pacer": "^0.21.1",
         "@tanstack/solid-virtual": "^3.13.31",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
@@ -58,7 +59,7 @@
     "peerDependencies": {
         "@ark-ui/solid": "^5.37.1",
         "@iconify-solid/material-symbols": "^1.0.23",
-        "@quanttrinh/ts-helpers": "github:quanttrinh/ts-helpers",
+        "@tanstack/solid-pacer": "^0.21.1",
         "@tanstack/solid-virtual": "^3.13.31",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
@@ -73,7 +74,7 @@
         "@iconify-solid/material-symbols": {
             "optional": true
         },
-        "@quanttrinh/ts-helpers": {
+        "@tanstack/solid-pacer": {
             "optional": true
         },
         "@tanstack/solid-virtual": {

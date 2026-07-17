@@ -3,7 +3,7 @@ import { type JSX, type Ref, splitProps } from "solid-js";
 
 import { cn } from "../../cn";
 
-const block = cva("overflow-clip", {
+const blockVariants = cva("overflow-clip", {
   variants: {
     variant: {
       row: "flex items-center gap-3",
@@ -34,7 +34,7 @@ const block = cva("overflow-clip", {
   },
 });
 
-type BlockProps = VariantProps<typeof block> & {
+type BlockProps = VariantProps<typeof blockVariants> & {
   class?: string;
   ref?: Ref<HTMLDivElement>;
   children?: JSX.Element;
@@ -48,7 +48,10 @@ export function Block(props: Readonly<BlockProps>): JSX.Element {
   return (
     <div
       ref={local.ref}
-      class={cn(block({ variant: local.variant, gap: local.gap, pad: local.pad }), local.class)}
+      class={cn(
+        blockVariants({ variant: local.variant, gap: local.gap, pad: local.pad }),
+        local.class,
+      )}
       {...rest}
     >
       {local.children}

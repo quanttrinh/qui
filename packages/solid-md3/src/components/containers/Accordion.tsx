@@ -87,7 +87,7 @@ function AccordionItem(props: Readonly<AccordionItemProps>): JSX.Element {
             <div class="text-md3-body-sm text-md3-on-surface-variant">{local.description}</div>
           </Show>
         </div>
-        <ArkAccordion.ItemIndicator class="flex content-center text-md3-on-surface-variant transition-transform duration-200 data-[state=open]:rotate-180">
+        <ArkAccordion.ItemIndicator class="flex content-center text-md3-on-surface-variant transition-transform data-[state=open]:rotate-180">
           <ExpandMore />
         </ArkAccordion.ItemIndicator>
       </ArkAccordion.ItemTrigger>

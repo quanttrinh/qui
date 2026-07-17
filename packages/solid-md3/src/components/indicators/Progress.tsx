@@ -4,7 +4,7 @@ import { type JSX, Show, splitProps } from "solid-js";
 
 import { cn } from "../../cn";
 
-const progressVariant = cva("", {
+const progressVariants = cva("overflow-hidden rounded-full bg-md3-surface-container-highest", {
   defaultVariants: {
     size: "md",
   },
@@ -17,7 +17,7 @@ const progressVariant = cva("", {
   },
 });
 
-interface ProgressProps extends VariantProps<typeof progressVariant> {
+interface ProgressProps extends VariantProps<typeof progressVariants> {
   value?: number;
   max?: number;
   min?: number;
@@ -44,13 +44,8 @@ export function Progress(props: Readonly<ProgressProps>): JSX.Element {
       class={cn("flex w-full flex-col gap-1", local.class)}
       {...rest}
     >
-      <ArkProgress.Track
-        class={cn(
-          "overflow-hidden rounded-full bg-md3-surface-container-highest",
-          progressVariant({ size: local.size }),
-        )}
-      >
-        <ArkProgress.Range class="h-full rounded-full bg-md3-primary transition-all duration-300" />
+      <ArkProgress.Track class={cn(progressVariants({ size: local.size }))}>
+        <ArkProgress.Range class="h-full rounded-full bg-md3-primary transition-[width]" />
       </ArkProgress.Track>
       <Show when={local.value !== undefined}>
         <ArkProgress.ValueText class="text-xs text-md3-on-surface-variant">

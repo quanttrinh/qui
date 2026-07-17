@@ -4,7 +4,7 @@ import { type VariantProps, cva } from "class-variance-authority";
 
 import { cn } from "../../cn";
 
-const card = cva("rounded-md3-lg p-6 transition-all", {
+const cardVariants = cva("rounded-md3-lg p-4 sm:p-6 transition-all", {
   defaultVariants: {
     variant: "elevated",
   },
@@ -17,13 +17,15 @@ const card = cva("rounded-md3-lg p-6 transition-all", {
   },
 });
 
-type CardProps = VariantProps<typeof card> & {
+type CardProps = VariantProps<typeof cardVariants> & {
   class?: string;
   children: JSX.Element;
 };
 
 export function Card(props: Readonly<CardProps>): JSX.Element {
-  return <div class={cn(card({ variant: props.variant }), props.class)}>{props.children}</div>;
+  return (
+    <div class={cn(cardVariants({ variant: props.variant }), props.class)}>{props.children}</div>
+  );
 }
 
 export type { CardProps };
