@@ -7,7 +7,6 @@ import { Index, type JSX, Show, createEffect, createMemo, createSignal } from "s
 import { Portal } from "solid-js/web";
 
 import { cn } from "../../cn";
-import { ScrollArea } from "../containers/ScrollArea";
 import { Text } from "../typography/Text";
 
 const selectVariants = cva(
@@ -87,12 +86,7 @@ export function Select(props: Readonly<SelectProps>): JSX.Element {
           class="z-50"
         >
           <ArkSelect.Content class="box-content flex h-(--total-size) max-h-[min(480px,var(--available-height))] min-h-(--reference-height) w-(--reference-width) flex-col rounded-md3-md border border-md3-outline-variant bg-md3-surface-container py-2 shadow-md3-elevation-3">
-            <ScrollArea
-              class="h-full w-full"
-              scrollbarClass="my-0"
-              viewportRef={setScrollRef}
-              nonce={props.nonce}
-            >
+            <div ref={setScrollRef} class="size-full overflow-y-auto">
               <div
                 ref={(el) => {
                   createEffect(() => {
@@ -151,7 +145,7 @@ export function Select(props: Readonly<SelectProps>): JSX.Element {
                   }}
                 </Index>
               </div>
-            </ScrollArea>
+            </div>
           </ArkSelect.Content>
         </ArkSelect.Positioner>
       </Portal>

@@ -273,6 +273,29 @@
     }
 }
 
+/* ─── Scrollbar styles ─── */
+
+@layer base {
+    * {
+        scrollbar-width: auto;
+        scrollbar-color: var(--color-md3-outline) transparent;
+    }
+
+    *::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    *::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    *::-webkit-scrollbar-thumb {
+        border-radius: 9999px;
+        background: var(--color-md3-outline);
+    }
+}
+
 /* ─── Custom utilities ─── */
 
 @utility state-layer {

@@ -1,4 +1,3 @@
-import Inbox from "@iconify-solid/material-symbols/inbox";
 import { type JSX, Show } from "solid-js";
 
 import { cn } from "../../cn";
