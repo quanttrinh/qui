@@ -14,7 +14,6 @@ export { Section, type SectionProps } from "./components/containers/Section";
 export { Accordion, type AccordionProps } from "./components/containers/Accordion";
 export { Divider, type DividerProps } from "./components/containers/Divider";
 export { EmptyState, type EmptyStateProps } from "./components/containers/EmptyState";
-export { ScrollArea, type ScrollAreaProps } from "./components/containers/ScrollArea";
 
 // Data
 export { Pagination, type PaginationProps } from "./components/data/Pagination";

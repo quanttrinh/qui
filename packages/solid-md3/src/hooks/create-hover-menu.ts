@@ -23,7 +23,9 @@ export function createHoverMenu(timeout: number = 300) {
   };
 
   const toggleClick = () => {
-    if (openedByHover) return;
+    if (openedByHover) {
+      return;
+    }
     setHoverOpen((p) => !p);
   };
 
@@ -40,7 +42,9 @@ export function createHoverMenu(timeout: number = 300) {
   const onOpenChange = ({ open }: { open: boolean }) => {
     console.log("onOpenChange", open);
     setHoverOpen(open);
-    if (!open) openedByHover = false;
+    if (!open) {
+      openedByHover = false;
+    }
   };
 
   return {
