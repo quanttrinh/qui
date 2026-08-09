@@ -1,0 +1,199 @@
+name: Pages
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  pr-deploy:
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Notify deploying
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          BODY="⚡ Preview deploying...
+          <!-- preview-marker -->"
+
+          COMMENT_ID=$(gh api "repos/${REPO}/issues/${PR}/comments" --jq '.[] | select(.body | contains("<!-- preview-marker -->")) | .id' || true)
+
+          if [ -n "$COMMENT_ID" ]; then
+            gh api "repos/${REPO}/issues/comments/${COMMENT_ID}" -X PATCH -f body="${BODY}"
+          else
+            gh pr comment "${PR}" --body "${BODY}"
+          fi
+
+      - name: Setup
+        uses: ./.github/actions/setup-bun
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build demo
+        run: bun run --filter ./packages/demo build --base=/${{ github.event.repository.name }}/pr-${{ github.event.pull_request.number }}/
+
+      - name: Setup git
+        uses: ./.github/actions/setup-git
+
+      - name: Push to gh-pages
+        run: |
+          set -e
+          cp -r packages/demo/dist /tmp/preview-build
+
+          git fetch origin gh-pages:gh-pages 2>/dev/null || true
+          if git rev-parse --verify gh-pages >/dev/null 2>&1; then
+            git worktree add /tmp/gh-pages gh-pages
+          else
+            git worktree add /tmp/gh-pages --orphan
+          fi
+
+          cd /tmp/gh-pages
+          [ -d "pr-${{ github.event.pull_request.number }}" ] && git rm -rf "pr-${{ github.event.pull_request.number }}"
+          mkdir -p "pr-${{ github.event.pull_request.number }}"
+          cp -r /tmp/preview-build/* "pr-${{ github.event.pull_request.number }}/"
+          touch .nojekyll
+          git add -A
+          git diff --staged --quiet || git commit -m "Deploy preview for PR #${{ github.event.pull_request.number }}"
+          git push origin HEAD:gh-pages
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: /tmp/gh-pages
+
+      - name: Deploy to Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
+
+      - name: Update preview URL
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/pr-${PR}/"
+          BODY="🚀 Preview deployed at ${URL}
+          <!-- preview-marker -->"
+
+          COMMENT_ID=$(gh api "repos/${REPO}/issues/${PR}/comments" --jq '.[] | select(.body | contains("<!-- preview-marker -->")) | .id')
+
+          gh api "repos/${REPO}/issues/comments/${COMMENT_ID}" -X PATCH -f body="${BODY}"
+
+  pr-cleanup:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup git
+        uses: ./.github/actions/setup-git
+
+      - name: Push to gh-pages
+        run: |
+          set -e
+          git fetch origin gh-pages:gh-pages 2>/dev/null || true
+          if ! git rev-parse --verify gh-pages >/dev/null 2>&1; then
+            echo "No gh-pages branch, nothing to clean up."
+            exit 0
+          fi
+
+          git worktree add /tmp/gh-pages gh-pages
+          cd /tmp/gh-pages
+
+          if [ -d "pr-${{ github.event.pull_request.number }}" ]; then
+            git rm -rf "pr-${{ github.event.pull_request.number }}"
+            git commit -m "Remove preview for PR #${{ github.event.pull_request.number }}"
+            git push origin HEAD:gh-pages
+          else
+            echo "No preview found for PR #${{ github.event.pull_request.number }}."
+            exit 0
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: /tmp/gh-pages
+
+      - name: Deploy to Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
+
+  main:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup
+        uses: ./.github/actions/setup-bun
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build demo
+        run: bun run --filter ./packages/demo build --base=/${{ github.event.repository.name }}/
+
+      - name: Setup git
+        uses: ./.github/actions/setup-git
+
+      - name: Push to gh-pages
+        run: |
+          set -e
+          cp -r packages/demo/dist /tmp/preview-build
+
+          git fetch origin gh-pages:gh-pages 2>/dev/null || true
+          if git rev-parse --verify gh-pages >/dev/null 2>&1; then
+            git worktree add /tmp/gh-pages gh-pages
+          else
+            git worktree add /tmp/gh-pages --orphan
+          fi
+
+          cd /tmp/gh-pages
+
+          find . -maxdepth 1 -type f -delete
+          find . -maxdepth 1 -type d ! -name .git ! -name 'pr-*' -exec rm -rf {} + 2>/dev/null || true
+
+          cp -r /tmp/preview-build/* .
+          touch .nojekyll
+          git add -A
+          git diff --staged --quiet || git commit -m "Deploy main"
+          git push origin HEAD:gh-pages
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: /tmp/gh-pages
+
+      - name: Deploy to Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

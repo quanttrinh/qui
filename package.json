@@ -6,6 +6,8 @@
   ],
   "scripts": {
     "dev": "bun run --filter ./packages/demo dev",
+    "build-preview": "bun run --filter ./packages/demo build",
+    "publish": "cd packages/solid-md3 && bun publish",
     "lint": "bun run --filter ./packages/solid-md3 lint",
     "lint:fix": "bun run --filter ./packages/solid-md3 lint:fix",
     "fmt": "bun run --filter ./packages/solid-md3 fmt",

@@ -1,0 +1,24 @@
+name: Setup Bun and dependencies
+description: Setup Bun, configure GitHub Packages auth, and install dependencies
+
+inputs:
+  token:
+    description: GitHub token with package read permissions
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+
+    - name: Setup GitHub Packages auth
+      uses: ./.github/actions/setup-auth
+      with:
+        token: ${{ inputs.token }}
+
+    - name: Install dependencies
+      shell: bash
+      run: bun install --frozen-lockfile
+      env:
+        BUN_AUTH_TOKEN: ${{ inputs.token }}
