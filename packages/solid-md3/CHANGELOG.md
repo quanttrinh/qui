@@ -1,5 +1,15 @@
 # @quanttrinh/solid-md3
 
+## 1.0.0
+
+### Major Changes
+
+- 5a14653: Remove `ScrollArea` component. Switch to native browser scrolling for `Select` and `Combobox` dropdowns.
+
+### Minor Changes
+
+- cfa4ea6: Add `Toast` component using Ark UI's toast engine with `createToaster`, MD3 variant styling, and responsive layout.
+
 ## 0.2.0
 
 ### Minor Changes
