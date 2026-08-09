@@ -1,0 +1,93 @@
+name: Dependabot Changelog & Auto-Approve
+
+on:
+  pull_request:
+    types: [opened, reopened]
+    paths:
+      - 'packages/solid-md3/package.json'
+      - 'package.json'
+      - 'bun.lock'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  dependabot:
+    runs-on: ubuntu-slim
+    if: github.actor == 'dependabot[bot]'
+
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: false
+
+      - name: Determine changeset bump type
+        id: bump
+        run: |
+          case "${{ steps.metadata.outputs.update-type }}" in
+            "version-update:semver-patch") echo "type=patch" >> $GITHUB_OUTPUT ;;
+            "version-update:semver-minor") echo "type=minor" >> $GITHUB_OUTPUT ;;
+            "version-update:semver-major") echo "type=major" >> $GITHUB_OUTPUT ;;
+            *) echo "type=patch" >> $GITHUB_OUTPUT ;;
+          esac
+
+      - name: Create changeset fragment
+        id: fragment
+        run: |
+          PACKAGE_NAME=$(jq -r .name packages/solid-md3/package.json)
+          BRANCH_SAFE=$(echo "${{ github.head_ref }}" | tr '/' '-')
+          FRAGMENT_PATH=".changeset/${BRANCH_SAFE}.md"
+
+          if [ -f "$FRAGMENT_PATH" ]; then
+            echo "Fragment already exists at ${FRAGMENT_PATH}, skipping creation."
+            echo "created=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          DEP_NAMES="${{ steps.metadata.outputs.dependency-names }}"
+          PREV_VERSION="${{ steps.metadata.outputs.previous-version }}"
+          NEW_VERSION="${{ steps.metadata.outputs.new-version }}"
+
+          cat > "$FRAGMENT_PATH" << EOF
+          ---
+          "${PACKAGE_NAME}": ${{ steps.bump.outputs.type }}
+          ---
+
+          Bump ${DEP_NAMES} from ${PREV_VERSION} to ${NEW_VERSION}
+          EOF
+
+          echo "created=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push changeset
+        if: steps.fragment.outputs.created == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .changeset/
+          git commit -m "chore: add changeset for ${{ steps.metadata.outputs.dependency-names }} bump"
+          git push
+
+      - name: Auto-approve non-breaking changes
+        if: steps.bump.outputs.type != 'major'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr review "${{ github.event.pull_request.number }}" \
+            --approve \
+            --body "✅ **Auto-approved**: This is a non-breaking \`${{ steps.bump.outputs.type }}\` version bump. No manual review required."
+
+      - name: Enable auto-merge
+        if: steps.bump.outputs.type != 'major'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge "${{ github.event.pull_request.number }}" --auto --squash

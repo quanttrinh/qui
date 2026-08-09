@@ -1,0 +1,16 @@
+name: Setup GitHub Packages auth
+description: Configures .npmrc with GitHub Packages registry and auth token
+
+inputs:
+  token:
+    description: GitHub token with package read permissions
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Write .npmrc
+      shell: bash
+      run: |
+        echo "@${{ github.repository_owner }}:registry=https://npm.pkg.github.com" > .npmrc
+        echo "//npm.pkg.github.com/:_authToken=${{ inputs.token }}" >> .npmrc

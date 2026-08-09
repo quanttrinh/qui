@@ -6,6 +6,6 @@
     "linked": [],
     "access": "restricted",
     "baseBranch": "main",
-    "updateInternalDependencies": "patch",
+    "changedFilePatterns": ["packages/solid-md3/**/*.{ts,tsx,js,jsx,json,md}"],
     "ignore": ["@quanttrinh/solid-md3-demo"]
 }
