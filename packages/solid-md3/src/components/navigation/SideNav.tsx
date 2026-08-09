@@ -202,10 +202,14 @@ function SideNavSectionMenu(
         disabled={props.entry.disabled === true || props.hidden()}
         onClick={hover.toggleClick}
         onPointerEnter={(e) => {
-          if (e.pointerType === "mouse") hover.open();
+          if (e.pointerType === "mouse") {
+            hover.open();
+          }
         }}
         onPointerLeave={(e) => {
-          if (e.pointerType === "mouse") hover.close();
+          if (e.pointerType === "mouse") {
+            hover.close();
+          }
         }}
         tabIndex={props.hidden() ? -1 : undefined}
         variant="text"
@@ -260,10 +264,14 @@ function SideNavOverflowMenu(
         disabled={props.items().length === 0}
         onClick={hover.toggleClick}
         onPointerEnter={(e) => {
-          if (e.pointerType === "mouse") hover.open();
+          if (e.pointerType === "mouse") {
+            hover.open();
+          }
         }}
         onPointerLeave={(e) => {
-          if (e.pointerType === "mouse") hover.close();
+          if (e.pointerType === "mouse") {
+            hover.close();
+          }
         }}
         variant="text"
         size="md"
@@ -284,10 +292,14 @@ function SideNavOverflowMenu(
           <Menu.Content
             class={menuContentClass}
             onPointerEnter={(e) => {
-              if (e.pointerType === "mouse") hover.cancelClose();
+              if (e.pointerType === "mouse") {
+                hover.cancelClose();
+              }
             }}
             onPointerLeave={(e) => {
-              if (e.pointerType === "mouse") hover.close();
+              if (e.pointerType === "mouse") {
+                hover.close();
+              }
             }}
           >
             <For each={props.items()}>

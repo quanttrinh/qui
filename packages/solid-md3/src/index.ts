@@ -39,6 +39,13 @@ export { NumberInput, type NumberInputProps } from "./components/inputs/NumberIn
 // Messaging
 export { Modal, type ModalProps } from "./components/messaging/Modal";
 export { Banner, type BannerProps } from "./components/messaging/Banner";
+export {
+  Toaster,
+  createToaster,
+  type ToasterProps,
+  type ToastPlacement,
+  type CreateToasterReturn,
+} from "./components/messaging/Toast";
 export { Tooltip, type TooltipProps } from "./components/messaging/Tooltip";
 
 // Navigation
@@ -46,11 +53,12 @@ export { AppBar, type AppBarProps } from "./components/navigation/AppBar";
 export { AppShell, type AppShellProps } from "./components/navigation/AppShell";
 export { Tabs, type TabsProps } from "./components/navigation/Tabs";
 export { Breadcrumb, type BreadcrumbProps } from "./components/navigation/Breadcrumb";
-export { SideNav, type SideNavProps } from "./components/navigation/SideNav";
-export type {
-  SideNavEntry,
-  SideNavItemData,
-  SideNavSectionData,
+export {
+  SideNav,
+  type SideNavProps,
+  type SideNavEntry,
+  type SideNavItemData,
+  type SideNavSectionData,
 } from "./components/navigation/SideNav";
 
 // Other

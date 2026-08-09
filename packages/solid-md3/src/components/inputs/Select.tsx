@@ -25,13 +25,12 @@ const selectVariants = cva(
   },
 );
 
-export type SelectProps = {
+export type SelectProps<T extends string> = {
   placeholder?: string;
-  nonce?: string;
 } & VariantProps<typeof selectVariants> &
-  Omit<ArkSelect.RootProps<string>, "scrollToIndexFn" | "asChild" | "positioning">;
+  Omit<ArkSelect.RootProps<T>, "scrollToIndexFn" | "asChild" | "positioning">;
 
-export function Select(props: Readonly<SelectProps>): JSX.Element {
+export function Select<T extends string>(props: Readonly<SelectProps<T>>): JSX.Element {
   const [scrollElement, setScrollRef] = createSignal<HTMLDivElement | null>(null);
 
   const virtualizer = createVirtualizer({
