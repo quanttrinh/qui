@@ -1,0 +1,11 @@
+name: Setup git as bot
+description: Configures git user as github-actions[bot]
+
+runs:
+  using: composite
+  steps:
+    - name: Configure git user as github-actions[bot]
+      shell: bash
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
