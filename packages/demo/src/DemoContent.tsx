@@ -36,9 +36,11 @@ import {
   TagsInput,
   Text,
   TextInput,
+  Toaster,
   Tooltip,
+  createToaster,
 } from "@quanttrinh/solid-md3";
-import { type JSX, For, createMemo, createSignal } from "solid-js";
+import { type JSX, createMemo, createSignal } from "solid-js";
 
 function stopDemoLink(e: MouseEvent): void {
   e.preventDefault();
@@ -87,6 +89,8 @@ export default function DemoContent(): JSX.Element {
   const [toggleVal, setToggleVal] = createSignal<string[]>(["list"]);
   const [accordionVal, setAccordionVal] = createSignal<string[]>(["item-1"]);
   const [tabVal, setTabVal] = createSignal("tab-1");
+
+  const toaster = createToaster({ placement: "top-end", overlap: true, gap: 24 });
 
   return (
     <div class="size-full overflow-y-auto">
@@ -506,6 +510,54 @@ export default function DemoContent(): JSX.Element {
       <Section id="loading-spinner" title="Loading Spinner">
         <LoadingSpinner animatedDots />
       </Section>
+
+      <Section id="toast" title="Toast">
+        <Block variant="row" gap="sm">
+            <Button
+              size="sm"
+              variant="filled"
+              onClick={() => toaster.create({ title: "Default toast", description: "No type specified." })}
+            >
+              Default
+            </Button>
+            <Button
+              size="sm"
+              variant="tonal"
+              onClick={() => toaster.info({ title: "Info", description: "Something you should know." })}
+            >
+              Info
+            </Button>
+            <Button
+              size="sm"
+              variant="tonal"
+              onClick={() =>
+                toaster.success({ title: "Success", description: "Your changes have been saved." })
+              }
+            >
+              Success
+            </Button>
+            <Button
+              size="sm"
+              variant="tonal"
+              onClick={() =>
+                toaster.warning({ title: "Warning", description: "Storage is almost full." })
+              }
+            >
+              Warning
+            </Button>
+            <Button
+              size="sm"
+              variant="tonal"
+              onClick={() =>
+                toaster.error({ title: "Error", description: "Something went wrong." })
+              }
+            >
+              Error
+            </Button>
+          </Block>
+      </Section>
+
+      <Toaster toaster={toaster} />
     </div>
   );
 }
