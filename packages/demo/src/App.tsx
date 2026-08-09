@@ -117,6 +117,7 @@ export default function App(): JSX.Element {
       icon: () => <Hourglass class="text-xl!" />,
       label: "Loading & Spinner",
     },
+    { type: "item", href: "#toast", icon: () => <Info class="text-xl!" />, label: "Toast" },
   ];
 
   return (

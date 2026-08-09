@@ -342,6 +342,7 @@
     }
 }
 
+/* ─── Icons ─── */
 svg[viewBox]:not([width]):not([height]) {
     width: 1em;
     height: 1em;

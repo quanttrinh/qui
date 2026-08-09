@@ -31,7 +31,6 @@ const comboboxVariants = cva(
 export type ComboboxProps = {
   placeholder?: string;
   filter?: (query: string) => boolean;
-  nonce?: string;
 } & VariantProps<typeof comboboxVariants> &
   Omit<ArkCombobox.RootProps<string>, "scrollToIndexFn" | "asChild" | "positioning">;
 
