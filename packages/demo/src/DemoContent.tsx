@@ -28,7 +28,6 @@ import {
   Pill,
   Progress,
   RadioGroup,
-  ScrollArea,
   Section,
   Select,
   Shimmer,
@@ -90,7 +89,7 @@ export default function DemoContent(): JSX.Element {
   const [tabVal, setTabVal] = createSignal("tab-1");
 
   return (
-    <ScrollArea class="flex-1 pr-4">
+    <div class="size-full overflow-y-auto">
       <Section id="color-palette" title="Color Palette">
         <Block variant="wrap" gap="sm">
           <div class="rounded-md3-sm bg-md3-primary px-4 py-2 text-sm font-medium text-md3-on-primary">
@@ -507,20 +506,6 @@ export default function DemoContent(): JSX.Element {
       <Section id="loading-spinner" title="Loading Spinner">
         <LoadingSpinner animatedDots />
       </Section>
-
-      <Section id="scrollarea" title="ScrollArea">
-        <ScrollArea class="h-40 max-w-sm rounded-md3-sm border border-md3-outline-variant bg-md3-surface p-3 pr-1">
-          <Block variant="column" gap="sm">
-            <For each={Array.from({ length: 30 }, (_, i) => `Item ${i + 1}`)}>
-              {(item) => (
-                <div class="rounded-md3-xs bg-md3-surface-container-highest px-3 py-2 text-sm">
-                  {item}
-                </div>
-              )}
-            </For>
-          </Block>
-        </ScrollArea>
-      </Section>
-    </ScrollArea>
+    </div>
   );
 }

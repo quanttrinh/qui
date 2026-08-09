@@ -14,7 +14,6 @@ import Inbox from "@iconify-solid/material-symbols/inbox";
 import Info from "@iconify-solid/material-symbols/info";
 import LabelIcon from "@iconify-solid/material-symbols/label";
 import LinkIcon from "@iconify-solid/material-symbols/link";
-import List from "@iconify-solid/material-symbols/list";
 import OpenInNew from "@iconify-solid/material-symbols/open-in-new";
 import Palette from "@iconify-solid/material-symbols/palette";
 import Person from "@iconify-solid/material-symbols/person";
@@ -118,7 +117,6 @@ export default function App(): JSX.Element {
       icon: () => <Hourglass class="text-xl!" />,
       label: "Loading & Spinner",
     },
-    { type: "item", href: "#scrollarea", icon: () => <List class="text-xl!" />, label: "ScrollArea" },
   ];
 
   return (

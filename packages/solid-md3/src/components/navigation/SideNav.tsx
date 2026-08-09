@@ -1,4 +1,6 @@
-import { Menu, MenuRootBaseProps } from "@ark-ui/solid/menu";
+import type { MenuRootBaseProps } from "@ark-ui/solid/menu";
+
+import { Menu } from "@ark-ui/solid/menu";
 import ChevronLeft from "@iconify-solid/material-symbols/chevron-left";
 import ChevronRight from "@iconify-solid/material-symbols/chevron-right";
 import MoreHoriz from "@iconify-solid/material-symbols/more-horiz";
@@ -194,11 +196,17 @@ function SideNavSectionMenu(
       onPointerDownOutside={hover.blockClick}
     >
       <Button
-        ref={buttonRef}
+        ref={(el) => {
+          buttonRef = el;
+        }}
         disabled={props.entry.disabled === true || props.hidden()}
         onClick={hover.toggleClick}
-        onPointerEnter={(e) => e.pointerType === "mouse" && hover.open()}
-        onPointerLeave={(e) => e.pointerType === "mouse" && hover.close()}
+        onPointerEnter={(e) => {
+          if (e.pointerType === "mouse") hover.open();
+        }}
+        onPointerLeave={(e) => {
+          if (e.pointerType === "mouse") hover.close();
+        }}
         tabIndex={props.hidden() ? -1 : undefined}
         variant="text"
         size="md"
@@ -217,8 +225,12 @@ function SideNavSectionMenu(
         menuContentClass={menuContentClass}
         isLeft={props.isLeft}
         renderLink={props.renderLink}
-        onContentMouseEnter={() => hover.cancelClose()}
-        onContentMouseLeave={() => hover.close()}
+        onContentMouseEnter={() => {
+          hover.cancelClose();
+        }}
+        onContentMouseLeave={() => {
+          hover.close();
+        }}
       />
     </Menu.Root>
   );
@@ -242,11 +254,17 @@ function SideNavOverflowMenu(
       onPointerDownOutside={hover.blockClick}
     >
       <Button
-        ref={buttonRef}
+        ref={(el) => {
+          buttonRef = el;
+        }}
         disabled={props.items().length === 0}
         onClick={hover.toggleClick}
-        onPointerEnter={(e) => e.pointerType === "mouse" && hover.open()}
-        onPointerLeave={(e) => e.pointerType === "mouse" && hover.close()}
+        onPointerEnter={(e) => {
+          if (e.pointerType === "mouse") hover.open();
+        }}
+        onPointerLeave={(e) => {
+          if (e.pointerType === "mouse") hover.close();
+        }}
         variant="text"
         size="md"
         class={cn(
@@ -265,8 +283,12 @@ function SideNavOverflowMenu(
         <Menu.Positioner>
           <Menu.Content
             class={menuContentClass}
-            onPointerEnter={(e) => e.pointerType === "mouse" && hover.cancelClose()}
-            onPointerLeave={(e) => e.pointerType === "mouse" && hover.close()}
+            onPointerEnter={(e) => {
+              if (e.pointerType === "mouse") hover.cancelClose();
+            }}
+            onPointerLeave={(e) => {
+              if (e.pointerType === "mouse") hover.close();
+            }}
           >
             <For each={props.items()}>
               {(entry) => {
@@ -418,7 +440,7 @@ function SideNav(props: Readonly<SideNavProps>): JSX.Element {
   let cachedRowHeights: number[] = [];
 
   createEffect(() => {
-    local.items;
+    void local.items;
     cachedRowHeights = [];
   });
 
@@ -560,13 +582,21 @@ function SideNav(props: Readonly<SideNavProps>): JSX.Element {
         local.class,
       )}
       onTransitionStart={(e: TransitionEvent) => {
-        if (e.target !== e.currentTarget) return;
-        if (e.propertyName !== "width") return;
+        if (e.target !== e.currentTarget) {
+          return;
+        }
+        if (e.propertyName !== "width") {
+          return;
+        }
         setIsWidthTransitioning(true);
       }}
       onTransitionEnd={(e: TransitionEvent) => {
-        if (e.target !== e.currentTarget) return;
-        if (e.propertyName !== "width") return;
+        if (e.target !== e.currentTarget) {
+          return;
+        }
+        if (e.propertyName !== "width") {
+          return;
+        }
         setIsWidthTransitioning(false);
         measure();
       }}
@@ -574,7 +604,9 @@ function SideNav(props: Readonly<SideNavProps>): JSX.Element {
       <div class="px-3 pt-2 pb-1">
         <button
           type="button"
-          onClick={() => setOpen(!internalOpen())}
+          onClick={() => {
+            setOpen(!internalOpen());
+          }}
           class={cn(
             "state-layer flex w-full items-center gap-3 rounded-md3-full px-3 py-2.5 whitespace-nowrap text-md3-on-surface-variant transition-colors hover:text-md3-on-surface",
             !isLeft() && "flex-row-reverse",
@@ -590,8 +622,18 @@ function SideNav(props: Readonly<SideNavProps>): JSX.Element {
         </button>
       </div>
 
-      <div ref={listWrapperRef} class="relative min-h-0 flex-1 overflow-hidden px-3 py-2">
-        <ul ref={listRef} class="relative flex flex-col gap-1">
+      <div
+        ref={(el) => {
+          listWrapperRef = el;
+        }}
+        class="relative min-h-0 flex-1 overflow-hidden px-3 py-2"
+      >
+        <ul
+          ref={(el) => {
+            listRef = el;
+          }}
+          class="relative flex flex-col gap-1"
+        >
           <For each={renderedItems()}>
             {(entry, index) => {
               const hidden = (): boolean => overflowIndex() !== undefined && index() >= cutoff();
@@ -634,7 +676,9 @@ function SideNav(props: Readonly<SideNavProps>): JSX.Element {
         </ul>
 
         <div
-          ref={overflowRef}
+          ref={(el) => {
+            overflowRef = el;
+          }}
           class={cn(
             "absolute bottom-0 left-0 w-full bg-md3-surface px-3 py-2",
             overflowItems().length === 0 && "pointer-events-none invisible",
