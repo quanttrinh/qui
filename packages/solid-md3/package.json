@@ -2,7 +2,7 @@
     "name": "@quanttrinh/solid-md3",
     "version": "0.2.0",
     "private": false,
-    "description": "SolidJS Material Design 3 component library",
+    "description": "SolidJS Material Design 3 inspired component library",
     "keywords": [
         "components",
         "material-3",
