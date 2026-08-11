@@ -2,6 +2,13 @@ name: CI
 
 on:
   pull_request:
+    paths:
+      - packages/solid-md3/src/**
+      - packages/solid-md3/oxlint.config.ts
+      - packages/solid-md3/oxfmt.config.ts
+      - packages/solid-md3/package.json
+      - package.json
+      - bun.lock
 
 jobs:
   checks:
@@ -13,25 +20,18 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Detect changed paths
-        id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            source:
-              - 'packages/solid-md3/src/**'
-              - 'packages/solid-md3/oxlint.config.ts'
-              - 'packages/solid-md3/oxfmt.config.ts'
-
-      - name: Setup Bun and dependencies
+      - name: Setup Bun
         uses: ./.github/actions/setup-bun
         with:
-            token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        env:
+          BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Format check
-        if: steps.filter.outputs.source == 'true'
         run: bun run fmt:check
 
       - name: Lint check
-        if: steps.filter.outputs.source == 'true'
         run: bun run lint

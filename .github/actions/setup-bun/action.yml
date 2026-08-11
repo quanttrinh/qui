@@ -1,5 +1,5 @@
-name: Setup Bun and dependencies
-description: Setup Bun, configure GitHub Packages auth, and install dependencies
+name: Setup Bun
+description: Install a pinned, verified bun binary and configure GitHub Packages auth
 
 inputs:
   token:
@@ -9,16 +9,54 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
-
-    - name: Setup GitHub Packages auth
-      uses: ./.github/actions/setup-auth
-      with:
-        token: ${{ inputs.token }}
-
-    - name: Install dependencies
+    - name: Initialize Constants
       shell: bash
-      run: bun install --frozen-lockfile
-      env:
-        BUN_AUTH_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+        echo "TARGET_VERSION=v1.3.14" >> "$GITHUB_ENV"
+        echo "TARGET_SHA=951ee2aee855f08595aeec6225226a298d3fea83a3dcd6465c09cbccdf7e848f" >> "$GITHUB_ENV"
+
+    - name: Restore Bun from cache
+      id: cache
+      uses: actions/cache@v6
+      with:
+        path: /usr/local/bin/bun
+        key: bun-${{ env.TARGET_VERSION }}-${{ env.TARGET_SHA }}
+
+    - name: Download Bun
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: ./.github/actions/download-file
+      with:
+        url: https://github.com/oven-sh/bun/releases/download/bun-${{ env.TARGET_VERSION }}/bun-linux-x64.zip
+        sha256: ${{ env.TARGET_SHA }}
+        output: /tmp/bun.zip
+
+    - name: Install Bun
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        unzip -p /tmp/bun.zip bun-linux-x64/bun | install -m 755 /dev/stdin /usr/local/bin/bun
+        rm /tmp/bun.zip
+
+    - name: Verify Bun
+      shell: bash
+      run: |
+        set -euo pipefail
+        actual=$(bun --version)
+        expected="${TARGET_VERSION#bun-v}"
+        case "$actual" in
+          "$expected"*) echo "bun $actual OK" ;;
+          *)
+            echo "bun version mismatch: got '$actual', expected '$expected'" >&2
+            exit 1
+            ;;
+        esac
+
+    - name: Write .npmrc
+      shell: bash
+      run: |
+        cat > "$HOME/.npmrc" << EOF
+        @${{ github.repository_owner }}:registry=https://npm.pkg.github.com
+        //npm.pkg.github.com/:_authToken=${{ inputs.token }}
+        EOF
