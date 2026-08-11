@@ -1,0 +1,68 @@
+name: Dependabot Changeset
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - packages/solid-md3/package.json
+      - package.json
+      - bun.lock
+
+permissions:
+  contents: write
+
+jobs:
+  changeset:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine changeset bump type
+        id: bump
+        run: |
+          case "${{ steps.metadata.outputs.update-type }}" in
+            "version-update:semver-patch") echo "type=patch" >> $GITHUB_OUTPUT ;;
+            "version-update:semver-minor") echo "type=minor" >> $GITHUB_OUTPUT ;;
+            "version-update:semver-major") echo "type=major" >> $GITHUB_OUTPUT ;;
+            *) echo "type=patch" >> $GITHUB_OUTPUT ;;
+          esac
+
+      - name: Generate changeset fragment
+        run: |
+          PACKAGE_NAME=$(jq -r .name packages/solid-md3/package.json)
+          BRANCH_SAFE=$(echo "${{ github.head_ref }}" | tr '/' '-')
+          FRAGMENT_PATH=".changeset/${BRANCH_SAFE}.md"
+
+          DEP_NAMES="${{ steps.metadata.outputs.dependency-names }}"
+          PREV_VERSION="${{ steps.metadata.outputs.previous-version }}"
+          NEW_VERSION="${{ steps.metadata.outputs.new-version }}"
+
+          cat > "$FRAGMENT_PATH" << EOF
+          ---
+          "${PACKAGE_NAME}": ${{ steps.bump.outputs.type }}
+          ---
+
+          Bump ${DEP_NAMES} from ${PREV_VERSION} to ${NEW_VERSION}
+          EOF
+
+      - name: Setup git
+        uses: ./.github/actions/setup-git
+
+      - name: Commit and push if changed
+        run: |
+          git add .changeset/
+          if git diff --cached --exit-code > /dev/null; then
+            echo "Fragment unchanged, skipping."
+          else
+            git commit -m "chore: add changeset for ${{ steps.metadata.outputs.dependency-names }} bump [dependabot skip]"
+            git push
+          fi

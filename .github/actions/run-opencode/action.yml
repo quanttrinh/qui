@@ -1,0 +1,51 @@
+name: Run OpenCode CLI
+description: Run opencode with a prompt and capture cost
+
+inputs:
+  model:
+    description: Model in provider/model format
+    required: true
+  prompt_file:
+    description: Path to file containing the prompt
+    required: true
+  variant:
+    description: Model variant / reasoning effort
+    required: false
+    default: ''
+
+outputs:
+  cost:
+    description: Cost of the run in USD
+    value: ${{ steps.review.outputs.cost }}
+
+runs:
+  using: composite
+  steps:
+    - name: Run OpenCode
+      id: review
+      shell: bash
+      env:
+        TARGET_PROMPT_FILE: ${{ inputs.prompt_file }}
+        OPENCODE_MODEL: ${{ inputs.model }}
+        OPENCODE_VARIANT: ${{ inputs.variant }}
+      run: |
+        set -euo pipefail
+
+        args=( --model "$OPENCODE_MODEL" --auto --format json )
+        if [ -n "$OPENCODE_VARIANT" ]; then
+          args+=( --variant "$OPENCODE_VARIANT" )
+        fi
+
+        opencode run "${args[@]}" < "$TARGET_PROMPT_FILE" | tee /tmp/opencode-log.jsonl
+
+        cost=$(jq -sR '
+          [split("\n")[]
+            | select(length > 0)
+            | fromjson? // empty
+            | select(.type == "step_finish")
+            | .part.cost]
+          | add // 0
+        ' /tmp/opencode-log.jsonl)
+        echo "cost=$cost" >> "$GITHUB_OUTPUT"
+
+        rm -f /tmp/opencode-log.jsonl

@@ -1,0 +1,43 @@
+name: Download file with checksum
+description: Download a file and optionally verify its SHA256 checksum
+
+inputs:
+  url:
+    description: URL to download
+    required: true
+  sha256:
+    description: Expected SHA256 checksum of the file
+    required: false
+    default: ''
+  output:
+    description: Path to write the file to
+    required: true
+  token:
+    description: GitHub token for authenticated downloads
+    required: false
+    default: ''
+
+outputs:
+  path:
+    description: Path the file was written to
+    value: ${{ inputs.output }}
+
+runs:
+  using: composite
+  steps:
+    - name: Download
+      shell: bash
+      env:
+        URL: ${{ inputs.url }}
+        SHA256: ${{ inputs.sha256 }}
+        OUTPUT: ${{ inputs.output }}
+        TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+        curl --proto '=https' --tlsv1.2 -fsSL \
+          ${TOKEN:+-H "Authorization: Bearer ${TOKEN}"} \
+          -o "$OUTPUT" \
+          "$URL"
+        if [ -n "$SHA256" ]; then
+          echo "$SHA256  $OUTPUT" | sha256sum --check --strict
+        fi
