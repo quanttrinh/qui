@@ -176,7 +176,7 @@ jobs:
     needs: manage
     if: github.actor == 'dependabot[bot]' && needs.manage.outputs.changeset_present == 'false' && needs.manage.outputs.valid == 'true'
     permissions:
-      contents: read
+      contents: write
       actions: write
       pull-requests: write
       issues: write
