@@ -50,10 +50,16 @@ jobs:
           BODY="⚡ Preview deploying...
           <!-- preview-marker -->"
 
-          COMMENT_ID=$(gh api "repos/${REPO}/issues/${PR}/comments" --jq '.[] | select(.body | contains("<!-- preview-marker -->")) | .id' || true)
+          COMMENT_IDS=$(gh api --paginate "repos/${REPO}/issues/${PR}/comments" | jq -s '[.[].[] | select(.body | contains("<!-- preview-marker -->")) | .id]')
 
-          if [ -n "$COMMENT_ID" ]; then
+          if [ "$(jq 'length' <<< "$COMMENT_IDS")" -gt 0 ]; then
+            COMMENT_ID=$(jq -r 'last' <<< "$COMMENT_IDS")
             gh api "repos/${REPO}/issues/comments/${COMMENT_ID}" -X PATCH -f body="${BODY}"
+
+            jq -r '.[0:-1][]' <<< "$COMMENT_IDS" | while read -r OLD_COMMENT_ID; do
+              [ -n "$OLD_COMMENT_ID" ] || continue
+              gh api -X DELETE "repos/${REPO}/issues/comments/${OLD_COMMENT_ID}" || true
+            done
           else
             gh pr comment "${PR}" --body "${BODY}"
           fi
@@ -110,9 +116,20 @@ jobs:
           BODY="🚀 Preview deployed at ${URL}
           <!-- preview-marker -->"
 
-          COMMENT_ID=$(gh api "repos/${REPO}/issues/${PR}/comments" --jq '.[] | select(.body | contains("<!-- preview-marker -->")) | .id')
+          COMMENT_IDS=$(gh api --paginate "repos/${REPO}/issues/${PR}/comments" | jq -s '[.[].[] | select(.body | contains("<!-- preview-marker -->")) | .id]')
 
+          if [ "$(jq 'length' <<< "$COMMENT_IDS")" -eq 0 ]; then
+            echo "::error::No preview marker comment found to update" >&2
+            exit 1
+          fi
+
+          COMMENT_ID=$(jq -r 'last' <<< "$COMMENT_IDS")
           gh api "repos/${REPO}/issues/comments/${COMMENT_ID}" -X PATCH -f body="${BODY}"
+
+          jq -r '.[0:-1][]' <<< "$COMMENT_IDS" | while read -r OLD_COMMENT_ID; do
+            [ -n "$OLD_COMMENT_ID" ] || continue
+            gh api -X DELETE "repos/${REPO}/issues/comments/${OLD_COMMENT_ID}" || true
+          done
 
   pr-cleanup:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'

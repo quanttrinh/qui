@@ -49,6 +49,12 @@ jobs:
               - '!.github/actions/*/action.yml'
               - '!.github/dependabot.yml'
 
+      - name: Setup Bun
+        if: contains(steps.filter.outputs.allowed_files, 'bun.lock')
+        uses: ./.github/actions/setup-bun
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Validate PR changes
         id: validate
         env:
@@ -93,7 +99,7 @@ jobs:
           PYEOF
                 ;;
               bun.lock)
-                jq empty "$f" >/dev/null 2>&1 || { echo "::error::$f is not valid JSON"; exit 1; }
+                bun install --frozen-lockfile --lockfile-only
                 ;;
               .github/workflows/*.yml | .github/workflows/*.yaml \
               | .github/actions/*/action.yml | .github/dependabot.yml)
