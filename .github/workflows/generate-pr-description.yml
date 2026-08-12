@@ -10,22 +10,19 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-
 jobs:
   generate:
     if: >-
       ${{
         (github.event_name == 'pull_request'
-          && contains(github.event.pull_request.body, '@generate-pr-description')
+          && contains(github.event.pull_request.body, '/generate-pr-description')
           && contains(
             fromJson('["OWNER","MEMBER","COLLABORATOR"]'),
             github.event.pull_request.author_association
           ))
         || (github.event_name == 'issue_comment'
           && github.event.issue.pull_request
-          && contains(github.event.comment.body, '@generate-pr-description')
+          && contains(github.event.comment.body, '/generate-pr-description')
           && contains(
             fromJson('["OWNER","MEMBER","COLLABORATOR"]'),
             github.event.comment.author_association
@@ -51,7 +48,7 @@ jobs:
         run: |
           gh api \
             "repos/${GITHUB_REPOSITORY}/issues/comments/${{ github.event.comment.id }}/reactions" \
-            -F content='eyes'
+            -f content='eyes'
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -122,4 +119,4 @@ jobs:
         run: |
           gh api \
             "repos/${GITHUB_REPOSITORY}/issues/comments/${{ github.event.comment.id }}/reactions" \
-            -F content='+1'
+            -f content='+1'

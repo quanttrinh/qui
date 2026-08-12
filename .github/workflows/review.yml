@@ -20,9 +20,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ inputs.pr_number || github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-
 jobs:
   review:
     if: >-
@@ -32,7 +29,7 @@ jobs:
         || (inputs.pr_number != '')
         || (github.event_name == 'issue_comment'
           && github.event.issue.pull_request
-          && contains(github.event.comment.body, '@review-pr')
+          && contains(github.event.comment.body, '/review-pr')
           && contains(fromJson('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
       }}
     runs-on: ubuntu-latest
@@ -68,7 +65,7 @@ jobs:
         run: |
           gh api \
             "repos/${GITHUB_REPOSITORY}/issues/comments/${{ github.event.comment.id }}/reactions" \
-            -F content='eyes'
+            -f content='eyes'
 
       - name: React to skipped review command
         if: github.event_name == 'issue_comment' && steps.skip.outputs.skip == 'true'
@@ -78,7 +75,7 @@ jobs:
         run: |
           gh api \
             "repos/${GITHUB_REPOSITORY}/issues/comments/${{ github.event.comment.id }}/reactions" \
-            -F content='-1'
+            -f content='-1'
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.skip.outputs.skip != 'true'
@@ -254,11 +251,20 @@ jobs:
               "$(printf '%.4f' "$total")"
           } | gh pr review "$PR_NUMBER" "$action" --body-file -
 
+      - name: Check for infrastructure changes
+        id: infra
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: |
+            infra:
+              - '.github/**'
+
       - name: Enable auto-merge
         if: >
           steps.skip.outputs.skip != 'true'
           && steps.opencode.outcome == 'success'
           && steps.verdict.outputs.verdict == 'safe'
+          && steps.infra.outputs.infra == 'false'
           && ( inputs.variant == 'dependabot'
             || github.event_name == 'issue_comment'
               && github.event.issue.user.login == 'dependabot[bot]' )
@@ -275,5 +281,5 @@ jobs:
         run: |
           gh api \
             "repos/${GITHUB_REPOSITORY}/issues/comments/${{ github.event.comment.id }}/reactions" \
-            -F content='+1'
+            -f content='+1'
 
