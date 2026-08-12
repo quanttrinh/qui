@@ -20,6 +20,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
   pull-requests: write
   pages: write
   id-token: write
@@ -38,7 +39,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Notify deploying
         env:
@@ -71,7 +72,7 @@ jobs:
         run: bun run --filter ./packages/demo build --base=/${{ github.event.repository.name }}/pr-${{ github.event.pull_request.number }}/
 
       - name: Checkout gh-pages
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: gh-pages
           path: gh-pages
@@ -86,19 +87,18 @@ jobs:
           [ -d "pr-${{ github.event.pull_request.number }}" ] && git rm -rf "pr-${{ github.event.pull_request.number }}"
           mkdir -p "pr-${{ github.event.pull_request.number }}"
           cp -r ../packages/demo/dist/* "pr-${{ github.event.pull_request.number }}/"
-          touch .nojekyll
-          git add -A
+          git add -- "pr-${{ github.event.pull_request.number }}"
           git diff --staged --quiet || git commit -m "Deploy preview for PR #${{ github.event.pull_request.number }}"
           git push
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: gh-pages
 
       - name: Deploy to Pages
         id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
 
       - name: Update preview URL
         env:
@@ -123,13 +123,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup git
         uses: ./.github/actions/setup-git
 
       - name: Checkout gh-pages
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: gh-pages
           path: gh-pages
@@ -145,13 +145,13 @@ jobs:
           fi
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: gh-pages
 
       - name: Deploy to Pages
         id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
 
   main:
     if: github.event_name == 'push'
@@ -162,7 +162,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
@@ -178,7 +178,7 @@ jobs:
         run: bun run --filter ./packages/demo build --base=/${{ github.event.repository.name }}/
 
       - name: Checkout gh-pages
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: gh-pages
           path: gh-pages
@@ -195,16 +195,16 @@ jobs:
           find . -maxdepth 1 -type d ! -name .git ! -name 'pr-*' -exec rm -rf {} + 2>/dev/null || true
 
           cp -r ../packages/demo/dist/* .
-          touch .nojekyll
-          git add -A
+          git add -u -- . ':!pr-*'
+          git add -- . ':!pr-*'
           git diff --staged --quiet || git commit -m "Deploy main"
           git push
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: gh-pages
 
       - name: Deploy to Pages
         id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

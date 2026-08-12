@@ -1,33 +1,46 @@
-name: Dependabot Changeset
+name: Dependabot Management
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
-      - packages/solid-md3/package.json
+      - .github/**
       - package.json
       - bun.lock
+      - packages/*/package.json
 
 permissions:
   contents: write
 
 jobs:
-  changeset:
+  manage:
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-slim
+    outputs:
+      changeset_present: ${{ steps.check.outputs.changeset_present }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.head_ref }}
 
+      - name: Check if changeset commit is already the latest
+        id: check
+        run: |
+          if git log -1 --format='%s' | grep -q '^chore: add changeset'; then
+            echo "changeset_present=true" >> $GITHUB_OUTPUT
+          else
+            echo "changeset_present=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Fetch Dependabot metadata
         id: metadata
-        uses: dependabot/fetch-metadata@v2
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Determine changeset bump type
         id: bump
+        if: steps.metadata.outputs.directory == '/packages/solid-md3'
         run: |
           case "${{ steps.metadata.outputs.update-type }}" in
             "version-update:semver-patch") echo "type=patch" >> $GITHUB_OUTPUT ;;
@@ -37,6 +50,7 @@ jobs:
           esac
 
       - name: Generate changeset fragment
+        if: steps.metadata.outputs.directory == '/packages/solid-md3'
         run: |
           PACKAGE_NAME=$(jq -r .name packages/solid-md3/package.json)
           BRANCH_SAFE=$(echo "${{ github.head_ref }}" | tr '/' '-')
@@ -55,9 +69,11 @@ jobs:
           EOF
 
       - name: Setup git
+        if: steps.metadata.outputs.directory == '/packages/solid-md3'
         uses: ./.github/actions/setup-git
 
       - name: Commit and push if changed
+        if: steps.metadata.outputs.directory == '/packages/solid-md3'
         run: |
           git add .changeset/
           if git diff --cached --exit-code > /dev/null; then
@@ -66,3 +82,17 @@ jobs:
             git commit -m "chore: add changeset for ${{ steps.metadata.outputs.dependency-names }} bump [dependabot skip]"
             git push
           fi
+
+  review:
+    needs: manage
+    if: github.actor == 'dependabot[bot]' && needs.manage.outputs.changeset_present == 'false'
+    permissions:
+      contents: read
+      actions: write
+      pull-requests: write
+      issues: write
+    uses: ./.github/workflows/review.yml
+    with:
+      pr_number: ${{ github.event.pull_request.number }}
+      variant: dependabot
+    secrets: inherit
