@@ -17,12 +17,12 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        echo "TARGET_VERSION=v1.18.16" >> "$GITHUB_ENV"
+        echo "TARGET_VERSION=1.18.16" >> "$GITHUB_ENV"
         echo "TARGET_SHA=286e07355df06738c1905955be15b7fbc10a7b12d931de9394a6f7597246750b" >> "$GITHUB_ENV"
 
     - name: Restore OpenCode from cache
       id: cache
-      uses: actions/cache@v6
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: /usr/local/bin/opencode
         key: opencode-${{ env.TARGET_VERSION }}-${{ env.TARGET_SHA }}
@@ -31,7 +31,7 @@ runs:
       if: steps.cache.outputs.cache-hit != 'true'
       uses: ./.github/actions/download-file
       with:
-        url: https://github.com/anomalyco/opencode/releases/download/${{ env.TARGET_VERSION }}/opencode-linux-x64.tar.gz
+        url: https://github.com/anomalyco/opencode/releases/download/v${{ env.TARGET_VERSION }}/opencode-linux-x64.tar.gz
         sha256: ${{ env.TARGET_SHA }}
         output: /tmp/opencode.tar.gz
         token: ${{ inputs.token }}
@@ -48,10 +48,11 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        actual=$(opencode --version)
+        actual=$(opencode --version | head -1)
+        actual="${actual%%+*}"
         expected="${{ env.TARGET_VERSION }}"
         case "$actual" in
-          "$expected"*) echo "opencode $actual OK" ;;
+          "$expected") echo "opencode $actual OK" ;;
           *)
             echo "opencode version mismatch: got '$actual', expected '$expected'" >&2
             exit 1

@@ -15,12 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
       packages: write
       pull-requests: write
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -35,11 +36,12 @@ jobs:
           BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Release Pull Request or Publish
-        uses: changesets/action@v1
+        uses: changesets/action@22ccf9aa43179fe9e27dc62e575971d28cce197c # v2.0.0
         with:
-          publish: bun run publish
-          version: bun run version
-          createGithubReleases: false
+          publish-script: bun run publish
+          version-script: bun run version
+          create-github-releases: false
+          push-git-tags: false
+          github-token: ${{ secrets.GITHUB_TOKEN }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
