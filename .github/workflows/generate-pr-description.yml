@@ -1,11 +1,13 @@
 name: AI Generate PR Description
 
 on:
+  pull_request:
+    types: [opened]
   issue_comment:
     types: [created]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: true
 
 permissions:
@@ -15,28 +17,52 @@ jobs:
   generate:
     if: >-
       ${{
-        github.event.issue.pull_request &&
-        contains(github.event.comment.body, '@generate-pr-description') &&
-        contains(
-          fromJson('["OWNER","MEMBER","COLLABORATOR"]'),
-          github.event.comment.author_association
-        )
+        (github.event_name == 'pull_request'
+          && contains(github.event.pull_request.body, '@generate-pr-description')
+          && contains(
+            fromJson('["OWNER","MEMBER","COLLABORATOR"]'),
+            github.event.pull_request.author_association
+          ))
+        || (github.event_name == 'issue_comment'
+          && github.event.issue.pull_request
+          && contains(github.event.comment.body, '@generate-pr-description')
+          && contains(
+            fromJson('["OWNER","MEMBER","COLLABORATOR"]'),
+            github.event.comment.author_association
+          ))
       }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: write
       pull-requests: write
       issues: write
     steps:
-      - uses: actions/checkout@v7
+      - name: Resolve PR number
+        id: pr
+        run: |
+          echo "pr_number=${{ github.event.pull_request.number || github.event.issue.number }}" >> $GITHUB_OUTPUT
+
+      - name: React to command
+        if: github.event_name == 'issue_comment'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            "repos/${GITHUB_REPOSITORY}/issues/comments/${{ github.event.comment.id }}/reactions" \
+            -F content='eyes'
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: refs/pull/${{ github.event.issue.number }}/head
+          ref: refs/pull/${{ steps.pr.outputs.pr_number }}/head
           persist-credentials: false
 
       - name: Fetch PR diff
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh pr diff "${{ github.event.issue.number }}" > /tmp/pr-diff.txt
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+        run: gh pr diff "$PR_NUMBER" > /tmp/pr-diff.txt
 
       - name: Build prompt
         run: |
@@ -80,18 +106,20 @@ jobs:
       - name: Update PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
         run: |
           if [ -f /tmp/pr-title.txt ] && [ -f /tmp/pr-body.txt ]; then
-            gh pr edit "${{ github.event.issue.number }}" \
+            gh pr edit "$PR_NUMBER" \
               --title "$(cat /tmp/pr-title.txt)" \
               --body-file /tmp/pr-body.txt
           fi
 
       - name: React to comment
+        if: github.event_name == 'issue_comment'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh api \
             "repos/${GITHUB_REPOSITORY}/issues/comments/${{ github.event.comment.id }}/reactions" \
-            -F content='rocket'
+            -F content='+1'

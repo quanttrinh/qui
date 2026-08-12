@@ -2,12 +2,22 @@ name: AI PR Review
 
 on:
   pull_request:
-    types: [opened, synchronize, ready_for_review]
+    types: [opened, ready_for_review]
   issue_comment:
     types: [created]
+  workflow_call:
+    inputs:
+      pr_number:
+        required: true
+        type: number
+      variant:
+        description: "PR author variant: dependabot or manual"
+        required: false
+        default: manual
+        type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number }}
+  group: ${{ github.workflow }}-${{ inputs.pr_number || github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: true
 
 permissions:
@@ -15,20 +25,11 @@ permissions:
 
 jobs:
   review:
-    # Auto-review only on PR open / ready_for_review.
-    # synchronize is limited to dependabot PRs (their changeset push lands there);
-    # regular PR re-reviews require @review-pr to avoid paid runs on every push.
-    # issue_comment triggers are restricted to collaborators to avoid abuse.
     if: >-
       ${{
         (github.event_name == 'pull_request'
-          && github.event.action == 'opened'
           && github.actor != 'dependabot[bot]')
-        || (github.event_name == 'pull_request'
-          && github.event.action == 'ready_for_review')
-        || (github.event_name == 'pull_request'
-          && github.event.action == 'synchronize'
-          && github.actor == 'dependabot[bot]')
+        || (inputs.pr_number != '')
         || (github.event_name == 'issue_comment'
           && github.event.issue.pull_request
           && contains(github.event.comment.body, '@review-pr')
@@ -36,25 +37,21 @@ jobs:
       }}
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
+      actions: write
       pull-requests: write
       issues: write
     steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: >
-            ${{
-              github.event_name == 'pull_request'
-                && github.event.pull_request.head.sha
-                || format('refs/pull/{0}/head', github.event.issue.number)
-            }}
-          persist-credentials: false
+      - name: Resolve PR number
+        id: pr
+        run: |
+          echo "pr_number=${{ inputs.pr_number || github.event.pull_request.number || github.event.issue.number }}" >> $GITHUB_OUTPUT
 
-      - name: Check for no-review label
+      - name: Determine whether to skip review
         id: skip
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
         run: |
           if gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name' | grep -qx 'no-review'; then
             echo "Skipping — PR has no-review label."
@@ -63,17 +60,43 @@ jobs:
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: React to review command
+        if: github.event_name == 'issue_comment' && steps.skip.outputs.skip != 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            "repos/${GITHUB_REPOSITORY}/issues/comments/${{ github.event.comment.id }}/reactions" \
+            -F content='eyes'
+
+      - name: React to skipped review command
+        if: github.event_name == 'issue_comment' && steps.skip.outputs.skip == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            "repos/${GITHUB_REPOSITORY}/issues/comments/${{ github.event.comment.id }}/reactions" \
+            -F content='-1'
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.skip.outputs.skip != 'true'
+        with:
+          ref: refs/pull/${{ steps.pr.outputs.pr_number }}/head
+          persist-credentials: false
+
       - name: Fetch PR diff
         if: steps.skip.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
         run: gh pr diff "$PR_NUMBER" > /tmp/pr-diff.txt
 
       - name: Build review prompt
         if: steps.skip.outputs.skip != 'true'
         env:
-          IS_DEPENDABOT: ${{ github.event_name == 'pull_request' && github.actor == 'dependabot[bot]' || github.event.issue.user.login == 'dependabot[bot]' }}
+          IS_DEPENDABOT: ${{ inputs.variant == 'dependabot' || github.event.issue.user.login == 'dependabot[bot]' }}
         run: |
           if [ "$IS_DEPENDABOT" = "true" ]; then
             cat > /tmp/review-prompt.txt << 'PROMPT'
@@ -138,7 +161,7 @@ jobs:
         if: steps.skip.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
         run: |
           prev=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews" \
             --jq '[.[].body | strings | scan("total: \\$([0-9.]+)")[0] | tonumber] | max // 0')
@@ -149,7 +172,7 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
         run: |
           ids=$(gh api graphql \
             -F owner="$GITHUB_REPOSITORY_OWNER" \
@@ -171,7 +194,7 @@ jobs:
               | .id]')
 
           if [ "$ids" != "[]" ]; then
-            mutation=$(jq -n -r \
+            mutation=$(jq -r \
               '[.[] | "  r\(.): dismissPullRequestReview(input:{pullRequestReviewId:\"\(.)\",message:\"Stale\"}) { clientMutationId }"]
                | "mutation{" + join("\n") + "}"' <<< "$ids")
             gh api graphql -f query="$mutation"
@@ -207,7 +230,7 @@ jobs:
         if: steps.skip.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
           COST: ${{ steps.opencode.outputs.cost }}
           PREV: ${{ steps.cost.outputs.prev }}
         run: |
@@ -216,7 +239,9 @@ jobs:
             exit 0
           fi
 
-          total=$(echo "${PREV:-0} + ${COST:-0}" | bc)
+          : "${COST:=0}"
+          : "${PREV:=0}"
+          total=$(echo "${PREV} + ${COST}" | bc)
           case "${{ steps.verdict.outputs.verdict }}" in
             approved|safe) action="--approve" ;;
             *)             action="--request-changes" ;;
@@ -230,20 +255,19 @@ jobs:
           } | gh pr review "$PR_NUMBER" "$action" --body-file -
 
       - name: Enable auto-merge
-        # Only for dependabot PRs (checked via PR author, not commenter),
-        # and only when the AI verdict is "safe".
         if: >
-          steps.skip.outputs.skip != 'true' &&
-          steps.opencode.outcome == 'success' &&
-          steps.verdict.outputs.verdict == 'safe' &&
-          ( github.event_name == 'pull_request' && github.actor == 'dependabot[bot]' ||
-            github.event_name == 'issue_comment' && github.event.issue.user.login == 'dependabot[bot]' )
+          steps.skip.outputs.skip != 'true'
+          && steps.opencode.outcome == 'success'
+          && steps.verdict.outputs.verdict == 'safe'
+          && ( inputs.variant == 'dependabot'
+            || github.event_name == 'issue_comment'
+              && github.event.issue.user.login == 'dependabot[bot]' )
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
         run: gh pr merge "$PR_NUMBER" --auto --squash
 
-      - name: React to review command
+      - name: React to review done
         if: github.event_name == 'issue_comment' && steps.skip.outputs.skip != 'true'
         continue-on-error: true
         env:
@@ -251,5 +275,5 @@ jobs:
         run: |
           gh api \
             "repos/${GITHUB_REPOSITORY}/issues/comments/${{ github.event.comment.id }}/reactions" \
-            -F content='eyes'
+            -F content='+1'
 
