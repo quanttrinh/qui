@@ -1,7 +1,7 @@
 name: Dependabot Management
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, reopened]
     paths:
       - .github/**
@@ -9,22 +9,104 @@ on:
       - bun.lock
       - packages/*/package.json
 
-permissions:
-  contents: write
-
 jobs:
   manage:
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-slim
+    permissions:
+      contents: write
+      pull-requests: read
     outputs:
       changeset_present: ${{ steps.check.outputs.changeset_present }}
+      valid: ${{ steps.validate.outputs.valid }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.head_ref }}
 
+      - name: Filter changed paths
+        id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          list-files: json
+          predicate-quantifier: some-with-excludes
+          filters: |
+            allowed:
+              - package.json
+              - bun.lock
+              - packages/*/package.json
+              - .github/workflows/*.yml
+              - .github/workflows/*.yaml
+              - .github/actions/*/action.yml
+              - .github/dependabot.yml
+            invalid:
+              - '**'
+              - '!package.json'
+              - '!bun.lock'
+              - '!packages/*/package.json'
+              - '!.github/workflows/*.yml'
+              - '!.github/workflows/*.yaml'
+              - '!.github/actions/*/action.yml'
+              - '!.github/dependabot.yml'
+
+      - name: Validate PR changes
+        id: validate
+        env:
+          FILES: ${{ steps.filter.outputs.allowed_files }}
+          INVALID: ${{ steps.filter.outputs.invalid }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$INVALID" = "true" ]; then
+            echo "::notice::Skipping — change is outside allowlist"
+            echo "valid=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch --depth=1 origin "$BASE"
+
+          for f in $(echo "$FILES" | jq -r '.[]'); do
+            case "$f" in
+              package.json | packages/*/package.json)
+                BASE_JSON="$(git show "$BASE:$f" 2>/dev/null || echo '')"
+                [ -n "$BASE_JSON" ] || { echo "::error::$f does not exist in base"; exit 1; }
+                python3 - "$f" "$BASE_JSON" << 'PYEOF'
+          import json, sys
+          file_path, base_json = sys.argv[1], sys.argv[2]
+          try:
+              with open(file_path) as fh:
+                  head_manifest = json.load(fh)
+              base_manifest = json.loads(base_json)
+          except json.JSONDecodeError as e:
+              print(f"::error::{file_path}: invalid JSON: {e}", flush=True)
+              sys.exit(1)
+
+          for section in ("dependencies", "devDependencies", "resolutions", "peerDependencies"):
+              if set(base_manifest.get(section, {})) != set(head_manifest.get(section, {})):
+                  print(f"::error::{file_path}: dependency names changed in {section}: only versions may change", flush=True)
+                  sys.exit(1)
+
+          base_rest = {k: v for k, v in base_manifest.items() if k not in ("dependencies", "devDependencies", "resolutions", "peerDependencies")}
+          head_rest = {k: v for k, v in head_manifest.items() if k not in ("dependencies", "devDependencies", "resolutions", "peerDependencies")}
+          if base_rest != head_rest:
+              print(f"::error::{file_path}: changes outside dependency sections", flush=True)
+              sys.exit(1)
+          PYEOF
+                ;;
+              bun.lock)
+                jq empty "$f" >/dev/null 2>&1 || { echo "::error::$f is not valid JSON"; exit 1; }
+                ;;
+              .github/workflows/*.yml | .github/workflows/*.yaml \
+              | .github/actions/*/action.yml | .github/dependabot.yml)
+                python3 -c 'import yaml,sys; yaml.safe_load(open(sys.argv[1]))' "$f" >/dev/null 2>&1 \
+                  || { echo "::error::$f is not valid YAML"; exit 1; }
+                ;;
+            esac
+          done
+          echo "valid=true" >> "$GITHUB_OUTPUT"
+
       - name: Check if changeset commit is already the latest
         id: check
+        if: steps.validate.outputs.valid == 'true'
         run: |
           if git log -1 --format='%s' | grep -q '^chore: add changeset'; then
             echo "changeset_present=true" >> $GITHUB_OUTPUT
@@ -34,13 +116,14 @@ jobs:
 
       - name: Fetch Dependabot metadata
         id: metadata
+        if: steps.validate.outputs.valid == 'true'
         uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Determine changeset bump type
         id: bump
-        if: steps.metadata.outputs.directory == '/packages/solid-md3'
+        if: steps.validate.outputs.valid == 'true' && steps.metadata.outputs.directory == '/packages/solid-md3'
         run: |
           case "${{ steps.metadata.outputs.update-type }}" in
             "version-update:semver-patch") echo "type=patch" >> $GITHUB_OUTPUT ;;
@@ -50,7 +133,7 @@ jobs:
           esac
 
       - name: Generate changeset fragment
-        if: steps.metadata.outputs.directory == '/packages/solid-md3'
+        if: steps.validate.outputs.valid == 'true' && steps.metadata.outputs.directory == '/packages/solid-md3'
         run: |
           PACKAGE_NAME=$(jq -r .name packages/solid-md3/package.json)
           BRANCH_SAFE=$(echo "${{ github.head_ref }}" | tr '/' '-')
@@ -69,11 +152,11 @@ jobs:
           EOF
 
       - name: Setup git
-        if: steps.metadata.outputs.directory == '/packages/solid-md3'
+        if: steps.validate.outputs.valid == 'true' && steps.metadata.outputs.directory == '/packages/solid-md3'
         uses: ./.github/actions/setup-git
 
       - name: Commit and push if changed
-        if: steps.metadata.outputs.directory == '/packages/solid-md3'
+        if: steps.validate.outputs.valid == 'true' && steps.metadata.outputs.directory == '/packages/solid-md3'
         run: |
           git add .changeset/
           if git diff --cached --exit-code > /dev/null; then
@@ -85,7 +168,7 @@ jobs:
 
   review:
     needs: manage
-    if: github.actor == 'dependabot[bot]' && needs.manage.outputs.changeset_present == 'false'
+    if: github.actor == 'dependabot[bot]' && needs.manage.outputs.changeset_present == 'false' && needs.manage.outputs.valid == 'true'
     permissions:
       contents: read
       actions: write
