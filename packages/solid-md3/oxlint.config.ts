@@ -29,7 +29,9 @@ export default defineConfig({
   ],
   rules: {
     "oxc/no-optional-chaining": "off",
+    "oxc/no-rest-spread-properties": "off",
     "eslint/sort-imports": "off",
+    "eslint/one-var": "off",
     "eslint/no-plusplus": "off",
     "eslint/no-undefined": "off",
     "eslint/max-statements": "off",

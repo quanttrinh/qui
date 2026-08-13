@@ -11,14 +11,14 @@
         "@quanttrinh/solid-md3": "workspace:*"
     },
     "devDependencies": {
-        "@ark-ui/solid": "^5.38.0",
+        "@ark-ui/solid": "^5.38.1",
         "@iconify-solid/material-symbols": "^1.0.29",
         "@tailwindcss/vite": "^4.3.3",
         "@types/bun": "^1.3.14",
-        "solid-js": "^1.9.13",
-        "tailwindcss": "^4.3.2",
+        "solid-js": "^1.9.14",
+        "tailwindcss": "^4.3.3",
         "typescript": "^7.0.2",
-        "vite": "^8.0.0-beta.4",
+        "vite": "^8.2.1",
         "vite-plugin-solid": "^2.11.14"
     }
 }

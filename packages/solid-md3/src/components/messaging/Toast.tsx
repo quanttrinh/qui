@@ -2,7 +2,6 @@ import {
   Toast as ArkToast,
   Toaster as ArkToaster,
   type CreateToasterReturn,
-  type ToastPlacement,
 } from "@ark-ui/solid/toast";
 import Close from "@iconify-solid/material-symbols/close";
 import { Show, type JSX } from "solid-js";
@@ -10,9 +9,9 @@ import { Portal } from "solid-js/web";
 
 import { cn } from "../../cn";
 
-type ToasterProps = {
+interface ToasterProps {
   toaster: CreateToasterReturn;
-};
+}
 
 function Toaster(props: Readonly<ToasterProps>): JSX.Element {
   return (
@@ -61,5 +60,6 @@ function Toaster(props: Readonly<ToasterProps>): JSX.Element {
 }
 
 export { createToaster } from "@ark-ui/solid/toast";
+export type { CreateToasterReturn, ToastPlacement } from "@ark-ui/solid/toast";
 export { Toaster };
-export type { ToasterProps, ToastPlacement, CreateToasterReturn };
+export type { ToasterProps };
