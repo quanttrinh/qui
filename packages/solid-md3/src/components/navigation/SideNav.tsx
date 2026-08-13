@@ -1,6 +1,4 @@
-import type { MenuRootBaseProps } from "@ark-ui/solid/menu";
-
-import { Menu } from "@ark-ui/solid/menu";
+import { Menu, type MenuRootBaseProps } from "@ark-ui/solid/menu";
 import ChevronLeft from "@iconify-solid/material-symbols/chevron-left";
 import ChevronRight from "@iconify-solid/material-symbols/chevron-right";
 import MoreHoriz from "@iconify-solid/material-symbols/more-horiz";
@@ -21,7 +19,7 @@ import {
 import { Dynamic, Portal } from "solid-js/web";
 
 import { cn } from "../../cn";
-import { createHoverMenu } from "../../hooks/create-hover-menu";
+import { createHoverMenu } from "../../hooks/createHoverMenu";
 import { Button } from "../buttons/Button";
 
 export interface SideNavShellContextValue {
@@ -148,10 +146,12 @@ function SideNavMenuItem(
   );
 }
 
+const menuContentClass =
+  "rounded-md3-md border-md3-outline-variant bg-md3-surface-container shadow-md3-elevation-3 min-w-36 flex flex-col border p-1 z-51";
+
 function SideNavSectionMenuContent(
   props: Readonly<{
     section: SideNavSectionData;
-    menuContentClass: string;
     isLeft: () => boolean;
     renderLink?: RenderLink;
     onContentMouseEnter?: () => void;
@@ -162,7 +162,7 @@ function SideNavSectionMenuContent(
     <Portal>
       <Menu.Positioner>
         <Menu.Content
-          class={props.menuContentClass}
+          class={menuContentClass}
           onMouseEnter={props.onContentMouseEnter}
           onMouseLeave={props.onContentMouseLeave}
         >
@@ -177,6 +177,23 @@ function SideNavSectionMenuContent(
   );
 }
 
+function getMenuRootProps(
+  isLeft: boolean,
+  positioning: MenuRootBaseProps["positioning"] = {},
+): MenuRootBaseProps {
+  return {
+    closeOnSelect: true,
+    lazyMount: true,
+    positioning: {
+      flip: true,
+      gutter: 4,
+      placement: isLeft ? "right-start" : ("left-start" as const),
+      ...positioning,
+    },
+    unmountOnExit: true,
+  };
+}
+
 function SideNavSectionMenu(
   props: Readonly<{
     entry: SideNavSectionData;
@@ -184,9 +201,9 @@ function SideNavSectionMenu(
     isLeft: () => boolean;
     renderLink?: RenderLink;
   }>,
-) {
+): JSX.Element {
   const hover = createHoverMenu();
-  let buttonRef: HTMLButtonElement | undefined;
+  let buttonRef: HTMLButtonElement | undefined = undefined;
 
   return (
     <Menu.Root
@@ -226,7 +243,6 @@ function SideNavSectionMenu(
 
       <SideNavSectionMenuContent
         section={props.entry}
-        menuContentClass={menuContentClass}
         isLeft={props.isLeft}
         renderLink={props.renderLink}
         onContentMouseEnter={() => {
@@ -246,9 +262,9 @@ function SideNavOverflowMenu(
     isLeft: () => boolean;
     renderLink?: RenderLink;
   }>,
-) {
+): JSX.Element {
   const hover = createHoverMenu();
-  let buttonRef: HTMLButtonElement | undefined;
+  let buttonRef: HTMLButtonElement | undefined = undefined;
 
   return (
     <Menu.Root
@@ -319,7 +335,6 @@ function SideNavOverflowMenu(
 
                       <SideNavSectionMenuContent
                         section={entry}
-                        menuContentClass={menuContentClass}
                         isLeft={props.isLeft}
                         renderLink={props.renderLink}
                       />
@@ -392,8 +407,46 @@ const sideNavVariants = cva(
   },
 );
 
-const menuContentClass =
-  "rounded-md3-md border-md3-outline-variant bg-md3-surface-container shadow-md3-elevation-3 min-w-36 flex flex-col border p-1 z-51";
+interface ComputeCutoffIndexOptions {
+  gap: number;
+  heights: readonly number[];
+  itemsLength: number;
+  maxVisibleH: number;
+  nextCutoff: number;
+  rowsLength: number;
+}
+
+function computeCutoffIndex(options: ComputeCutoffIndexOptions): number | undefined {
+  const { gap, heights, itemsLength, maxVisibleH, nextCutoff, rowsLength } = options;
+  let cutoff = nextCutoff;
+  let visibleH = 0;
+  const limit = Math.min(cutoff, rowsLength);
+  for (let i = 0; i < limit; i++) {
+    if (i > 0) {
+      visibleH += gap;
+    }
+    visibleH += heights[i];
+  }
+
+  while (cutoff > 0 && visibleH > maxVisibleH) {
+    visibleH -= heights[cutoff - 1];
+    if (cutoff - 1 > 0) {
+      visibleH -= gap;
+    }
+    cutoff--;
+  }
+
+  while (cutoff < rowsLength) {
+    const addH = heights[cutoff] + (cutoff > 0 ? gap : 0);
+    if (visibleH + addH > maxVisibleH) {
+      break;
+    }
+    visibleH += addH;
+    cutoff++;
+  }
+
+  return cutoff >= itemsLength ? undefined : cutoff;
+}
 
 interface SideNavProps {
   items: SideNavEntry[];
@@ -443,17 +496,20 @@ function SideNav(props: Readonly<SideNavProps>): JSX.Element {
   const [overflowIndex, setOverflowIndex] = createSignal<number>();
   const isLeft = (): boolean => (local.side ?? "left") === "left";
 
-  let listWrapperRef: HTMLDivElement | undefined;
-  let listRef: HTMLUListElement | undefined;
-  let overflowRef: HTMLDivElement | undefined;
+  let listWrapperRef: HTMLDivElement | undefined = undefined;
+  let listRef: HTMLUListElement | undefined = undefined;
+  let overflowRef: HTMLDivElement | undefined = undefined;
   let observer: ResizeObserver | undefined = undefined;
   let rafId: number | undefined = undefined;
   let prevOverflowIndex: number | undefined = undefined;
   let cachedRowHeights: number[] = [];
+  let cachedItems: SideNavEntry[] | undefined = undefined;
 
   createEffect(() => {
-    void local.items;
-    cachedRowHeights = [];
+    if (local.items !== cachedItems) {
+      cachedItems = local.items;
+      cachedRowHeights = [];
+    }
   });
 
   const cutoff = (): number => overflowIndex() ?? local.items.length;
@@ -521,36 +577,17 @@ function SideNav(props: Readonly<SideNavProps>): JSX.Element {
       return;
     }
 
-    let nextCutoff =
+    const nextCutoff =
       overflowIndex() === undefined ? computeInitialCutoff(rows, gap, fullMaxH) : cutoff();
 
-    let visibleH = 0;
-    const limit = Math.min(nextCutoff, rows.length);
-    for (let i = 0; i < limit; i++) {
-      if (i > 0) {
-        visibleH += gap;
-      }
-      visibleH += heights[i];
-    }
-
-    while (nextCutoff > 0 && visibleH > maxVisibleH) {
-      visibleH -= heights[nextCutoff - 1];
-      if (nextCutoff - 1 > 0) {
-        visibleH -= gap;
-      }
-      nextCutoff--;
-    }
-
-    while (nextCutoff < rows.length) {
-      const addH = heights[nextCutoff] + (nextCutoff > 0 ? gap : 0);
-      if (visibleH + addH > maxVisibleH) {
-        break;
-      }
-      visibleH += addH;
-      nextCutoff++;
-    }
-
-    const finalIndex = nextCutoff >= local.items.length ? undefined : nextCutoff;
+    const finalIndex = computeCutoffIndex({
+      gap,
+      heights,
+      itemsLength: local.items.length,
+      maxVisibleH,
+      nextCutoff,
+      rowsLength: rows.length,
+    });
 
     if (finalIndex !== prevOverflowIndex) {
       prevOverflowIndex = finalIndex;
@@ -705,23 +742,6 @@ function SideNav(props: Readonly<SideNavProps>): JSX.Element {
       </div>
     </nav>
   );
-}
-
-function getMenuRootProps(
-  isLeft: boolean,
-  positioning: MenuRootBaseProps["positioning"] = {},
-): MenuRootBaseProps {
-  return {
-    closeOnSelect: true,
-    lazyMount: true,
-    positioning: {
-      flip: true,
-      gutter: 4,
-      placement: isLeft ? "right-start" : ("left-start" as const),
-      ...positioning,
-    },
-    unmountOnExit: true,
-  } as const;
 }
 
 export { SideNav, type SideNavProps };
