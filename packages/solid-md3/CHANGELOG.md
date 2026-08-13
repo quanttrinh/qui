@@ -1,5 +1,27 @@
 # @quanttrinh/solid-md3
 
+## 1.1.0
+
+### Minor Changes
+
+- cbd0119: Add a Vite build pipeline that emits compiled JavaScript and styles (`dist/index.js`, `dist/styles.css`) plus TypeScript declarations, and add a `solid` export condition so Solid apps can compile the component source in their own build. Package entry points now resolve to `dist` instead of `src`.
+  
+  Make `solid-js` a required peer dependency instead of optional, since it is the library's core runtime.
+  
+  Update all dev and peer dependencies to their latest versions.
+
+### Patch Changes
+
+- cbd0119: Fix all lint warnings in the package.
+  
+  Rename `src/hooks/create-hover-menu.ts` to `src/hooks/createHoverMenu.ts`, remove a stray `console.log` in the hover-menu hook, and add explicit return types plus `Readonly` parameter types.
+  
+  Refactor `SideNav` to merge duplicated `@ark-ui/solid/menu` imports, initialize refs, avoid `no-use-before-define` by hoisting shared helpers, and reduce the complexity of the overflow `measure` function by extracting the cutoff computation into a `computeCutoffIndex` helper that takes a single options object.
+  
+  Re-export toast types directly from `@ark-ui/solid/toast` and convert `ToasterProps` to an interface.
+  
+  Disable the stylistic `eslint/one-var` and `oxc/no-rest-spread-properties` rules, which conflict with the project's formatting conventions.
+
 ## 1.0.0
 
 ### Major Changes
