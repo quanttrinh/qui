@@ -1,7 +1,7 @@
 name: AI PR Review
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, ready_for_review]
   issue_comment:
     types: [created]
@@ -24,7 +24,7 @@ jobs:
   review:
     if: >-
       ${{
-        (github.event_name == 'pull_request'
+        (github.event_name == 'pull_request_target'
           && github.actor != 'dependabot[bot]')
         || (inputs.pr_number != '')
         || (github.event_name == 'issue_comment'
