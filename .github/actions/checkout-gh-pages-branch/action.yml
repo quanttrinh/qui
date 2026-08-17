@@ -1,0 +1,39 @@
+name: Checkout gh-pages (create if missing)
+description: Ensure the gh-pages branch exists, then check it out into a subdirectory
+
+inputs:
+  path:
+    description: Directory to check out gh-pages into
+    required: false
+    default: gh-pages
+
+runs:
+  using: composite
+  steps:
+    - name: Ensure and checkout gh-pages
+      shell: bash
+      env:
+        GIT_AUTHOR_NAME: github-actions[bot]
+        GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        GIT_COMMITTER_NAME: github-actions[bot]
+        GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        CHECKOUT_PATH: ${{ inputs.path }}
+      run: |
+        set -euo pipefail
+
+        if git ls-remote --exit-code origin refs/heads/gh-pages >/dev/null 2>&1; then
+          echo "::notice::gh-pages branch exists on remote"
+        else
+          echo "::notice::gh-pages branch missing - creating empty branch via git push"
+          empty_tree=$(printf '' | git mktree)
+          commit=$(git commit-tree "$empty_tree" -m "chore: initialize gh-pages")
+          if ! git push origin "$commit":refs/heads/gh-pages >/dev/null 2>&1; then
+            # A concurrent run may have created it between the check and the push.
+            git ls-remote --exit-code origin refs/heads/gh-pages >/dev/null 2>&1
+          fi
+        fi
+
+        git fetch origin refs/heads/gh-pages:refs/remotes/origin/gh-pages
+        rm -rf "$CHECKOUT_PATH"
+        git worktree add -B gh-pages "$CHECKOUT_PATH" refs/remotes/origin/gh-pages
+        git -C "$CHECKOUT_PATH" branch --set-upstream-to=origin/gh-pages gh-pages

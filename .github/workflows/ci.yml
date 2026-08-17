@@ -39,8 +39,12 @@ jobs:
 
       - name: Format check
         if: steps.filter.outputs.code == 'true'
-        run: bun run fmt:check
+        run: bun --bun run fmt:check
 
       - name: Lint check
         if: steps.filter.outputs.code == 'true'
-        run: bun run lint
+        run: bun --bun run lint
+
+      - name: Check lockfile in sync
+        if: steps.filter.outputs.code == 'true'
+        run: python3 scripts/sync-lockfile-version.py --check

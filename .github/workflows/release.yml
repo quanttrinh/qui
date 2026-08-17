@@ -38,8 +38,8 @@ jobs:
       - name: Create Release Pull Request or Publish
         uses: changesets/action@22ccf9aa43179fe9e27dc62e575971d28cce197c # v2.0.0
         with:
-          publish-script: bun run publish
-          version-script: bun run version
+          publish-script: bun --bun run publish
+          version-script: bun --bun run version
           create-github-releases: false
           push-git-tags: false
           github-token: ${{ secrets.GITHUB_TOKEN }}

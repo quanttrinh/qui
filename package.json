@@ -5,14 +5,14 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "bun run --filter ./packages/demo dev",
-    "build-preview": "bun run --filter ./packages/demo build",
-    "publish": "cd packages/solid-md3 && bun run build && bun publish",
-    "lint": "bun run --filter ./packages/solid-md3 lint",
-    "lint:fix": "bun run --filter ./packages/solid-md3 lint:fix",
-    "fmt": "bun run --filter ./packages/solid-md3 fmt",
-    "fmt:check": "bun run --filter ./packages/solid-md3 fmt:check",
-    "version": "changeset version"
+    "dev": "bun --bun run --filter ./packages/demo dev",
+    "build-preview": "bun --bun run --filter ./packages/demo build",
+    "publish": "cd packages/solid-md3 && bun --bun run build && bun publish",
+    "lint": "bun --bun run --filter ./packages/solid-md3 lint",
+    "lint:fix": "bun --bun run --filter ./packages/solid-md3 lint:fix",
+    "fmt": "bun --bun run --filter ./packages/solid-md3 fmt",
+    "fmt:check": "bun --bun run --filter ./packages/solid-md3 fmt:check",
+    "version": "changeset version && python3 scripts/sync-lockfile-version.py"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.0",

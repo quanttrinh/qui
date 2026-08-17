@@ -75,12 +75,11 @@ jobs:
           BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build demo
-        run: bun run --filter ./packages/demo build --base=/${{ github.event.repository.name }}/pr-${{ github.event.pull_request.number }}/
+        run: bun --bun run --filter ./packages/demo build --base=/${{ github.event.repository.name }}/pr-${{ github.event.pull_request.number }}/
 
       - name: Checkout gh-pages
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: ./.github/actions/checkout-gh-pages-branch
         with:
-          ref: gh-pages
           path: gh-pages
 
       - name: Setup git
@@ -146,9 +145,8 @@ jobs:
         uses: ./.github/actions/setup-git
 
       - name: Checkout gh-pages
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: ./.github/actions/checkout-gh-pages-branch
         with:
-          ref: gh-pages
           path: gh-pages
 
       - name: Remove preview
@@ -192,16 +190,15 @@ jobs:
           BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build demo
-        run: bun run --filter ./packages/demo build --base=/${{ github.event.repository.name }}/
-
-      - name: Checkout gh-pages
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: gh-pages
-          path: gh-pages
+        run: bun --bun run --filter ./packages/demo build --base=/${{ github.event.repository.name }}/
 
       - name: Setup git
         uses: ./.github/actions/setup-git
+
+      - name: Checkout gh-pages
+        uses: ./.github/actions/checkout-gh-pages-branch
+        with:
+          path: gh-pages
 
       - name: Deploy to gh-pages
         working-directory: gh-pages

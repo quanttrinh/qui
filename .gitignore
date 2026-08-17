@@ -3,3 +3,4 @@ dist/
 test-results/
 .opencode/
 .impeccable/
+__pycache__
