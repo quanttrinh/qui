@@ -1,7 +1,7 @@
 name: AI Generate PR Description
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened]
   issue_comment:
     types: [created]
@@ -14,7 +14,7 @@ jobs:
   generate:
     if: >-
       ${{
-        (github.event_name == 'pull_request'
+        (github.event_name == 'pull_request_target'
           && contains(github.event.pull_request.body, '/generate-pr-description')
           && contains(
             fromJson('["OWNER","MEMBER","COLLABORATOR"]'),
