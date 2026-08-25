@@ -52,7 +52,7 @@
     "fmt:check": "oxfmt --config oxfmt.config.ts --check"
   },
   "devDependencies": {
-    "@ark-ui/solid": "^5.38.1",
+    "@ark-ui/solid": "^5.38.2",
     "@iconify-solid/material-symbols": "^1.0.30",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/solid-pacer": "^0.22.0",
@@ -75,7 +75,7 @@
     "vite-plugin-solid": "^2.11.14"
   },
   "peerDependencies": {
-    "@ark-ui/solid": "^5.38.1",
+    "@ark-ui/solid": "^5.38.2",
     "@iconify-solid/material-symbols": "^1.0.30",
     "@tanstack/solid-pacer": "^0.22.0",
     "@tanstack/solid-virtual": "^3.13.36",
