@@ -11,7 +11,7 @@
         "@quanttrinh/solid-md3": "workspace:*"
     },
     "devDependencies": {
-        "@ark-ui/solid": "^5.38.2",
+        "@ark-ui/solid": "^5.39.0",
         "@iconify-solid/material-symbols": "^1.0.30",
         "@tailwindcss/vite": "^4.3.3",
         "@types/bun": "^1.4.0",
