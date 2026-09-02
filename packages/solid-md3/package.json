@@ -53,7 +53,7 @@
   },
   "devDependencies": {
     "@ark-ui/solid": "^5.39.0",
-    "@iconify-solid/material-symbols": "^1.0.30",
+    "@iconify-solid/material-symbols": "^1.0.31",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/solid-pacer": "^0.22.0",
     "@tanstack/solid-virtual": "^3.13.36",
@@ -76,7 +76,7 @@
   },
   "peerDependencies": {
     "@ark-ui/solid": "^5.39.0",
-    "@iconify-solid/material-symbols": "^1.0.30",
+    "@iconify-solid/material-symbols": "^1.0.31",
     "@tanstack/solid-pacer": "^0.22.0",
     "@tanstack/solid-virtual": "^3.13.36",
     "class-variance-authority": "^0.7.1",
