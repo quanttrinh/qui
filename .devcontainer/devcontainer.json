@@ -1,25 +1,47 @@
 {
-    "name": "Bun",
-    "build": {
-        "dockerfile": "Containerfile",
-        "context": ".."
-    },
-    "secrets": {
-        "DOCKERHUB_USER": {},
-        "DOCKERHUB_TOKEN": {}
-    },
-    "customizations": {
-        "vscode": {
-            "extensions": ["oven.bun-vscode", "bradlc.vscode-tailwindcss", "oxc.oxc-vscode"],
-            "settings": {
-                "editor.codeActionsOnSave": {
-                    "source.fixAll.oxc": "always"
-                },
-                "editor.defaultFormatter": "oxc.oxc-vscode",
-                "editor.formatOnSave": true
-            }
-        }
-    },
-    "initializeCommand": ["./.devcontainer/initialize.sh"],
-    "postStartCommand": "bun install --frozen-lockfile"
+  "name": "solid-md3",
+  "build": {
+    "dockerfile": "Containerfile",
+    "context": ".."
+  },
+  "secrets": {
+    "DOCKERHUB_USER": {},
+    "DOCKERHUB_TOKEN": {}
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": false,
+      "installOhMyZsh": true,
+      "installOhMyZshConfig": true,
+      "upgradePackages": false,
+      "username": "none"
+    }
+  },
+  "containerEnv": {
+    "SHELL": "/bin/zsh",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8"
+  },
+  "initializeCommand": [
+    ".devcontainer/initialize.sh"
+  ],
+  "postCreateCommand": "usermod --shell \"$(command -v zsh)\" \"$(id -un)\"",
+  "postStartCommand": "bun install --frozen-lockfile",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "oven.bun-vscode",
+        "bradlc.vscode-tailwindcss",
+        "oxc.oxc-vscode"
+      ],
+      "settings": {
+        "editor.codeActionsOnSave": {
+          "source.fixAll.oxc": "always"
+        },
+        "editor.defaultFormatter": "oxc.oxc-vscode",
+        "editor.formatOnSave": true
+      }
+    }
+  }
 }
