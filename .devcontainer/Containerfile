@@ -1,3 +1,6 @@
-FROM dhi.io/bun:1-alpine-dev
+FROM dhi.io/bun:1.4-debian-dev
 
-RUN apk --no-cache add git
+RUN /sbin/ldconfig \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends ncurses-base ncurses-bin ncurses-term \
+ && rm -rf /var/lib/apt/lists/*
