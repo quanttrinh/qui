@@ -2,14 +2,17 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+cd "${SCRIPT_DIR}/.."
+
 REGISTRY="dhi.io"
 TOKEN=""
 USER=""
 
-if [ -n "$CODESPACES" ]; then    
+if [ -n "${CODESPACES+x}" ]; then
     TOKEN="$DOCKERHUB_TOKEN"
     USER="$DOCKERHUB_USER"
-elif command -v doppler &> /dev/null; then    
+elif command -v doppler &> /dev/null; then
     TOKEN=$(doppler secrets get DOCKERHUB_TOKEN --plain)
     USER=$(doppler secrets get DOCKERHUB_USER --plain)
 fi
