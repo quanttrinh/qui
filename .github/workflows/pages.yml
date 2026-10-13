@@ -75,7 +75,7 @@ jobs:
           BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build demo
-        run: bun run --filter ./packages/demo build --base=/${{ github.event.repository.name }}/pr-${{ github.event.pull_request.number }}/
+        run: cd packages/demo && bun run build --base=/${{ github.event.repository.name }}/pr-${{ github.event.pull_request.number }}/
 
       - name: Checkout gh-pages
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -192,7 +192,7 @@ jobs:
           BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build demo
-        run: bun run --filter ./packages/demo build --base=/${{ github.event.repository.name }}/
+        run: cd packages/demo && bun run build --base=/${{ github.event.repository.name }}/
 
       - name: Checkout gh-pages
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
