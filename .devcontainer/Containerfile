@@ -1,6 +1,32 @@
 FROM dhi.io/bun:1.4-debian-dev
 
+# The DHI base image ships a `perl-base` that is newer than the one published
+# in the DHI apt repository. Prefer the repository version so that installing
+# `git` (which depends on `perl`/`perl-base`) resolves instead of failing with
+# "held broken packages". See https://docs.docker.com/dhi/
 RUN /sbin/ldconfig \
+ && printf 'Package: perl perl-base\nPin: origin dhi.io\nPin-Priority: 1001\n' \
+   > /etc/apt/preferences.d/99-dhi-perl \
  && apt-get update \
- && apt-get install -y --no-install-recommends ncurses-base ncurses-bin ncurses-term \
- && rm -rf /var/lib/apt/lists/*
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends --allow-downgrades \
+   ssh \
+   git \
+   zsh \
+   curl \
+   ca-certificates \
+   passwd \
+   ncurses-base \
+   ncurses-bin \
+   ncurses-term \
+   locales \
+ && sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen \
+ && locale-gen \
+ && rm -rf /var/lib/apt/lists/* \
+ && sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
+ && usermod --shell "$(command -v zsh)" "$(id -un)"
+
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+ENV SHELL=/bin/zsh
+
+CMD ["/bin/zsh"]
