@@ -1,6 +1,10 @@
 node_modules/
 dist/
+styled-system/
+.head/
 test-results/
 .opencode/
 .impeccable/
 __pycache__/
+.husky/_
+.npmrc
