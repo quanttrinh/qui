@@ -5,18 +5,21 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "cd packages/demo && bun run dev",
-    "build-preview": "cd packages/demo && bun run build",
-    "publish": "cd packages/solid-md3 && bun run build && bun publish",
-    "lint": "cd packages/solid-md3 && bun run lint",
-    "lint:fix": "cd packages/solid-md3 && bun run lint:fix",
-    "fmt": "cd packages/solid-md3 && bun run fmt",
-    "fmt:check": "cd packages/solid-md3 && bun run fmt:check",
+    "prepare": "husky",
+    "dev": "cd packages/demo && $npm_execpath run dev",
+    "dev:qui": "cd packages/solid-qui && $npm_execpath run build && cd ../demo && $npm_execpath run dev",
+    "build:qui": "cd packages/solid-qui && $npm_execpath run build",
+    "build-preview": "cd packages/demo && $npm_execpath run build",
+    "publish": "cd packages/solid-qui && $npm_execpath run build && $npm_execpath publish",
+    "lint": "cd packages/solid-qui && $npm_execpath run lint",
+    "lint:fix": "cd packages/solid-qui && $npm_execpath run lint:fix",
+    "fmt": "cd packages/solid-qui && $npm_execpath run fmt",
+    "fmt:check": "cd packages/solid-qui && $npm_execpath run fmt:check",
     "version": "changeset version"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.1",
+    "husky": "^9.1.7",
     "typescript": "^7.0.2"
-  },
-  "packageManager": "bun@1.4.3"
+  }
 }
