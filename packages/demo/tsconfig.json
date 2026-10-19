@@ -1,5 +1,6 @@
 {
-    "extends": "../solid-md3/tsconfig.json",
-    "include": ["."],
-    "exclude": ["dist", "node_modules"]
+  "extends": "../solid-qui/tsconfig.json",
+  "compilerOptions": {},
+  "include": ["."],
+  "exclude": ["dist", "node_modules"]
 }

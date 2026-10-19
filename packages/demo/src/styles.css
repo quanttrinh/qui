@@ -1,11 +1,1 @@
-@import "tailwindcss";
-@import "@quanttrinh/solid-md3/styles.css";
-
-html,
-body,
-#root {
-    height: 100%;
-    width: 100%;
-    margin: 0;
-    overflow: clip;
-}
+@layer reset, base, tokens, recipes, utilities;

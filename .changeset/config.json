@@ -6,6 +6,6 @@
     "linked": [],
     "access": "restricted",
     "baseBranch": "main",
-    "changedFilePatterns": ["packages/solid-md3/**/*.{ts,tsx,js,jsx,json,md}"],
-    "ignore": ["@quanttrinh/solid-md3-demo"]
+    "changedFilePatterns": ["packages/solid-qui/**/*.{ts,tsx,js,jsx,json,md}"],
+    "ignore": ["@quanttrinh/solid-qui-demo"]
 }

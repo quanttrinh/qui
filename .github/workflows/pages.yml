@@ -5,16 +5,16 @@ on:
     types: [opened, synchronize, reopened, closed]
     paths:
       - packages/demo/**
-      - packages/solid-md3/src/**
-      - packages/solid-md3/package.json
+      - packages/solid-qui/src/**
+      - packages/solid-qui/package.json
       - package.json
       - bun.lock
   push:
     branches: [main]
     paths:
       - packages/demo/**
-      - packages/solid-md3/src/**
-      - packages/solid-md3/package.json
+      - packages/solid-qui/src/**
+      - packages/solid-qui/package.json
       - package.json
       - bun.lock
 
@@ -64,6 +64,12 @@ jobs:
             gh pr comment "${PR}" --body "${BODY}"
           fi
 
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: latest
+          package-manager-cache: false
+
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
         with:
@@ -73,6 +79,9 @@ jobs:
         run: bun install --frozen-lockfile
         env:
           BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build library
+        run: bun run build:qui
 
       - name: Build demo
         run: cd packages/demo && bun run build --base=/${{ github.event.repository.name }}/pr-${{ github.event.pull_request.number }}/
@@ -181,6 +190,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: latest
+          package-manager-cache: false
+
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
         with:
@@ -190,6 +205,9 @@ jobs:
         run: bun install --frozen-lockfile
         env:
           BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build library
+        run: bun run build:qui
 
       - name: Build demo
         run: cd packages/demo && bun run build --base=/${{ github.event.repository.name }}/

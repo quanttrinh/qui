@@ -1,24 +1,25 @@
 {
-    "name": "@quanttrinh/solid-md3-demo",
-    "private": true,
-    "type": "module",
-    "scripts": {
-        "dev": "vite",
-        "build": "vite build",
-        "preview": "vite preview"
-    },
-    "dependencies": {
-        "@quanttrinh/solid-md3": "workspace:*"
-    },
-    "devDependencies": {
-        "@ark-ui/solid": "^5.39.1",
-        "@iconify-solid/material-symbols": "^1.0.31",
-        "@tailwindcss/vite": "^4.3.3",
-        "@types/bun": "^1.4.0",
-        "solid-js": "^1.9.15",
-        "tailwindcss": "^4.3.3",
-        "typescript": "^7.0.2",
-        "vite": "^8.3.0",
-        "vite-plugin-solid": "^2.11.14"
-    }
+  "name": "@quanttrinh/solid-qui-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun scripts/render-head.mjs && vite",
+    "build": "bun scripts/render-head.mjs && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@quanttrinh/solid-qui": "workspace:*"
+  },
+  "devDependencies": {
+    "@iconify-solid/material-symbols": "^1.0.31",
+    "@pandacss/vite": "^2.2.0",
+    "@types/bun": "^1.4.0",
+    "solid-js": "^1.9.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0",
+    "vite-plugin-solid": "^2.11.14",
+    "@pandacss/dev": "^2.2.0",
+    "@pandacss/preset-base": "^2.2.0",
+    "@pandacss/preset-panda": "^2.2.0"
+  }
 }

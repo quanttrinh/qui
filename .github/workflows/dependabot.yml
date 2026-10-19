@@ -129,7 +129,7 @@ jobs:
 
       - name: Determine changeset bump type
         id: bump
-        if: steps.validate.outputs.valid == 'true' && steps.metadata.outputs.directory == '/packages/solid-md3'
+        if: steps.validate.outputs.valid == 'true' && steps.metadata.outputs.directory == '/packages/solid-qui'
         run: |
           case "${{ steps.metadata.outputs.update-type }}" in
             "version-update:semver-patch") echo "type=patch" >> $GITHUB_OUTPUT ;;
@@ -139,9 +139,9 @@ jobs:
           esac
 
       - name: Generate changeset fragment
-        if: steps.validate.outputs.valid == 'true' && steps.metadata.outputs.directory == '/packages/solid-md3'
+        if: steps.validate.outputs.valid == 'true' && steps.metadata.outputs.directory == '/packages/solid-qui'
         run: |
-          PACKAGE_NAME=$(jq -r .name packages/solid-md3/package.json)
+          PACKAGE_NAME=$(jq -r .name packages/solid-qui/package.json)
           BRANCH_SAFE=$(echo "${{ github.head_ref }}" | tr '/' '-')
           FRAGMENT_PATH=".changeset/${BRANCH_SAFE}.md"
 
@@ -158,11 +158,11 @@ jobs:
           EOF
 
       - name: Setup git
-        if: steps.validate.outputs.valid == 'true' && steps.metadata.outputs.directory == '/packages/solid-md3'
+        if: steps.validate.outputs.valid == 'true' && steps.metadata.outputs.directory == '/packages/solid-qui'
         uses: ./.github/actions/setup-git
 
       - name: Commit and push if changed
-        if: steps.validate.outputs.valid == 'true' && steps.metadata.outputs.directory == '/packages/solid-md3'
+        if: steps.validate.outputs.valid == 'true' && steps.metadata.outputs.directory == '/packages/solid-qui'
         run: |
           git add .changeset/
           if git diff --cached --exit-code > /dev/null; then
