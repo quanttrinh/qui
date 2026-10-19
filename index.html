@@ -1,13 +1,31 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>solid-md3 Demo</title>
-      <script type="module" crossorigin src="/solid-qui/assets/index-D63Y6Sj1.js"></script>
-      <link rel="stylesheet" crossorigin href="/solid-qui/assets/index-BZMia6me.css">
-    </head>
-    <body>
-        <div id="root"></div>
-    </body>
+  <head><script>(function () {
+  try {
+    var stored = JSON.parse(localStorage.getItem("solid-qui-demo-theme") || "null");
+    var dark =
+      stored && typeof stored.dark === "boolean"
+        ? stored.dark
+        : window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var root = document.documentElement;
+    root.classList.toggle("dark", !!dark);
+    root.style.colorScheme = dark ? "dark" : "light";
+    if (stored && typeof stored.variables === "object" && stored.variables) {
+      for (var key in stored.variables) {
+        root.style.setProperty(key, stored.variables[key]);
+      }
+    }
+  } catch (error) {
+    /* storage unavailable */
+  }
+})();</script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>solid-qui demo</title>
+    <script type="module" crossorigin src="/solid-qui/assets/index-QokLyTI1.js"></script>
+    <link rel="stylesheet" crossorigin href="/solid-qui/assets/index-DCmrSZF_.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>
