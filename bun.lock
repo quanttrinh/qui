@@ -34,7 +34,7 @@
         "@ark-ui/solid": "^5.39.1",
         "@iconify-solid/material-symbols": "^1.0.31",
         "@tailwindcss/vite": "^4.3.3",
-        "@tanstack/solid-pacer": "^0.22.0",
+        "@tanstack/solid-pacer": "^0.24.0",
         "@tanstack/solid-virtual": "^3.13.40",
         "@typescript/typescript6": "^6.0.2",
         "class-variance-authority": "^0.7.1",
@@ -56,7 +56,7 @@
       "peerDependencies": {
         "@ark-ui/solid": "^5.39.1",
         "@iconify-solid/material-symbols": "^1.0.31",
-        "@tanstack/solid-pacer": "^0.22.0",
+        "@tanstack/solid-pacer": "^0.24.0",
         "@tanstack/solid-virtual": "^3.13.40",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
@@ -498,9 +498,9 @@
 
     "@tanstack/devtools-event-client": ["@tanstack/devtools-event-client@0.5.0", "", { "bin": { "intent": "./bin/intent.js" } }, "sha512-H+OH3zC6Vhu/K0NaVfQKknEKawc/+2PT+D3SB3Ox0V8SiMlTo0abbmH2rH0721R2aNYbjdMXA1oENOd8E2UVoA=="],
 
-    "@tanstack/pacer": ["@tanstack/pacer@0.22.0", "", { "dependencies": { "@tanstack/devtools-event-client": "^0.5.0", "@tanstack/store": "^0.11.1" } }, "sha512-Zq23KOn30tFiA6ZYWihs5x++ttHkOIcnIIjRrJq05tGrYx9+iHsmVaj8jb7UJVemEI+JRWGzJ9C+50YV4nRz0w=="],
+    "@tanstack/pacer": ["@tanstack/pacer@0.23.1", "", { "dependencies": { "@tanstack/devtools-event-client": "^0.5.0", "@tanstack/store": "^0.11.2" } }, "sha512-ROZj19aPPGYebeRPhFZNRlqNaR2e4vkcLbgiXfbi5uJu8WiW/etsYmkcAcoSQRGOwGZbbioWRX7xssewDRVRhw=="],
 
-    "@tanstack/solid-pacer": ["@tanstack/solid-pacer@0.22.0", "", { "dependencies": { "@tanstack/pacer": "0.22.0", "@tanstack/solid-store": "^0.11.1" }, "peerDependencies": { "solid-js": ">=1.9.5" } }, "sha512-ksaEPdz67DJHkyHIbQxJPAqDxPhT+eU29J0Bf73Ehh26RYo+GaQvwxn95C4nEQRJoR26hEid+Tt8/yoCjqtqOg=="],
+    "@tanstack/solid-pacer": ["@tanstack/solid-pacer@0.24.0", "", { "dependencies": { "@tanstack/pacer": "0.23.1", "@tanstack/solid-store": "^0.11.2" }, "peerDependencies": { "solid-js": ">=1.9.5" } }, "sha512-1N7pBIpYAIKVw2l0/ltimCydVzvXEUnawRV/zUN09EriwpGhNIHTIL7pY2q3TIOAIF3jdSlHyPLlJQNhTtlVTQ=="],
 
     "@tanstack/solid-store": ["@tanstack/solid-store@0.11.2", "", { "dependencies": { "@tanstack/store": "0.11.2" }, "peerDependencies": { "solid-js": "^1.6.0" } }, "sha512-lscar3xeRKfs/RQBcZjR9NG55sfMP5Pb8S/URohUqcnSB8Yu19JLE/hPjfSd7pKmCpjYq1ZbjqtpIc5bDE1lAQ=="],
 
