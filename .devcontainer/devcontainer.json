@@ -1,0 +1,30 @@
+{
+  "name": "qui",
+  "build": {
+    "dockerfile": "Containerfile",
+    "context": ".."
+  },
+  "secrets": {
+    "DOCKERHUB_USER": {},
+    "DOCKERHUB_TOKEN": {}
+  },
+  "initializeCommand": [
+    ".devcontainer/initialize.sh"
+  ],
+  "postStartCommand": "bun install --frozen-lockfile",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "oven.bun-vscode",
+        "oxc.oxc-vscode"
+      ],
+      "settings": {
+        "editor.codeActionsOnSave": {
+          "source.fixAll.oxc": "always"
+        },
+        "editor.defaultFormatter": "oxc.oxc-vscode",
+        "editor.formatOnSave": true
+      }
+    }
+  }
+}

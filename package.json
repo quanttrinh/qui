@@ -1,0 +1,144 @@
+{
+  "name": "@quanttrinh/qui",
+  "version": "0.0.1",
+  "description": "Material Design 3 web components built with Stencil",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "styled-system",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "main": "./dist/shared/index.js",
+  "module": "./dist/shared/index.js",
+  "types": "./dist/types/index.d.ts",
+  "imports": {
+    "#styled-system/css": "./styled-system/css/index.js",
+    "#qui-style-url": "./styled-system/style-urls/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/shared/index.js",
+      "default": "./dist/shared/index.js"
+    },
+    "./split": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/split/index.js",
+      "default": "./dist/split/index.js"
+    },
+    "./shared/*": {
+      "types": "./dist/shared/*.d.ts",
+      "import": "./dist/shared/*.js",
+      "default": "./dist/shared/*.js"
+    },
+    "./split/*": {
+      "types": "./dist/split/*.d.ts",
+      "import": "./dist/split/*.js",
+      "default": "./dist/split/*.js"
+    },
+    "./theme.css": "./styled-system/theme.css",
+    "./styles.css": "./styled-system/styles.css",
+    "./base.css": "./styled-system/base.css",
+    "./split.css": "./styled-system/base.css",
+    "./split/components/*.css": "./styled-system/split/components/*.css",
+    "./package.json": "./package.json",
+    "./panda/*": "./dist/panda/*",
+    "./css": {
+      "types": "./styled-system/css/index.d.ts",
+      "default": "./styled-system/css/index.js"
+    },
+    "./css/*": {
+      "types": "./styled-system/css/*.d.ts",
+      "default": "./styled-system/css/*.js"
+    },
+    "./patterns": {
+      "types": "./styled-system/patterns/index.d.ts",
+      "default": "./styled-system/patterns/index.js"
+    },
+    "./patterns/*": {
+      "types": "./styled-system/patterns/*.d.ts",
+      "default": "./styled-system/patterns/*.js"
+    },
+    "./jsx": {
+      "types": "./styled-system/jsx/index.d.ts",
+      "default": "./styled-system/jsx/index.js"
+    },
+    "./jsx/*": {
+      "types": "./styled-system/jsx/*.d.ts",
+      "default": "./styled-system/jsx/*.js"
+    },
+    "./tokens": {
+      "types": "./styled-system/tokens/index.d.ts",
+      "default": "./styled-system/tokens/index.js"
+    },
+    "./helpers": {
+      "types": "./styled-system/helpers.d.ts",
+      "default": "./styled-system/helpers.js"
+    },
+    "./types": {
+      "types": "./styled-system/types/index.d.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "dev": "stencil build --dev --watch --serve",
+    "dev:split": "MD3_STYLE_STRATEGY=split stencil build --dev --watch --serve",
+    "build": "stencil build",
+    "build:split": "MD3_STYLE_STRATEGY=split stencil build",
+    "codegen": "panda codegen",
+    "lint": "oxlint --config oxlint.config.ts src",
+    "lint:fix": "oxlint --config oxlint.config.ts --fix src",
+    "fmt": "oxfmt --config oxfmt.config.ts",
+    "fmt:check": "oxfmt --config oxfmt.config.ts --check",
+    "version": "changeset version",
+    "build:all": "bun run build && bun run build:split && bun run build:lib",
+    "prepublishOnly": "bun run build:all",
+    "build:lib": "panda lib --files './**/*.{js,mjs}'"
+  },
+  "dependencies": {
+    "@material/material-color-utilities": "^0.4.0",
+    "@stencil/core": "^4.45.2",
+    "@zag-js/accordion": "^1.46.0",
+    "@zag-js/checkbox": "^1.46.0",
+    "@zag-js/collection": "^1.46.0",
+    "@zag-js/combobox": "^1.46.0",
+    "@zag-js/core": "^1.46.0",
+    "@zag-js/radio-group": "^1.46.0",
+    "@zag-js/select": "^1.46.0",
+    "@zag-js/switch": "^1.46.0",
+    "@zag-js/tabs": "^1.46.0",
+    "@zag-js/types": "^1.46.0",
+    "@zag-js/vanilla": "^1.46.0"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^3.0.3",
+    "@pandacss/dev": "^2.4.0",
+    "@pandacss/preset-base": "^2.4.0",
+    "@pandacss/preset-panda": "^2.4.0",
+    "@pandacss/rollup": "2.4.0",
+    "@stencil/eslint-plugin": "^1.4.0",
+    "@types/node": "^26.6.5",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "husky": "^9.1.7",
+    "oxfmt": "^0.74.0",
+    "oxlint": "^1.89.0",
+    "oxlint-tsgolint": "^7.0.2005",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
+  },
+  "peerDependencies": {
+    "@pandacss/dev": "^2.4.0"
+  },
+  "peerDependenciesMeta": {
+    "@pandacss/dev": {
+      "optional": true
+    }
+  }
+}

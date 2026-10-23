@@ -1,0 +1,322 @@
+name: Pages
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    paths:
+      - 'src/**'
+      - '*.ts'
+      - 'package.json'
+      - 'bun.lock'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - '*.ts'
+      - 'package.json'
+      - 'bun.lock'
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  pr-build:
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Clear trusted checkout path
+        run: rm -rf .trusted
+
+      - name: Checkout trusted action definitions
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: .trusted
+          persist-credentials: false
+
+      - name: Restore trusted action definitions
+        run: |
+          rm -rf .github
+          cp -r .trusted/.github .github
+          if [ -d .trusted/scripts ]; then
+            rm -rf scripts
+            cp -r .trusted/scripts scripts
+          fi
+          rm -rf .trusted
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: latest
+          package-manager-cache: false
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build demo
+        run: bun run build
+
+      - name: Validate demo output
+        run: |
+          set -euo pipefail
+          [ -d www ] && [ ! -L www ] || {
+            echo "::error::Build output www is missing or is a symlink" >&2
+            exit 1
+          }
+          if find www -mindepth 1 ! -type d ! -type f -print -quit | grep -q .; then
+            echo "::error::Build output contains symlinks or special files" >&2
+            find www -mindepth 1 ! -type d ! -type f -print >&2
+            exit 1
+          fi
+          find www -name .git -prune -exec rm -rf {} +
+          find www -name .gitmodules -delete
+
+      - name: Upload demo
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: demo-build
+          path: www
+          if-no-files-found: error
+          retention-days: 1
+
+  pr-deploy:
+    needs: pr-build
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    permissions:
+      contents: write
+      actions: write
+      pull-requests: write
+      issues: write
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Notify deploying
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          BODY="⚡ Preview deploying...
+          <!-- preview-marker -->"
+
+          COMMENT_IDS=$(gh api --paginate "repos/${REPO}/issues/${PR}/comments" | jq -s '[.[].[] | select(.body | contains("<!-- preview-marker -->")) | .id]')
+
+          if [ "$(jq 'length' <<< "$COMMENT_IDS")" -gt 0 ]; then
+            COMMENT_ID=$(jq -r 'last' <<< "$COMMENT_IDS")
+            gh api "repos/${REPO}/issues/comments/${COMMENT_ID}" -X PATCH -f body="${BODY}"
+
+            jq -r '.[0:-1][]' <<< "$COMMENT_IDS" | while read -r OLD_COMMENT_ID; do
+              [ -n "$OLD_COMMENT_ID" ] || continue
+              gh api -X DELETE "repos/${REPO}/issues/comments/${OLD_COMMENT_ID}" || true
+            done
+          else
+            gh pr comment "${PR}" --body "${BODY}"
+          fi
+
+      - name: Checkout trusted action definitions
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Download demo
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: demo-build
+          path: preview-build
+
+      - name: Verify demo
+        run: |
+          set -euo pipefail
+          [ -d preview-build ] && [ ! -L preview-build ] || {
+            echo "::error::Downloaded demo is missing or is a symlink" >&2
+            exit 1
+          }
+          if find preview-build -mindepth 1 ! -type d ! -type f -print -quit | grep -q .; then
+            echo "::error::Downloaded demo contains symlinks or special files" >&2
+            find preview-build -mindepth 1 ! -type d ! -type f -print >&2
+            exit 1
+          fi
+
+      - name: Checkout gh-pages
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Setup git
+        uses: ./.github/actions/setup-git-bot
+
+      - name: Deploy to gh-pages
+        working-directory: gh-pages
+        run: |
+          set -e
+          [ -d "pr-${{ github.event.pull_request.number }}" ] && git rm -rf "pr-${{ github.event.pull_request.number }}"
+          mkdir -p "pr-${{ github.event.pull_request.number }}"
+          cp -r ../preview-build/* "pr-${{ github.event.pull_request.number }}/"
+          git add -- "pr-${{ github.event.pull_request.number }}"
+          git diff --staged --quiet || git commit -m "Deploy preview for PR #${{ github.event.pull_request.number }}"
+          git push
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: gh-pages
+
+      - name: Deploy to Pages
+        id: deploy
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+
+      - name: Update preview URL
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/pr-${PR}/"
+          BODY="🚀 Preview deployed at ${URL}
+          <!-- preview-marker -->"
+
+          COMMENT_IDS=$(gh api --paginate "repos/${REPO}/issues/${PR}/comments" | jq -s '[.[].[] | select(.body | contains("<!-- preview-marker -->")) | .id]')
+
+          if [ "$(jq 'length' <<< "$COMMENT_IDS")" -eq 0 ]; then
+            echo "::error::No preview marker comment found to update" >&2
+            exit 1
+          fi
+
+          COMMENT_ID=$(jq -r 'last' <<< "$COMMENT_IDS")
+          gh api "repos/${REPO}/issues/comments/${COMMENT_ID}" -X PATCH -f body="${BODY}"
+
+          jq -r '.[0:-1][]' <<< "$COMMENT_IDS" | while read -r OLD_COMMENT_ID; do
+            [ -n "$OLD_COMMENT_ID" ] || continue
+            gh api -X DELETE "repos/${REPO}/issues/comments/${OLD_COMMENT_ID}" || true
+          done
+
+  pr-cleanup:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-slim
+    permissions:
+      contents: write
+      actions: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup git
+        uses: ./.github/actions/setup-git-bot
+
+      - name: Checkout gh-pages
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Remove preview
+        working-directory: gh-pages
+        run: |
+          set -e
+          if [ -d "pr-${{ github.event.pull_request.number }}" ]; then
+            git rm -rf "pr-${{ github.event.pull_request.number }}"
+            git commit -m "Remove preview for PR #${{ github.event.pull_request.number }}" || true
+            git push
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: gh-pages
+
+      - name: Deploy to Pages
+        id: deploy
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+
+  main:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-slim
+    permissions:
+      contents: write
+      actions: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: latest
+          package-manager-cache: false
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        env:
+          BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build demo
+        run: bun run build
+
+      - name: Checkout gh-pages
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Setup git
+        uses: ./.github/actions/setup-git-bot
+
+      - name: Deploy to gh-pages
+        working-directory: gh-pages
+        run: |
+          set -e
+
+          find . -maxdepth 1 -type f -delete
+          find . -maxdepth 1 -type d ! -name .git ! -name 'pr-*' -exec rm -rf {} + 2>/dev/null || true
+
+          cp -r ../www/* .
+          git add -u -- . ':!pr-*'
+          git add -- . ':!pr-*'
+          git diff --staged --quiet || git commit -m "Deploy main"
+          git push
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: gh-pages
+
+      - name: Deploy to Pages
+        id: deploy
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

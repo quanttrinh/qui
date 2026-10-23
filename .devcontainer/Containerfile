@@ -1,0 +1,37 @@
+# syntax=docker/dockerfile:1
+
+FROM scratch AS build-scripts
+COPY scripts/install-bun.sh /scripts/install-bun.sh
+COPY scripts/lib/download.sh /scripts/lib/download.sh
+COPY scripts/lib/env.sh /scripts/lib/env.sh
+COPY scripts/tools/bun.env /scripts/tools/bun.env
+
+
+FROM dhi.io/debian-base:trixie-dev
+
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    SHELL=/bin/zsh
+
+RUN /sbin/ldconfig \
+ && apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+   ssh \
+   git \
+   zsh \
+   curl \
+   unzip \
+   ca-certificates \
+   passwd \
+   ncurses-base \
+   ncurses-bin \
+   ncurses-term \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
+ && usermod --shell "$(command -v zsh)" "$(id -un)"
+
+RUN --mount=type=bind,from=build-scripts,source=/scripts,target=/tmp/build-scripts \
+    bash /tmp/build-scripts/install-bun.sh
+
+CMD ["/bin/zsh"]
