@@ -1,0 +1,75 @@
+<!doctype html><html lang="en"><head> <meta charset="utf-8"> <meta name="viewport" content="width=device-width, initial-scale=1"> <title>qui web components</title> <link rel="stylesheet" href="theme.css"> <link rel="stylesheet" href="styles.css"> <script>
+            // The Stencil `www` target rewrites <link rel="stylesheet"> tags out
+            // of the built index. Re-add the generated Panda sheets so the demo
+            // works in both dev and production builds.
+            for (const href of ["theme.css", "styles.css"]) {
+                if (!document.querySelector(`link[href="${href}"]`)) {
+                    const link = document.createElement("link");
+                    link.rel = "stylesheet";
+                    link.href = href;
+                    document.head.append(link);
+                }
+            }
+        </script> <script type="module" src="build/qui.esm.js"></script> <script nomodule="" src="build/qui.js"></script> <style>body {
+                margin: 0;
+                padding: 40px;
+                min-height: 100vh;
+                box-sizing: border-box;
+            }
+            main {
+                display: flex;
+                flex-direction: column;
+                gap: 32px;
+                max-width: 960px;
+            }
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 12px;
+            }
+            .row-start {
+                align-items: flex-start;
+                gap: 32px;
+            }
+            :root {
+                color-scheme: light;
+            }
+            :root.dark {
+                color-scheme: dark;
+            }
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                gap: 16px;
+            }
+            h1,
+            h2 {
+                margin: 0;
+            }
+            h2 {
+                font-size: 14px;
+                font-weight: 500;
+                letter-spacing: 0.5px;
+                text-transform: uppercase;
+            }
+            .toolbar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .theme-toggle {
+                border: 1px solid var(--md-sys-color-outline);
+                background: var(--md-sys-color-surface-container);
+                color: var(--md-sys-color-on-surface);
+                border-radius: 9999px;
+                padding: 8px 16px;
+                cursor: pointer;
+                font: inherit;
+            }</style> </head> <body> <main> <div class="toolbar"> <h1>qui</h1> <button class="theme-toggle" id="theme-toggle" type="button">Toggle dark</button> </div> <section> <h2>Button variants</h2> <div class="row"> <qui-button variant="filled">Filled</qui-button> <qui-button variant="tonal">Tonal</qui-button> <qui-button variant="elevated">Elevated</qui-button> <qui-button variant="outlined">Outlined</qui-button> <qui-button variant="text">Text</qui-button> </div> </section> <section> <h2>Button sizes and states</h2> <div class="row"> <qui-button size="sm">Small</qui-button> <qui-button size="md">Medium</qui-button> <qui-button size="lg">Large</qui-button> <qui-button disabled="">Disabled</qui-button> <qui-button href="https://example.com" target="_blank" rel="noreferrer"> Anchor </qui-button> </div> </section> <section> <h2>Checkbox</h2> <div class="row"> <qui-checkbox>Unchecked</qui-checkbox> <qui-checkbox checked="">Checked</qui-checkbox> <qui-checkbox indeterminate="">Indeterminate</qui-checkbox> <qui-checkbox disabled="">Disabled</qui-checkbox> <qui-checkbox checked="" disabled="">Disabled checked</qui-checkbox> </div> <div class="row"> <qui-checkbox id="cb-controlled">Controlled</qui-checkbox> <qui-button variant="text" id="cb-toggle">Toggle controlled</qui-button> </div> </section> <section> <h2>Switch</h2> <div class="row"> <qui-switch>Off</qui-switch> <qui-switch checked="">On</qui-switch> <qui-switch disabled="">Disabled</qui-switch> <qui-switch checked="" disabled="">Disabled on</qui-switch> </div> </section> <section> <h2>Radio group</h2> <div class="row row-start"> <qui-radio-group name="plan" value="pro"> <qui-radio value="free">Free</qui-radio> <qui-radio value="pro">Pro</qui-radio> <qui-radio value="team" disabled="">Team</qui-radio> </qui-radio-group> <qui-radio-group name="size" orientation="horizontal" default-value="md"> <qui-radio value="sm">Small</qui-radio> <qui-radio value="md">Medium</qui-radio> <qui-radio value="lg">Large</qui-radio> </qui-radio-group> </div> </section> <section> <h2>Field and input</h2> <div class="grid"> <qui-field id="field-email" required=""> <qui-field-label> Email <qui-field-required-indicator></qui-field-required-indicator> </qui-field-label> <qui-input input-type="email" placeholder="you@example.com"> <span slot="prefix">@</span> </qui-input> <qui-field-helper-text>We never share it.</qui-field-helper-text> </qui-field> <qui-field id="field-error" invalid="" required=""> <qui-field-label>Username</qui-field-label> <qui-input value="a" placeholder="Pick a username"></qui-input> <qui-field-error-text>Use at least three characters.</qui-field-error-text> </qui-field> <qui-field id="field-mask"> <qui-field-label>Card number</qui-field-label> <qui-input mask-pattern="#### #### #### ####" placeholder="0000 0000 0000 0000"></qui-input> </qui-field> <qui-field id="field-number"> <qui-field-label>Quantity</qui-field-label> <qui-input input-type="number" value="3" min="0" max="10" step="1"></qui-input> </qui-field> <qui-field id="field-password"> <qui-field-label>Password</qui-field-label> <qui-input input-type="password" value="secret"></qui-input> </qui-field> <qui-field id="field-plan"> <qui-field-label>Plan</qui-field-label> <qui-radio-group name="plan-field" value="pro"> <qui-radio value="free">Free</qui-radio> <qui-radio value="pro">Pro</qui-radio> </qui-radio-group> <qui-field-helper-text>Change any time.</qui-field-helper-text> </qui-field> <qui-field id="field-consent" required=""> <qui-field-label>Consent</qui-field-label> <qui-checkbox>Email me about updates</qui-checkbox> <qui-field-helper-text>You can unsubscribe at any time.</qui-field-helper-text> </qui-field> <qui-field id="field-profile"> <qui-field-label>Public profile</qui-field-label> <qui-switch>Visible to other members</qui-switch> <qui-field-helper-text>Your name and avatar stay hidden otherwise.</qui-field-helper-text> </qui-field> </div> </section> <section> <h2>Accordion</h2> <qui-accordion multiple=""> <qui-accordion-item value="shipping"> <qui-accordion-trigger>Shipping</qui-accordion-trigger> <qui-accordion-content> Orders ship within two business days. </qui-accordion-content> </qui-accordion-item> <qui-accordion-item value="returns"> <qui-accordion-trigger>Returns</qui-accordion-trigger> <qui-accordion-content> Returns are accepted within 30 days. </qui-accordion-content> </qui-accordion-item> <qui-accordion-item value="support" disabled=""> <qui-accordion-trigger>Support (disabled)</qui-accordion-trigger> <qui-accordion-content>Unavailable.</qui-accordion-content> </qui-accordion-item> </qui-accordion> </section> <section> <h2>Tabs</h2> <qui-tabs default-value="overview"> <qui-tab-list> <qui-tab-trigger value="overview">Overview</qui-tab-trigger> <qui-tab-trigger value="details">Details</qui-tab-trigger> <qui-tab-trigger value="disabled" disabled="">Disabled</qui-tab-trigger> </qui-tab-list> <qui-tab-panel value="overview">The overview panel.</qui-tab-panel> <qui-tab-panel value="details">The details panel.</qui-tab-panel> </qui-tabs> </section> <section> <h2>Select and combobox</h2> <div class="grid"> <qui-field id="field-select"> <qui-field-label>Fruit</qui-field-label> <qui-select placeholder="Pick a fruit" name="fruit"> <qui-option value="apple">Apple</qui-option> <qui-option value="banana">Banana</qui-option> <qui-option value="cherry">Cherry</qui-option> <qui-option value="dragonfruit" disabled="">Dragon fruit</qui-option> </qui-select> <qui-field-helper-text>Select one option.</qui-field-helper-text> </qui-field> <qui-field id="field-combobox"> <qui-field-label>Search fruit</qui-field-label> <qui-combobox placeholder="Type to filter"> <qui-option value="apple">Apple</qui-option> <qui-option value="banana">Banana</qui-option> <qui-option value="cherry">Cherry</qui-option> <qui-option value="dragonfruit">Dragon fruit</qui-option> </qui-combobox> </qui-field> </div> </section> <section> <h2>Dialog</h2> <qui-dialog> <qui-dialog-trigger>Open dialog</qui-dialog-trigger> <qui-dialog-content> <qui-dialog-title>Delete item?</qui-dialog-title> <qui-dialog-description> This action cannot be undone. </qui-dialog-description> <qui-dialog-actions> <qui-dialog-close>Cancel</qui-dialog-close> </qui-dialog-actions> </qui-dialog-content> </qui-dialog> </section> <section> <h2>Cards</h2> <div class="grid"> <qui-card variant="elevated"> <span slot="title">Elevated card</span> <span slot="description">A level-1 surface with a subtle shadow.</span> <p> Cards are a simple container port: named slots for title, description
+                            and actions. </p> <div slot="actions"> <qui-button variant="text">Action</qui-button> </div> </qui-card> <qui-card variant="filled"> <span slot="title">Filled card</span> <span slot="description">Uses the highest surface container.</span> <p>The default slot carries arbitrary content.</p> </qui-card> <qui-card variant="outlined"> <span slot="title">Outlined card</span> <p>No actions or description here.</p> </qui-card> </div> </section> </main> <script>
+            const root = document.documentElement;
+            document.getElementById("theme-toggle").addEventListener("click", () => {
+                root.classList.toggle("dark");
+            });
+        </script> </body></html>
