@@ -62,7 +62,7 @@ url="https://registry.npmjs.org/${OPENCODE_PACKAGE}/-/${package_base}-${OPENCODE
 
 download_and_verify "$url" "$OPENCODE_INTEGRITY" "$archive"
 
-install -d "$dest_dir"
+mkdir -p "$dest_dir"
 tar -xzf "$archive" -O package/bin/opencode | install -m 755 /dev/stdin "${dest_dir}/opencode"
 
 actual="$("${dest_dir}/opencode" --version | head -n1)"
