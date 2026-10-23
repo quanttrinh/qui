@@ -13,12 +13,13 @@ env_file="$script_dir/tools/bun.env"
 . "$script_dir/lib/env.sh"
 
 env_file_validate "$env_file"
-env_file_require "$env_file" BUN_VERSION BUN_SHA256 BUN_REPO BUN_ASSET
+env_file_require "$env_file" BUN_TAG BUN_SHA256 BUN_REPO BUN_ASSET
 
-BUN_VERSION="$(env_file_get "$env_file" BUN_VERSION)"
+BUN_TAG="$(env_file_get "$env_file" BUN_TAG)"
 BUN_SHA256="$(env_file_get "$env_file" BUN_SHA256)"
 BUN_REPO="$(env_file_get "$env_file" BUN_REPO)"
 BUN_ASSET="$(env_file_get "$env_file" BUN_ASSET)"
+bun_version="${BUN_TAG#bun-v}"
 
 dest_dir="/usr/local/bin"
 
@@ -62,7 +63,7 @@ tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
 archive="$tmp_dir/bun.zip"
-url="https://github.com/${BUN_REPO}/releases/download/bun-v${BUN_VERSION}/${BUN_ASSET}"
+url="https://github.com/${BUN_REPO}/releases/download/${BUN_TAG}/${BUN_ASSET}"
 binary_dir="${BUN_ASSET%.zip}"
 
 download_and_verify "$url" "$BUN_SHA256" "$archive"
@@ -72,8 +73,8 @@ unzip -p "$archive" "${binary_dir}/bun" | install -m 755 /dev/stdin "${dest_dir}
 
 actual="$("${dest_dir}/bun" --version | head -n1)"
 actual="${actual%%+*}"
-if [ "$actual" != "$BUN_VERSION" ]; then
-  echo "install-bun.sh: version mismatch: got '$actual', expected '$BUN_VERSION'" >&2
+if [ "$actual" != "$bun_version" ]; then
+  echo "install-bun.sh: version mismatch: got '$actual', expected '$bun_version'" >&2
   exit 1
 fi
 
