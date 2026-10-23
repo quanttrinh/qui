@@ -1,0 +1,234 @@
+name: Renovate Management
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    paths:
+      - package.json
+      - bun.lock
+      - .github/**
+      - scripts/tools/*.env
+
+jobs:
+  manage:
+    if: github.actor == 'renovate[bot]'
+    runs-on: ubuntu-slim
+    permissions:
+      contents: write
+      pull-requests: read
+    outputs:
+      changeset_present: ${{ steps.check.outputs.changeset_present }}
+      valid: ${{ steps.validate.outputs.valid }}
+      auto_approve: ${{ steps.bump.outputs.auto_approve }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: false
+
+      - name: Filter changed paths
+        id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          list-files: json
+          predicate-quantifier: some-with-excludes
+          filters: |
+            allowed:
+              - package.json
+              - bun.lock
+              - .github/workflows/*.yml
+              - .github/workflows/*.yaml
+              - .github/actions/*/action.yml
+              - scripts/tools/*.env
+            invalid:
+              - '**'
+              - '!package.json'
+              - '!bun.lock'
+              - '!.github/workflows/*.yml'
+              - '!.github/workflows/*.yaml'
+              - '!.github/actions/*/action.yml'
+              - '!scripts/tools/*.env'
+
+      - name: Setup Bun
+        if: contains(steps.filter.outputs.allowed_files, 'bun.lock')
+        uses: ./.github/actions/setup-bun
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate PR changes
+        id: validate
+        env:
+          FILES: ${{ steps.filter.outputs.allowed_files }}
+          INVALID: ${{ steps.filter.outputs.invalid }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$INVALID" = "true" ]; then
+            echo "::notice::Skipping — change is outside allowlist"
+            echo "valid=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch --depth=1 origin "$BASE"
+
+          for f in $(echo "$FILES" | jq -r '.[]'); do
+            case "$f" in
+              package.json)
+                BASE_JSON="$(git show "$BASE:$f" 2>/dev/null || echo '')"
+                [ -n "$BASE_JSON" ] || { echo "::error::$f does not exist in base"; exit 1; }
+                python3 - "$f" "$BASE_JSON" << 'PYEOF'
+          import json, sys
+          file_path, base_json = sys.argv[1], sys.argv[2]
+          try:
+              with open(file_path) as fh:
+                  head_manifest = json.load(fh)
+              base_manifest = json.loads(base_json)
+          except json.JSONDecodeError as e:
+              print(f"::error::{file_path}: invalid JSON: {e}", flush=True)
+              sys.exit(1)
+
+          for section in ("dependencies", "devDependencies", "resolutions", "peerDependencies"):
+              if set(base_manifest.get(section, {})) != set(head_manifest.get(section, {})):
+                  print(f"::error::{file_path}: dependency names changed in {section}: only versions may change", flush=True)
+                  sys.exit(1)
+
+          base_rest = {k: v for k, v in base_manifest.items() if k not in ("dependencies", "devDependencies", "resolutions", "peerDependencies")}
+          head_rest = {k: v for k, v in head_manifest.items() if k not in ("dependencies", "devDependencies", "resolutions", "peerDependencies")}
+          if base_rest != head_rest:
+              print(f"::error::{file_path}: changes outside dependency sections", flush=True)
+              sys.exit(1)
+          PYEOF
+                ;;
+              bun.lock)
+                bun install --frozen-lockfile --lockfile-only
+                ;;
+              .github/workflows/*.yml | .github/workflows/*.yaml \
+              | .github/actions/*/action.yml)
+                python3 -c 'import yaml,sys; yaml.safe_load(open(sys.argv[1]))' "$f" >/dev/null 2>&1 \
+                  || { echo "::error::$f is not valid YAML"; exit 1; }
+                ;;
+              scripts/tools/*.env)
+                case "$f" in
+                  scripts/tools/bun.env)
+                    bash scripts/install-bun.sh --help >/dev/null
+                    ;;
+                  scripts/tools/opencode.env)
+                    bash scripts/install-opencode.sh --help >/dev/null
+                    ;;
+                  *)
+                    echo "::error::no validator for $f"
+                    exit 1
+                    ;;
+                esac
+                ;;
+            esac
+          done
+          echo "valid=true" >> "$GITHUB_OUTPUT"
+
+      - name: Check if changeset commit is already the latest
+        id: check
+        if: steps.validate.outputs.valid == 'true'
+        run: |
+          if git log -1 --format='%s' | grep -q '^chore: add changeset'; then
+            echo "changeset_present=true" >> $GITHUB_OUTPUT
+          else
+            echo "changeset_present=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine update type
+        id: bump
+        if: steps.validate.outputs.valid == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          labels="$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name')"
+          type=patch
+          auto_approve=false
+          if grep -qx 'update-type:major' <<< "$labels"; then
+            type=major
+          elif grep -qx 'update-type:minor' <<< "$labels"; then
+            type=minor
+            auto_approve=true
+          elif grep -qx 'update-type:patch' <<< "$labels"; then
+            type=patch
+            auto_approve=true
+          fi
+          echo "type=$type" >> "$GITHUB_OUTPUT"
+          echo "auto_approve=$auto_approve" >> "$GITHUB_OUTPUT"
+
+      - name: Generate changeset fragment
+        id: changeset
+        if: steps.validate.outputs.valid == 'true' && contains(steps.filter.outputs.allowed_files, 'package.json')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          BUMP: ${{ steps.bump.outputs.type }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          python3 - "$BASE" > /tmp/dep-summary.txt << 'PYEOF'
+          import json, subprocess, sys
+          base = json.loads(subprocess.check_output(["git", "show", f"{sys.argv[1]}:package.json"]))
+          with open("package.json") as fh:
+              head = json.load(fh)
+          changed = []
+          seen = set()
+          for section in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies"):
+              for name, new in head.get(section, {}).items():
+                  old = base.get(section, {}).get(name)
+                  if old != new:
+                      line = f"- `{name}`: `{old}` -> `{new}`"
+                      if line not in seen:
+                          seen.add(line)
+                          changed.append(line)
+          print("\n".join(changed) if changed else "- dependency versions updated")
+          PYEOF
+
+          PACKAGE_NAME=$(jq -r .name package.json)
+          BRANCH_SAFE=$(echo "$HEAD_REF" | tr '/' '-')
+          FRAGMENT_PATH=".changeset/${BRANCH_SAFE}.md"
+
+          {
+            echo '---'
+            echo "\"${PACKAGE_NAME}\": ${BUMP}"
+            echo '---'
+            echo
+            echo 'Dependency updates:'
+            echo
+            cat /tmp/dep-summary.txt
+          } > "$FRAGMENT_PATH"
+
+      - name: Setup git
+        if: steps.validate.outputs.valid == 'true' && contains(steps.filter.outputs.allowed_files, 'package.json')
+        uses: ./.github/actions/setup-git-bot
+
+      - name: Commit and push if changed
+        if: steps.validate.outputs.valid == 'true' && contains(steps.filter.outputs.allowed_files, 'package.json')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          git add .changeset/
+          if git diff --cached --exit-code > /dev/null; then
+            echo "Fragment unchanged, skipping."
+          else
+            git commit -m "chore: add changeset for dependency updates"
+            # checkout runs with persist-credentials: false, so authenticate
+            # this one push explicitly instead of storing the token on disk.
+            git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${HEAD_REF}"
+          fi
+
+  review:
+    needs: manage
+    if: github.actor == 'renovate[bot]' && needs.manage.outputs.changeset_present == 'false' && needs.manage.outputs.valid == 'true'
+    permissions:
+      contents: write
+      actions: write
+      pull-requests: write
+      issues: write
+    uses: ./.github/workflows/review.yml
+    with:
+      pr_number: ${{ github.event.pull_request.number }}
+      variant: renovate
+      auto_approve: ${{ needs.manage.outputs.auto_approve == 'true' }}
+    secrets: inherit

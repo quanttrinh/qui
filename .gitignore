@@ -1,0 +1,13 @@
+node_modules/
+dist/
+styled-system/
+www/
+.stencil/
+src/components.d.ts
+.head/
+test-results/
+.opencode/
+.impeccable/
+__pycache__/
+.husky/_
+.npmrc

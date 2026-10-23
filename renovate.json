@@ -1,0 +1,50 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "prConcurrentLimit": 2,
+  "packageRules": [
+    {
+      "description": "Expose the update type as a label for the auto-approve workflow",
+      "matchUpdateTypes": ["major"],
+      "addLabels": ["update-type:major"]
+    },
+    {
+      "matchUpdateTypes": ["minor"],
+      "addLabels": ["update-type:minor"]
+    },
+    {
+      "matchUpdateTypes": ["patch"],
+      "addLabels": ["update-type:patch"]
+    },
+    {
+      "description": "Pins and digest-only updates are never auto-approved",
+      "matchUpdateTypes": ["pin", "digest"],
+      "addLabels": ["update-type:pin"]
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Bun version + checksum, kept in one match so the digest is updated with the version",
+      "managerFilePatterns": ["/^scripts\\/tools\\/bun\\.env$/"],
+      "matchStrings": [
+        "BUN_VERSION=(?<currentValue>\\d+\\.\\d+\\.\\d+)\\s+BUN_SHA256=(?<currentDigest>[0-9a-f]{64})"
+      ],
+      "datasourceTemplate": "github-release-attachments",
+      "depNameTemplate": "oven-sh/bun",
+      "extractVersionTemplate": "^bun-v(?<version>.+)$",
+      "versioningTemplate": "semver-coerced"
+    },
+    {
+      "customType": "regex",
+      "description": "OpenCode CLI version + npm SRI integrity, kept in one match so the digest is updated with the version",
+      "managerFilePatterns": ["/^scripts\\/tools\\/opencode\\.env$/"],
+      "matchStrings": [
+        "OPENCODE_VERSION=(?<currentValue>\\d+\\.\\d+\\.\\d+)\\s+OPENCODE_INTEGRITY=(?<currentDigest>sha512-[A-Za-z0-9+/=]+)"
+      ],
+      "datasourceTemplate": "npm",
+      "depNameTemplate": "@opencode/cli-linux-x64",
+      "versioningTemplate": "npm"
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Clear trusted checkout path
+        run: rm -rf .trusted
+
+      - name: Checkout trusted action definitions
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: .trusted
+          persist-credentials: false
+
+      - name: Restore trusted action definitions
+        run: |
+          set -euo pipefail
+          # Run trusted code, but keep the PR's pin files (data). The pin files
+          # are parsed, never sourced, and validated by the install scripts.
+          pin_dir="$(mktemp -d)"
+          if compgen -G "scripts/tools/*.env" >/dev/null; then
+            cp scripts/tools/*.env "$pin_dir"/
+          fi
+          rm -rf .github scripts
+          cp -r .trusted/.github .github
+          if [ -d .trusted/scripts ]; then
+            cp -r .trusted/scripts scripts
+          fi
+          if compgen -G "$pin_dir/*.env" >/dev/null; then
+            mkdir -p scripts/tools
+            cp "$pin_dir"/*.env scripts/tools/
+          fi
+          rm -rf .trusted "$pin_dir"
+
+      - name: Detect relevant changes
+        id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: |
+            code:
+              - 'src/**'
+              - '*.ts'
+              - 'package.json'
+              - 'bun.lock'
+              - 'scripts/**'
+              - '.github/actions/setup-bun/**'
+              - '.github/actions/setup-opencode/**'
+              - '.devcontainer/Containerfile'
+              - 'renovate.json'
+
+      - name: Setup Node
+        if: steps.filter.outputs.code == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: latest
+          package-manager-cache: false
+
+      - name: Setup Bun
+        if: steps.filter.outputs.code == 'true'
+        uses: ./.github/actions/setup-bun
+
+      - name: Install dependencies
+        if: steps.filter.outputs.code == 'true'
+        run: bun install --frozen-lockfile
+
+      - name: Generate styled-system
+        if: steps.filter.outputs.code == 'true'
+        run: bun run codegen
+
+      - name: Format check
+        if: steps.filter.outputs.code == 'true'
+        run: bun run fmt:check
+
+      - name: Lint check
+        if: steps.filter.outputs.code == 'true'
+        run: bun run lint

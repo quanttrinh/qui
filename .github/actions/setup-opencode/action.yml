@@ -1,0 +1,174 @@
+name: Setup OpenCode CLI
+description: Install a pinned, verified opencode binary and configure auth
+
+inputs:
+  api_key:
+    description: API key for the provider
+    required: true
+  provider:
+    description: Provider ID the run is allowed to use
+    required: false
+    default: opencode-go
+
+runs:
+  using: composite
+  steps:
+    - name: Read OpenCode metadata
+      id: meta
+      shell: bash
+      run: |
+        set -euo pipefail
+        # shellcheck source=../../../scripts/lib/env.sh
+        . "$GITHUB_WORKSPACE/scripts/lib/env.sh"
+        env_file="$GITHUB_WORKSPACE/scripts/tools/opencode.env"
+        env_file_validate "$env_file"
+        env_file_require "$env_file" OPENCODE_VERSION OPENCODE_INTEGRITY
+        integrity="$(env_file_get "$env_file" OPENCODE_INTEGRITY)"
+        {
+          echo "version=$(env_file_get "$env_file" OPENCODE_VERSION)"
+          echo "integrity=$integrity"
+          echo "cache_id=$(printf '%s' "$integrity" | sha256sum | cut -c1-16)"
+        } >> "$GITHUB_OUTPUT"
+        echo "OPENCODE_DISABLE_AUTOUPDATE=1" >> "$GITHUB_ENV"
+        echo "OPENCODE_DISABLE_PROJECT_CONFIG=1" >> "$GITHUB_ENV"
+
+    - name: Restore OpenCode from cache
+      id: cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: /usr/local/bin/opencode
+        key: opencode-${{ steps.meta.outputs.version }}-${{ steps.meta.outputs.cache_id }}
+
+    - name: Install OpenCode
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        "$GITHUB_WORKSPACE/scripts/install-opencode.sh"
+
+    - name: Configure OpenCode auth
+      shell: bash
+      env:
+        OPENCODE_SECRET_KEY: ${{ inputs.api_key }}
+        OPENCODE_PROVIDER: ${{ inputs.provider }}
+        OPENCODE_DISABLE_PROJECT_CONFIG: "1"
+      run: |
+        set -euo pipefail
+        umask 077
+
+        # Write the global policy before starting any OpenCode command in the
+        # PR checkout, so project config, plugins, and providers are already
+        # denied when the credential import starts its private server. Resolve
+        # the config directory instead of assuming XDG_CONFIG_HOME is unset.
+        config_dir=$(opencode debug paths config)
+        mkdir -p "$config_dir"
+        chmod 700 "$config_dir"
+        config_file="$config_dir/opencode.json"
+        echo "OPENCODE_CONFIG=$config_file" >> "$GITHUB_ENV"
+        cat << EOF > "$config_file"
+        {
+          "formatter": false,
+          "lsp": false,
+          "permissions": [
+            { "action": "*", "resource": "*", "effect": "deny" },
+            { "action": "external_directory", "resource": "*", "effect": "deny" },
+            { "action": "external_directory", "resource": "/tmp/opencode-output/*", "effect": "allow" },
+            { "action": "edit", "resource": "*", "effect": "deny" },
+            { "action": "edit", "resource": "/tmp/opencode-output/*", "effect": "allow" },
+            { "action": "read", "resource": "*", "effect": "allow" },
+            { "action": "glob", "resource": "*", "effect": "allow" },
+            { "action": "webfetch", "resource": "*", "effect": "allow" },
+            { "action": "read", "resource": "*.env", "effect": "deny" },
+            { "action": "read", "resource": "*.env.*", "effect": "deny" },
+            { "action": "read", "resource": ".git/config", "effect": "deny" },
+            { "action": "read", "resource": "*/.git/config", "effect": "deny" },
+            { "action": "read", "resource": "${HOME}/.ssh/*", "effect": "deny" },
+            { "action": "read", "resource": "${HOME}/.aws/*", "effect": "deny" },
+            { "action": "read", "resource": "${HOME}/.config/gh/*", "effect": "deny" },
+            { "action": "read", "resource": "${HOME}/.config/git/credentials", "effect": "deny" },
+            { "action": "read", "resource": "${HOME}/.docker/config.json", "effect": "deny" },
+            { "action": "read", "resource": "${HOME}/.git-credentials", "effect": "deny" },
+            { "action": "read", "resource": "${HOME}/.netrc", "effect": "deny" },
+            { "action": "read", "resource": "${HOME}/.npmrc", "effect": "deny" },
+            { "action": "read", "resource": "${HOME}/.local/share/opencode/*", "effect": "deny" },
+            { "action": "read", "resource": "*opencode.db", "effect": "deny" },
+            { "action": "read", "resource": "*opencode.db-*", "effect": "deny" },
+            { "action": "read", "resource": "${HOME}/.config/opencode/*", "effect": "deny" },
+            { "action": "read", "resource": "/proc/*", "effect": "deny" },
+            { "action": "shell", "resource": "*", "effect": "deny" },
+            { "action": "grep", "resource": "*", "effect": "deny" },
+            { "action": "subagent", "resource": "*", "effect": "deny" },
+            { "action": "question", "resource": "*", "effect": "deny" },
+            { "action": "execute", "resource": "*", "effect": "deny" },
+            { "action": "skill", "resource": "*", "effect": "deny" },
+            { "action": "websearch", "resource": "*", "effect": "deny" }
+          ],
+          "policies": [
+            { "action": "provider.use", "resource": "*", "effect": "deny" },
+            { "action": "provider.use", "resource": "${OPENCODE_PROVIDER}", "effect": "allow" },
+            { "action": "tool.use", "resource": "*", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:*", "effect": "allow" },
+            { "action": "tool.use", "resource": "glob:*", "effect": "allow" },
+            { "action": "tool.use", "resource": "shell:*", "effect": "deny" },
+            { "action": "tool.use", "resource": "grep:*", "effect": "deny" },
+            { "action": "tool.use", "resource": "edit:*", "effect": "deny" },
+            { "action": "tool.use", "resource": "edit:/tmp/opencode-output/*", "effect": "allow" },
+            { "action": "tool.use", "resource": "read:*.env", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:*.env.*", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:*/.git/config", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:*/.ssh/*", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:*/.aws/*", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:*/.config/gh/*", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:*/.config/git/credentials", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:*/.docker/config.json", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:*/.git-credentials", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:*/.netrc", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:*/.npmrc", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:*/.local/share/opencode/*", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:*opencode.db", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:*opencode.db-*", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:*/.config/opencode/*", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:/proc/*", "effect": "deny" },
+            { "action": "tool.use", "resource": "external_directory:*", "effect": "deny" },
+            { "action": "tool.use", "resource": "external_directory:/tmp/opencode-output/*", "effect": "allow" },
+            { "action": "tool.use", "resource": "subagent:*", "effect": "deny" },
+            { "action": "tool.use", "resource": "execute:*", "effect": "deny" },
+            { "action": "tool.use", "resource": "skill:*", "effect": "deny" },
+            { "action": "tool.use", "resource": "websearch:*", "effect": "deny" },
+            { "action": "tool.use", "resource": "webfetch:*", "effect": "deny" },
+            { "action": "tool.use", "resource": "webfetch:https://github.com/*", "effect": "allow" },
+            { "action": "tool.use", "resource": "webfetch:https://api.github.com/*", "effect": "allow" },
+            { "action": "tool.use", "resource": "webfetch:https://raw.githubusercontent.com/*", "effect": "allow" },
+            { "action": "tool.use", "resource": "webfetch:https://objects.githubusercontent.com/*", "effect": "allow" },
+            { "action": "tool.use", "resource": "webfetch:https://codeload.github.com/*", "effect": "allow" },
+            { "action": "tool.use", "resource": "webfetch:https://registry.npmjs.org/*", "effect": "allow" },
+            { "action": "tool.use", "resource": "webfetch:https://www.npmjs.com/*", "effect": "allow" },
+            { "action": "tool.use", "resource": "webfetch:https://npmjs.com/*", "effect": "allow" },
+            { "action": "integration.use", "resource": "mcp:*", "effect": "deny" },
+            { "action": "integration.use", "resource": "plugin:*", "effect": "deny" },
+            { "action": "integration.use", "resource": "skill:*", "effect": "deny" }
+          ]
+        }
+        EOF
+
+        # Only this directory is writable by the agent. Workflows place the
+        # generated review/description files here.
+        rm -rf /tmp/opencode-output
+        install -d -m 700 /tmp/opencode-output
+
+        # Import the key into V2's credential store over stdin. It is never
+        # written to GITHUB_ENV, so later steps and the agent's tools cannot
+        # read it from their environment.
+        jq -n '[{
+          id: "cred_ci",
+          integrationID: env.OPENCODE_PROVIDER,
+          label: "ci",
+          active: true,
+          value: { type: "key", key: env.OPENCODE_SECRET_KEY }
+        }]' | env -u OPENCODE_SECRET_KEY OPENCODE_CONFIG="$config_file" opencode auth import --standalone
+
+        db=$(opencode debug paths db)
+        chmod 700 "$(dirname "$db")"
+        if [ -f "$db" ]; then
+          chmod 600 "$db"
+        fi
