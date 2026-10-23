@@ -3,6 +3,10 @@
   "version": "0.0.1",
   "description": "Material Design 3 web components built with Stencil",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/quanttrinh/qui.git"
+  },
   "files": [
     "dist",
     "styled-system",
@@ -85,10 +89,11 @@
     }
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
-    "prepare": "husky",
+    "prepare": "if command -v husky >/dev/null 2>&1; then husky; fi",
     "dev": "stencil build --dev --watch --serve",
     "dev:split": "MD3_STYLE_STRATEGY=split stencil build --dev --watch --serve",
     "build": "stencil build",
