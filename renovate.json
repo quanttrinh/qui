@@ -25,14 +25,13 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Bun version + checksum, kept in one match so the digest is updated with the version",
+      "description": "Bun release tag + checksum, kept in one match so the digest is updated with the version",
       "managerFilePatterns": ["/^scripts\\/tools\\/bun\\.env$/"],
       "matchStrings": [
-        "BUN_VERSION=(?<currentValue>\\d+\\.\\d+\\.\\d+)\\s+BUN_SHA256=(?<currentDigest>[0-9a-f]{64})"
+        "BUN_TAG=(?<currentValue>bun-v\\d+\\.\\d+\\.\\d+)\\s+BUN_SHA256=(?<currentDigest>[0-9a-f]{64})"
       ],
       "datasourceTemplate": "github-release-attachments",
       "depNameTemplate": "oven-sh/bun",
-      "extractVersionTemplate": "^bun-v(?<version>.+)$",
       "versioningTemplate": "semver-coerced"
     },
     {

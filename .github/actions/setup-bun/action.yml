@@ -19,9 +19,10 @@ runs:
         . "$GITHUB_WORKSPACE/scripts/lib/env.sh"
         env_file="$GITHUB_WORKSPACE/scripts/tools/bun.env"
         env_file_validate "$env_file"
-        env_file_require "$env_file" BUN_VERSION BUN_SHA256
+        env_file_require "$env_file" BUN_TAG BUN_SHA256
+        tag="$(env_file_get "$env_file" BUN_TAG)"
         {
-          echo "version=$(env_file_get "$env_file" BUN_VERSION)"
+          echo "version=${tag#bun-v}"
           echo "sha256=$(env_file_get "$env_file" BUN_SHA256)"
         } >> "$GITHUB_OUTPUT"
 
