@@ -173,7 +173,7 @@ function styleDependencies(file: string): string[] {
   return localImports(file).filter((candidate) => readFileSync(candidate, "utf8").includes("css("));
 }
 
-function findComponents(root: string): ComponentEntry[] {
+export function findComponents(root: string): ComponentEntry[] {
   const outputDirectory = join(root, STYLED_SYSTEM, COMPONENTS);
   mkdirSync(outputDirectory, { recursive: true });
 
@@ -213,7 +213,7 @@ function sameComponents(a: ComponentEntry[], b: ComponentEntry[]): boolean {
   );
 }
 
-function writeStyleUrlModule(outdir: string, components: ComponentEntry[]): void {
+export function writeStyleUrlModule(outdir: string, components: ComponentEntry[]): void {
   const entries = components.map((component) => ({
     key: styleUrlKey(component.name),
     value: relativePath(dirname(component.file), component.output),

@@ -93,7 +93,7 @@
     "dev:split": "MD3_STYLE_STRATEGY=split stencil build --dev --watch --serve",
     "build": "stencil build",
     "build:split": "MD3_STYLE_STRATEGY=split stencil build",
-    "codegen": "panda codegen",
+    "codegen": "panda codegen && bun scripts/generate-style-urls.ts",
     "lint": "oxlint --config oxlint.config.ts src",
     "lint:fix": "oxlint --config oxlint.config.ts --fix src",
     "fmt": "oxfmt --config oxfmt.config.ts",
