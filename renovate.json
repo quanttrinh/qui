@@ -20,6 +20,13 @@
       "description": "Pins and digest-only updates are never auto-approved",
       "matchUpdateTypes": ["pin", "digest"],
       "addLabels": ["update-type:pin"]
+    },
+    {
+      "description": "Bun tags are prefixed, which semver-coerced reports as unstable; allow stable X.Y.Z tags and skip canary builds",
+      "matchDatasources": ["github-release-attachments"],
+      "matchPackageNames": ["oven-sh/bun"],
+      "ignoreUnstable": false,
+      "allowedVersions": "/^bun-v\\d+\\.\\d+\\.\\d+$/"
     }
   ],
   "customManagers": [
