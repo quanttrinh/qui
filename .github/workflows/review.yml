@@ -100,11 +100,14 @@ jobs:
           path: .trusted
           persist-credentials: false
 
-      - name: Restore trusted action definitions
+      - name: Restore trusted action definitions and scripts
         if: steps.skip.outputs.skip != 'true'
         run: |
-          rm -rf .github
+          rm -rf .github scripts
           cp -r .trusted/.github .github
+          if [ -d .trusted/scripts ]; then
+            cp -r .trusted/scripts scripts
+          fi
           rm -rf .trusted
 
       - name: Fetch PR diff
