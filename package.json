@@ -2,6 +2,10 @@
   "name": "@quanttrinh/qui",
   "version": "0.0.1",
   "description": "Material Design 3 web components built with Stencil",
+  "homepage": "https://quanttrinh.github.io/qui/",
+  "bugs": {
+    "url": "https://github.com/quanttrinh/qui/issues"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -93,7 +97,7 @@
     "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
-    "prepare": "if command -v husky >/dev/null 2>&1; then husky; fi",
+    "prepare": "bun -e \"try{require('husky')()}catch{}\"",
     "dev": "stencil build --dev --watch --serve",
     "dev:split": "MD3_STYLE_STRATEGY=split stencil build --dev --watch --serve",
     "build": "stencil build",
@@ -104,6 +108,7 @@
     "fmt": "oxfmt --config oxfmt.config.ts",
     "fmt:check": "oxfmt --config oxfmt.config.ts --check",
     "version": "changeset version",
+    "release": "changeset publish",
     "build:all": "bun run build && bun run build:split && bun run build:lib",
     "prepublishOnly": "bun run build:all",
     "build:lib": "panda lib --files './**/*.{js,mjs}'"

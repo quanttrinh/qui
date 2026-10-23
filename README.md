@@ -5,6 +5,25 @@ Stencil web components with Material Design 3 styling via PandaCSS.
 This is a port of the earlier Solid implementation. It supports a shared Panda
 stylesheet or per-component stylesheets, selected at build time.
 
+## Installation
+
+The package is published to GitHub Packages, which requires authentication even
+for public packages.
+
+Create an `.npmrc` (project or global):
+
+```ini
+@quanttrinh:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+```
+
+`GITHUB_TOKEN` must have at least `read:packages` (a classic PAT with
+`read:packages`, or a fine-grained token with package read access). Then:
+
+```sh
+bun add @quanttrinh/qui
+```
+
 ## Components
 
 - `<qui-button>` — variants, sizes, disabled, anchor mode
