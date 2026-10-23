@@ -8,6 +8,7 @@ on:
       - '*.ts'
       - 'package.json'
       - 'bun.lock'
+      - '.github/workflows/pages.yml'
   push:
     branches: [main]
     paths:
@@ -15,6 +16,7 @@ on:
       - '*.ts'
       - 'package.json'
       - 'bun.lock'
+      - '.github/workflows/pages.yml'
 
 concurrency:
   group: pages
@@ -111,6 +113,7 @@ jobs:
       - name: Notify deploying
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
