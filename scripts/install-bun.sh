@@ -67,7 +67,7 @@ binary_dir="${BUN_ASSET%.zip}"
 
 download_and_verify "$url" "$BUN_SHA256" "$archive"
 
-install -d "$dest_dir"
+mkdir -p "$dest_dir"
 unzip -p "$archive" "${binary_dir}/bun" | install -m 755 /dev/stdin "${dest_dir}/bun"
 
 actual="$("${dest_dir}/bun" --version | head -n1)"
