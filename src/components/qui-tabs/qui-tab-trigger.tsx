@@ -8,12 +8,12 @@ import {
   Prop,
   type VNode,
 } from "@stencil/core";
-import { spreadProps } from "@zag-js/vanilla";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { consumeTabs, type TabsContext, type TabsVariant } from "./tabs-context";
+import { dataAttr } from "../../helpers/attr";
+import { consumeTabs, type TabsContext, type TabsVariant } from "./context";
 
 const styles = {
   host: css({ display: "flex", flex: "1" }),
@@ -143,8 +143,6 @@ export class QuiTabTrigger {
 
   private tabs?: TabsContext;
   private unsubscribe?: () => void;
-  private spreads: (() => void)[] = [];
-  private buttonEl?: HTMLButtonElement;
 
   public componentWillLoad(): void {
     this.attachTabs();
@@ -153,18 +151,11 @@ export class QuiTabTrigger {
   public componentDidLoad(): void {
     if (this.tabs === undefined) {
       this.attachTabs();
+      forceUpdate(this.host);
     }
-  }
-
-  public componentDidRender(): void {
-    this.applySpreads();
   }
 
   public disconnectedCallback(): void {
-    for (const cleanup of this.spreads) {
-      cleanup();
-    }
-    this.spreads = [];
     this.unsubscribe?.();
   }
 
@@ -180,35 +171,58 @@ export class QuiTabTrigger {
     });
   }
 
-  private applySpreads(): void {
-    if (this.tabs === undefined || this.buttonEl === undefined) {
+  private readonly handleClick = (): void => {
+    if (this.disabled) {
       return;
     }
-    this.spreads = [
-      spreadProps(this.buttonEl, {
-        ...this.tabs.api().getTriggerProps({ value: this.value, disabled: this.disabled }),
-        "data-variant": this.tabs.variant(),
-        class: cx(styles.trigger, this.innerClass),
-      }),
-    ];
-  }
+    this.tabs?.select(this.value);
+  };
+
+  private readonly handleFocus = (): void => {
+    this.tabs?.focus(this.value);
+  };
+
+  private readonly handleBlur = (event: FocusEvent): void => {
+    const next = event.relatedTarget;
+    if (next instanceof HTMLElement && next.getAttribute("role") === "tab") {
+      return;
+    }
+    this.tabs?.blur();
+  };
 
   public render(): VNode {
     const variant = this.tabs?.variant() ?? "primary";
     const orientation = this.tabs?.orientation() ?? "horizontal";
+    const textDirection = this.tabs?.textDirection() ?? "ltr";
+    const selected = this.tabs?.isSelected(this.value) ?? false;
+    const focused = this.tabs?.isFocused(this.value) ?? false;
 
     return (
       <Host class={styles.host}>
         <button
-          ref={(el) => {
-            if (el instanceof HTMLButtonElement) {
-              this.buttonEl = el;
-            }
-          }}
-          class={styles.trigger}
-          part="trigger"
-          data-variant={variant}
+          id={this.tabs?.triggerId(this.value)}
+          type="button"
+          role="tab"
+          disabled={this.disabled}
+          aria-disabled={this.disabled ? "true" : "false"}
+          aria-selected={selected ? "true" : "false"}
+          aria-controls={selected ? this.tabs?.panelId(this.value) : undefined}
+          tabIndex={selected ? 0 : -1}
+          data-scope="tabs"
+          data-part="trigger"
+          data-value={this.value}
           data-orientation={orientation}
+          data-disabled={dataAttr(this.disabled)}
+          data-selected={dataAttr(selected)}
+          data-focus={dataAttr(focused)}
+          data-ownedby={this.tabs?.listId()}
+          data-variant={variant}
+          dir={textDirection}
+          class={cx(styles.trigger, this.innerClass)}
+          part="trigger"
+          onClick={this.handleClick}
+          onFocus={this.handleFocus}
+          onBlur={this.handleBlur}
         >
           <span class={styles.tabContent} data-variant={variant} data-orientation={orientation}>
             <slot />

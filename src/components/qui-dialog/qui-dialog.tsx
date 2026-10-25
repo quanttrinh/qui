@@ -1,4 +1,5 @@
 import {
+  Build,
   resolveVar,
   Component,
   Element,
@@ -15,14 +16,14 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { nextId } from "../../utilities/id";
+import { nextId } from "../../helpers/id";
 import {
   clearDialog,
   provideDialog,
   type DialogContext,
   type DialogControl,
   type DialogIds,
-} from "./dialog-context";
+} from "./context";
 
 const styles = {
   host: css({ display: "contents" }),
@@ -233,7 +234,7 @@ export class QuiDialog {
   }
 
   private lockScroll(): void {
-    if (!this.isModal() || this.preventScroll === false || this.locked) {
+    if (Build.isServer || !this.isModal() || this.preventScroll === false || this.locked) {
       return;
     }
     this.locked = true;
@@ -241,7 +242,7 @@ export class QuiDialog {
   }
 
   private unlockScroll(): void {
-    if (!this.locked) {
+    if (Build.isServer || !this.locked) {
       return;
     }
     this.locked = false;

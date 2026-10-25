@@ -6,14 +6,15 @@ import {
   h,
   Host,
   Prop,
+  State,
   type VNode,
 } from "@stencil/core";
-import { spreadProps } from "@zag-js/vanilla";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { consumeTabs, type TabsContext } from "./tabs-context";
+import { dataAttr } from "../../helpers/attr";
+import { consumeTabs, type TabsContext } from "./context";
 
 const styles = {
   host: css({ display: "block", flex: "1" }),
@@ -23,8 +24,8 @@ const styles = {
     outlineStyle: "none",
     fontSize: "sm",
     color: "onSurfaceVariant",
-    // Defers layout/paint of off-screen panels. Inactive panels are also hidden
-    // By Zag, so this mainly helps long, active panels below the fold.
+    // Defers layout/paint of off-screen panels. Inactive panels are also hidden,
+    // So this mainly helps long, active panels below the fold.
     contentVisibility: "auto",
     containIntrinsicSize: "auto 100px",
     "&[data-orientation=vertical]": { paddingY: "0", paddingInlineStart: "4" },
@@ -55,10 +56,10 @@ export class QuiTabPanel {
   /** Additional class applied to the panel. */
   @Prop() innerClass?: string;
 
+  @State() private tabbable = true;
+
   private tabs?: TabsContext;
   private unsubscribe?: () => void;
-  private spreads: (() => void)[] = [];
-  private panelEl?: HTMLDivElement;
 
   public componentWillLoad(): void {
     this.attachTabs();
@@ -67,19 +68,31 @@ export class QuiTabPanel {
   public componentDidLoad(): void {
     if (this.tabs === undefined) {
       this.attachTabs();
+      forceUpdate(this.host);
     }
   }
 
   public componentDidRender(): void {
-    this.applySpreads();
+    this.syncTabIndex(this.tabs?.isSelected(this.value) ?? false);
   }
 
   public disconnectedCallback(): void {
-    for (const cleanup of this.spreads) {
-      cleanup();
-    }
-    this.spreads = [];
     this.unsubscribe?.();
+  }
+
+  private syncTabIndex(selected: boolean): void {
+    if (!selected) {
+      return;
+    }
+    const focusable = [
+      ...this.host.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    ].some((element) => element.getAttribute("part") !== "panel");
+    const tabbable = !focusable;
+    if (this.tabbable !== tabbable) {
+      this.tabbable = tabbable;
+    }
   }
 
   private attachTabs(): void {
@@ -94,31 +107,27 @@ export class QuiTabPanel {
     });
   }
 
-  private applySpreads(): void {
-    if (this.tabs === undefined || this.panelEl === undefined) {
-      return;
-    }
-    this.spreads = [
-      spreadProps(this.panelEl, {
-        ...this.tabs.api().getContentProps({ value: this.value }),
-        "data-orientation": this.tabs.orientation(),
-        class: cx(styles.panel, this.innerClass),
-      }),
-    ];
-  }
-
   public render(): VNode {
+    const selected = this.tabs?.isSelected(this.value) ?? false;
+    const orientation = this.tabs?.orientation() ?? "horizontal";
+    const textDirection = this.tabs?.textDirection() ?? "ltr";
+
     return (
       <Host class={styles.host}>
         <div
-          ref={(el) => {
-            if (el instanceof HTMLDivElement) {
-              this.panelEl = el;
-            }
-          }}
-          class={styles.panel}
+          id={this.tabs?.panelId(this.value)}
+          role="tabpanel"
+          aria-labelledby={this.tabs?.triggerId(this.value)}
+          tabIndex={this.tabbable ? 0 : undefined}
+          hidden={!selected}
+          data-scope="tabs"
+          data-part="content"
+          data-selected={dataAttr(selected)}
+          data-orientation={orientation}
+          data-ownedby={this.tabs?.listId()}
+          dir={textDirection}
+          class={cx(styles.panel, this.innerClass)}
           part="panel"
-          data-orientation={this.tabs?.orientation() ?? "horizontal"}
         >
           <slot />
         </div>

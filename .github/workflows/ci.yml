@@ -56,6 +56,7 @@ jobs:
               - 'package.json'
               - 'bun.lock'
               - 'scripts/**'
+              - 'build/**'
               - '.github/actions/setup-bun/**'
               - '.github/actions/setup-opencode/**'
               - '.devcontainer/Containerfile'
@@ -76,9 +77,21 @@ jobs:
         if: steps.filter.outputs.code == 'true'
         run: bun install --frozen-lockfile
 
-      - name: Build
+      - name: Restore Playwright browsers
+        id: playwright-cache
         if: steps.filter.outputs.code == 'true'
-        run: bun run build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+
+      - name: Install Playwright Chromium
+        if: steps.filter.outputs.code == 'true'
+        run: bun x playwright install --with-deps chromium
+
+      - name: Test
+        if: steps.filter.outputs.code == 'true'
+        run: bun run test
 
       - name: Format check
         if: steps.filter.outputs.code == 'true'

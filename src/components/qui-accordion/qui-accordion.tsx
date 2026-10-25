@@ -11,23 +11,14 @@ import {
   type EventEmitter,
   type VNode,
 } from "@stencil/core";
-import {
-  connect as accordionConnect,
-  machine as accordionMachine,
-  type Api as AccordionApi,
-  type Props as AccordionProps,
-  type ValueChangeDetails,
-} from "@zag-js/accordion";
-import { normalizeProps, spreadProps, VanillaMachine } from "@zag-js/vanilla";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { nextId } from "../../utilities/id";
-import { type MachineSchemaOf } from "../../utilities/zag";
-import { provideAccordion, clearAccordion, type AccordionContext } from "./accordion-context";
-
-type AccordionSchema = MachineSchemaOf<typeof accordionMachine>;
+import { nextId } from "../../helpers/id";
+import { ReactiveControlBase } from "../shared/reactive-control/component-base";
+import { clearAccordion, provideAccordion, type AccordionContext } from "./accordion-context";
+import { AccordionController } from "./controller";
 
 const styles = {
   host: css({ display: "block", width: "full" }),
@@ -41,6 +32,11 @@ const styles = {
   }),
 };
 
+/** Emitted whenever the expanded values change. */
+export interface AccordionValueChangeDetails {
+  value: string[];
+}
+
 /**
  * MD3 accordion. Compose with `qui-accordion-item`, `qui-accordion-trigger`, and
  * `qui-accordion-content`.
@@ -52,7 +48,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiAccordion),
   scoped: true,
 })
-export class QuiAccordion {
+export class QuiAccordion extends ReactiveControlBase {
   @Element() host!: HTMLQuiAccordionElement;
 
   /** Whether multiple items may be expanded at once. */
@@ -74,43 +70,83 @@ export class QuiAccordion {
 
   /** Emitted whenever the expanded values change. */
   @Event({ eventName: "valuechange", bubbles: true, composed: true })
-  valueChange!: EventEmitter<ValueChangeDetails>;
+  valueChange!: EventEmitter<AccordionValueChangeDetails>;
 
-  private machine?: VanillaMachine<AccordionSchema>;
-  private unsubscribe?: () => void;
+  private idBase = "";
   private readonly listeners = new Set<() => void>();
-  private spreads: (() => void)[] = [];
-  private rootEl?: HTMLDivElement;
   private readonly generatedId = nextId("qui-accordion");
-
-  public componentWillLoad(): void {
-    this.machine = new VanillaMachine(accordionMachine, () => this.machineProps());
-    this.unsubscribe = this.machine.subscribe(() => {
+  private readonly controller = new AccordionController({
+    getHost: (): HTMLElement => this.host,
+    getValue: (): string[] | undefined => this.value,
+    getDefaultValue: (): string[] | undefined => this.defaultValue,
+    getMultiple: (): boolean => this.multiple,
+    getCollapsible: (): boolean => this.collapsible,
+    getTriggerId: (value: string): string => this.triggerId(value),
+    onChange: (value: string[]): void => {
+      this.valueChange.emit({ value });
+    },
+    requestUpdate: (): void => {
       forceUpdate(this.host);
       this.notifyListeners();
-    });
-    this.machine.start();
-    provideAccordion(this.host, this.context());
+    },
+  });
+  private readonly context: AccordionContext = {
+    value: (): string[] => this.controller.value,
+    focusedValue: (): string | undefined => this.controller.focusedValue,
+    isExpanded: (value: string): boolean => this.controller.value.includes(value),
+    isFocused: (value: string): boolean => this.controller.focusedValue === value,
+    isDisabled: (): boolean => this.disabled,
+    orientation: (): "horizontal" | "vertical" => this.orientation,
+    textDirection: (): "ltr" | "rtl" | undefined => this.textDirection,
+    toggle: (value: string): void => {
+      this.controller.toggle(value);
+    },
+    focus: (value: string): void => {
+      this.controller.focus(value);
+    },
+    blur: (): void => {
+      this.controller.blur();
+    },
+    move: (fromValue: string, delta: 1 | -1): void => {
+      this.controller.move(fromValue, delta);
+    },
+    edge: (edge: "first" | "last"): void => {
+      this.controller.edge(edge);
+    },
+    rootId: (): string => this.rootId,
+    itemId: (value: string): string => this.itemId(value),
+    triggerId: (value: string): string => this.triggerId(value),
+    contentId: (value: string): string => this.contentId(value),
+    subscribe: (listener: () => void): (() => void) => {
+      this.listeners.add(listener);
+      return (): void => {
+        this.listeners.delete(listener);
+      };
+    },
+  };
+
+  constructor() {
+    super();
+    this.addController(this.controller);
   }
 
   public connectedCallback(): void {
-    if (this.machine !== undefined) {
-      provideAccordion(this.host, this.context());
+    super.connectedCallback();
+    if (this.idBase === "") {
+      this.idBase = this.host.id || this.generatedId;
     }
+    provideAccordion(this.host, this.context);
   }
 
-  public componentDidRender(): void {
-    this.applySpreads();
+  public componentWillLoad(): void {
+    super.componentWillLoad();
+    this.idBase = this.host.id || this.generatedId;
+    provideAccordion(this.host, this.context);
   }
 
   public disconnectedCallback(): void {
+    super.disconnectedCallback();
     clearAccordion(this.host);
-    for (const cleanup of this.spreads) {
-      cleanup();
-    }
-    this.spreads = [];
-    this.unsubscribe?.();
-    this.machine?.stop();
     this.listeners.clear();
   }
 
@@ -120,37 +156,25 @@ export class QuiAccordion {
   @Watch("disabled")
   @Watch("orientation")
   @Watch("textDirection")
-  private syncMachineProps(): void {
-    this.machine?.updateProps(this.machineProps());
+  private syncContext(): void {
+    forceUpdate(this.host);
+    this.notifyListeners();
   }
 
-  private machineProps(): AccordionProps {
-    return {
-      id: this.host.id || this.generatedId,
-      getRootNode: () => this.host.getRootNode(),
-      multiple: this.multiple,
-      collapsible: this.collapsible,
-      value: this.value,
-      defaultValue: this.defaultValue,
-      disabled: this.disabled,
-      orientation: this.orientation,
-      dir: this.textDirection,
-      onValueChange: (details) => {
-        this.valueChange.emit(details);
-      },
-    };
+  private get rootId(): string {
+    return `accordion:${this.idBase || this.generatedId}`;
   }
 
-  private context(): AccordionContext {
-    return {
-      api: () => this.api,
-      subscribe: (listener) => {
-        this.listeners.add(listener);
-        return () => {
-          this.listeners.delete(listener);
-        };
-      },
-    };
+  private itemId(value: string): string {
+    return `${this.rootId}:item:${value}`;
+  }
+
+  private triggerId(value: string): string {
+    return `${this.rootId}:trigger:${value}`;
+  }
+
+  private contentId(value: string): string {
+    return `${this.rootId}:content:${value}`;
   }
 
   private notifyListeners(): void {
@@ -159,35 +183,16 @@ export class QuiAccordion {
     }
   }
 
-  private get api(): AccordionApi {
-    if (this.machine === undefined) {
-      throw new Error("qui-accordion has not been initialized");
-    }
-    return accordionConnect(this.machine.service, normalizeProps);
-  }
-
-  private applySpreads(): void {
-    if (this.rootEl === undefined) {
-      return;
-    }
-    this.spreads = [
-      spreadProps(this.rootEl, {
-        ...this.api.getRootProps(),
-        class: cx(styles.root, this.innerClass),
-      }),
-    ];
-  }
-
   public render(): VNode {
     return (
       <Host class={styles.host}>
         <div
-          ref={(el) => {
-            if (el instanceof HTMLDivElement) {
-              this.rootEl = el;
-            }
-          }}
-          class={styles.root}
+          id={this.rootId}
+          data-scope="accordion"
+          data-part="root"
+          data-orientation={this.orientation}
+          dir={this.textDirection}
+          class={cx(styles.root, this.innerClass)}
           part="root"
         >
           <slot />

@@ -21,11 +21,13 @@ export class QuiOption {
   @Element() host!: HTMLQuiOptionElement;
 
   /** The submitted value. */
-  @Prop() value!: string;
+  @Prop({ reflect: true }) value!: string;
   /** Disables the option. */
-  @Prop() disabled = false;
+  @Prop({ reflect: true }) disabled = false;
   /** Explicit label. Defaults to the slotted text. */
-  @Prop() label?: string;
+  @Prop({ reflect: true }) label?: string;
+  /** Extra text matched by the combobox filter, e.g. synonyms or aliases. */
+  @Prop({ reflect: true }) keywords?: string;
 
   public render(): VNode {
     return (

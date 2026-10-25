@@ -8,12 +8,18 @@ import {
   Prop,
   type VNode,
 } from "@stencil/core";
-import { spreadProps } from "@zag-js/vanilla";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { consumeRadioGroup, type RadioGroupApi, type RadioItem } from "./radio-group-context";
+import { ariaAttr, dataAttr } from "../../helpers/attr";
+import { isHTMLInputElement } from "../../helpers/dom";
+import {
+  consumeRadioGroup,
+  type RadioGroupContext,
+  type RadioItem,
+  type RadioItemState,
+} from "./context";
 
 const styles = {
   host: css({ display: "block" }),
@@ -60,6 +66,17 @@ const styles = {
     fontWeight: "medium",
     color: "onSurface",
   }),
+  input: css({
+    position: "absolute",
+    width: "1px",
+    height: "1px",
+    padding: "0",
+    margin: "-1px",
+    overflow: "hidden",
+    clip: "rect(0, 0, 0, 0)",
+    whiteSpace: "nowrap",
+    borderWidth: "0",
+  }),
 };
 
 /**
@@ -86,12 +103,8 @@ export class QuiRadio {
   /** Additional class applied to the item label. */
   @Prop() innerClass?: string;
 
-  private group?: RadioGroupApi;
+  private group?: RadioGroupContext;
   private groupUnsubscribe?: () => void;
-  private spreads: (() => void)[] = [];
-  private rootEl?: HTMLLabelElement;
-  private controlEl?: HTMLSpanElement;
-  private textEl?: HTMLSpanElement;
   private inputEl?: HTMLInputElement;
 
   public componentWillLoad(): void {
@@ -106,14 +119,13 @@ export class QuiRadio {
   }
 
   public componentDidRender(): void {
-    this.applySpreads();
+    const checked = this.group?.itemState(this.item()).checked ?? false;
+    if (this.inputEl !== undefined && this.inputEl.checked !== checked) {
+      this.inputEl.checked = checked;
+    }
   }
 
   public disconnectedCallback(): void {
-    for (const cleanup of this.spreads) {
-      cleanup();
-    }
-    this.spreads = [];
     this.groupUnsubscribe?.();
   }
 
@@ -129,7 +141,7 @@ export class QuiRadio {
     });
   }
 
-  private itemProps(): RadioItem {
+  private item(): RadioItem {
     return {
       value: this.value,
       disabled: this.disabled ? true : undefined,
@@ -137,71 +149,77 @@ export class QuiRadio {
     };
   }
 
-  private applySpreads(): void {
+  private readonly handleClick = (event: Event): void => {
     const { group } = this;
     if (group === undefined) {
       return;
     }
-    const item = this.itemProps();
-    const props = group.itemProps(item);
-    this.spreads = [];
-    if (this.rootEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.rootEl, {
-          ...props.root,
-          class: cx(styles.item, this.innerClass),
-        }),
-      );
+    if (group.isDisabled() || group.isReadOnly() || this.disabled) {
+      event.preventDefault();
+      return;
     }
-    if (this.controlEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.controlEl, {
-          ...props.control,
-          class: styles.control,
-        }),
-      );
-    }
-    if (this.textEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.textEl, {
-          ...props.text,
-          class: styles.label,
-        }),
-      );
-    }
-    if (this.inputEl !== undefined) {
-      const { name: _name, required: _required, ...inputProps } = props.hiddenInput;
-      this.spreads.push(spreadProps(this.inputEl, inputProps));
-    }
-  }
+    group.select(this.value);
+  };
+
+  private readonly handleFocus = (event: FocusEvent): void => {
+    const target = event.currentTarget;
+    const focusVisible = isHTMLInputElement(target) && target.matches(":focus-visible");
+    this.group?.focus(this.value, focusVisible);
+  };
+
+  private readonly handleBlur = (): void => {
+    this.group?.blur();
+  };
 
   public render(): VNode {
+    const { group } = this;
+    const item = this.item();
+    const state: RadioItemState = group?.itemState(item) ?? {
+      checked: false,
+      disabled: this.disabled,
+      invalid: this.invalid,
+      focused: false,
+      focusVisible: false,
+    };
+    const orientation = group?.orientation() ?? "vertical";
+    const textDirection = group?.textDirection();
+    const readOnly = group?.isReadOnly() ?? false;
+    const dataAttrs = {
+      "data-state": state.checked ? "checked" : "unchecked",
+      "data-disabled": dataAttr(state.disabled),
+      "data-readonly": dataAttr(readOnly),
+      "data-invalid": dataAttr(state.invalid),
+      "data-focus": dataAttr(state.focused),
+      "data-focus-visible": dataAttr(state.focusVisible),
+      "data-orientation": orientation,
+      dir: textDirection,
+    };
+
     return (
       <Host class={styles.host}>
         <label
-          ref={(el) => {
-            if (el instanceof HTMLLabelElement) {
-              this.rootEl = el;
-            }
-          }}
-          class={styles.item}
+          id={group?.itemId(this.value)}
+          htmlFor={group?.inputId(this.value)}
+          data-scope="radio-group"
+          data-part="item"
+          {...dataAttrs}
+          class={cx(styles.item, this.innerClass)}
           part="root"
         >
           <span
-            ref={(el) => {
-              if (el instanceof HTMLSpanElement) {
-                this.controlEl = el;
-              }
-            }}
+            id={group?.controlId(this.value)}
+            data-scope="radio-group"
+            data-part="item-control"
+            aria-hidden="true"
+            {...dataAttrs}
             class={styles.control}
             part="control"
           />
           <span
-            ref={(el) => {
-              if (el instanceof HTMLSpanElement) {
-                this.textEl = el;
-              }
-            }}
+            id={group?.labelId(this.value)}
+            data-scope="radio-group"
+            data-part="item-text"
+            {...dataAttrs}
             class={styles.label}
             part="label"
           >
@@ -209,10 +227,22 @@ export class QuiRadio {
           </span>
           <input
             ref={(el) => {
-              if (el instanceof HTMLInputElement) {
+              if (isHTMLInputElement(el)) {
                 this.inputEl = el;
               }
             }}
+            id={group?.inputId(this.value)}
+            type="radio"
+            value={this.value}
+            checked={state.checked}
+            disabled={state.disabled || readOnly}
+            aria-labelledby={group?.labelId(this.value)}
+            aria-invalid={ariaAttr(state.invalid)}
+            data-ownedby={group?.rootId()}
+            class={styles.input}
+            onClick={this.handleClick}
+            onFocus={this.handleFocus}
+            onBlur={this.handleBlur}
           />
         </label>
       </Host>

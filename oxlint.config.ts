@@ -44,10 +44,96 @@ export default defineConfig({
         "typescript/no-unsafe-return": "off",
       },
     },
+    {
+      files: ["src/**/*.unit.test.{ts,tsx}", "src/**/*.browser.test.{ts,tsx}"],
+      rules: {
+        // Test files register suites at module scope and use compact helpers.
+        "stencil/ban-side-effects": "off",
+        "react/jsx-no-literals": "off",
+        "typescript/explicit-function-return-type": "off",
+        "typescript/no-unsafe-type-assertion": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "eslint/no-empty-function": "off",
+        "eslint/init-declarations": "off",
+        "unicorn/no-useless-undefined": "off",
+        "promise/avoid-new": "off",
+      },
+    },
+    {
+      files: ["src/unplugin/{core,extract}.ts"],
+      rules: {
+        // Sorting a fresh array is safe; `toSorted` needs an ES2023 lib.
+        "unicorn/no-array-sort": "off",
+      },
+    },
+    {
+      files: ["src/unplugin/extract.ts"],
+      rules: {
+        // Parsing runs once per module during a bundler transform; the sync
+        // Oxc API avoids thread overhead and is the intended plugin path.
+        "node/no-sync": "off",
+      },
+    },
+    {
+      files: ["src/unplugin/index.ts"],
+      rules: {
+        // `unplugin` plugins use a default export so consumers can call
+        // `Qui.vite(...)` / `Qui.webpack(...)`.
+        "import/no-default-export": "off",
+        // Creating the unplugin instance at module scope is the unplugin API.
+        "stencil/ban-side-effects": "off",
+      },
+    },
+    {
+      files: ["src/components/qui-radio/*.tsx"],
+      rules: {
+        // The native radio input is the accessible control; `aria-invalid` is
+        // valid on it even though the lint rule only maps it to input roles.
+        "jsx-a11y/role-supports-aria-props": "off",
+        // The checked property is synchronized from group state after click.
+        "react/checked-requires-onchange-or-readonly": "off",
+      },
+    },
+    {
+      files: ["src/components/qui-accordion/qui-accordion-content.tsx"],
+      rules: {
+        // A div keeps the grid-row transition; section would be equivalent but
+        // the content part is intentionally layout-neutral.
+        "jsx-a11y/prefer-tag-over-role": "off",
+      },
+    },
+    {
+      files: ["src/components/qui-tabs/*.tsx"],
+      rules: {
+        // A tablist is a composite widget: focus is owned by its tab triggers,
+        // not by the list container itself.
+        "jsx-a11y/interactive-supports-focus": "off",
+      },
+    },
+    {
+      files: [
+        "src/components/qui-combobox/*.tsx",
+        "src/components/qui-select/qui-select.tsx",
+        "src/components/shared/option/option-list.tsx",
+      ],
+      rules: {
+        // The ARIA combobox pattern keeps focus in the input and points at the
+        // active option with aria-activedescendant, so options are intentionally
+        // not focusable and the list is a div-based listbox, not a <select>.
+        "jsx-a11y/click-events-have-key-events": "off",
+        "jsx-a11y/interactive-supports-focus": "off",
+        "jsx-a11y/prefer-tag-over-role": "off",
+        // Props inherited from OptionControlBase are not visible to the
+        // Stencil lint plugin, so watches on those props look unused.
+        "stencil/no-unused-watch": "off",
+        // The shared option controller and DOM guards are separate small
+        // modules, keeping each concern independently testable.
+        "import/max-dependencies": "off",
+      },
+    },
   ],
   rules: {
     ...stencil.configs.oxlint,
-
     // --- Framework incompatibilities ---------------------------------------
     // Stencil components are class-based and render custom elements. These
     // React rules assume a React component model and produce false positives.
@@ -111,6 +197,7 @@ export default defineConfig({
       "error",
       {
         capIsNewExceptions: [
+          "AttachInternals",
           "Component",
           "Element",
           "Event",

@@ -1,9 +1,20 @@
-import { resolveVar, Component, Element, h, Host, Prop, State, type VNode } from "@stencil/core";
+import {
+  Build,
+  resolveVar,
+  Component,
+  Element,
+  h,
+  Host,
+  Prop,
+  State,
+  type VNode,
+} from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { consumeDialog, type DialogContext, type DialogControl } from "./dialog-context";
+import { isHTMLDialogElement } from "../../helpers/dom";
+import { consumeDialog, type DialogContext, type DialogControl } from "./context";
 
 const styles = {
   host: css({ display: "contents" }),
@@ -170,12 +181,16 @@ export class QuiDialogContent {
   }
 
   private attachDocumentListeners(): void {
+    if (Build.isServer) {
+      return;
+    }
     const context = this.dialogContext;
     if (context === undefined) {
       return;
     }
 
-    const nativeModalDismiss = context.modal() && "closedBy" in HTMLDialogElement.prototype;
+    const nativeModalDismiss =
+      context.modal() && this.dialogEl !== undefined && "closedBy" in this.dialogEl;
     if (!nativeModalDismiss) {
       this.pointerHandler = (event: PointerEvent): void => {
         const dialog = this.dialogEl;
@@ -218,7 +233,7 @@ export class QuiDialogContent {
       <Host class={styles.host}>
         <dialog
           ref={(el) => {
-            if (el instanceof HTMLDialogElement) {
+            if (isHTMLDialogElement(el)) {
               this.dialogEl = el;
             }
           }}

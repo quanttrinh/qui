@@ -286,6 +286,48 @@
             </section>
 
             <section>
+                <h2>Virtualized select and combobox</h2>
+                <div class="grid">
+                    <qui-field id="field-select-virtualized">
+                        <qui-field-label>Account</qui-field-label>
+                        <qui-select
+                            id="virtual-select"
+                            name="virtual-account"
+                            placeholder="Pick from 1,000 accounts"
+                        ></qui-select>
+                        <qui-field-helper-text>
+                            1,000 options. Only the visible window is rendered.
+                        </qui-field-helper-text>
+                    </qui-field>
+
+                    <qui-field id="field-combobox-virtualized">
+                        <qui-field-label>Search accounts</qui-field-label>
+                        <qui-combobox
+                            id="virtual-combobox"
+                            name="virtual-account-search"
+                            placeholder="Search 1,000 accounts"
+                        ></qui-combobox>
+                        <qui-field-helper-text>
+                            Filter and scroll through the same virtualized list.
+                        </qui-field-helper-text>
+                    </qui-field>
+                </div>
+            </section>
+
+            <section>
+                <h2>Popover</h2>
+                <div class="row row-start">
+                    <qui-button id="popover-trigger" variant="filled">Open popover</qui-button>
+                    <qui-popover id="demo-popover" placement="bottom-start">
+                        <div style="max-width: 260px">
+                            <strong>Popover content</strong>
+                            <p>A general child container rendered in the top layer.</p>
+                        </div>
+                    </qui-popover>
+                </div>
+            </section>
+
+            <section>
                 <h2>Dialog</h2>
                 <qui-dialog>
                     <qui-dialog-trigger>Open dialog</qui-dialog-trigger>
@@ -331,9 +373,39 @@
         </main>
 
         <script>
+            const virtualItems = Array.from({ length: 1000 }, (_, index) => ({
+                value: `account-${index + 1}`,
+                label: `Account ${String(index + 1).padStart(4, "0")}`,
+                keywords: `customer account ${index + 1}`,
+                disabled: (index + 1) % 50 === 0,
+            }));
+
+            customElements.whenDefined("qui-select").then(() => {
+                const select = document.getElementById("virtual-select");
+                if (select) {
+                    select.items = virtualItems;
+                }
+            });
+
+            customElements.whenDefined("qui-combobox").then(() => {
+                const combobox = document.getElementById("virtual-combobox");
+                if (combobox) {
+                    combobox.items = virtualItems;
+                }
+            });
+
             const root = document.documentElement;
             document.getElementById("theme-toggle").addEventListener("click", () => {
                 root.classList.toggle("dark");
+            });
+
+            const demoPopover = document.getElementById("demo-popover");
+            const popoverTrigger = document.getElementById("popover-trigger");
+            popoverTrigger.addEventListener("click", () => {
+                demoPopover.open = !demoPopover.open;
+            });
+            demoPopover.addEventListener("dismiss", () => {
+                demoPopover.open = false;
             });
         </script>
     </body>

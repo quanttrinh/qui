@@ -1,56 +1,100 @@
 # @quanttrinh/qui
 
-Stencil web components with Material Design 3 styling via PandaCSS.
+Material Design 3 web components built with [Stencil](https://stenciljs.com/) and
+styled with [PandaCSS](https://panda-css.com/).
 
-This is a port of the earlier Solid implementation. It supports a shared Panda
-stylesheet or per-component stylesheets, selected at build time.
+The package ships two independent distributions:
+
+- **Shared** — one global component stylesheet
+- **Split** — per-component CSS shipped with each component module
+
+Both distributions include client-side custom elements and a Stencil hydrate
+module for SSR/SSG.
 
 ## Installation
 
-The package is published to GitHub Packages, which requires authentication even
-for public packages.
+The package is published to GitHub Packages.
 
-Create an `.npmrc` (project or global):
+Create an `.npmrc` in the project or user config:
 
 ```ini
 @quanttrinh:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 ```
 
-`GITHUB_TOKEN` must have at least `read:packages` (a classic PAT with
-`read:packages`, or a fine-grained token with package read access). Then:
+`GITHUB_TOKEN` needs at least `read:packages`.
 
 ```sh
 bun add @quanttrinh/qui
 ```
 
+## Quick start
+
+### Shared mode
+
+Load the theme once and the shared component stylesheet once:
+
+```ts
+import "@quanttrinh/qui/theme.css";
+import "@quanttrinh/qui/styles.css";
+```
+
+Register only the components used by the page:
+
+```ts
+import { defineComponents } from "@quanttrinh/qui/register";
+import { defineCustomElement as defineButton } from "@quanttrinh/qui/shared/qui-button";
+import { defineCustomElement as defineInput } from "@quanttrinh/qui/shared/qui-input";
+
+defineComponents(defineButton, defineInput);
+```
+
+```html
+<qui-input placeholder="Email" input-type="email"></qui-input>
+<qui-button variant="filled">Save</qui-button>
+```
+
+`defineComponents()` imports no components itself. Only the component modules
+you pass in are included in the bundle. There is no lazy loader, dynamic import
+or per-tag network waterfall.
+
+### Split mode
+
+Use the split hydrate/component paths and per-component CSS:
+
+```ts
+import "@quanttrinh/qui/theme.css";
+import "@quanttrinh/qui/base.css";
+import "@quanttrinh/qui/split/components/qui-button.css";
+import { defineComponents } from "@quanttrinh/qui/register";
+import { defineCustomElement as defineButton } from "@quanttrinh/qui/split/qui-button";
+
+defineComponents(defineButton);
+```
+
+Do not mix shared and split component modules, hydrate modules, or CSS.
+
 ## Components
 
-- `<qui-button>` — variants, sizes, disabled, anchor mode
-- `<qui-icon>` — any Material Symbols name via the icon font; use `font-size` and
-  `color` to size/color it
-- `<qui-card>` — elevated/filled/outlined, named `title`/`description`/`actions` slots
-- `<qui-checkbox>` — checked/indeterminate, disabled, required, `checkedchange`
+- `<qui-button>` — filled, tonal, elevated, outlined and text variants; anchor mode
+- `<qui-icon>` — Material Symbols by name
+- `<qui-card>` — elevated, filled and outlined; named `title` / `description` / `actions` slots
+- `<qui-checkbox>` — checked, indeterminate, disabled, required, `checkedchange`
 - `<qui-switch>` — checked, disabled, required, `checkedchange`
 - `<qui-radio-group>` + `<qui-radio>` — orientation, disabled, required, `valuechange`
-- `<qui-field>` + `<qui-field-label>`, `<qui-field-helper-text>`,
-  `<qui-field-error-text>`, `<qui-field-required-indicator>`
+- `<qui-field>` + label, helper text, error text and required indicator parts
 - `<qui-input>` — text/email/tel/search/password/number, masks, prefix/suffix slots,
-  number stepping, password toggle, `valuechange`
-- `<qui-accordion>` + `<qui-accordion-item>`, `<qui-accordion-trigger>`,
-  `<qui-accordion-content>` — multi/collapsible accordion
-- `<qui-tabs>` + `<qui-tab-list>`, `<qui-tab-trigger>`, `<qui-tab-panel>` — primary/secondary,
-  horizontal/vertical tabs
-- `<qui-dialog>` + trigger/content/title/description/actions/close parts, backed by
-  the native `<dialog>` element
-- `<qui-select>` and `<qui-combobox>` — child `qui-option` data sources or a
-  `collection` property; `content-visibility` row virtualization; field integration
+  number stepping, password visibility, `valuechange`
+- `<qui-accordion>` + item, trigger and content parts
+- `<qui-tabs>` + tab list, tab trigger and tab panel parts
+- `<qui-dialog>` + trigger, content, title, description, actions and close parts
+- `<qui-select>` and `<qui-combobox>` — child `qui-option` data sources or `items`
+  properties; measured virtualized rows in a native popover
+- `<qui-popover>` — native popover positioned with JavaScript
 
 ### Icons
 
-Material Symbols is distributed as a font (and raw SVG files), not as per-icon JS
-modules, so there is nothing like `import { Add } from "material-symbols"`. Import
-the font once and use any icon by name:
+Material Symbols is distributed as a font. Install it separately:
 
 ```sh
 bun add @material-symbols/font-400
@@ -65,31 +109,15 @@ import "@material-symbols/font-400/rounded.css";
     <qui-icon name="add"></qui-icon>
     Add item
 </qui-button>
-
-<qui-button icon-only aria-label="Remove">
-    <qui-icon name="remove"></qui-icon>
-</qui-button>
 ```
 
-```html
-<qui-input placeholder="Search">
-    <qui-icon slot="prefix" name="search"></qui-icon>
-</qui-input>
-```
+`qui-icon` inherits `font-size` and `color`. Any icon element can be used in a
+qui slot, so other icon packages work too.
 
-`qui-icon` inherits `font-size` and `color`, so size it with CSS:
+## Field composition
 
-```css
-qui-icon {
-    font-size: 20px;
-}
-```
-
-Any element in a qui slot can be an icon, so an app-wide icon package (for example
-`iconify-icon`) works too. The inline icons in
-`src/components/qui-icon/icons.ts` are only the ones qui's own components need.
-
-### Field composition
+`qui-field` owns IDs, label wiring, validation and disabled/read-only state.
+Descendant controls consume the field through a DOM context.
 
 ```html
 <qui-field id="email" required>
@@ -99,184 +127,202 @@ Any element in a qui slot can be an icon, so an app-wide icon package (for examp
 </qui-field>
 ```
 
-`qui-field` owns the control ids and state. Descendant `qui-input`, `qui-checkbox`,
-`qui-switch`, and `qui-radio-group` consume the field through a DOM context, so they
-inherit `disabled`, `invalid`, `readOnly`, and `required` without duplicating props.
-A field is intended for one control; use separate fields for separate controls.
+Use one field per control.
 
-### Forms
+## Forms
 
-`qui-input`, `qui-checkbox`, `qui-switch`, `qui-radio-group`, `qui-select`, and
-`qui-combobox` are form-associated custom elements. They participate directly in
-`FormData`, validation, `<fieldset disabled>`, and `form.reset()`.
+Checkbox, switch, radio group, input, select and combobox are form-associated
+custom elements. They support:
 
-```html
-<form id="profile">
-    <qui-input name="email" value="you@example.com" required></qui-input>
-    <qui-checkbox name="newsletter" value="yes" checked></qui-checkbox>
-</form>
+- form values and reset
+- `required`, `invalid`, `disabled` and `readOnly`
+- `qui-field` inheritance
+- state restoration
+- native form validation hooks
 
-<qui-input form="profile" name="nickname"></qui-input>
-```
-
-`form.reset()` restores each control's initial `value` / `defaultValue`,
-`checked` / `defaultChecked`, or radio-group `value` / `defaultValue`. The custom
-element itself is the form control; its internal native inputs no longer submit
-duplicate values.
-
-`qui-field` is a layout/context wrapper and is not itself form-associated. The
-actual control inside it owns form participation.
-
-### Radio group
-
-```html
-<qui-radio-group name="plan" value="pro">
-    <qui-radio value="free">Free</qui-radio>
-    <qui-radio value="pro">Pro</qui-radio>
-</qui-radio-group>
-```
-
-`value` makes the group controlled; use `default-value` for uncontrolled state.
-`orientation="horizontal"` switches the layout; the default is vertical.
-
-## Run
-
-```sh
-bun install         # from the repo root
-bun run dev         # shared styles + stencil dev server
-bun run dev:split   # per-component styles + stencil dev server
-bun run build       # shared production build
-bun run build:split # per-component production build
-bun run build:all   # both builds + Panda design-system artifacts
-bun run lint        # oxlint + @stencil/eslint-plugin
-bun run fmt         # oxfmt
-bun run fmt:check
-node ./node_modules/@typescript/native/bin/tsc --noEmit  # TypeScript 7 (src)
-```
-
-Stencil generates `src/components.d.ts` during a build. On a fresh checkout, run
-`bun run build` (or `bun run dev`) once before type-checking.
-
-`bun run build:all` writes both distributions at once:
-
-- `dist/shared/` — the shared-stylesheet build, exported as `@quanttrinh/qui`
-- `dist/split/` — the per-component build, exported as `@quanttrinh/qui/split`
-- `dist/panda/` — the design-system manifest, preset, and build info used by
-  `designSystem: "@quanttrinh/qui"` in an app's Panda config
-
-Both builds are included in the same npm tarball.
-
-## Style strategies
-
-`MD3_STYLE_STRATEGY` selects how PandaCSS output is packaged:
-
-```sh
-MD3_STYLE_STRATEGY=shared bun run build  # default
-MD3_STYLE_STRATEGY=split bun run build
-```
-
-| Strategy | Global CSS                 | Per-component CSS      |
-| -------- | -------------------------- | ---------------------- |
-| `shared` | `theme.css` + `styles.css` | empty placeholders     |
-| `split`  | `theme.css` + `base.css`   | one file per component |
-
-Both strategies use the same components and `styleUrl` declarations. In shared
-mode the per-component files are generated as empty placeholders, so the
-per-component path is still valid but contributes no CSS. In split mode Stencil
-injects only the styles for the components in use.
-
-For an app that uses many components, import the global styles once:
-
-```html
-<link rel="stylesheet" href="node_modules/@quanttrinh/qui/theme.css" />
-<link rel="stylesheet" href="node_modules/@quanttrinh/qui/styles.css" />
-```
-
-Or with a bundler:
+Register every tag used by the form. For a field with an input:
 
 ```ts
-import "@quanttrinh/qui/theme.css";
-import "@quanttrinh/qui/styles.css";
+defineComponents(defineField, defineFieldLabel, defineFieldHelperText, defineInput);
 ```
 
-For standalone use, load `theme.css` and `base.css` globally, then let Stencil
-inject each component's `styleUrl` CSS. If you consume the generated CSS files
-directly, load only the component files you need:
+## Registering components
 
-```html
-<link rel="stylesheet" href="node_modules/@quanttrinh/qui/theme.css" />
-<link rel="stylesheet" href="node_modules/@quanttrinh/qui/base.css" />
-<!-- one file per component actually used -->
-<link rel="stylesheet" href="node_modules/@quanttrinh/qui/split/components/qui-button.css" />
-```
-
-`theme.css` must stay global; do not adopt it into shadow roots.
-
-Consume the shared build from the package root and the split build from the
-`/split` subpath:
+Every generated component module exports a `defineCustomElement` function:
 
 ```ts
-import { QuiButton } from "@quanttrinh/qui"; // shared stylesheet
-import { QuiButton as QuiButtonSplit } from "@quanttrinh/qui/split"; // per-component CSS
-```
-
-Per-component subpaths are available too:
-
-```ts
-import { QuiButton, defineCustomElement } from "@quanttrinh/qui/split/qui-button";
+import { defineCustomElement } from "@quanttrinh/qui/shared/qui-button";
 defineCustomElement();
 ```
 
-Everything generated by Panda lives under `styled-system/`:
-
-- `styled-system/` — generated code and types; with source transforms enabled, static `css()` calls compile to class strings and the styling runtime is tree-shaken
-- `styled-system/theme.css` — `@property` registrations, light defaults, `.dark` overrides
-- `styled-system/styles.css` — shared reset, tokens, recipes, and utilities
-- `styled-system/base.css` — split mode reset, used tokens, and global styles
-- `styled-system/components/*.css` — the last generated strategy
-- `styled-system/shared/components/*.css` — shared placeholders
-- `styled-system/split/components/*.css` — split per-component CSS (published)
-- `styled-system/style-urls/` — generated short aliases for every component's `styleUrl`
-- `styled-system/style-strategy.json` — the last generated strategy and component manifest
-
-Style generation lives in `styles.stencil.plugin.ts`. `stencil.config.ts` only
-selects the strategy and wires the plugin; it does not generate files. The plugin
-runs an initial generation before Stencil reads the project config, then checks a
-fingerprint of the style inputs at the start of every watch rebuild and regenerates
-when something changed. Unchanged files are not rewritten, which avoids a watch
-loop.
-
-Component decorators use the generated alias instead of spelling out the path:
+Use the root `register` helper to register several definitions in one place:
 
 ```ts
-styleUrl: resolveVar(styleUrls.quiButton),
+import { defineComponents } from "@quanttrinh/qui/register";
+import { defineCustomElement as defineButton } from "@quanttrinh/qui/shared/qui-button";
+import { defineCustomElement as defineSelect } from "@quanttrinh/qui/shared/qui-select";
+
+defineComponents(defineButton, defineSelect);
 ```
 
-`styles.stencil.plugin.ts` writes `styled-system/style-urls/index.js` and
-`index.d.ts`; `#qui-style-url` maps to it in `package.json`. Stencil resolves the
-alias at compile time with `resolveVar()`, so the built bundle contains the CSS but
-no path or alias.
+Composite components need all tags in their composition registered. A dialog
+page, for example, needs `qui-dialog`, its trigger, content, title, description,
+actions and close parts.
 
-Stencil copies the selected global stylesheet to the `www` root as `/styles.css`
-and copies `theme.css` as `/theme.css`, so the demo loads both in `<head>`.
+Importing `@quanttrinh/qui` or `@quanttrinh/qui/split` directly pulls in the
+full component barrel. Use component subpaths when bundle size matters.
 
-The Stencil config also enables Panda's Rollup source transform:
+## Auto-registration plugin
+
+`@quanttrinh/qui/unplugin` scans JSX/TSX, MDX, and Astro source for used
+`qui-*` tags. For client modules it injects one static registration module per
+set of components. It also injects the matching styles, so the component modules
+and CSS always use the same distribution.
 
 ```ts
-rollupPlugins: {
-    before: [...pandacss({ transform: true })],
-},
+import Qui from "@quanttrinh/qui/unplugin";
+// vite.config.ts
+import { defineConfig } from "vite";
+
+export default defineConfig({
+    plugins: [Qui.vite({ strategy: "shared" })],
+});
 ```
 
-Static calls like `css({ display: "flex" })` are rewritten to class strings at
-build time, so the `styled-system/css` runtime is removed from the component
-bundles. Calls with values that are not statically knowable keep the runtime
-fallback as designed by Panda.
+For the split distribution:
 
-## Use with Panda
+```ts
+Qui.vite({
+    strategy: "split",
+    // Set to false if the app loads all CSS itself.
+    styles: true,
+});
+```
 
-The package ships a Panda design-system manifest. Apps that run Panda should point
-at the package once instead of copying its config or adding it to `include`:
+The plugin generates static imports, not a loader:
+
+```ts
+import { defineComponents } from "@quanttrinh/qui/register";
+import { defineCustomElement as __qui_0 } from "@quanttrinh/qui/shared/qui-button";
+import "@quanttrinh/qui/theme.css";
+import "@quanttrinh/qui/styles.css";
+
+defineComponents(__qui_0);
+```
+
+Registering the same component more than once is safe; Stencil checks
+`customElements.get()` before defining it.
+
+Tag detection uses Oxc's AST for JavaScript-family files, so tags in strings and
+comments are ignored. Astro/MDX use a lexical fallback because they are not
+JavaScript. Components created with dynamic tag names or markup assembled at
+runtime still need explicit `defineComponents()` registration.
+
+The plugin handles client-side registration. It does not call
+`renderToString` and does not perform SSR/SSG. Astro `.astro` page modules run on
+the server, so the injected registration is not a browser script. Keep the
+explicit registration `<script>` described below for native Astro templates; use
+the plugin for JSX/TSX islands or other Vite, Rollup, Webpack, Rspack, and
+esbuild entries.
+
+## SSR / SSG
+
+Both distributions ship a Node-compatible Stencil hydrate module.
+
+```ts
+// shared mode
+import { renderToString } from "@quanttrinh/qui/hydrate";
+// split mode
+import { renderToString } from "@quanttrinh/qui/hydrate/split";
+```
+
+Render components as scoped light DOM:
+
+```ts
+const { html, diagnostics } = await renderToString(markup, {
+    fullDocument: false,
+    serializeShadowRoot: "scoped",
+});
+```
+
+`markup` should contain the complete component composition. Render nested parts
+together so field, tabs, dialog and option context works during SSR.
+
+After hydration, register the same components on the client with
+`defineComponents()`.
+
+### CSS for SSR
+
+- **Shared mode:** load `theme.css` and `styles.css`
+- **Split mode:** load `theme.css` and `base.css`, plus the per-component CSS
+  files for components on the page
+
+With `fullDocument: true`, Stencil includes split component styles in the
+generated document head. With `fullDocument: false`, those styles are not
+included, so the page must load them.
+
+The custom elements build uses `externalRuntime: false`. Stencil's external
+client runtime is compiled with `hydrateClientSide: false`; inlining the runtime
+enables the hydrate path for the custom elements build. Without it, server
+markup is treated as slot content and the rendered DOM is duplicated on upgrade.
+
+### Astro
+
+Astro can render the hydrate output with `set:html`:
+
+```astro
+---
+import "@quanttrinh/qui/theme.css";
+import "@quanttrinh/qui/styles.css";
+import { renderToString } from "@quanttrinh/qui/hydrate";
+
+const { html } = await renderToString(
+  `<qui-button variant="filled">Save</qui-button>`,
+  { fullDocument: false, serializeShadowRoot: "scoped" },
+);
+---
+
+<Fragment set:html={html} />
+
+<script>
+  import { defineComponents } from "@quanttrinh/qui/register";
+  import { defineCustomElement as defineButton } from "@quanttrinh/qui/shared/qui-button";
+  defineComponents(defineButton);
+</script>
+```
+
+Astro emits the client entry at the end of `<body>`. To avoid waiting for CSS
+before discovering it, add a `modulepreload` for the entry script in the head.
+The Astro app should also preserve Stencil's hydration annotations; do not strip
+comments from the rendered markup.
+
+## Styling
+
+### Shared strategy
+
+```sh
+bun run build
+```
+
+- `theme.css` — CSS custom properties and light/dark values
+- `styles.css` — reset, tokens, recipes and component utilities
+- Per-component CSS files are empty placeholders
+
+### Split strategy
+
+```sh
+bun run build:split
+```
+
+- `theme.css` — CSS custom properties and light/dark values
+- `base.css` — reset, used tokens and global styles
+- `split/components/*.css` — one stylesheet per component
+
+Both builds use the same source and public entry points.
+
+### Use with Panda
+
+Point an app's Panda config at the package design system:
 
 ```ts
 // panda.config.ts
@@ -284,152 +330,122 @@ import { defineConfig } from "@pandacss/dev";
 
 export default defineConfig({
     designSystem: "@quanttrinh/qui",
-    include: ["./src/**/*.{ts,tsx}"],
+    include: ["./src/**/*.{js,jsx,ts,tsx,astro}"],
     outdir: "styled-system",
 });
 ```
 
-That loads qui's theme, recipes, tokens, and the styles Panda already extracted
-from the components. Apps can extend the theme and use their local `css()` or
-recipes alongside qui components:
+This shares tokens, recipes and extracted component styles with the app's own
+Panda CSS. It lets Astro and the web components generate into the same
+stylesheet instead of loading two overlapping CSS bundles.
+
+Load `theme.css` globally at runtime. Do not adopt it into shadow roots.
+
+Low-level generated exports are also available:
 
 ```ts
-import { defineConfig } from "@pandacss/dev";
-
-export default defineConfig({
-    designSystem: "@quanttrinh/qui",
-    include: ["./src/**/*.{ts,tsx}"],
-    theme: {
-        extend: {
-            tokens: {
-                spacing: {
-                    18: { value: "4.5rem" },
-                },
-            },
-        },
-    },
-});
+import { css } from "@quanttrinh/qui/css";
+import { flex } from "@quanttrinh/qui/patterns";
 ```
 
-```ts
-import { css } from "../styled-system/css";
-import { QuiButton } from "@quanttrinh/qui";
+## Distribution layout
 
-const toolbar = css({ display: "flex", gap: "18" });
+`bun run build:all` produces:
 
-export const Toolbar = () => (
-    <div class={toolbar}>
-        <QuiButton variant="filled">Save</QuiButton>
-    </div>
-);
+```text
+dist/shared/                 shared custom-elements build
+dist/split/                  split custom-elements build
+dist/hydrate/shared/         shared SSR/SSG hydrate module
+dist/hydrate/split/          split SSR/SSG hydrate module
+dist/utilities/              compiled utility modules
+dist/unplugin/               bundler plugin
+dist/types/                  TypeScript declarations
+dist/panda/                  Panda design-system manifest
+styled-system/               generated Panda CSS and types
 ```
 
-If you only need qui tokens without the full design-system manifest, the
-`./css`, `./tokens`, and `./types` subpaths are exported as well. `theme.css`
-still supplies the runtime `--md-sys-color-*` values; load it globally.
+Published entry points:
 
-Panda's `panda lib` step runs as part of `bun run build:all` and writes
-`dist/panda/{lib.json,preset.mjs,buildinfo.json}`. Do not hand-edit those files or
-the generated `./css`, `./recipes`, `./patterns`, `./jsx`, `./tokens`, `./helpers`,
-and `./types` exports; `panda lib` owns them. The `"."`, `"./split"`, and CSS
-exports are the package's public entry points and are kept on every run.
+| Entry                                    | Purpose                               |
+| ---------------------------------------- | ------------------------------------- |
+| `@quanttrinh/qui`                        | Shared components                     |
+| `@quanttrinh/qui/split`                  | Split components                      |
+| `@quanttrinh/qui/shared/*`               | Individual shared component           |
+| `@quanttrinh/qui/split/*`                | Individual split component            |
+| `@quanttrinh/qui/register`               | Static component registration helper  |
+| `@quanttrinh/qui/unplugin`               | Auto-registration bundler plugin      |
+| `@quanttrinh/qui/hydrate`                | Shared SSR/SSG renderer               |
+| `@quanttrinh/qui/hydrate/split`          | Split SSR/SSG renderer                |
+| `@quanttrinh/qui/theme.css`              | Theme custom properties               |
+| `@quanttrinh/qui/styles.css`             | Shared component CSS                  |
+| `@quanttrinh/qui/base.css`               | Split base CSS                        |
+| `@quanttrinh/qui/split/components/*.css` | Split component CSS                   |
+| `@quanttrinh/qui/panda/*`                | Panda manifest, preset and build info |
+| `@quanttrinh/qui/css`                    | Generated Panda CSS helper            |
+| `@quanttrinh/qui/patterns`               | Generated Panda patterns              |
+| `@quanttrinh/qui/jsx`                    | Generated Panda JSX helpers           |
+| `@quanttrinh/qui/tokens`                 | Generated Panda tokens                |
+| `@quanttrinh/qui/helpers`                | Generated Panda helpers               |
+| `@quanttrinh/qui/types`                  | Generated Panda types                 |
 
-## Generated code alias
+## Development
 
-Components import the generated styled-system through a Node subpath import:
-
-```ts
-import { css, cx } from "#styled-system/css";
+```sh
+bun install
+bun run dev          # shared styles + Stencil dev server
+bun run dev:split    # split styles + Stencil dev server
+bun run build            # shared production build + utilities + plugin
+bun run build:split      # split production build + utilities + plugin
+bun run build:all        # both builds, utilities, plugin, and Panda artifacts
+bun run build:utilities  # compile src/utilities -> dist/utilities
+bun run build:unplugin   # compile src/unplugin -> dist/unplugin
+bun run lint
+bun run fmt
+bun run fmt:check
 ```
 
-This is configured in `package.json` and needs no bundler plugin:
+Stencil generates `src/components.d.ts` during a build. On a fresh checkout, run
+`bun run build` once before type-checking.
 
-```json
-"imports": {
-  "#styled-system/css": "./styled-system/css/index.js"
-}
-```
+`dev` and `dev:split` compile utilities once before starting the Stencil watch.
+Re-run `bun run build:utilities` after editing `src/utilities/**`, and
+`bun run build:unplugin` after editing `src/unplugin/**`.
 
-`tsconfig.json` sets `"rootDir": "."` so TypeScript can resolve the subpath import
-from the package root. Stencil rewrites it to a relative path in the emitted output,
-so consumers never see the alias.
-
-## Lint / format
-
-- `oxlint.config.ts` — Stencil rules via `@stencil/eslint-plugin` (`jsPlugins`), plus JSX rules.
-- `oxfmt.config.ts` — import sorting and package.json ordering.
-
-## Native dialog
-
-`qui-dialog` now uses the native `<dialog>` element. It supports:
-
-- `modal` (default `true`) — `showModal()` vs `show()`
-- `open` / `defaultOpen`
-- `closeOnEscape`
-- `closeOnInteractOutside` — `closedby="any"` where supported
-- `preventScroll` — modal scroll lock
-- `dialogRole` (`dialog` or `alertdialog`)
-- `dialogLabel`
-- `show()` / `close(returnValue)` methods
-- `openchange` and `dialogcancel` events
-
-Select and Combobox use CSS-native row virtualization (`content-visibility`) with popper
-positioning. The
-Popover API migration is documented in
-[`docs/native-dialog-popover-investigation.md`](docs/native-dialog-popover-investigation.md).
-
-## TypeScript 7
-
-TypeScript 7.0 ships the native `tsc` compiler but **no JavaScript compiler API**.
-`@stencil/eslint-plugin` imports the TypeScript API, so it cannot run against the
-TypeScript 7 root package directly.
-
-This package uses the official side-by-side setup:
-
-```json
-"@typescript/native": "npm:typescript@^7.0.2",
-"typescript": "npm:@typescript/typescript6@^6.0.2"
-```
-
-- `@typescript/native` is TypeScript 7.0.2 and is the compiler used for type-checking.
-- `typescript` is the TypeScript 6 API alias, used only by API-consuming tooling
-  (`@stencil/eslint-plugin` via oxlint).
+Type-check with the native TypeScript compiler:
 
 ```sh
 node ./node_modules/@typescript/native/bin/tsc --noEmit
 ```
 
-`tsconfig.json` checks `src`:
+### Testing
 
-- `include: ["src"]` — the components
-- `rootDir: "."` — lets TypeScript resolve the `#styled-system/*` subpath import
-- `types: []` — the components are browser code; `@types/node` is opt-in per file
+Tests use `@stencil/vitest` with two projects:
 
-Root config files (`stencil.config.ts`, `panda*.config.ts`, `oxlint.config.ts`,
-`oxfmt.config.ts`) are not part of the `src` program. `stencil.config.ts` starts with
-`/// <reference types="node" />` so editors resolve its Node globals, and the other
-configs are covered by their own tooling.
+- `*.unit.test.ts` / `*.unit.test.tsx` — Node tests for controllers and helpers
+- `*.browser.test.tsx` — real Chromium tests for DOM, forms, focus, popovers and
+  virtualized rows
 
-oxlint reads rule options by their documented camelCase names (for example
-`preferInline`); the generated TypeScript types only declare those names, so the
-kebab-case form type-checks as an error even though oxlint also accepts it at
-runtime.
+```sh
+bun run test:unit
+bun run test:browser
+bun run test
+bun run test:watch
+```
 
-If you want `typescript` itself to point at 7.0.2, the Stencil ESLint plugin must
-be dropped or moved to a separate TypeScript 6 lint workspace.
+`stencil-test` builds the `www` lazy loader before running Vitest.
+`vitest-setup.ts` loads that loader and the generated theme/shared styles for
+browser tests.
 
-## Status / next steps
+## Implementation notes
 
-- [x] Stencil package scaffold
-- [x] Panda config + generated theme.css (`@property`)
-- [x] Button
-- [x] Card
-- [x] Checkbox / Switch / RadioGroup (Zag vanilla)
-- [x] Field / Input
-- [x] Tabs / Accordion
-- [x] Dialog / Select / Combobox
-- [x] Native `<dialog>` migration
-- [ ] Popover API migration for Select/Combobox
-- [ ] Theme components
-- [x] Split/per-component CSS + compile-time switch
-- [ ] unplugin package
+- The original Zag integrations have been replaced with local controllers.
+- Select and combobox share measured/virtualized option-list controllers.
+- Form controls share `FormController` and `CheckableController`.
+- Browser-only work is gated with `Build.isServer` / `Build.isBrowser`.
+- `build/build-utilities.ts` compiles `src/utilities/**/*.ts` into
+  `dist/utilities/`, including declarations and rewritten relative imports.
+  `build:all` runs it once after both Stencil builds.
+- `build/build-unplugin.ts` compiles `src/unplugin/**/*.ts` into
+  `dist/unplugin/` using the same module builder.
+- The generated `www` app is the demo/dev server; it is not the published client
+  entry point.
