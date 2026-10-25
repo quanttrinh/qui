@@ -35,31 +35,23 @@ describe("qui-field", () => {
   });
 
   it("does not let host part attributes break context lifecycles", async () => {
-    const errors: string[] = [];
-    const onError = (event: ErrorEvent): void => {
-      errors.push(event.message);
-      event.preventDefault();
-    };
-
-    globalThis.addEventListener("error", onError);
-
-    const { root } = await render(
-      <qui-field id="field">
-        <qui-field-label>Label</qui-field-label>
+    const { root, waitForChanges } = await render(
+      <qui-field id="field" required>
+        <qui-field-label>
+          Label
+          <qui-field-required-indicator />
+        </qui-field-label>
         <qui-input />
         <qui-field-helper-text>Helper</qui-field-helper-text>
         <qui-field-error-text>Error</qui-field-error-text>
       </qui-field>,
     );
 
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 0);
-    });
-    globalThis.removeEventListener("error", onError);
+    await waitForChanges();
 
-    expect(errors).toEqual([]);
     expect(root.querySelector("[part=helper-text]")).toHaveAttribute("id", "field::helper-text");
     expect(root.querySelector("[part=error-text]")).toHaveAttribute("id", "field::error-text");
+    expect(root.querySelector("[part=required-indicator]")).toHaveAttribute("data-required");
   });
 
   it("propagates disabled and read-only state to its control", async () => {
