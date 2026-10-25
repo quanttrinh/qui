@@ -54,11 +54,21 @@ describe("qui-input", () => {
     }
 
     expect(input.type).toBe("password");
+    const svg = trigger.querySelector("svg");
+    const hiddenPath = svg?.querySelector("path")?.getAttribute("d");
+    expect(svg?.getAttribute("viewBox")).toBe("0 -960 960 960");
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+    expect(svg).toHaveAttribute("focusable", "false");
+
     trigger.click();
     await waitForChanges();
     expect(input.type).toBe("text");
+    const visiblePath = svg?.querySelector("path")?.getAttribute("d");
+    expect(visiblePath).not.toBe(hiddenPath);
+
     trigger.click();
     await waitForChanges();
     expect(input.type).toBe("password");
+    expect(svg?.querySelector("path")?.getAttribute("d")).toBe(hiddenPath);
   });
 });
