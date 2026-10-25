@@ -78,6 +78,11 @@ const styles = {
     fontWeight: "medium",
     color: "onSurface",
   }),
+  requiredIndicator: css({
+    color: "error",
+    marginInlineStart: "0.5",
+    "&:not([data-required])": { display: "none" },
+  }),
   input: css({
     position: "absolute",
     width: "1px",
@@ -134,6 +139,7 @@ export class QuiCheckbox extends FormControlBase {
   checkedChange!: EventEmitter<{ checked: CheckedState }>;
 
   private inputEl?: HTMLInputElement;
+  private readonly defaultMarker = "*";
   private readonly generatedId = nextId("qui-checkbox");
   private readonly checkable = new CheckableController({
     getChecked: (): CheckedState | undefined => normalizeChecked(this.checked),
@@ -340,6 +346,16 @@ export class QuiCheckbox extends FormControlBase {
             part="label"
           >
             <slot>{this.label}</slot>
+            <span
+              data-scope="checkbox"
+              data-part="required-indicator"
+              aria-hidden="true"
+              data-required={dataAttr(this.form.isRequired)}
+              class={styles.requiredIndicator}
+              part="required-indicator"
+            >
+              {this.defaultMarker}
+            </span>
           </span>
           <input
             {...this.inputProps}

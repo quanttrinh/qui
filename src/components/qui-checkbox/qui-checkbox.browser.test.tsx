@@ -24,6 +24,22 @@ describe("qui-checkbox", () => {
     expect(input.checked).toBe(true);
   });
 
+  it("renders a required indicator when required", async () => {
+    const { root, waitForChanges } = await render(<qui-checkbox required>Check me</qui-checkbox>);
+
+    await waitForChanges();
+
+    expect(root.querySelector("[part=required-indicator]")).toHaveAttribute("data-required");
+  });
+
+  it("does not render the required indicator when optional", async () => {
+    const { root, waitForChanges } = await render(<qui-checkbox>Check me</qui-checkbox>);
+
+    await waitForChanges();
+
+    expect(root.querySelector("[part=required-indicator]")).not.toHaveAttribute("data-required");
+  });
+
   it("renders the indeterminate state and clears it on click", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(
       <qui-checkbox indeterminate>Check me</qui-checkbox>,
