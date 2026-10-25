@@ -55,7 +55,13 @@ export function normalizeComponents(components: Iterable<string>): string[] {
 export function registrationOrder(components: Iterable<string>): string[] {
   return normalizeComponents(components).sort((left, right) => {
     const priority = (COMPONENT_PRIORITY[left] ?? 100) - (COMPONENT_PRIORITY[right] ?? 100);
-    return priority === 0 ? left.localeCompare(right) : priority;
+    if (priority !== 0) {
+      return priority;
+    }
+    if (left === right) {
+      return 0;
+    }
+    return left < right ? -1 : 1;
   });
 }
 
@@ -116,7 +122,7 @@ export function createRegistrationModule(
   }
   // Keep the previous alphabetical CSS order.
   // Defining custom elements must not change the split CSS cascade.
-  const styleTags = normalizeComponents(components);
+  const styleTags = [...tags].sort();
 
   const bindings: string[] = [];
   const lines = ['import { defineComponents } from "@quanttrinh/qui/register";'];

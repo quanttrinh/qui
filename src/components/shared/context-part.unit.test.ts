@@ -93,23 +93,29 @@ describe("consumeContextPart lifecycle", () => {
     part.hostDisconnected();
   });
 
-  it("reattaches after a reconnect", () => {
-    const context = createContext();
-    const state: { current?: ReturnType<typeof createContext> } = { current: context };
+  it("reattaches and re-renders after a reconnect with a new provider", () => {
+    const first = createContext();
+    const second = createContext();
+    const state: { current?: ReturnType<typeof createContext> } = { current: first };
+    const update = vi.fn((): void => undefined);
     const part = consumeContextPart({
       host: createHost,
       key: KEY,
       consume: () => state.current,
+      update,
     });
 
     part.hostWillLoad();
+    part.hostDidLoad();
     part.hostDisconnected();
     expect(part.context).toBeUndefined();
-    expect(context.listenerCount()).toBe(0);
+    expect(first.listenerCount()).toBe(0);
 
+    state.current = second;
     part.hostConnected();
-    expect(part.context).toBe(context);
-    expect(context.listenerCount()).toBe(1);
+    expect(part.context).toBe(second);
+    expect(second.listenerCount()).toBe(1);
+    expect(update).toHaveBeenCalledOnce();
     part.hostDisconnected();
   });
 
@@ -200,6 +206,29 @@ describe("consumeContextPart provider notifications", () => {
     notifyContextProvided(KEY);
     await flush();
     expect(part.context).toBe(context);
+    part.hostDisconnected();
+  });
+
+  it("updates one-shot consumers when their provider appears", async () => {
+    const context = createContext();
+    const state: { current?: ReturnType<typeof createContext> } = {};
+    const update = vi.fn((): void => undefined);
+    const part = consumeContextPart({
+      host: createHost,
+      key: KEY,
+      consume: () => state.current,
+      subscribe: false,
+      update,
+    });
+
+    part.hostWillLoad();
+    state.current = context;
+    notifyContextProvided(KEY);
+    await flush();
+
+    expect(part.context).toBe(context);
+    expect(update).toHaveBeenCalledOnce();
+    expect(context.listenerCount()).toBe(0);
     part.hostDisconnected();
   });
 

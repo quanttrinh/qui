@@ -88,6 +88,11 @@ describe("extractComponents", () => {
   });
 });
 
+function* singleUseComponents(): Generator<string> {
+  yield "qui-accordion-content";
+  yield "qui-accordion";
+}
+
 describe("registrationOrder", () => {
   it("defines parent contexts before the parts that consume them", () => {
     expect(
@@ -149,6 +154,15 @@ describe("registrationOrder", () => {
       "qui-accordion-content",
       "qui-accordion-trigger",
     ]);
+  });
+
+  it("consumes one-shot component iterables once", () => {
+    const code = createRegistrationModule(singleUseComponents(), { strategy: "split" });
+    const styleImports = [...code.matchAll(/split\/components\/(?<tag>qui-[^"]+)\.css/gu)].map(
+      (match) => match.groups?.tag,
+    );
+
+    expect(styleImports).toEqual(["qui-accordion", "qui-accordion-content"]);
   });
 
   it("keeps split CSS imports alphabetical", () => {

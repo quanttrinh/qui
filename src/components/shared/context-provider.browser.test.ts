@@ -1,6 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { consumeContextPart } from "./context-part";
+import {
+  clearAccordion,
+  clearAccordionItem,
+  consumeAccordion,
+  consumeAccordionItem,
+  provideAccordion,
+  provideAccordionItem,
+  type AccordionContext,
+  type AccordionItemContext,
+} from "../qui-accordion/accordion-context";
+import { consumeContextPart, type ContextPart } from "./context-part";
 import { clearField, consumeField, provideField, type FieldApi } from "./field/context";
 import { FormController } from "./form-control/controller";
 
@@ -43,6 +53,34 @@ function createFieldApi(): FieldApi {
     registerHelperText: () => () => undefined,
     registerErrorText: () => () => undefined,
     subscribe: () => () => undefined,
+  };
+}
+
+function createAccordionContext(): AccordionContext {
+  return {
+    isExpanded: () => false,
+    isFocused: () => false,
+    isDisabled: () => false,
+    orientation: () => "vertical",
+    textDirection: () => undefined,
+    toggle: (): void => undefined,
+    focus: (): void => undefined,
+    blur: (): void => undefined,
+    move: (): void => undefined,
+    edge: (): void => undefined,
+    rootId: () => "accordion",
+    itemId: (value) => `accordion-item-${value}`,
+    triggerId: (value) => `accordion-trigger-${value}`,
+    contentId: (value) => `accordion-content-${value}`,
+    subscribe: () => () => undefined,
+  };
+}
+
+function createItemContext(accordion: AccordionContext, value: string): AccordionItemContext {
+  return {
+    ...accordion,
+    item: () => ({ value }),
+    isItemDisabled: () => accordion.isDisabled(),
   };
 }
 
@@ -117,8 +155,80 @@ describe("context provider notifications", () => {
     expect(onChange).toHaveBeenCalledOnce();
     expect(requestUpdate).toHaveBeenCalledOnce();
 
-    controller.hostDisconnected();
     clearField(provider);
+    await Promise.resolve();
+
+    expect(controller.fieldApi).toBeUndefined();
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(requestUpdate).toHaveBeenCalledTimes(2);
+
+    controller.hostDisconnected();
     provider.remove();
+  });
+});
+
+function createAccordionTree(values: string[]): {
+  host: HTMLElement;
+  itemParts: ContextPart<AccordionContext>[];
+  contentParts: ContextPart<AccordionItemContext>[];
+} {
+  const host = document.createElement("div");
+  document.body.append(host);
+  const itemParts: ContextPart<AccordionContext>[] = [];
+  const contentParts: ContextPart<AccordionItemContext>[] = [];
+
+  for (const value of values) {
+    const itemHost = document.createElement("div");
+    const contentHost = document.createElement("div");
+    itemHost.append(contentHost);
+    host.append(itemHost);
+
+    const itemPart = consumeContextPart({
+      host: () => itemHost,
+      key: "accordion",
+      consume: consumeAccordion,
+      setup: (accordion: AccordionContext) => {
+        provideAccordionItem(itemHost, createItemContext(accordion, value));
+        return (): void => {
+          clearAccordionItem(itemHost);
+        };
+      },
+    });
+    const contentPart = consumeContextPart({
+      host: () => contentHost,
+      key: "accordion-item",
+      consume: consumeAccordionItem,
+    });
+
+    itemPart.hostWillLoad();
+    contentPart.hostWillLoad();
+    itemParts.push(itemPart);
+    contentParts.push(contentPart);
+  }
+
+  return { host, itemParts, contentParts };
+}
+
+function destroyAccordionTree(tree: ReturnType<typeof createAccordionTree>): void {
+  for (const part of [...tree.itemParts, ...tree.contentParts]) {
+    part.hostDisconnected();
+  }
+  clearAccordion(tree.host);
+  tree.host.remove();
+}
+
+describe("accordion cascading notifications", () => {
+  it("attaches every item and consumer when the accordion provider appears", async () => {
+    const tree = createAccordionTree(["one", "two", "three"]);
+    expect(tree.itemParts.every((part) => part.context === undefined)).toBe(true);
+    expect(tree.contentParts.every((part) => part.context === undefined)).toBe(true);
+
+    const accordion = createAccordionContext();
+    provideAccordion(tree.host, accordion);
+    await Promise.resolve();
+
+    expect(tree.itemParts.every((part) => part.context === accordion)).toBe(true);
+    expect(tree.contentParts.every((part) => part.context !== undefined)).toBe(true);
+    destroyAccordionTree(tree);
   });
 });

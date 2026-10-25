@@ -35,6 +35,10 @@ interface ContextPart<TContext extends ContextPartSource> {
   hostDisconnected: () => void;
 }
 
+// Notifications are scoped by context family, not by provider host.
+// Parts re-walk their ancestors when a matching provider changes.
+// Attach is a no-op for the current context.
+// A provider-to-consumer index would be more complex than this is worth.
 const contextProvidedListeners = new Map<ContextPartKey, Set<() => void>>();
 const pendingKeys = new Set<ContextPartKey>();
 let flushScheduled = false;
@@ -106,12 +110,13 @@ function consumeContextPart<TContext extends ContextPartSource>(
   let unsubscribe: (() => void) | undefined = undefined;
   let teardown: (() => void) | undefined = undefined;
   let stopListening: (() => void) | undefined = undefined;
+  let loaded = false;
 
   const detach = (): void => {
-    teardown?.();
-    teardown = undefined;
     unsubscribe?.();
     unsubscribe = undefined;
+    teardown?.();
+    teardown = undefined;
   };
 
   const requestUpdate = (next: TContext): void => {
@@ -155,12 +160,13 @@ function consumeContextPart<TContext extends ContextPartSource>(
     }
   };
 
-  const start = (): void => {
+  const start = (): boolean => {
     stopListening ??= onContextProvided(options.key, handleProvided);
-    attach();
+    return attach();
   };
 
   const hostDidLoad = (): void => {
+    loaded = true;
     if (attach()) {
       updateAttached();
     }
@@ -170,8 +176,14 @@ function consumeContextPart<TContext extends ContextPartSource>(
     get context(): TContext | undefined {
       return context;
     },
-    hostConnected: start,
-    hostWillLoad: start,
+    hostConnected: (): void => {
+      if (start() && loaded) {
+        updateAttached();
+      }
+    },
+    hostWillLoad: (): void => {
+      start();
+    },
     hostDidLoad,
     hostDisconnected: (): void => {
       stopListening?.();

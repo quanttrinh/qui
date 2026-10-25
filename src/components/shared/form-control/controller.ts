@@ -215,18 +215,21 @@ export class FormController implements FormControl, ReactiveController {
 
   private attach(): boolean {
     const field = consumeField(this.options.getHost());
-    if (field === undefined || field === this.field) {
+    if (field === this.field) {
       return false;
     }
     this.unsubscribe?.();
+    this.unsubscribe = undefined;
     this.field = field;
-    this.unsubscribe = field.subscribe(() => {
-      this.signature = "";
-      this.options.onChange?.();
-      this.options.requestUpdate();
-      this.sync();
-    });
     this.signature = "";
+    if (field !== undefined) {
+      this.unsubscribe = field.subscribe(() => {
+        this.signature = "";
+        this.options.onChange?.();
+        this.options.requestUpdate();
+        this.sync();
+      });
+    }
     this.sync();
     return true;
   }
