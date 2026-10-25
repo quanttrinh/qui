@@ -260,6 +260,9 @@ export class QuiCheckbox extends FormControlBase {
           }
         : { ...field.getInputProps() };
     delete props.required;
+    if (this.form.isRequired) {
+      props["aria-required"] = "true";
+    }
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     return props as Record<string, string | number | boolean | undefined>;
   }
