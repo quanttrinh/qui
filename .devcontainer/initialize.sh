@@ -9,7 +9,7 @@ REGISTRY="dhi.io"
 TOKEN=""
 USER=""
 
-if [ -n "${CODESPACES+x}" ]; then
+if [ -n "${CODESPACES:-}" ]; then
     TOKEN="$DOCKERHUB_TOKEN"
     USER="$DOCKERHUB_USER"
 elif command -v doppler &> /dev/null; then

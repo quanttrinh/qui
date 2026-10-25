@@ -3,10 +3,10 @@ import { resolveVar, Component, Element, h, Host, Prop, Watch, type VNode } from
 import { styleUrls } from "#qui-style-url";
 import { cx } from "#styled-system/css";
 
-import { dataAttr } from "../../utilities/attr";
-import { nextId } from "../../utilities/id";
-import { clearField, provideField, type FieldApi, type FieldIds } from "./field-context";
-import { fieldStyles } from "./field-styles";
+import { dataAttr } from "../../helpers/attr";
+import { nextId } from "../../helpers/id";
+import { clearField, provideField, type FieldApi, type FieldIds } from "../shared/field/context";
+import { fieldStyles } from "./styles";
 
 /**
  * Groups a control with its label, helper text, and error text.

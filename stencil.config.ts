@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { stylesPlugin } from "./styles.stencil.plugin";
 
 const packageRoot = __dirname;
-const styleStrategy = process.env.MD3_STYLE_STRATEGY === "split" ? "split" : "shared";
+const styleStrategy = process.env.STYLE_STRATEGY === "split" ? "split" : "shared";
 
 const globalCss =
   styleStrategy === "split"
@@ -32,6 +32,11 @@ export const config: Config = {
       dir: outputDirectory,
       generateTypeDeclarations: true,
       customElementsExportBehavior: "single-export-module",
+      externalRuntime: false,
+    },
+    {
+      type: "dist-hydrate-script",
+      dir: join(packageRoot, "dist", "hydrate", styleStrategy),
     },
   ],
   rollupPlugins: {

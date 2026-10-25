@@ -8,17 +8,17 @@ import {
   Prop,
   type VNode,
 } from "@stencil/core";
-import { type ItemProps } from "@zag-js/accordion";
-import { spreadProps } from "@zag-js/vanilla";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
+import { dataAttr } from "../../helpers/attr";
 import {
   clearAccordionItem,
   consumeAccordion,
   provideAccordionItem,
   type AccordionContext,
+  type AccordionItem,
   type AccordionItemContext,
 } from "./accordion-context";
 
@@ -54,8 +54,6 @@ export class QuiAccordionItem {
 
   private accordion?: AccordionContext;
   private unsubscribe?: () => void;
-  private spreads: (() => void)[] = [];
-  private rootEl?: HTMLDivElement;
 
   public componentWillLoad(): void {
     this.attachAccordion();
@@ -64,19 +62,12 @@ export class QuiAccordionItem {
   public componentDidLoad(): void {
     if (this.accordion === undefined) {
       this.attachAccordion();
+      forceUpdate(this.host);
     }
-  }
-
-  public componentDidRender(): void {
-    this.applySpreads();
   }
 
   public disconnectedCallback(): void {
     clearAccordionItem(this.host);
-    for (const cleanup of this.spreads) {
-      cleanup();
-    }
-    this.spreads = [];
     this.unsubscribe?.();
   }
 
@@ -93,39 +84,38 @@ export class QuiAccordionItem {
     provideAccordionItem(this.host, this.context(accordion));
   }
 
-  private item(): ItemProps {
-    return { value: this.value, disabled: this.disabled };
+  private item(): AccordionItem {
+    return {
+      value: this.value,
+      disabled: this.disabled ? true : undefined,
+    };
   }
 
   private context(accordion: AccordionContext): AccordionItemContext {
     return {
       ...accordion,
-      item: () => this.item(),
+      item: (): AccordionItem => this.item(),
     };
   }
 
-  private applySpreads(): void {
-    if (this.rootEl === undefined || this.accordion === undefined) {
-      return;
-    }
-    this.spreads = [
-      spreadProps(this.rootEl, {
-        ...this.accordion.api().getItemProps(this.item()),
-        class: cx(styles.item, this.innerClass),
-      }),
-    ];
-  }
-
   public render(): VNode {
+    const { accordion } = this;
+    const expanded = accordion?.isExpanded(this.value) ?? false;
+    const focused = accordion?.isFocused(this.value) ?? false;
+    const disabled = this.disabled || (accordion?.isDisabled() ?? false);
+
     return (
       <Host class={styles.host}>
         <div
-          ref={(el) => {
-            if (el instanceof HTMLDivElement) {
-              this.rootEl = el;
-            }
-          }}
-          class={styles.item}
+          id={accordion?.itemId(this.value)}
+          data-scope="accordion"
+          data-part="item"
+          data-state={expanded ? "open" : "closed"}
+          data-focus={dataAttr(focused)}
+          data-disabled={dataAttr(disabled)}
+          data-orientation={accordion?.orientation() ?? "vertical"}
+          dir={accordion?.textDirection()}
+          class={cx(styles.item, this.innerClass)}
           part="item"
         >
           <slot />

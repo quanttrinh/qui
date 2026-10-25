@@ -12,28 +12,28 @@ import {
   type EventEmitter,
   type VNode,
 } from "@stencil/core";
-import {
-  connect as radioGroupConnect,
-  machine as radioGroupMachine,
-  type Api as ZagRadioGroupApi,
-  type Props as RadioGroupProps,
-} from "@zag-js/radio-group";
-import { normalizeProps, spreadProps, VanillaMachine } from "@zag-js/vanilla";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { getRootNode } from "../../utilities/dom";
-import { nextId } from "../../utilities/id";
-import { type MachineSchemaOf } from "../../utilities/zag";
-import { consumeField, type FieldApi } from "../qui-field/field-context";
-import { provideRadioGroup, clearRadioGroup, type RadioGroupApi } from "./radio-group-context";
-
-type RadioGroupSchema = MachineSchemaOf<typeof radioGroupMachine>;
+import { dataAttr } from "../../helpers/attr";
+import { isHTMLDivElement } from "../../helpers/dom";
+import { nextId } from "../../helpers/id";
+import { FormControlBase } from "../shared/form-control/component-base";
+import { FormController, type FormValidity } from "../shared/form-control/controller";
+import {
+  clearRadioGroup,
+  provideRadioGroup,
+  type RadioGroupContext,
+  type RadioItem,
+  type RadioItemState,
+} from "./context";
+import { RadioGroupController } from "./controller";
 
 const styles = {
   host: css({ display: "block" }),
   root: css({
+    position: "relative",
     display: "flex",
     flexDirection: "column",
     gap: "2",
@@ -52,9 +52,8 @@ const styles = {
   scoped: true,
   formAssociated: true,
 })
-export class QuiRadioGroup {
+export class QuiRadioGroup extends FormControlBase {
   @Element() host!: HTMLQuiRadioGroupElement;
-  // oxlint-disable-next-line eslint/new-cap
   @AttachInternals() internals!: ElementInternals;
 
   /** The controlled selected value. */
@@ -82,74 +81,128 @@ export class QuiRadioGroup {
   @Event({ eventName: "valuechange", bubbles: true, composed: true })
   valueChange!: EventEmitter<{ value: string | undefined }>;
 
-  private formDisabled = false;
-
-  private machine?: VanillaMachine<RadioGroupSchema>;
-  private unsubscribe?: () => void;
-  private field?: FieldApi;
-  private fieldUnsubscribe?: () => void;
-  private readonly listeners = new Set<() => void>();
-  private spreads: (() => void)[] = [];
   private rootEl?: HTMLDivElement;
-  private initialValue = "";
+  private idBase = "";
+  private readonly listeners = new Set<() => void>();
   private readonly generatedId = nextId("qui-radio-group");
-
-  public componentWillLoad(): void {
-    this.initialValue = this.defaultValue ?? this.value ?? "";
-    this.attachField();
-    this.machine = new VanillaMachine(radioGroupMachine, () => this.machineProps());
-    this.unsubscribe = this.machine.subscribe(() => {
+  private readonly controller = new RadioGroupController({
+    getValue: (): string | undefined => this.value,
+    getDefaultValue: (): string | undefined => this.defaultValue,
+    isDisabled: (): boolean => this.form.isDisabled,
+    isReadOnly: (): boolean => this.form.isReadOnly,
+    onChange: (value: string | undefined): void => {
+      this.valueChange.emit({ value });
+      this.form.sync();
+    },
+    requestUpdate: (): void => {
       forceUpdate(this.host);
       this.notifyListeners();
-    });
-    this.machine.start();
-    provideRadioGroup(this.host, this.groupApi());
+    },
+  });
+  private readonly form = new FormController({
+    getHost: (): HTMLElement => this.host,
+    getInternals: (): ElementInternals => this.internals,
+    getName: (): string | undefined => this.name,
+    getMultiple: (): boolean => false,
+    getValue: (): readonly string[] => {
+      const { value } = this.controller;
+      return value === undefined || value === "" ? [] : [value];
+    },
+    getDisabled: (): boolean => this.disabled,
+    getReadOnly: (): boolean => this.readOnly,
+    getRequired: (): boolean => this.required,
+    getInvalid: (): boolean => this.invalid,
+    getValidationElement: (): HTMLElement | undefined => this.rootEl,
+    getFormValue: (): string | null => {
+      const { value } = this.controller;
+      // oxlint-disable-next-line unicorn/no-null
+      return value === undefined || value === "" ? null : value;
+    },
+    getValidity: (): FormValidity => this.validity(),
+    getSignature: (): string => this.signature(),
+    onReset: (): void => {
+      this.value = this.controller.initialValue;
+      this.controller.reset();
+    },
+    onRestore: (values: string[]): void => {
+      const restored = values.at(0);
+      const value = restored === "" ? undefined : restored;
+      this.value = value;
+      this.controller.restore(value);
+    },
+    requestUpdate: (): void => {
+      forceUpdate(this.host);
+    },
+    onChange: (): void => {
+      this.notifyListeners();
+    },
+  });
+  private readonly context: RadioGroupContext = {
+    value: (): string | undefined => this.controller.value,
+    isDisabled: (): boolean => this.form.isDisabled,
+    isReadOnly: (): boolean => this.form.isReadOnly,
+    isInvalid: (): boolean => this.form.isInvalid,
+    isRequired: (): boolean => this.form.isRequired,
+    orientation: (): "horizontal" | "vertical" => this.orientation,
+    textDirection: (): "ltr" | "rtl" | undefined => this.textDirection,
+    itemState: (item: RadioItem): RadioItemState => this.itemState(item),
+    select: (value: string): void => {
+      this.controller.select(value);
+    },
+    focus: (value: string, focusVisible: boolean): void => {
+      this.controller.focus(value, focusVisible);
+    },
+    blur: (): void => {
+      this.controller.blur();
+    },
+    rootId: (): string => this.rootId,
+    itemId: (value: string): string => this.itemId(value),
+    inputId: (value: string): string => this.inputId(value),
+    controlId: (value: string): string => this.controlId(value),
+    labelId: (value: string): string => this.labelIdFor(value),
+    subscribe: (listener: () => void): (() => void) => {
+      this.listeners.add(listener);
+      return (): void => {
+        this.listeners.delete(listener);
+      };
+    },
+  };
+
+  constructor() {
+    super();
+    this.addController(this.controller);
+    this.addController(this.form);
+  }
+
+  protected get formController(): FormController {
+    return this.form;
   }
 
   public connectedCallback(): void {
-    if (this.machine !== undefined) {
-      provideRadioGroup(this.host, this.groupApi());
+    super.connectedCallback();
+    if (this.idBase === "") {
+      this.idBase = this.host.id || this.generatedId;
     }
+    provideRadioGroup(this.host, this.context);
+  }
+
+  public componentWillLoad(): void {
+    super.componentWillLoad();
+    this.idBase = this.host.id || this.generatedId;
+    provideRadioGroup(this.host, this.context);
   }
 
   public componentDidLoad(): void {
-    if (this.field === undefined) {
-      this.attachField();
-    }
+    super.componentDidLoad();
   }
 
   public componentDidRender(): void {
-    this.applySpreads();
-  }
-
-  public formResetCallback(): void {
-    this.value = this.initialValue || undefined;
-    this.syncMachineProps();
-    this.syncFormState();
-  }
-
-  public formDisabledCallback(disabled: boolean): void {
-    this.formDisabled = disabled;
-    this.machine?.updateProps(this.machineProps());
-  }
-
-  public formStateRestoreCallback(state: string | File | FormData | null): void {
-    if (typeof state === "string") {
-      this.value = state || undefined;
-      this.syncMachineProps();
-      this.syncFormState();
-    }
+    super.componentDidRender();
   }
 
   public disconnectedCallback(): void {
+    super.disconnectedCallback();
     clearRadioGroup(this.host);
-    for (const cleanup of this.spreads) {
-      cleanup();
-    }
-    this.spreads = [];
-    this.fieldUnsubscribe?.();
-    this.unsubscribe?.();
-    this.machine?.stop();
     this.listeners.clear();
   }
 
@@ -161,41 +214,68 @@ export class QuiRadioGroup {
   @Watch("readOnly")
   @Watch("orientation")
   @Watch("textDirection")
-  private syncMachineProps(): void {
-    this.machine?.updateProps(this.machineProps());
+  private syncGroup(): void {
+    this.form.sync();
+    this.notifyListeners();
   }
 
-  private attachField(): void {
-    const field = consumeField(this.host);
-    if (field === undefined || field === this.field) {
-      return;
-    }
-    this.fieldUnsubscribe?.();
-    this.field = field;
-    this.fieldUnsubscribe = field.subscribe(() => {
-      this.machine?.updateProps(this.machineProps());
-    });
-    this.machine?.updateProps(this.machineProps());
+  private get rootId(): string {
+    return `radio-group:${this.idBase || this.generatedId}`;
   }
 
-  private machineProps(): RadioGroupProps {
-    const { field } = this;
+  private get labelId(): string {
+    return `${this.rootId}:label`;
+  }
+
+  private itemId(value: string): string {
+    return `${this.rootId}:radio:${value}`;
+  }
+
+  private inputId(value: string): string {
+    return `${this.rootId}:radio:input:${value}`;
+  }
+
+  private controlId(value: string): string {
+    return `${this.rootId}:radio:control:${value}`;
+  }
+
+  private labelIdFor(value: string): string {
+    return `${this.rootId}:radio:label:${value}`;
+  }
+
+  private itemState(item: RadioItem): RadioItemState {
+    const checked = this.controller.value === item.value;
     return {
-      id: this.host.id || this.generatedId,
-      getRootNode: () => getRootNode(this.host),
-      value: this.value,
-      defaultValue: this.defaultValue,
-      name: this.name,
-      disabled: this.formDisabled || (field?.disabled() ?? this.disabled),
-      invalid: field?.invalid() ?? this.invalid,
-      required: field?.required() ?? this.required,
-      readOnly: field?.readOnly() ?? this.readOnly,
-      orientation: this.orientation,
-      dir: this.textDirection,
-      onValueChange: (details) => {
-        this.valueChange.emit({ value: details.value ?? undefined });
-      },
+      checked,
+      disabled: (item.disabled ?? false) || this.form.isDisabled,
+      invalid: (item.invalid ?? false) || this.form.isInvalid,
+      focused: this.controller.focusedValue === item.value,
+      focusVisible: this.controller.focusVisibleValue === item.value,
     };
+  }
+
+  private validity(): FormValidity {
+    if (this.form.isRequired && this.controller.value === undefined) {
+      return {
+        flags: { valueMissing: true },
+        message: "Please select an option.",
+        element: this.rootEl,
+      };
+    }
+    if (this.form.isInvalid) {
+      return {
+        flags: { customError: true },
+        message: "Invalid value",
+        element: this.rootEl,
+      };
+    }
+    return { flags: {} };
+  }
+
+  private signature(): string {
+    return `${this.name ?? ""}\u0001${this.controller.value ?? ""}\u0001${
+      this.form.isRequired ? 1 : 0
+    }\u0001${this.form.isInvalid ? 1 : 0}\u0001${this.form.isDisabled ? 1 : 0}`;
   }
 
   private notifyListeners(): void {
@@ -204,107 +284,40 @@ export class QuiRadioGroup {
     }
   }
 
-  private groupApi(): RadioGroupApi {
-    return {
-      itemProps: (item) => {
-        const { api } = this;
-        return {
-          root: { ...api.getItemProps(item) },
-          control: { ...api.getItemControlProps(item) },
-          text: { ...api.getItemTextProps(item) },
-          hiddenInput: { ...api.getItemHiddenInputProps(item) },
-        };
-      },
-      subscribe: (listener) => {
-        this.listeners.add(listener);
-        return () => {
-          this.listeners.delete(listener);
-        };
-      },
-    };
-  }
-
-  private rootProps(api: ZagRadioGroupApi): Record<string, unknown> {
-    const root = { ...api.getRootProps() };
-    if (this.field === undefined) {
-      return root;
-    }
-    const control = this.field.getInputProps();
-    return {
-      ...root,
-      "aria-labelledby": this.field.ids.label,
-      "aria-describedby": control["aria-describedby"],
-      "aria-errormessage": control["aria-errormessage"],
-    };
-  }
-
-  private get api(): ZagRadioGroupApi {
-    if (this.machine === undefined) {
-      throw new Error("qui-radio-group has not been initialized");
-    }
-    return radioGroupConnect(this.machine.service, normalizeProps);
-  }
-
-  private applySpreads(): void {
-    if (this.rootEl === undefined) {
-      return;
-    }
-    const { api } = this;
-    this.spreads = [];
-    this.spreads.push(
-      spreadProps(this.rootEl, {
-        ...this.rootProps(api),
-        class: cx(
-          styles.root,
-          this.orientation === "horizontal" ? styles.horizontal : "",
-          this.innerClass,
-        ),
-      }),
-    );
-    this.syncFormState(api);
-  }
-
-  private syncFormState(api: ZagRadioGroupApi = this.api): void {
-    // oxlint-disable-next-line unicorn/no-null
-    const value = api.value ?? null;
-    this.internals.setFormValue(value);
-
-    if (this.isRequired && value === null) {
-      this.internals.setValidity(
-        { valueMissing: true },
-        "Please select one of these options.",
-        this.rootEl,
-      );
-      return;
-    }
-    if (this.isInvalid) {
-      this.internals.setValidity({ customError: true }, "Invalid value", this.rootEl);
-      return;
-    }
-    this.internals.setValidity({});
-  }
-
-  private get isRequired(): boolean {
-    return this.field?.required() ?? this.required;
-  }
-
-  private get isInvalid(): boolean {
-    return this.field?.invalid() ?? this.invalid;
-  }
-
   public render(): VNode {
+    const field = this.form.fieldApi;
+    const fieldInput = field?.getInputProps();
+
     return (
       <Host class={styles.host}>
         <div
           ref={(el) => {
-            if (el instanceof HTMLDivElement) {
+            if (isHTMLDivElement(el)) {
               this.rootEl = el;
             }
           }}
-          class={styles.root}
-          part="root"
+          id={this.rootId}
           role="radiogroup"
+          aria-labelledby={field?.ids.label ?? this.labelId}
+          aria-describedby={fieldInput?.["aria-describedby"]}
+          aria-errormessage={fieldInput?.["aria-errormessage"]}
+          aria-required={this.form.isRequired ? "true" : undefined}
+          aria-disabled={this.form.isDisabled ? "true" : undefined}
+          aria-readonly={this.form.isReadOnly ? "true" : undefined}
           aria-orientation={this.orientation}
+          data-scope="radio-group"
+          data-part="root"
+          data-orientation={this.orientation}
+          data-disabled={dataAttr(this.form.isDisabled)}
+          data-invalid={dataAttr(this.form.isInvalid)}
+          data-required={dataAttr(this.form.isRequired)}
+          dir={this.textDirection}
+          class={cx(
+            styles.root,
+            this.orientation === "horizontal" ? styles.horizontal : "",
+            this.innerClass,
+          )}
+          part="root"
         >
           <slot />
         </div>

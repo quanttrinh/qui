@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/**'
       - '*.ts'
+      - 'build/**'
       - 'package.json'
       - 'bun.lock'
       - '.github/workflows/pages.yml'
@@ -14,6 +15,7 @@ on:
     paths:
       - 'src/**'
       - '*.ts'
+      - 'build/**'
       - 'package.json'
       - 'bun.lock'
       - '.github/workflows/pages.yml'

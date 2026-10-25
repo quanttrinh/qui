@@ -12,24 +12,18 @@ import {
   type EventEmitter,
   type VNode,
 } from "@stencil/core";
-import {
-  connect as switchConnect,
-  machine as switchMachine,
-  type Api as SwitchApi,
-  type Props as SwitchProps,
-} from "@zag-js/switch";
-import { normalizeProps, spreadProps, VanillaMachine } from "@zag-js/vanilla";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { getRootNode } from "../../utilities/dom";
-import { nextId } from "../../utilities/id";
-import { type MachineSchemaOf } from "../../utilities/zag";
-import { consumeField, type FieldApi } from "../qui-field/field-context";
+import { dataAttr } from "../../helpers/attr";
+import { isHTMLInputElement } from "../../helpers/dom";
+import { nextId } from "../../helpers/id";
 import { CheckIcon } from "../qui-icon/icons";
-
-type SwitchSchema = MachineSchemaOf<typeof switchMachine>;
+import { normalizeBoolean, type CheckedState } from "../shared/checkable/checked-state";
+import { CheckableController } from "../shared/checkable/controller";
+import { FormControlBase } from "../shared/form-control/component-base";
+import { FormController, type FormValidity } from "../shared/form-control/controller";
 
 const styles = {
   host: css({ display: "inline-flex" }),
@@ -99,20 +93,21 @@ const styles = {
     fontWeight: "medium",
     color: "onSurface",
   }),
+  input: css({
+    position: "absolute",
+    width: "1px",
+    height: "1px",
+    padding: "0",
+    margin: "-1px",
+    overflow: "hidden",
+    clip: "rect(0, 0, 0, 0)",
+    whiteSpace: "nowrap",
+    borderWidth: "0",
+  }),
 };
 
-function normalizeBoolean(value: unknown): boolean | undefined {
-  if (value === "" || value === "true" || value === true) {
-    return true;
-  }
-  if (value === "false" || value === false) {
-    return false;
-  }
-  return undefined;
-}
-
 /**
- * MD3 switch with a Zag state machine.
+ * MD3 switch.
  *
  * @slot - Label content. Falls back to the `label` prop.
  */
@@ -122,9 +117,8 @@ function normalizeBoolean(value: unknown): boolean | undefined {
   scoped: true,
   formAssociated: true,
 })
-export class QuiSwitch {
+export class QuiSwitch extends FormControlBase {
   @Element() host!: HTMLQuiSwitchElement;
-  // oxlint-disable-next-line eslint/new-cap
   @AttachInternals() internals!: ElementInternals;
 
   /** The controlled checked state. Leave unset for an uncontrolled switch. */
@@ -152,68 +146,80 @@ export class QuiSwitch {
   @Event({ eventName: "checkedchange", bubbles: true, composed: true })
   checkedChange!: EventEmitter<{ checked: boolean }>;
 
-  private formDisabled = false;
-
-  private machine?: VanillaMachine<SwitchSchema>;
-  private unsubscribe?: () => void;
-  private field?: FieldApi;
-  private fieldUnsubscribe?: () => void;
-  private spreads: (() => void)[] = [];
-  private rootEl?: HTMLLabelElement;
-  private controlEl?: HTMLSpanElement;
-  private thumbEl?: HTMLSpanElement;
-  private labelEl?: HTMLSpanElement;
   private inputEl?: HTMLInputElement;
-  private initialChecked = false;
   private readonly generatedId = nextId("qui-switch");
+  private readonly checkable = new CheckableController({
+    getChecked: (): boolean | undefined => normalizeBoolean(this.checked),
+    getDefaultChecked: (): boolean | undefined => normalizeBoolean(this.defaultChecked),
+    isDisabled: (): boolean => this.form.isDisabled,
+    isReadOnly: (): boolean => this.form.isReadOnly,
+    onChange: (checked: CheckedState): void => {
+      this.checkedChange.emit({ checked: checked === true });
+      this.form.sync();
+    },
+    requestUpdate: (): void => {
+      forceUpdate(this.host);
+    },
+  });
+  private readonly form = new FormController({
+    getHost: (): HTMLElement => this.host,
+    getInternals: (): ElementInternals => this.internals,
+    getName: (): string | undefined => this.name,
+    getMultiple: (): boolean => false,
+    getValue: (): readonly string[] => (this.checkable.isChecked ? [this.value ?? "on"] : []),
+    getDisabled: (): boolean => this.disabled,
+    getReadOnly: (): boolean => this.readOnly,
+    getRequired: (): boolean => this.required,
+    getInvalid: (): boolean => this.invalid,
+    getValidationElement: (): HTMLElement | undefined => this.inputEl,
+    getFormValue: (): string | null =>
+      // oxlint-disable-next-line unicorn/no-null
+      this.checkable.isChecked ? (this.value ?? "on") : null,
+    getValidity: (): FormValidity => this.validity(),
+    getSignature: (): string => this.signature(),
+    onReset: (): void => {
+      this.checked = this.checkable.initialChecked === true;
+      this.checkable.reset();
+    },
+    onRestore: (values: string[]): void => {
+      const checked = normalizeBoolean(values.at(0)) ?? false;
+      this.checked = checked;
+      this.checkable.restore(checked);
+    },
+    requestUpdate: (): void => {
+      forceUpdate(this.host);
+    },
+  });
+
+  constructor() {
+    super();
+    this.addController(this.checkable);
+    this.addController(this.form);
+  }
+
+  protected get formController(): FormController {
+    return this.form;
+  }
+
+  public connectedCallback(): void {
+    super.connectedCallback();
+    this.checkable.setInput(this.inputEl);
+  }
 
   public componentWillLoad(): void {
-    this.initialChecked = normalizeBoolean(this.defaultChecked ?? this.checked) ?? false;
-    this.attachField();
-    this.machine = new VanillaMachine(switchMachine, () => this.machineProps());
-    this.unsubscribe = this.machine.subscribe(() => {
-      forceUpdate(this.host);
-    });
-    this.machine.start();
+    super.componentWillLoad();
   }
 
   public componentDidLoad(): void {
-    if (this.field === undefined) {
-      this.attachField();
-    }
+    super.componentDidLoad();
   }
 
   public componentDidRender(): void {
-    this.applySpreads();
-  }
-
-  public formResetCallback(): void {
-    this.checked = this.initialChecked;
-    this.syncMachineProps();
-    this.syncFormState();
-  }
-
-  public formDisabledCallback(disabled: boolean): void {
-    this.formDisabled = disabled;
-    this.machine?.updateProps(this.machineProps());
-  }
-
-  public formStateRestoreCallback(state: string | File | FormData | null): void {
-    if (typeof state === "string") {
-      this.checked = normalizeBoolean(state) ?? false;
-      this.syncMachineProps();
-      this.syncFormState();
-    }
+    super.componentDidRender();
   }
 
   public disconnectedCallback(): void {
-    for (const cleanup of this.spreads) {
-      cleanup();
-    }
-    this.spreads = [];
-    this.fieldUnsubscribe?.();
-    this.unsubscribe?.();
-    this.machine?.stop();
+    super.disconnectedCallback();
   }
 
   @Watch("checked")
@@ -223,152 +229,126 @@ export class QuiSwitch {
   @Watch("readOnly")
   @Watch("name")
   @Watch("value")
-  private syncMachineProps(): void {
-    this.machine?.updateProps(this.machineProps());
+  private syncForm(): void {
+    this.form.sync();
   }
 
-  private attachField(): void {
-    const field = consumeField(this.host);
-    if (field === undefined || field === this.field) {
-      return;
-    }
-    this.fieldUnsubscribe?.();
-    this.field = field;
-    this.fieldUnsubscribe = field.subscribe(() => {
-      this.machine?.updateProps(this.machineProps());
-      forceUpdate(this.host);
-    });
-    this.machine?.updateProps(this.machineProps());
+  private get rootId(): string {
+    return `switch:${this.host.id || this.generatedId}`;
   }
 
-  private machineProps(): SwitchProps {
-    const { field } = this;
-    return {
-      id: this.host.id || this.generatedId,
-      getRootNode: () => getRootNode(this.host),
-      checked: normalizeBoolean(this.checked),
-      defaultChecked: normalizeBoolean(this.defaultChecked),
-      disabled: this.formDisabled || (field?.disabled() ?? this.disabled),
-      invalid: field?.invalid() ?? this.invalid,
-      readOnly: field?.readOnly() ?? this.readOnly,
-      required: field?.required() ?? this.required,
-      name: this.name,
-      value: this.value,
-      ids: field === undefined ? undefined : { hiddenInput: field.ids.control },
-      onCheckedChange: (details) => {
-        this.checkedChange.emit(details);
-      },
-    };
+  private get labelId(): string {
+    return `${this.rootId}:label`;
   }
 
-  private get isRequired(): boolean {
-    return this.field?.required() ?? this.required;
+  private get inputId(): string {
+    return this.form.fieldApi?.ids.control ?? `${this.rootId}:input`;
   }
 
-  private get isInvalid(): boolean {
-    return this.field?.invalid() ?? this.invalid;
+  private get controlId(): string {
+    return `${this.rootId}:control`;
   }
 
-  private get api(): SwitchApi | undefined {
-    return this.machine === undefined
-      ? undefined
-      : switchConnect(this.machine.service, normalizeProps);
+  private get thumbId(): string {
+    return `${this.rootId}:thumb`;
   }
 
-  private applySpreads(): void {
-    const { api } = this;
-    if (api === undefined) {
-      return;
-    }
-
-    this.spreads = [];
-    if (this.rootEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.rootEl, {
-          ...api.getRootProps(),
-          class: cx(styles.root, this.innerClass),
-        }),
-      );
-    }
-    if (this.inputEl !== undefined) {
-      const hiddenInputProps =
-        this.field === undefined
-          ? api.getHiddenInputProps()
-          : { ...this.field.getInputProps(), ...api.getHiddenInputProps() };
-      const { name: _name, required: _required, ...inputProps } = hiddenInputProps;
-      this.spreads.push(spreadProps(this.inputEl, inputProps));
-    }
-    if (this.controlEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.controlEl, { ...api.getControlProps(), class: styles.control }),
-      );
-    }
-    if (this.thumbEl !== undefined) {
-      this.spreads.push(spreadProps(this.thumbEl, { ...api.getThumbProps(), class: styles.thumb }));
-    }
-    if (this.labelEl !== undefined) {
-      this.spreads.push(spreadProps(this.labelEl, { ...api.getLabelProps(), class: styles.label }));
-    }
-    this.syncFormState(api);
+  private get inputProps(): Record<string, string | number | boolean | undefined> {
+    const field = this.form.fieldApi;
+    const props: Record<string, unknown> =
+      field === undefined
+        ? {
+            id: this.inputId,
+            disabled: this.form.isDisabled,
+            "aria-invalid": this.form.isInvalid ? "true" : "false",
+            "data-scope": "switch",
+            "data-part": "input",
+            "data-invalid": dataAttr(this.form.isInvalid),
+            "data-required": dataAttr(this.form.isRequired),
+            "data-readonly": dataAttr(this.form.isReadOnly),
+          }
+        : { ...field.getInputProps() };
+    delete props.required;
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    return props as Record<string, string | number | boolean | undefined>;
   }
 
-  private syncFormState(api: SwitchApi | undefined = this.api): void {
-    if (api === undefined) {
-      return;
+  private validity(): FormValidity {
+    if (this.form.isRequired && !this.checkable.isChecked) {
+      return {
+        flags: { valueMissing: true },
+        message: "Please check this box if you want to proceed.",
+        element: this.inputEl,
+      };
     }
+    if (this.form.isInvalid) {
+      return {
+        flags: { customError: true },
+        message: "Invalid value",
+        element: this.inputEl,
+      };
+    }
+    return { flags: {} };
+  }
 
-    // oxlint-disable-next-line unicorn/no-null
-    this.internals.setFormValue(api.checked ? (this.value ?? "on") : null, String(api.checked));
-
-    if (this.isRequired && !api.checked) {
-      this.internals.setValidity(
-        { valueMissing: true },
-        "Please check this box if you want to proceed.",
-        this.inputEl,
-      );
-      return;
-    }
-    if (this.isInvalid) {
-      this.internals.setValidity({ customError: true }, "Invalid value", this.inputEl);
-      return;
-    }
-    this.internals.setValidity({});
+  private signature(): string {
+    return `${this.name ?? ""}\u0001${this.checkable.isChecked ? 1 : 0}\u0001${
+      this.value ?? ""
+    }\u0001${this.form.isRequired ? 1 : 0}\u0001${this.form.isInvalid ? 1 : 0}`;
   }
 
   public render(): VNode {
+    const { state, hasFocus, hasFocusVisible } = this.checkable;
+    const stateAttrs = {
+      "data-state": state,
+      "data-disabled": dataAttr(this.form.isDisabled),
+      "data-readonly": dataAttr(this.form.isReadOnly),
+      "data-invalid": dataAttr(this.form.isInvalid),
+      "data-required": dataAttr(this.form.isRequired),
+      "data-focus": dataAttr(hasFocus),
+      "data-focus-visible": dataAttr(hasFocusVisible),
+    };
+
     return (
       <Host class={styles.host}>
         <label
-          ref={(el) => {
-            if (el instanceof HTMLLabelElement) {
-              this.rootEl = el;
-            }
-          }}
-          class={styles.root}
+          data-scope="switch"
+          data-part="root"
+          {...stateAttrs}
+          id={this.rootId}
+          htmlFor={this.inputId}
+          class={cx(styles.root, this.innerClass)}
           part="root"
         >
           <input
+            {...this.inputProps}
             ref={(el) => {
-              if (el instanceof HTMLInputElement) {
+              if (isHTMLInputElement(el)) {
                 this.inputEl = el;
+                this.checkable.setInput(el);
               }
             }}
+            type="checkbox"
+            value={this.value ?? "on"}
+            aria-labelledby={this.labelId}
+            class={styles.input}
+            part="input"
           />
           <span
-            ref={(el) => {
-              if (el instanceof HTMLSpanElement) {
-                this.controlEl = el;
-              }
-            }}
+            data-scope="switch"
+            data-part="control"
+            {...stateAttrs}
+            id={this.controlId}
+            aria-hidden="true"
             class={styles.control}
             part="control"
           >
             <span
-              ref={(el) => {
-                if (el instanceof HTMLSpanElement) {
-                  this.thumbEl = el;
-                }
-              }}
+              data-scope="switch"
+              data-part="thumb"
+              {...stateAttrs}
+              id={this.thumbId}
+              aria-hidden="true"
               class={styles.thumb}
               part="thumb"
             >
@@ -376,11 +356,10 @@ export class QuiSwitch {
             </span>
           </span>
           <span
-            ref={(el) => {
-              if (el instanceof HTMLSpanElement) {
-                this.labelEl = el;
-              }
-            }}
+            data-scope="switch"
+            data-part="label"
+            {...stateAttrs}
+            id={this.labelId}
             class={styles.label}
             part="label"
           >

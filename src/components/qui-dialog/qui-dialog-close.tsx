@@ -3,7 +3,7 @@ import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@sten
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { consumeDialog } from "./dialog-context";
+import { consumeDialog } from "./context";
 
 const styles = {
   host: css({ display: "inline-block" }),

@@ -8,12 +8,13 @@ import {
   Prop,
   type VNode,
 } from "@stencil/core";
-import { spreadProps } from "@zag-js/vanilla";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { consumeTabs, type TabsContext } from "./tabs-context";
+import { dataAttr } from "../../helpers/attr";
+import { isHTMLDivElement } from "../../helpers/dom";
+import { consumeTabs, type TabsContext, type TabsOrientation } from "./context";
 
 const styles = {
   host: css({ display: "block" }),
@@ -30,6 +31,42 @@ const styles = {
     },
   }),
 };
+
+function arrowDelta(key: string, orientation: TabsOrientation, rtl: boolean): 1 | -1 | undefined {
+  switch (key) {
+    case "ArrowDown": {
+      return orientation === "vertical" ? 1 : undefined;
+    }
+    case "ArrowUp": {
+      return orientation === "vertical" ? -1 : undefined;
+    }
+    case "ArrowLeft": {
+      if (orientation !== "horizontal") {
+        return undefined;
+      }
+      return rtl ? 1 : -1;
+    }
+    case "ArrowRight": {
+      if (orientation !== "horizontal") {
+        return undefined;
+      }
+      return rtl ? -1 : 1;
+    }
+    default: {
+      return undefined;
+    }
+  }
+}
+
+function edgeKey(key: string): "first" | "last" | undefined {
+  if (key === "Home") {
+    return "first";
+  }
+  if (key === "End") {
+    return "last";
+  }
+  return undefined;
+}
 
 /**
  * The list container for `qui-tab-trigger` elements.
@@ -49,7 +86,6 @@ export class QuiTabList {
 
   private tabs?: TabsContext;
   private unsubscribe?: () => void;
-  private spreads: (() => void)[] = [];
   private listEl?: HTMLDivElement;
 
   public componentWillLoad(): void {
@@ -59,18 +95,11 @@ export class QuiTabList {
   public componentDidLoad(): void {
     if (this.tabs === undefined) {
       this.attachTabs();
+      forceUpdate(this.host);
     }
-  }
-
-  public componentDidRender(): void {
-    this.applySpreads();
   }
 
   public disconnectedCallback(): void {
-    for (const cleanup of this.spreads) {
-      cleanup();
-    }
-    this.spreads = [];
     this.unsubscribe?.();
   }
 
@@ -86,31 +115,55 @@ export class QuiTabList {
     });
   }
 
-  private applySpreads(): void {
-    if (this.tabs === undefined || this.listEl === undefined) {
+  private readonly handleKeyDown = (event: KeyboardEvent): void => {
+    const { tabs, listEl } = this;
+    if (tabs === undefined || listEl === undefined || event.defaultPrevented || event.isComposing) {
       return;
     }
-    this.spreads = [
-      spreadProps(this.listEl, {
-        ...this.tabs.api().getListProps(),
-        "data-variant": this.tabs.variant(),
-        class: cx(styles.list, this.innerClass),
-      }),
-    ];
-  }
+    const { target } = event;
+    if (!(target instanceof Node) || !listEl.contains(target)) {
+      return;
+    }
+    const orientation = tabs.orientation();
+    const delta = arrowDelta(event.key, orientation, tabs.textDirection() === "rtl");
+    if (delta !== undefined) {
+      event.preventDefault();
+      tabs.move(delta);
+      return;
+    }
+    const edge = edgeKey(event.key);
+    if (edge !== undefined) {
+      event.preventDefault();
+      tabs.edge(edge);
+    }
+  };
 
   public render(): VNode {
+    const variant = this.tabs?.variant() ?? "primary";
+    const orientation = this.tabs?.orientation() ?? "horizontal";
+    const textDirection = this.tabs?.textDirection() ?? "ltr";
+    const hasFocus = this.tabs?.hasFocus() ?? false;
+
     return (
       <Host class={styles.host}>
         <div
           ref={(el) => {
-            if (el instanceof HTMLDivElement) {
+            if (isHTMLDivElement(el)) {
               this.listEl = el;
             }
           }}
-          class={styles.list}
+          id={this.tabs?.listId()}
+          role="tablist"
+          aria-orientation={orientation}
+          data-scope="tabs"
+          data-part="list"
+          data-orientation={orientation}
+          data-focus={dataAttr(hasFocus)}
+          data-variant={variant}
+          dir={textDirection}
+          class={cx(styles.list, this.innerClass)}
           part="list"
-          data-variant={this.tabs?.variant() ?? "primary"}
+          onKeyDown={this.handleKeyDown}
         >
           <slot />
         </div>
