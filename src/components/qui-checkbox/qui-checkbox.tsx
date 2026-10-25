@@ -24,6 +24,7 @@ import { normalizeChecked, type CheckedState } from "../shared/checkable/checked
 import { CheckableController } from "../shared/checkable/controller";
 import { FormControlBase } from "../shared/form-control/component-base";
 import { FormController, type FormValidity } from "../shared/form-control/controller";
+import { requiredIndicatorStyle } from "../shared/required-indicator";
 
 const styles = {
   host: css({ display: "inline-flex" }),
@@ -77,11 +78,6 @@ const styles = {
     fontSize: "sm",
     fontWeight: "medium",
     color: "onSurface",
-  }),
-  requiredIndicator: css({
-    color: "error",
-    marginInlineStart: "0.5",
-    "&:not([data-required])": { display: "none" },
   }),
   input: css({
     position: "absolute",
@@ -354,7 +350,7 @@ export class QuiCheckbox extends FormControlBase {
               data-part="required-indicator"
               aria-hidden="true"
               data-required={dataAttr(this.form.isRequired)}
-              class={styles.requiredIndicator}
+              class={requiredIndicatorStyle}
               part="required-indicator"
             >
               {this.defaultMarker}
