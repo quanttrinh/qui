@@ -24,8 +24,10 @@ export type { FieldApi, FieldIds } from "./components/shared/field/context";
 
 export { QuiInput } from "./components/qui-input/qui-input";
 export type {
+  InputAutocapitalize,
   InputMask,
   InputMode,
+  InputTextCase,
   InputType,
   InputValueDetails,
 } from "./components/qui-input/qui-input";

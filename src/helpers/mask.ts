@@ -97,5 +97,35 @@ function formatMask(value: string, pattern: string, caret: number): MaskResult {
   return { value: masked, caret: position };
 }
 
-export { applyMask, formatMask, unmask };
+/**
+ * Extracts the raw placeholder characters from an already-masked value. Mask
+ * literals are skipped when they appear at their pattern position, so literal
+ * digits and letters are not consumed as user data.
+ */
+function rawFromMasked(value: string, pattern: string): string {
+  let result = "";
+  let index = 0;
+
+  for (const token of pattern) {
+    const regex = placeholderRegex(token);
+    if (regex === undefined) {
+      if (value[index] === token) {
+        index += 1;
+      }
+    } else {
+      while (index < value.length) {
+        const candidate = value[index];
+        index += 1;
+        if (regex.test(candidate)) {
+          result += candidate;
+          break;
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+export { applyMask, formatMask, rawFromMasked, unmask };
 export type { MaskResult };
