@@ -8,11 +8,11 @@ import {
   Prop,
   type VNode,
 } from "@stencil/core";
-import { spreadProps } from "@zag-js/vanilla";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
+import { dataAttr } from "../../helpers/attr";
 import { consumeAccordionItem, type AccordionItemContext } from "./accordion-context";
 
 const styles = {
@@ -61,8 +61,6 @@ export class QuiAccordionContent {
 
   private item?: AccordionItemContext;
   private unsubscribe?: () => void;
-  private spreads: (() => void)[] = [];
-  private contentEl?: HTMLDivElement;
 
   public componentWillLoad(): void {
     this.attachItem();
@@ -71,18 +69,11 @@ export class QuiAccordionContent {
   public componentDidLoad(): void {
     if (this.item === undefined) {
       this.attachItem();
+      forceUpdate(this.host);
     }
-  }
-
-  public componentDidRender(): void {
-    this.applySpreads();
   }
 
   public disconnectedCallback(): void {
-    for (const cleanup of this.spreads) {
-      cleanup();
-    }
-    this.spreads = [];
     this.unsubscribe?.();
   }
 
@@ -98,41 +89,27 @@ export class QuiAccordionContent {
     });
   }
 
-  private expanded(): boolean {
-    if (this.item === undefined) {
-      return false;
-    }
-    return this.item.api().getItemState(this.item.item()).expanded;
-  }
-
-  private applySpreads(): void {
-    if (this.item === undefined || this.contentEl === undefined) {
-      return;
-    }
-    // `hidden` would set `display: none`, which cancels the grid-row transition.
-    // Collapse with `0fr` and rely on `inert` for the closed state instead.
-    const contentProps = this.item.api().getItemContentProps(this.item.item());
-    delete contentProps.hidden;
-    this.spreads = [
-      spreadProps(this.contentEl, {
-        ...contentProps,
-        class: cx(styles.content, this.innerClass),
-      }),
-    ];
-  }
-
   public render(): VNode {
-    const expanded = this.expanded();
+    const { item } = this;
+    const value = item?.item().value ?? "";
+    const expanded = item?.isExpanded(value) ?? false;
+    const focused = item?.isFocused(value) ?? false;
+    const disabled = item?.item().disabled === true || (item?.isDisabled() ?? false);
 
     return (
       <Host class={styles.host}>
         <div
-          ref={(el) => {
-            if (el instanceof HTMLDivElement) {
-              this.contentEl = el;
-            }
-          }}
-          class={styles.content}
+          id={item?.contentId(value)}
+          role="region"
+          aria-labelledby={item?.triggerId(value)}
+          data-scope="accordion"
+          data-part="item-content"
+          data-state={expanded ? "open" : "closed"}
+          data-disabled={dataAttr(disabled)}
+          data-focus={dataAttr(focused)}
+          data-orientation={item?.orientation() ?? "vertical"}
+          dir={item?.textDirection()}
+          class={cx(styles.content, this.innerClass)}
           part="content"
           inert={expanded ? undefined : true}
         >

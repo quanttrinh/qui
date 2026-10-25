@@ -1,12 +1,31 @@
-import { type Api as AccordionApi, type ItemProps } from "@zag-js/accordion";
+export interface AccordionItem {
+  value: string;
+  disabled?: boolean;
+}
 
+/** The accordion state and ids shared with descendant parts. */
 export interface AccordionContext {
-  api: () => AccordionApi;
+  value: () => string[];
+  focusedValue: () => string | undefined;
+  isExpanded: (value: string) => boolean;
+  isFocused: (value: string) => boolean;
+  isDisabled: () => boolean;
+  orientation: () => "horizontal" | "vertical";
+  textDirection: () => "ltr" | "rtl" | undefined;
+  toggle: (value: string) => void;
+  focus: (value: string) => void;
+  blur: () => void;
+  move: (fromValue: string, delta: 1 | -1) => void;
+  edge: (edge: "first" | "last") => void;
+  rootId: () => string;
+  itemId: (value: string) => string;
+  triggerId: (value: string) => string;
+  contentId: (value: string) => string;
   subscribe: (listener: () => void) => () => void;
 }
 
 export interface AccordionItemContext extends AccordionContext {
-  item: () => ItemProps;
+  item: () => AccordionItem;
 }
 
 const accordions = new WeakMap<HTMLElement, AccordionContext>();
@@ -20,8 +39,17 @@ function clearAccordion(host: HTMLElement): void {
   accordions.delete(host);
 }
 
+function parentElement(node: Element): Element | undefined {
+  const parent = node.parentElement;
+  if (parent) {
+    return parent;
+  }
+  const root = node.getRootNode();
+  return root instanceof ShadowRoot ? root.host : undefined;
+}
+
 function consumeAccordion(host: HTMLElement): AccordionContext | undefined {
-  let node: Element | undefined = host.parentElement ?? undefined;
+  let node = parentElement(host);
   while (node !== undefined) {
     if (node instanceof HTMLElement) {
       const context = accordions.get(node);
@@ -29,7 +57,7 @@ function consumeAccordion(host: HTMLElement): AccordionContext | undefined {
         return context;
       }
     }
-    node = node.parentElement ?? undefined;
+    node = parentElement(node);
   }
   return undefined;
 }
@@ -43,7 +71,7 @@ function clearAccordionItem(host: HTMLElement): void {
 }
 
 function consumeAccordionItem(host: HTMLElement): AccordionItemContext | undefined {
-  let node: Element | undefined = host.parentElement ?? undefined;
+  let node = parentElement(host);
   while (node !== undefined) {
     if (node instanceof HTMLElement) {
       const context = accordionItems.get(node);
@@ -51,7 +79,7 @@ function consumeAccordionItem(host: HTMLElement): AccordionItemContext | undefin
         return context;
       }
     }
-    node = node.parentElement ?? undefined;
+    node = parentElement(node);
   }
   return undefined;
 }

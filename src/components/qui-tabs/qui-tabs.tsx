@@ -11,24 +11,15 @@ import {
   type EventEmitter,
   type VNode,
 } from "@stencil/core";
-import {
-  connect as tabsConnect,
-  machine as tabsMachine,
-  type Api as TabsApi,
-  type Props as TabsProps,
-  type ValueChangeDetails,
-} from "@zag-js/tabs";
-import { normalizeProps, spreadProps, VanillaMachine } from "@zag-js/vanilla";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { getRootNode } from "../../utilities/dom";
-import { nextId } from "../../utilities/id";
-import { type MachineSchemaOf } from "../../utilities/zag";
-import { clearTabs, provideTabs, type TabsContext, type TabsVariant } from "./tabs-context";
-
-type TabsSchema = MachineSchemaOf<typeof tabsMachine>;
+import { dataAttr } from "../../helpers/attr";
+import { nextId } from "../../helpers/id";
+import { ReactiveControlBase } from "../shared/reactive-control/component-base";
+import { clearTabs, provideTabs, type TabsContext, type TabsVariant } from "./context";
+import { TabsController } from "./controller";
 
 const styles = {
   host: css({ display: "block", width: "full" }),
@@ -44,6 +35,11 @@ const styles = {
   }),
 };
 
+/** Emitted whenever the selected tab changes. */
+export interface TabsValueChangeDetails {
+  value: string | undefined;
+}
+
 /**
  * MD3 tabs. Compose with `qui-tab-list`, `qui-tab-trigger`, and `qui-tab-panel`.
  *
@@ -54,7 +50,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiTabs),
   scoped: true,
 })
-export class QuiTabs {
+export class QuiTabs extends ReactiveControlBase {
   @Element() host!: HTMLQuiTabsElement;
 
   /** The controlled selected tab value. */
@@ -78,43 +74,84 @@ export class QuiTabs {
 
   /** Emitted whenever the selected tab changes. */
   @Event({ eventName: "valuechange", bubbles: true, composed: true })
-  valueChange!: EventEmitter<ValueChangeDetails>;
+  valueChange!: EventEmitter<TabsValueChangeDetails>;
 
-  private machine?: VanillaMachine<TabsSchema>;
-  private unsubscribe?: () => void;
   private readonly listeners = new Set<() => void>();
-  private spreads: (() => void)[] = [];
-  private rootEl?: HTMLDivElement;
   private readonly generatedId = nextId("qui-tabs");
-
-  public componentWillLoad(): void {
-    this.machine = new VanillaMachine(tabsMachine, () => this.machineProps());
-    this.unsubscribe = this.machine.subscribe(() => {
+  private idBase = "";
+  private readonly controller = new TabsController({
+    getHost: (): HTMLElement => this.host,
+    getValue: (): string | undefined => this.value,
+    getDefaultValue: (): string | undefined => this.defaultValue,
+    getActivationMode: (): "manual" | "automatic" => this.activationMode,
+    getLoopFocus: (): boolean => this.loopFocus ?? true,
+    getDeselectable: (): boolean => this.deselectable,
+    onChange: (value: string | undefined): void => {
+      this.valueChange.emit({ value });
+    },
+    requestUpdate: (): void => {
       forceUpdate(this.host);
       this.notifyListeners();
-    });
-    this.machine.start();
-    provideTabs(this.host, this.context());
+    },
+  });
+  private readonly context: TabsContext = {
+    value: (): string | undefined => this.controller.value,
+    focusedValue: (): string | undefined => this.controller.focusedValue,
+    hasFocus: (): boolean => this.controller.hasFocus,
+    isSelected: (value: string): boolean => this.controller.value === value,
+    isFocused: (value: string): boolean => this.controller.focusedValue === value,
+    select: (value: string): void => {
+      this.controller.select(value);
+    },
+    focus: (value: string): void => {
+      this.controller.focus(value);
+    },
+    blur: (): void => {
+      this.controller.blur();
+    },
+    move: (delta: 1 | -1): void => {
+      this.controller.move(delta);
+    },
+    edge: (edge: "first" | "last"): void => {
+      this.controller.edge(edge);
+    },
+    variant: (): TabsVariant => this.variant,
+    orientation: (): "horizontal" | "vertical" => this.orientation,
+    textDirection: (): "ltr" | "rtl" => this.textDirection ?? "ltr",
+    rootId: (): string => this.rootId,
+    listId: (): string => this.listId,
+    triggerId: (value: string): string => this.triggerId(value),
+    panelId: (value: string): string => this.panelId(value),
+    subscribe: (listener: () => void): (() => void) => {
+      this.listeners.add(listener);
+      return (): void => {
+        this.listeners.delete(listener);
+      };
+    },
+  };
+
+  constructor() {
+    super();
+    this.addController(this.controller);
   }
 
   public connectedCallback(): void {
-    if (this.machine !== undefined) {
-      provideTabs(this.host, this.context());
+    super.connectedCallback();
+    if (this.idBase === "") {
+      this.idBase = this.host.id || this.generatedId;
     }
+    provideTabs(this.host, this.context);
   }
 
-  public componentDidRender(): void {
-    this.applySpreads();
+  public componentWillLoad(): void {
+    super.componentWillLoad();
+    this.idBase = this.host.id || this.generatedId;
+    provideTabs(this.host, this.context);
   }
 
   public disconnectedCallback(): void {
+    super.disconnectedCallback();
     clearTabs(this.host);
-    for (const cleanup of this.spreads) {
-      cleanup();
-    }
-    this.spreads = [];
-    this.unsubscribe?.();
-    this.machine?.stop();
     this.listeners.clear();
   }
 
@@ -124,39 +161,26 @@ export class QuiTabs {
   @Watch("loopFocus")
   @Watch("deselectable")
   @Watch("textDirection")
-  private syncMachineProps(): void {
-    this.machine?.updateProps(this.machineProps());
+  @Watch("variant")
+  private syncContext(): void {
+    forceUpdate(this.host);
+    this.notifyListeners();
   }
 
-  private machineProps(): TabsProps {
-    return {
-      id: this.host.id || this.generatedId,
-      getRootNode: () => getRootNode(this.host),
-      value: this.value,
-      defaultValue: this.defaultValue,
-      orientation: this.orientation,
-      activationMode: this.activationMode,
-      loopFocus: this.loopFocus,
-      deselectable: this.deselectable,
-      dir: this.textDirection,
-      onValueChange: (details) => {
-        this.valueChange.emit(details);
-      },
-    };
+  private get rootId(): string {
+    return `tabs:${this.idBase || this.generatedId}`;
   }
 
-  private context(): TabsContext {
-    return {
-      api: () => this.api,
-      variant: () => this.variant,
-      orientation: () => this.orientation,
-      subscribe: (listener) => {
-        this.listeners.add(listener);
-        return () => {
-          this.listeners.delete(listener);
-        };
-      },
-    };
+  private get listId(): string {
+    return `${this.rootId}:list`;
+  }
+
+  private triggerId(value: string): string {
+    return `${this.rootId}:trigger-${value}`;
+  }
+
+  private panelId(value: string): string {
+    return `${this.rootId}:content-${value}`;
   }
 
   private notifyListeners(): void {
@@ -165,38 +189,19 @@ export class QuiTabs {
     }
   }
 
-  private get api(): TabsApi {
-    if (this.machine === undefined) {
-      throw new Error("qui-tabs has not been initialized");
-    }
-    return tabsConnect(this.machine.service, normalizeProps);
-  }
-
-  private applySpreads(): void {
-    if (this.rootEl === undefined) {
-      return;
-    }
-    this.spreads = [
-      spreadProps(this.rootEl, {
-        ...this.api.getRootProps(),
-        "data-variant": this.variant,
-        class: cx(styles.root, this.innerClass),
-      }),
-    ];
-  }
-
   public render(): VNode {
     return (
       <Host class={styles.host}>
         <div
-          ref={(el) => {
-            if (el instanceof HTMLDivElement) {
-              this.rootEl = el;
-            }
-          }}
-          class={styles.root}
-          part="root"
+          id={this.rootId}
+          data-scope="tabs"
+          data-part="root"
+          data-orientation={this.orientation}
+          data-focus={dataAttr(this.controller.hasFocus)}
           data-variant={this.variant}
+          dir={this.textDirection ?? "ltr"}
+          class={cx(styles.root, this.innerClass)}
+          part="root"
         >
           <slot />
         </div>

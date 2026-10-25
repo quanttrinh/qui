@@ -1,5 +1,4 @@
 import {
-  resolveVar,
   AttachInternals,
   Component,
   Element,
@@ -8,128 +7,76 @@ import {
   h,
   Host,
   Prop,
+  resolveVar,
   Watch,
   type EventEmitter,
   type VNode,
 } from "@stencil/core";
-import { type ListCollection } from "@zag-js/collection";
-import {
-  collection,
-  connect as comboboxConnect,
-  type Api as ComboboxApi,
-  machine as comboboxMachine,
-  type InputValueChangeDetails,
-  type OpenChangeDetails,
-  type PositioningOptions,
-  type Props as ComboboxProps,
-  type ScrollToIndexDetails,
-  type ValueChangeDetails,
-} from "@zag-js/combobox";
-import { type PropTypes } from "@zag-js/types";
-import { normalizeProps, spreadProps, VanillaMachine } from "@zag-js/vanilla";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { cx } from "#styled-system/css";
 
-import { getRootNode } from "../../utilities/dom";
-import { nextId } from "../../utilities/id";
-import { optionLabel, type OptionElement } from "../../utilities/options";
-import { type MachineSchemaOf } from "../../utilities/zag";
-import { consumeField, type FieldApi } from "../qui-field/field-context";
-import { CheckIcon, UnfoldMoreIcon } from "../qui-icon/icons";
-import { listStyles } from "../qui-select/list-styles";
+import { ariaAttr, dataAttr } from "../../helpers/attr";
+import { isHTMLDivElement, isHTMLInputElement } from "../../helpers/dom";
+import { nextId } from "../../helpers/id";
+import { UnfoldMoreIcon } from "../qui-icon/icons";
+import { quiOptionSource } from "../qui-option/option-source";
+import { type PopoverDismissEvent } from "../qui-popover/qui-popover";
+import {
+  FormController,
+  OptionListNavigationController,
+  ListWindowController,
+  OptionSourceController,
+  SelectionController,
+} from "../shared/controllers";
+import { OptionControlBase } from "../shared/option/component-base";
+import { labelForValue, type OptionItem } from "../shared/option/option";
+import {
+  PANEL_MAX_HEIGHT,
+  listStyles,
+  renderOptionList,
+  renderOptionRow,
+} from "../shared/option/option-list";
+import { ComboboxInputController } from "./input-controller";
+import { type ComboboxFilter, type ComboboxFilterMode, type ComboboxOption } from "./model";
+import { comboboxStyles as styles } from "./styles";
 
-type ComboboxSchema = MachineSchemaOf<typeof comboboxMachine>;
-
-interface OptionData {
-  value: string;
-  label: string;
-  disabled: boolean;
+/** Emitted whenever the selected values change. */
+export interface ComboboxValueChangeDetails {
+  value: string[];
+  items: ComboboxOption[];
 }
 
-const defaultPositioning: PositioningOptions = {
-  sameWidth: true,
-  flip: true,
-  placement: "bottom-start",
-};
+/** Emitted whenever the input value changes. */
+export interface ComboboxInputValueChangeDetails {
+  inputValue: string;
+  reason: string;
+}
 
-const styles = {
-  host: css({ display: "block", position: "relative", width: "full" }),
-  root: css({ position: "relative", width: "full" }),
-  control: css({
-    display: "flex",
-    alignItems: "center",
-    width: "full",
-    height: "10",
-    backgroundColor: "surface",
-    borderWidth: "1px",
-    borderColor: "outlineVariant",
-    rounded: "lg",
-    overflow: "hidden",
-    transition: "border-color 150ms, outline-color 150ms",
-    "&:hover": { borderColor: "outline" },
-    "&:focus-within": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "0",
-      borderColor: "primary",
-    },
-    "&[data-invalid]": { borderColor: "error" },
-    "&[data-disabled]": { opacity: 0.38, cursor: "not-allowed" },
-  }),
-  input: css({
-    flex: "1",
-    minWidth: "0",
-    height: "full",
-    paddingX: "3",
-    fontSize: "sm",
-    color: "onSurface",
-    backgroundColor: "transparent",
-    outlineStyle: "none",
-    outlineWidth: "0",
-    borderWidth: "0",
-    "&::placeholder": { color: "onSurfaceVariant" },
-  }),
-  trigger: css({
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    width: "9",
-    height: "full",
-    color: "onSurfaceVariant",
-    cursor: "pointer",
-    fontSize: "md",
-    backgroundColor: "transparent",
-    borderWidth: "0",
-    "&:hover": { color: "onSurface" },
-    "&:focus-visible": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "-2px",
-    },
-    "&:disabled": { cursor: "not-allowed" },
-    "& svg": { width: "1em", height: "1em" },
-  }),
-  listContent: css({
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-    paddingBlock: "2",
-  }),
-  listViewport: css({
-    flex: "1 1 auto",
-    minHeight: "0",
-    overflowY: "auto",
-    maxHeight: "min(320px, var(--available-height))",
-  }),
-};
+/** Emitted whenever the list opens or closes. */
+export interface ComboboxOpenChangeDetails {
+  open: boolean;
+  reason: string;
+}
+
+function displayValueFor(
+  items: readonly OptionItem[],
+  values: readonly string[],
+  multiple: boolean,
+): string {
+  if (multiple) {
+    return "";
+  }
+  const value = values.at(0);
+  return value === undefined ? "" : labelForValue(items, value);
+}
 
 /**
- * MD3 combobox. Provide options with `qui-option` children or a `collection`
- * property.
+ * MD3 combobox built on the native popover API. Provide options with
+ * `qui-option` children or an `items` property.
+ *
+ * The list renders in the top layer with `popover="manual"` and is positioned
+ * with JavaScript, so it does not depend on CSS anchor positioning.
  */
 @Component({
   tag: "qui-combobox",
@@ -137,518 +84,533 @@ const styles = {
   scoped: true,
   formAssociated: true,
 })
-export class QuiCombobox {
+export class QuiCombobox extends OptionControlBase {
   @Element() host!: HTMLQuiComboboxElement;
-  // oxlint-disable-next-line eslint/new-cap
   @AttachInternals() internals!: ElementInternals;
 
-  /** A prepared Zag collection. Property-only. */
-  @Prop() collection?: ListCollection<OptionData>;
-  /** The controlled selected values. Property-only. */
-  @Prop() value?: string[];
-  /** The initial selected values. Property-only. */
-  @Prop() defaultValue?: string[];
   /** The controlled input value. */
   @Prop() inputValue?: string;
   /** The initial input value. */
   @Prop() defaultInputValue = "";
-  /** The form field name. */
-  @Prop() name?: string;
   /** Placeholder text. */
   @Prop() placeholder?: string;
-  /** Disables the combobox. */
-  @Prop() disabled = false;
-  /** Marks the combobox invalid. */
-  @Prop() invalid = false;
-  /** Makes the combobox read-only. */
-  @Prop() readOnly = false;
-  /** Marks the combobox required. */
-  @Prop() required = false;
-  /** Allows multiple selected values. */
-  @Prop() multiple = false;
-  /** Whether selecting an item closes the menu. */
-  @Prop() closeOnSelect?: boolean;
-  /** Whether the list opens on input click. */
+  /** Whether clicking the input opens the list. */
   @Prop() openOnClick = false;
-  /** Whether the list opens while typing. */
+  /** Whether typing opens the list. Defaults to `true`. */
   @Prop() openOnChange?: boolean;
-  /** Whether custom input values are allowed. */
+  /** Whether custom input values are committed as selections. */
   @Prop() allowCustomValue = false;
-  /** Whether keyboard navigation wraps. */
+  /** Whether keyboard navigation wraps around. Defaults to `true`. */
   @Prop() loopFocus?: boolean;
-  /** Input suggestion behavior. */
-  @Prop() inputBehavior: "autohighlight" | "autocomplete" | "none" = "autohighlight";
-  /** Selection behavior. */
-  @Prop() selectionBehavior: "clear" | "replace" | "preserve" = "replace";
-  /** The controlled open state. */
-  @Prop() open?: boolean;
-  /** The initial open state. */
-  @Prop() defaultOpen = false;
-  /** Popper positioning options. Property-only. */
-  @Prop() positioning?: PositioningOptions;
-  /** Text direction. */
-  @Prop() textDirection?: "ltr" | "rtl";
-  /** Additional class applied to the root element. */
-  @Prop() innerClass?: string;
-
+  /**
+   * Custom matcher for the visible options. Property-only. Receives each item
+   * and the trimmed input value, and returns whether the item should be shown.
+   */
+  @Prop() filter?: ComboboxFilter;
+  /**
+   * Built-in matching strategy used when `filter` is not set. Set to `none`
+   * when `items` is already filtered (for example by a server).
+   */
+  @Prop() filterMode: ComboboxFilterMode = "contains";
+  /** Milliseconds to debounce query changes before filtering. */
+  @Prop() filterDebounce = 0;
+  /** Marks the option list as loading, e.g. while a remote query resolves. */
+  @Prop() loading = false;
+  /** Message shown when no option matches the current query. */
+  @Prop() emptyText = "No results";
+  /** Message shown while `loading` is set. */
+  @Prop() loadingText = "Loading…";
   /** Emitted whenever the selected values change. */
   @Event({ eventName: "valuechange", bubbles: true, composed: true })
-  valueChange!: EventEmitter<ValueChangeDetails<OptionData>>;
+  valueChange!: EventEmitter<ComboboxValueChangeDetails>;
 
   /** Emitted whenever the input value changes. */
   @Event({ eventName: "inputvaluechange", bubbles: true, composed: true })
-  inputValueChange!: EventEmitter<InputValueChangeDetails>;
+  inputValueChange!: EventEmitter<ComboboxInputValueChangeDetails>;
 
-  /** Emitted whenever the menu opens or closes. */
+  /** Emitted whenever the list opens or closes. */
   @Event({ eventName: "openchange", bubbles: true, composed: true })
-  openChange!: EventEmitter<OpenChangeDetails>;
+  openChange!: EventEmitter<ComboboxOpenChangeDetails>;
 
-  private formDisabled = false;
-
-  private machine?: VanillaMachine<ComboboxSchema>;
-  private unsubscribe?: () => void;
-  private field?: FieldApi;
-  private fieldUnsubscribe?: () => void;
-  private observer?: MutationObserver;
-  private spreads: (() => void)[] = [];
   private rootEl?: HTMLDivElement;
-  private controlEl?: HTMLDivElement;
   private inputEl?: HTMLInputElement;
-  private triggerEl?: HTMLButtonElement;
-  private positionerEl?: HTMLDivElement;
-  private contentEl?: HTMLDivElement;
-  private initialValue: string[] = [];
-  private lastFormSignature = "";
-  private renderedItems: readonly OptionData[] = [];
   private readonly generatedId = nextId("qui-combobox");
+  private readonly listId = `${this.generatedId}-listbox`;
+  private readonly form = new FormController({
+    getHost: (): HTMLElement => this.host,
+    getInternals: (): ElementInternals => this.internals,
+    getName: (): string | undefined => this.name,
+    getMultiple: (): boolean => this.multiple,
+    getValue: (): string[] => this.selection.selected,
+    getDisabled: (): boolean => this.disabled,
+    getReadOnly: (): boolean => this.readOnly,
+    getRequired: (): boolean => this.required,
+    getInvalid: (): boolean => this.invalid,
+    getValidationElement: (): HTMLElement | undefined => this.inputEl,
+    onReset: (): void => {
+      this.selection.reset();
+      this.navigation.closeMenu("reset");
+      this.window.scrollToStart();
+      this.input.setTextSilently(
+        displayValueFor(this.source.items, this.selection.selected, this.multiple),
+      );
+    },
+    onRestore: (values: string[]): void => {
+      this.selection.restore(values);
+      this.input.setTextSilently(
+        displayValueFor(this.source.items, this.selection.selected, this.multiple),
+      );
+    },
+    requestUpdate: (): void => {
+      forceUpdate(this.host);
+    },
+  });
+
+  protected get formController(): FormController {
+    return this.form;
+  }
+  private readonly source = new OptionSourceController({
+    adapter: quiOptionSource,
+    getHost: (): HTMLElement => this.host,
+    getItems: (): readonly ComboboxOption[] | undefined => this.items,
+    getRenderedRoot: (): HTMLElement | undefined => this.rootEl,
+    requestUpdate: (): void => {
+      forceUpdate(this.host);
+    },
+    onInvalidate: (): void => {
+      this.invalidateFilter();
+    },
+  });
+  private readonly selection = new SelectionController({
+    getValue: (): string[] | undefined => this.value,
+    getDefaultValue: (): string[] | undefined => this.defaultValue,
+    getItems: (): readonly ComboboxOption[] => this.source.items,
+    getMultiple: (): boolean => this.multiple,
+    getDeselectable: (): boolean => false,
+    isReadOnly: (): boolean => this.form.isReadOnly,
+    onChange: ({ value, items }): void => {
+      this.valueChange.emit({ value, items });
+      this.form.sync();
+    },
+    requestUpdate: (): void => {
+      forceUpdate(this.host);
+    },
+  });
+  private readonly window = new ListWindowController({
+    getEstimateSize: (): number => this.estimateSize,
+    fallbackViewportSize: PANEL_MAX_HEIGHT,
+    getOverscan: (): number => this.overscan,
+    requestUpdate: (): void => {
+      forceUpdate(this.host);
+    },
+  });
+  private readonly navigation = new OptionListNavigationController<ComboboxOption>({
+    getItems: (): readonly ComboboxOption[] => this.visibleItems(this.source.items),
+    getInitialActive: (): string | undefined => {
+      const items = this.visibleItems(this.source.items);
+      const selected = new Set(this.selection.selected);
+      return (
+        items.find((item) => selected.has(item.value) && !item.disabled)?.value ??
+        items.find((item) => !item.disabled)?.value
+      );
+    },
+    isDisabled: (): boolean => this.form.isDisabled,
+    isReadOnly: (): boolean => this.form.isReadOnly,
+    isLooping: (): boolean => this.loopFocus !== false,
+    onOpenChange: (open: boolean, reason: string): void => {
+      this.openChange.emit({ open, reason });
+    },
+    onReveal: (index: number): void => {
+      this.window.revealIndex(index);
+    },
+    requestUpdate: (): void => {
+      forceUpdate(this.host);
+    },
+  });
+
+  private readonly input = new ComboboxInputController({
+    getControlledValue: (): string | undefined => this.inputValue,
+    getFilter: (): ComboboxFilter | undefined => this.filter,
+    getFilterMode: (): ComboboxFilterMode => this.filterMode,
+    getFilterDebounce: (): number => this.filterDebounce,
+    onInputValueChange: (value: string, reason: string): void => {
+      this.inputValueChange.emit({ inputValue: value, reason });
+    },
+    onQueryApplied: (): void => {
+      this.window.scrollToStart();
+      if (this.navigation.open) {
+        this.navigation.edge("first");
+      }
+    },
+    requestUpdate: (): void => {
+      forceUpdate(this.host);
+    },
+  });
+
+  constructor() {
+    super();
+    this.addController(this.form);
+    this.addController(this.source);
+    this.addController(this.selection);
+    this.addController(this.window);
+    this.addController(this.navigation);
+  }
 
   public componentWillLoad(): void {
-    this.initialValue = [...(this.defaultValue ?? this.value ?? [])];
-    this.attachField();
-    this.machine = new VanillaMachine(comboboxMachine, () => this.machineProps());
-    this.unsubscribe = this.machine.subscribe(() => {
-      forceUpdate(this.host);
-    });
-    this.machine.start();
+    super.componentWillLoad();
+    this.input.initialize(this.defaultInputValue);
+    if (this.open ?? this.defaultOpen) {
+      this.navigation.openMenu("initial");
+    }
   }
 
   public componentDidLoad(): void {
-    if (this.field === undefined) {
-      this.attachField();
-    }
-    this.observer = new MutationObserver((records) => {
-      const optionsChanged = records.some((record) => {
-        const nodes = [...record.addedNodes, ...record.removedNodes];
-        return nodes.some((node) => node instanceof HTMLElement && node.tagName === "QUI-OPTION");
-      });
-      if (optionsChanged) {
-        this.machine?.updateProps(this.machineProps());
-      }
-    });
-    this.observer.observe(this.host, { childList: true });
+    super.componentDidLoad();
+    this.syncInitialInput();
+    this.form.sync();
   }
 
   public componentDidRender(): void {
-    this.applySpreads(this.api);
-  }
-
-  public formResetCallback(): void {
-    this.value = [...this.initialValue];
-    this.syncMachineProps();
-    this.syncFormState();
-  }
-
-  public formDisabledCallback(disabled: boolean): void {
-    this.formDisabled = disabled;
-    this.machine?.updateProps(this.machineProps());
-  }
-
-  public formStateRestoreCallback(state: string | File | FormData | null): void {
-    if (typeof state !== "string") {
-      return;
-    }
-    try {
-      const value: unknown = JSON.parse(state);
-      if (Array.isArray(value)) {
-        this.value = value.map(String);
-        this.syncMachineProps();
-        this.syncFormState();
-      }
-    } catch {
-      // Ignore malformed restoration state.
-    }
+    super.componentDidRender();
   }
 
   public disconnectedCallback(): void {
-    this.observer?.disconnect();
-    for (const cleanup of this.spreads) {
-      cleanup();
-    }
-    this.spreads = [];
-    this.fieldUnsubscribe?.();
-    this.unsubscribe?.();
-    this.machine?.stop();
+    super.disconnectedCallback();
+    this.input.dispose();
   }
 
   @Watch("value")
+  private syncControlledValue(): void {
+    this.form.sync();
+    if (this.inputValue === undefined && !this.multiple && !this.navigation.open) {
+      this.input.setTextSilently(
+        displayValueFor(this.source.items, this.selection.selected, this.multiple),
+      );
+    }
+  }
+
   @Watch("inputValue")
-  @Watch("name")
-  @Watch("disabled")
-  @Watch("invalid")
-  @Watch("readOnly")
-  @Watch("required")
-  @Watch("multiple")
-  @Watch("closeOnSelect")
-  @Watch("openOnClick")
-  @Watch("openOnChange")
-  @Watch("allowCustomValue")
-  @Watch("loopFocus")
-  @Watch("inputBehavior")
-  @Watch("selectionBehavior")
+  private syncControlledInput(value?: string): void {
+    this.input.syncControlled(value ?? "");
+  }
+
   @Watch("open")
-  @Watch("positioning")
-  @Watch("textDirection")
-  @Watch("collection")
-  private syncMachineProps(): void {
-    this.machine?.updateProps(this.machineProps());
-  }
-
-  private attachField(): void {
-    const field = consumeField(this.host);
-    if (field === undefined || field === this.field) {
+  private syncControlledOpen(value?: boolean): void {
+    if (value === undefined || value === this.navigation.open) {
       return;
     }
-    this.fieldUnsubscribe?.();
-    this.field = field;
-    this.fieldUnsubscribe = field.subscribe(() => {
-      this.machine?.updateProps(this.machineProps());
-    });
-    this.machine?.updateProps(this.machineProps());
-  }
-
-  private optionItems(): OptionData[] {
-    return [...this.host.querySelectorAll<OptionElement>("qui-option")].map((option) => ({
-      value: option.getAttribute("value") ?? "",
-      label: optionLabel(option),
-      disabled: option.hasAttribute("disabled"),
-    }));
-  }
-
-  private buildCollection(): ListCollection<OptionData> {
-    if (this.collection !== undefined) {
-      return this.collection;
-    }
-    return collection({
-      items: this.optionItems(),
-      itemToValue: (item) => item.value,
-      itemToString: (item) => item.label,
-      isItemDisabled: (item) => item.disabled,
-    });
-  }
-
-  private machineProps(): ComboboxProps<OptionData> {
-    const { field } = this;
-    return {
-      id: this.host.id || this.generatedId,
-      getRootNode: () => getRootNode(this.host),
-      collection: this.buildCollection(),
-      value: this.value,
-      defaultValue: this.defaultValue,
-      inputValue: this.inputValue,
-      defaultInputValue: this.defaultInputValue,
-      name: this.name,
-      placeholder: this.placeholder,
-      disabled: this.formDisabled || (field?.disabled() ?? this.disabled),
-      invalid: field?.invalid() ?? this.invalid,
-      readOnly: field?.readOnly() ?? this.readOnly,
-      required: field?.required() ?? this.required,
-      multiple: this.multiple,
-      closeOnSelect: this.closeOnSelect,
-      openOnClick: this.openOnClick,
-      openOnChange: this.openOnChange,
-      allowCustomValue: this.allowCustomValue,
-      loopFocus: this.loopFocus,
-      inputBehavior: this.inputBehavior,
-      selectionBehavior: this.selectionBehavior,
-      open: this.open,
-      defaultOpen: this.defaultOpen,
-      positioning: this.positioning ?? defaultPositioning,
-      dir: this.textDirection,
-      ids: field === undefined ? undefined : { input: field.ids.control, label: field.ids.label },
-      scrollToIndexFn: (details: ScrollToIndexDetails) => {
-        details.getElement()?.scrollIntoView({ block: "nearest" });
-      },
-      onValueChange: (details) => {
-        this.valueChange.emit(details);
-      },
-      onInputValueChange: (details) => {
-        this.inputValueChange.emit(details);
-      },
-      onOpenChange: (details) => {
-        this.openChange.emit(details);
-      },
-    };
-  }
-
-  private visibleCollection(
-    api: ComboboxApi<PropTypes, OptionData> = this.api,
-  ): ListCollection<OptionData> {
-    const full = api.collection;
-    const query = api.inputValue.trim().toLowerCase();
-    if (query === "") {
-      return full;
-    }
-    const filtered = full.items.filter((item) => item.label.toLowerCase().includes(query));
-    return full.copy(filtered);
-  }
-
-  private inputProps(api: ComboboxApi<PropTypes, OptionData>): Record<string, unknown> {
-    const input = api.getInputProps();
-    const {
-      name: _name,
-      required: _required,
-      ...inputProps
-    } = this.field === undefined
-      ? input
-      : {
-          ...input,
-          "aria-describedby": this.field.getInputProps()["aria-describedby"],
-          "aria-errormessage": this.field.getInputProps()["aria-errormessage"],
-        };
-    return inputProps;
-  }
-
-  private get api(): ComboboxApi<PropTypes, OptionData> {
-    if (this.machine === undefined) {
-      throw new Error("qui-combobox has not been initialized");
-    }
-    return comboboxConnect<PropTypes, OptionData>(this.machine.service, normalizeProps);
-  }
-
-  private applySpreads(api: ComboboxApi<PropTypes, OptionData>): void {
-    this.spreads = [];
-    if (this.rootEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.rootEl, {
-          ...api.getRootProps(),
-          class: cx(styles.root, this.innerClass),
-        }),
-      );
-    }
-    if (this.controlEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.controlEl, { ...api.getControlProps(), class: styles.control }),
-      );
-    }
-    if (this.inputEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.inputEl, { ...this.inputProps(api), class: styles.input }),
-      );
-    }
-    if (this.triggerEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.triggerEl, { ...api.getTriggerProps(), class: styles.trigger }),
-      );
-    }
-    if (this.positionerEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.positionerEl, {
-          ...api.getPositionerProps(),
-          class: listStyles.positioner,
-        }),
-      );
-    }
-    if (this.contentEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.contentEl, {
-          ...api.getContentProps(),
-          class: cx(listStyles.content, styles.listContent),
-        }),
-      );
-    }
-    this.applyItemSpreads(api);
-    this.syncFormState(api);
-  }
-
-  private formKey(values: readonly string[]): string {
-    return `${this.name ?? ""}\u0001${this.multiple}\u0001${this.isRequired}\u0001${this.isInvalid}\u0001${values.join("\u0000")}`;
-  }
-
-  private syncFormState(api: ComboboxApi<PropTypes, OptionData> = this.api): void {
-    const values = api.value;
-    const signature = this.formKey(values);
-    if (signature === this.lastFormSignature) {
+    if (value) {
+      this.navigation.openMenu("prop");
       return;
     }
-    this.lastFormSignature = signature;
-    let formValue: string | FormData = values[0] ?? "";
-    if (this.multiple) {
-      formValue = new FormData();
-      for (const value of values) {
-        if (this.name !== undefined) {
-          formValue.append(this.name, value);
-        }
-      }
-    }
-
-    this.internals.setFormValue(formValue, JSON.stringify(values));
-    this.applyFormValidity(values.length);
+    this.closeMenu("prop", true);
   }
 
-  private applyFormValidity(valueCount: number): void {
-    if (this.isRequired && valueCount === 0) {
-      this.internals.setValidity({ valueMissing: true }, "Please select an option.", this.inputEl);
+  @Watch("items")
+  private invalidateItems(): void {
+    this.source.invalidate();
+    this.input.invalidate();
+  }
+
+  @Watch("filter")
+  @Watch("filterMode")
+  private invalidateFilter(): void {
+    this.input.invalidate();
+  }
+
+  private get inputText(): string {
+    return this.input.value;
+  }
+
+  private visibleItems(items: readonly ComboboxOption[]): readonly ComboboxOption[] {
+    return this.input.filter(items);
+  }
+
+  private syncInitialInput(): void {
+    if (this.inputValue !== undefined || this.defaultInputValue !== "") {
       return;
     }
-    if (this.isInvalid) {
-      this.internals.setValidity({ customError: true }, "Invalid value", this.inputEl);
-      return;
-    }
-    this.internals.setValidity({});
-  }
-
-  private get isRequired(): boolean {
-    return this.field?.required() ?? this.required;
-  }
-
-  private get isInvalid(): boolean {
-    return this.field?.invalid() ?? this.invalid;
-  }
-
-  private applyItemSpreads(api: ComboboxApi<PropTypes, OptionData>): void {
-    if (this.contentEl === undefined || this.contentEl.hidden === true) {
-      return;
-    }
-    const { renderedItems: items } = this;
-    for (const element of this.contentEl.querySelectorAll<HTMLElement>(
-      "[data-qui-combobox-item]",
-    )) {
-      const index = Number(element.dataset.index);
-      const item = items.at(index);
-      if (item !== undefined) {
-        this.spreadItem(api, element, item);
-      }
-    }
-  }
-
-  private spreadItem(
-    api: ComboboxApi<PropTypes, OptionData>,
-    element: HTMLElement,
-    item: OptionData,
-  ): void {
-    this.spreads.push(
-      spreadProps(element, {
-        ...api.getItemProps({ item }),
-        class: listStyles.item,
-      }),
+    this.input.setTextSilently(
+      displayValueFor(this.source.items, this.selection.selected, this.multiple),
     );
-    const textEl = element.querySelector<HTMLElement>("[data-qui-combobox-item-text]");
-    if (textEl !== null) {
-      this.spreads.push(
-        spreadProps(textEl, {
-          ...api.getItemTextProps({ item }),
-          class: listStyles.itemText,
-        }),
-      );
+  }
+
+  private setInput(value: string, reason?: string): void {
+    this.input.setText(value, reason);
+  }
+
+  private readonly handleInput = (event: Event): void => {
+    const input = event.target;
+    if (!isHTMLInputElement(input)) {
+      return;
     }
-    const indicatorEl = element.querySelector<HTMLElement>("[data-qui-combobox-item-indicator]");
-    if (indicatorEl !== null) {
-      this.spreads.push(
-        spreadProps(indicatorEl, {
-          ...api.getItemIndicatorProps({ item }),
-          class: listStyles.itemIndicator,
-        }),
-      );
+    this.input.handleInput(input.value);
+    if (this.openOnChange !== false) {
+      this.openMenu("input");
     }
+  };
+
+  private readonly handleInputClick = (): void => {
+    if (this.openOnClick && !this.navigation.open) {
+      this.openMenu("input-click");
+    }
+  };
+
+  private readonly handleTriggerClick = (): void => {
+    if (this.form.isDisabled || this.form.isReadOnly) {
+      return;
+    }
+    if (this.navigation.open) {
+      this.closeMenu("trigger", true);
+      return;
+    }
+    this.openMenu("trigger");
+    this.inputEl?.focus();
+  };
+
+  private readonly handleFocusOut = (event: FocusEvent): void => {
+    const next = event.relatedTarget;
+    if (next instanceof Node && this.host.contains(next)) {
+      return;
+    }
+    if (!this.navigation.open) {
+      return;
+    }
+    this.commitCustomValue();
+    this.closeMenu("blur", false);
+  };
+
+  private readonly handleKeyDown = (event: KeyboardEvent): void => {
+    if (this.form.isDisabled || this.form.isReadOnly) {
+      return;
+    }
+    if (this.navigation.handleNavigationKey({ event })) {
+      return;
+    }
+    switch (event.key) {
+      case "Enter": {
+        this.handleEnter(event);
+        break;
+      }
+      case "Escape": {
+        if (this.navigation.open) {
+          event.preventDefault();
+          this.closeMenu("escape", true);
+        }
+        break;
+      }
+      case "Tab": {
+        this.commitCustomValue();
+        this.closeMenu("tab", false);
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+  };
+
+  private handleEnter(event: KeyboardEvent): void {
+    const active = this.navigation.activeValue;
+    if (active !== undefined) {
+      event.preventDefault();
+      this.select(active);
+      return;
+    }
+    if (this.allowCustomValue) {
+      event.preventDefault();
+      this.commitCustomValue();
+      this.closeMenu("enter", false);
+    }
+  }
+
+  private openMenu(reason: string): void {
+    this.navigation.openMenu(reason);
+  }
+
+  private closeMenu(reason: string, restoreInput: boolean): void {
+    if (!this.navigation.open) {
+      return;
+    }
+    this.navigation.closeMenu(reason);
+    this.window.scrollToStart();
+    const display = displayValueFor(this.source.items, this.selection.selected, this.multiple);
+    if (restoreInput || (!this.allowCustomValue && this.inputText !== display)) {
+      this.setInput(display, reason);
+    } else if (this.multiple) {
+      this.setInput("", reason);
+    }
+    this.input.resetQuery();
+  }
+
+  private select(value: string): void {
+    const item = this.selection.select(value);
+    if (item === undefined) {
+      return;
+    }
+    if (this.multiple) {
+      this.setInput("", "select");
+      this.input.resetQuery();
+    } else {
+      this.setInput(item.label, "select");
+      this.input.resetQuery();
+      if (this.closeOnSelect !== false) {
+        this.closeMenu("select", false);
+      }
+    }
+  }
+
+  private commitCustomValue(): void {
+    const text = this.inputText.trim();
+    if (!this.allowCustomValue || text === "") {
+      return;
+    }
+    const match = this.source.items.find((item) => item.label.toLowerCase() === text.toLowerCase());
+    const value = match?.value ?? text;
+    if (this.selection.selected.includes(value)) {
+      return;
+    }
+    const next = this.multiple ? [...this.selection.selected, value] : [value];
+    this.selection.apply(next);
+    if (!this.multiple) {
+      this.setInput(match?.label ?? text, "custom");
+    }
+  }
+
+  private readonly handleDismiss = (event: CustomEvent<PopoverDismissEvent>): void => {
+    if (event.detail.reason === "outside") {
+      this.commitCustomValue();
+    }
+    this.closeMenu(event.detail.reason, event.detail.reason === "escape");
+  };
+
+  private statusText(total: number): string {
+    if (this.loading) {
+      return this.loadingText;
+    }
+    if (total === 0) {
+      return this.emptyText;
+    }
+    return `${total} ${total === 1 ? "result" : "results"}`;
   }
 
   public render(): VNode {
-    const { api } = this;
-    const { open } = api;
-    const collectionItems: readonly OptionData[] = this.visibleCollection(api).items;
-    this.renderedItems = collectionItems;
+    const items = this.visibleItems(this.source.items);
+    const list = this.window.getList(items);
+    const { total } = list;
+    const { selected } = this.selection;
+    const selectedValues = new Set(selected);
+    const { activeValue } = this.navigation;
+    const { open: isOpen } = this.navigation;
+    const { isDisabled, isReadOnly, isInvalid, isRequired } = this.form;
+    const activeIndex = isOpen ? items.findIndex((item) => item.value === activeValue) : -1;
+    const activeDescendant = activeIndex === -1 ? undefined : `${this.listId}-${activeIndex}`;
+    const { fieldApi: field } = this.form;
 
     return (
       <Host class={styles.host}>
         <div
           ref={(el) => {
-            if (el instanceof HTMLDivElement) {
+            if (isHTMLDivElement(el)) {
               this.rootEl = el;
             }
           }}
-          class={styles.root}
+          class={cx(styles.root, this.innerClass)}
           part="root"
+          dir={this.textDirection}
+          onFocusout={this.handleFocusOut}
         >
           <div
-            ref={(el) => {
-              if (el instanceof HTMLDivElement) {
-                this.controlEl = el;
-              }
-            }}
             class={styles.control}
             part="control"
+            data-disabled={dataAttr(isDisabled)}
+            data-invalid={dataAttr(isInvalid)}
           >
             <input
               ref={(el) => {
-                if (el instanceof HTMLInputElement) {
+                if (isHTMLInputElement(el)) {
                   this.inputEl = el;
                 }
               }}
+              id={field?.ids.control ?? (this.host.id || this.generatedId)}
               class={styles.input}
               part="input"
+              role="combobox"
+              type="text"
+              autocomplete="off"
+              spellcheck={false}
+              placeholder={this.placeholder}
+              value={this.inputText}
+              disabled={isDisabled}
+              readOnly={isReadOnly}
+              aria-autocomplete="list"
+              aria-haspopup="listbox"
+              aria-controls={this.listId}
+              aria-expanded={isOpen ? "true" : "false"}
+              aria-activedescendant={isOpen ? activeDescendant : undefined}
+              aria-invalid={ariaAttr(isInvalid)}
+              aria-required={ariaAttr(isRequired)}
+              aria-describedby={field?.getInputProps()["aria-describedby"]}
+              aria-errormessage={field?.getInputProps()["aria-errormessage"]}
+              onInput={this.handleInput}
+              onClick={this.handleInputClick}
+              onKeyDown={this.handleKeyDown}
             />
             <button
-              ref={(el) => {
-                if (el instanceof HTMLButtonElement) {
-                  this.triggerEl = el;
-                }
-              }}
               class={styles.trigger}
               part="trigger"
               type="button"
+              tabIndex={-1}
+              aria-label="Toggle options"
+              aria-haspopup="listbox"
+              aria-expanded={isOpen ? "true" : "false"}
+              aria-controls={this.listId}
+              disabled={isDisabled || isReadOnly}
+              onClick={this.handleTriggerClick}
             >
               <UnfoldMoreIcon />
             </button>
           </div>
 
-          <div
-            ref={(el) => {
-              if (el instanceof HTMLDivElement) {
-                this.positionerEl = el;
-              }
-            }}
-            class={listStyles.positioner}
-            part="positioner"
-          >
-            <div
-              ref={(el) => {
-                if (el instanceof HTMLDivElement) {
-                  this.contentEl = el;
-                }
-              }}
-              hidden={!open}
-              class={cx(listStyles.content, styles.listContent)}
-              part="content"
-            >
-              <div class={styles.listViewport} part="viewport">
-                {collectionItems.map((item: OptionData, index: number) => (
-                  <div
-                    key={item.value}
-                    data-qui-combobox-item=""
-                    data-index={index}
-                    class={listStyles.item}
-                  >
-                    <span data-qui-combobox-item-text="" class={listStyles.itemText}>
-                      {item.label}
-                    </span>
-                    <span data-qui-combobox-item-indicator="" class={listStyles.itemIndicator}>
-                      <CheckIcon />
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          {renderOptionList({
+            list,
+            listId: this.listId,
+            open: isOpen,
+            multiple: this.multiple,
+            status: this.statusText(total),
+            viewportRef: (el) => {
+              this.window.setViewport(el);
+            },
+            onDismiss: this.handleDismiss,
+            onScroll: (event) => {
+              this.window.handleScroll(event);
+            },
+            renderItem: (entry) =>
+              renderOptionRow({
+                entry,
+                listId: this.listId,
+                total,
+                activeValue,
+                selected: selectedValues.has(entry.item.value),
+                optionRender: this.optionRender,
+                onSelect: (value) => {
+                  this.select(value);
+                },
+                onHighlight: (value) => {
+                  this.navigation.setActive(value);
+                },
+              }),
+            renderEmpty: () =>
+              this.loading ? (
+                <div class={listStyles.empty} part="loading">
+                  {this.loadingText}
+                </div>
+              ) : (
+                <div class={listStyles.empty} part="empty">
+                  {this.emptyText}
+                </div>
+              ),
+          })}
         </div>
       </Host>
     );

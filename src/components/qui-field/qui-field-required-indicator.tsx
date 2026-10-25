@@ -12,8 +12,8 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { consumeField, type FieldApi } from "./field-context";
-import { fieldStyles } from "./field-styles";
+import { consumeField, type FieldApi } from "../shared/field/context";
+import { fieldStyles } from "./styles";
 
 const styles = {
   host: css({ display: "inline" }),

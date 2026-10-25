@@ -12,25 +12,18 @@ import {
   type EventEmitter,
   type VNode,
 } from "@stencil/core";
-import {
-  connect as checkboxConnect,
-  machine as checkboxMachine,
-  type Api as CheckboxApi,
-  type CheckedState,
-  type Props as CheckboxProps,
-} from "@zag-js/checkbox";
-import { normalizeProps, spreadProps, VanillaMachine } from "@zag-js/vanilla";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { getRootNode } from "../../utilities/dom";
-import { nextId } from "../../utilities/id";
-import { type MachineSchemaOf } from "../../utilities/zag";
-import { consumeField, type FieldApi } from "../qui-field/field-context";
+import { dataAttr } from "../../helpers/attr";
+import { isHTMLInputElement } from "../../helpers/dom";
+import { nextId } from "../../helpers/id";
 import { CheckIcon, RemoveIcon } from "../qui-icon/icons";
-
-type CheckboxSchema = MachineSchemaOf<typeof checkboxMachine>;
+import { normalizeChecked, type CheckedState } from "../shared/checkable/checked-state";
+import { CheckableController } from "../shared/checkable/controller";
+import { FormControlBase } from "../shared/form-control/component-base";
+import { FormController, type FormValidity } from "../shared/form-control/controller";
 
 const styles = {
   host: css({ display: "inline-flex" }),
@@ -85,24 +78,21 @@ const styles = {
     fontWeight: "medium",
     color: "onSurface",
   }),
+  input: css({
+    position: "absolute",
+    width: "1px",
+    height: "1px",
+    padding: "0",
+    margin: "-1px",
+    overflow: "hidden",
+    clip: "rect(0, 0, 0, 0)",
+    whiteSpace: "nowrap",
+    borderWidth: "0",
+  }),
 };
 
-/** Normalize a Stencil attribute/property value into a Zag checked state. */
-function normalizeChecked(value: unknown): CheckedState | undefined {
-  if (value === "indeterminate") {
-    return "indeterminate";
-  }
-  if (value === "" || value === "true" || value === true) {
-    return true;
-  }
-  if (value === "false" || value === false) {
-    return false;
-  }
-  return undefined;
-}
-
 /**
- * MD3 checkbox with a Zag state machine.
+ * MD3 checkbox.
  *
  * @slot - Label content. Falls back to the `label` prop.
  */
@@ -112,9 +102,8 @@ function normalizeChecked(value: unknown): CheckedState | undefined {
   scoped: true,
   formAssociated: true,
 })
-export class QuiCheckbox {
+export class QuiCheckbox extends FormControlBase {
   @Element() host!: HTMLQuiCheckboxElement;
-  // oxlint-disable-next-line eslint/new-cap
   @AttachInternals() internals!: ElementInternals;
 
   /** The controlled checked state. Leave unset for an uncontrolled checkbox. */
@@ -144,68 +133,81 @@ export class QuiCheckbox {
   @Event({ eventName: "checkedchange", bubbles: true, composed: true })
   checkedChange!: EventEmitter<{ checked: CheckedState }>;
 
-  private formDisabled = false;
-
-  private machine?: VanillaMachine<CheckboxSchema>;
-  private unsubscribe?: () => void;
-  private field?: FieldApi;
-  private fieldUnsubscribe?: () => void;
-  private spreads: (() => void)[] = [];
-  private rootEl?: HTMLLabelElement;
-  private controlEl?: HTMLSpanElement;
-  private indicatorEl?: HTMLSpanElement;
-  private labelEl?: HTMLSpanElement;
   private inputEl?: HTMLInputElement;
-  private initialChecked!: CheckedState;
   private readonly generatedId = nextId("qui-checkbox");
+  private readonly checkable = new CheckableController({
+    getChecked: (): CheckedState | undefined => normalizeChecked(this.checked),
+    getDefaultChecked: (): CheckedState | undefined => normalizeChecked(this.defaultChecked),
+    getIndeterminate: (): boolean => this.indeterminate,
+    isDisabled: (): boolean => this.form.isDisabled,
+    isReadOnly: (): boolean => this.form.isReadOnly,
+    onChange: (checked: CheckedState): void => {
+      this.checkedChange.emit({ checked });
+      this.form.sync();
+    },
+    requestUpdate: (): void => {
+      forceUpdate(this.host);
+    },
+  });
+  private readonly form = new FormController({
+    getHost: (): HTMLElement => this.host,
+    getInternals: (): ElementInternals => this.internals,
+    getName: (): string | undefined => this.name,
+    getMultiple: (): boolean => false,
+    getValue: (): readonly string[] => (this.checkable.isChecked ? [this.value ?? "on"] : []),
+    getDisabled: (): boolean => this.disabled,
+    getReadOnly: (): boolean => this.readOnly,
+    getRequired: (): boolean => this.required,
+    getInvalid: (): boolean => this.invalid,
+    getValidationElement: (): HTMLElement | undefined => this.inputEl,
+    getFormValue: (): string | null =>
+      // oxlint-disable-next-line unicorn/no-null
+      this.checkable.isChecked ? (this.value ?? "on") : null,
+    getValidity: (): FormValidity => this.validity(),
+    getSignature: (): string => this.signature(),
+    onReset: (): void => {
+      this.checked = this.checkable.initialChecked;
+      this.checkable.reset();
+    },
+    onRestore: (values: string[]): void => {
+      const checked = normalizeChecked(values.at(0)) ?? false;
+      this.checked = checked;
+      this.checkable.restore(checked);
+    },
+    requestUpdate: (): void => {
+      forceUpdate(this.host);
+    },
+  });
+
+  constructor() {
+    super();
+    this.addController(this.checkable);
+    this.addController(this.form);
+  }
+
+  protected get formController(): FormController {
+    return this.form;
+  }
+
+  public connectedCallback(): void {
+    super.connectedCallback();
+    this.checkable.setInput(this.inputEl);
+  }
 
   public componentWillLoad(): void {
-    this.initialChecked = normalizeChecked(this.defaultChecked ?? this.checked) ?? false;
-    this.attachField();
-    this.machine = new VanillaMachine(checkboxMachine, () => this.machineProps());
-    this.unsubscribe = this.machine.subscribe(() => {
-      forceUpdate(this.host);
-    });
-    this.machine.start();
+    super.componentWillLoad();
   }
 
   public componentDidLoad(): void {
-    if (this.field === undefined) {
-      this.attachField();
-    }
+    super.componentDidLoad();
   }
 
   public componentDidRender(): void {
-    this.applySpreads();
-  }
-
-  public formResetCallback(): void {
-    this.checked = this.initialChecked;
-    this.syncMachineProps();
-    this.syncFormState();
-  }
-
-  public formDisabledCallback(disabled: boolean): void {
-    this.formDisabled = disabled;
-    this.machine?.updateProps(this.machineProps());
-  }
-
-  public formStateRestoreCallback(state: string | File | FormData | null): void {
-    if (typeof state === "string") {
-      this.checked = normalizeChecked(state) ?? false;
-      this.syncMachineProps();
-      this.syncFormState();
-    }
+    super.componentDidRender();
   }
 
   public disconnectedCallback(): void {
-    for (const cleanup of this.spreads) {
-      cleanup();
-    }
-    this.spreads = [];
-    this.fieldUnsubscribe?.();
-    this.unsubscribe?.();
-    this.machine?.stop();
+    super.disconnectedCallback();
   }
 
   @Watch("checked")
@@ -216,152 +218,113 @@ export class QuiCheckbox {
   @Watch("readOnly")
   @Watch("name")
   @Watch("value")
-  private syncMachineProps(): void {
-    this.machine?.updateProps(this.machineProps());
+  private syncForm(): void {
+    this.form.sync();
   }
 
-  private attachField(): void {
-    const field = consumeField(this.host);
-    if (field === undefined || field === this.field) {
-      return;
-    }
-    this.fieldUnsubscribe?.();
-    this.field = field;
-    this.fieldUnsubscribe = field.subscribe(() => {
-      this.machine?.updateProps(this.machineProps());
-      forceUpdate(this.host);
-    });
-    this.machine?.updateProps(this.machineProps());
+  private get rootId(): string {
+    return `checkbox:${this.host.id || this.generatedId}`;
   }
 
-  private machineProps(): CheckboxProps {
-    const { field } = this;
-    return {
-      id: this.host.id || this.generatedId,
-      getRootNode: () => getRootNode(this.host),
-      checked: this.indeterminate ? "indeterminate" : normalizeChecked(this.checked),
-      defaultChecked: normalizeChecked(this.defaultChecked),
-      disabled: this.formDisabled || (field?.disabled() ?? this.disabled),
-      invalid: field?.invalid() ?? this.invalid,
-      readOnly: field?.readOnly() ?? this.readOnly,
-      required: field?.required() ?? this.required,
-      name: this.name,
-      value: this.value,
-      ids: field === undefined ? undefined : { hiddenInput: field.ids.control },
-      onCheckedChange: (details) => {
-        this.checkedChange.emit(details);
-      },
-    };
+  private get labelId(): string {
+    return `${this.rootId}:label`;
   }
 
-  private get isRequired(): boolean {
-    return this.field?.required() ?? this.required;
+  private get inputId(): string {
+    return this.form.fieldApi?.ids.control ?? `${this.rootId}:input`;
   }
 
-  private get isInvalid(): boolean {
-    return this.field?.invalid() ?? this.invalid;
+  private get controlId(): string {
+    return `${this.rootId}:control`;
   }
 
-  private get api(): CheckboxApi | undefined {
-    return this.machine === undefined
-      ? undefined
-      : checkboxConnect(this.machine.service, normalizeProps);
+  private get inputProps(): Record<string, string | number | boolean | undefined> {
+    const field = this.form.fieldApi;
+    const props: Record<string, unknown> =
+      field === undefined
+        ? {
+            id: this.inputId,
+            disabled: this.form.isDisabled,
+            "aria-invalid": this.form.isInvalid ? "true" : "false",
+            "data-scope": "checkbox",
+            "data-part": "input",
+            "data-invalid": dataAttr(this.form.isInvalid),
+            "data-required": dataAttr(this.form.isRequired),
+            "data-readonly": dataAttr(this.form.isReadOnly),
+          }
+        : { ...field.getInputProps() };
+    delete props.required;
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    return props as Record<string, string | number | boolean | undefined>;
   }
 
-  private applySpreads(): void {
-    const { api } = this;
-    if (api === undefined) {
-      return;
+  private validity(): FormValidity {
+    if (this.form.isRequired && !this.checkable.isChecked) {
+      return {
+        flags: { valueMissing: true },
+        message: "Please check this box if you want to proceed.",
+        element: this.inputEl,
+      };
     }
-
-    this.spreads = [];
-    if (this.rootEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.rootEl, {
-          ...api.getRootProps(),
-          class: cx(styles.root, this.innerClass),
-        }),
-      );
+    if (this.form.isInvalid) {
+      return {
+        flags: { customError: true },
+        message: "Invalid value",
+        element: this.inputEl,
+      };
     }
-    if (this.controlEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.controlEl, { ...api.getControlProps(), class: styles.control }),
-      );
-    }
-    if (this.indicatorEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.indicatorEl, {
-          ...api.getIndicatorProps(),
-          class: styles.indicator,
-        }),
-      );
-    }
-    if (this.labelEl !== undefined) {
-      this.spreads.push(spreadProps(this.labelEl, { ...api.getLabelProps(), class: styles.label }));
-    }
-    if (this.inputEl !== undefined) {
-      const hiddenInputProps =
-        this.field === undefined
-          ? api.getHiddenInputProps()
-          : { ...this.field.getInputProps(), ...api.getHiddenInputProps() };
-      const { name: _name, required: _required, ...inputProps } = hiddenInputProps;
-      this.spreads.push(spreadProps(this.inputEl, inputProps));
-    }
-    this.syncFormState(api);
+    return { flags: {} };
   }
 
-  private syncFormState(api: CheckboxApi | undefined = this.api): void {
-    if (api === undefined) {
-      return;
-    }
-
-    // oxlint-disable-next-line unicorn/no-null
-    this.internals.setFormValue(api.checked ? (this.value ?? "on") : null, String(api.checked));
-
-    if (this.isRequired && !api.checked) {
-      this.internals.setValidity(
-        { valueMissing: true },
-        "Please check this box if you want to proceed.",
-        this.inputEl,
-      );
-      return;
-    }
-    if (this.isInvalid) {
-      this.internals.setValidity({ customError: true }, "Invalid value", this.inputEl);
-      return;
-    }
-    this.internals.setValidity({});
+  private signature(): string {
+    return `${this.name ?? ""}\u0001${this.checkable.isChecked ? 1 : 0}\u0001${
+      this.value ?? ""
+    }\u0001${this.form.isRequired ? 1 : 0}\u0001${this.form.isInvalid ? 1 : 0}`;
   }
 
   public render(): VNode {
-    const indeterminate = this.api?.indeterminate ?? false;
+    const {
+      state,
+      isChecked: checked,
+      isIndeterminate: indeterminate,
+      hasFocus,
+      hasFocusVisible,
+    } = this.checkable;
+    const stateAttrs = {
+      "data-state": state,
+      "data-disabled": dataAttr(this.form.isDisabled),
+      "data-readonly": dataAttr(this.form.isReadOnly),
+      "data-invalid": dataAttr(this.form.isInvalid),
+      "data-required": dataAttr(this.form.isRequired),
+      "data-focus": dataAttr(hasFocus),
+      "data-focus-visible": dataAttr(hasFocusVisible),
+    };
 
     return (
       <Host class={styles.host}>
         <label
-          ref={(el) => {
-            if (el instanceof HTMLLabelElement) {
-              this.rootEl = el;
-            }
-          }}
-          class={styles.root}
+          data-scope="checkbox"
+          data-part="root"
+          {...stateAttrs}
+          id={this.rootId}
+          htmlFor={this.inputId}
+          class={cx(styles.root, this.innerClass)}
           part="root"
         >
           <span
-            ref={(el) => {
-              if (el instanceof HTMLSpanElement) {
-                this.controlEl = el;
-              }
-            }}
+            data-scope="checkbox"
+            data-part="control"
+            {...stateAttrs}
+            id={this.controlId}
+            aria-hidden="true"
             class={styles.control}
             part="control"
           >
             <span
-              ref={(el) => {
-                if (el instanceof HTMLSpanElement) {
-                  this.indicatorEl = el;
-                }
-              }}
+              data-scope="checkbox"
+              data-part="indicator"
+              {...stateAttrs}
+              hidden={!checked && !indeterminate}
               class={styles.indicator}
               part="indicator"
             >
@@ -369,22 +332,28 @@ export class QuiCheckbox {
             </span>
           </span>
           <span
-            ref={(el) => {
-              if (el instanceof HTMLSpanElement) {
-                this.labelEl = el;
-              }
-            }}
+            data-scope="checkbox"
+            data-part="label"
+            {...stateAttrs}
+            id={this.labelId}
             class={styles.label}
             part="label"
           >
             <slot>{this.label}</slot>
           </span>
           <input
+            {...this.inputProps}
             ref={(el) => {
-              if (el instanceof HTMLInputElement) {
+              if (isHTMLInputElement(el)) {
                 this.inputEl = el;
+                this.checkable.setInput(el);
               }
             }}
+            type="checkbox"
+            value={this.value ?? "on"}
+            aria-labelledby={this.labelId}
+            class={styles.input}
+            part="input"
           />
         </label>
       </Host>

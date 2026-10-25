@@ -1,5 +1,4 @@
 import {
-  resolveVar,
   AttachInternals,
   Component,
   Element,
@@ -8,120 +7,63 @@ import {
   h,
   Host,
   Prop,
+  resolveVar,
   Watch,
   type EventEmitter,
   type VNode,
 } from "@stencil/core";
-import { type ListCollection } from "@zag-js/collection";
-import {
-  collection,
-  connect as selectConnect,
-  type Api as SelectApi,
-  machine as selectMachine,
-  type OpenChangeDetails,
-  type PositioningOptions,
-  type Props as SelectProps,
-  type ScrollToIndexDetails,
-  type ValueChangeDetails,
-} from "@zag-js/select";
-import { type PropTypes } from "@zag-js/types";
-import { normalizeProps, spreadProps, VanillaMachine } from "@zag-js/vanilla";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { cx } from "#styled-system/css";
 
-import { getRootNode } from "../../utilities/dom";
-import { nextId } from "../../utilities/id";
-import { optionLabel, type OptionElement } from "../../utilities/options";
-import { type MachineSchemaOf } from "../../utilities/zag";
-import { consumeField, type FieldApi } from "../qui-field/field-context";
-import { CheckIcon, UnfoldMoreIcon } from "../qui-icon/icons";
-import { listStyles } from "./list-styles";
+import { ariaAttr, dataAttr } from "../../helpers/attr";
+import { isHTMLButtonElement, isHTMLDivElement } from "../../helpers/dom";
+import { nextId } from "../../helpers/id";
+import { UnfoldMoreIcon } from "../qui-icon/icons";
+import { quiOptionSource } from "../qui-option/option-source";
+import {
+  FormController,
+  OptionListNavigationController,
+  ListWindowController,
+  OptionSourceController,
+  SelectionController,
+} from "../shared/controllers";
+import { OptionControlBase } from "../shared/option/component-base";
+import { labelForValue, type OptionItem } from "../shared/option/option";
+import {
+  PANEL_MAX_HEIGHT,
+  listStyles,
+  renderOptionList,
+  renderOptionRow,
+} from "../shared/option/option-list";
+import { selectStyles as styles } from "./styles";
 
-type SelectSchema = MachineSchemaOf<typeof selectMachine>;
+/** A select option. */
+export type SelectOption = OptionItem;
 
-interface OptionData {
-  value: string;
-  label: string;
-  disabled: boolean;
+/** Emitted whenever the selected values change. */
+export interface SelectValueChangeDetails {
+  value: string[];
+  items: SelectOption[];
 }
 
-const defaultPositioning: PositioningOptions = {
-  sameWidth: true,
-  flip: true,
-  placement: "bottom-start",
-};
+/** Emitted whenever the list opens or closes. */
+export interface SelectOpenChangeDetails {
+  open: boolean;
+  reason: string;
+}
 
-const styles = {
-  host: css({ display: "block", position: "relative", width: "full" }),
-  root: css({ position: "relative", width: "full" }),
-  control: css({ width: "full" }),
-  trigger: css({
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "2",
-    width: "full",
-    height: "10",
-    paddingInlineStart: "3",
-    paddingInlineEnd: "1.5",
-    fontSize: "sm",
-    color: "onSurface",
-    backgroundColor: "surface",
-    borderWidth: "1px",
-    borderColor: "outlineVariant",
-    rounded: "lg",
-    cursor: "pointer",
-    textAlign: "start",
-    transition: "border-color 150ms, outline-color 150ms",
-    "&:hover": { borderColor: "outline" },
-    "&:focus-visible": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "0",
-      borderColor: "primary",
-    },
-    "&[data-placeholder-shown]": { color: "onSurfaceVariant" },
-    "&[data-invalid]": { borderColor: "error" },
-    "&:disabled": { opacity: 0.38, cursor: "not-allowed" },
-  }),
-  valueText: css({
-    flex: "1",
-    overflow: "hidden",
-    textAlign: "start",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  }),
-  indicator: css({
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    width: "6",
-    height: "6",
-    color: "onSurfaceVariant",
-    fontSize: "md",
-    "& svg": { width: "1em", height: "1em" },
-    "&[data-state=open]": { transform: "rotate(180deg)" },
-  }),
-  listContent: css({
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-    paddingBlock: "2",
-  }),
-  listViewport: css({
-    flex: "1 1 auto",
-    minHeight: "0",
-    overflowY: "auto",
-    maxHeight: "min(320px, var(--available-height))",
-  }),
-};
+function labelsForValues(
+  items: readonly OptionItem[],
+  values: readonly string[],
+  separator = ", ",
+): string {
+  return values.map((value) => labelForValue(items, value)).join(separator);
+}
 
 /**
- * MD3 select. Provide options with `qui-option` children or a `collection`
- * property.
+ * MD3 select. Provide options with `qui-option` children or an `items`
+ * property. The list and popover are shared with `qui-combobox`.
  */
 @Component({
   tag: "qui-select",
@@ -129,527 +71,359 @@ const styles = {
   scoped: true,
   formAssociated: true,
 })
-export class QuiSelect {
+export class QuiSelect extends OptionControlBase {
   @Element() host!: HTMLQuiSelectElement;
-  // oxlint-disable-next-line eslint/new-cap
   @AttachInternals() internals!: ElementInternals;
 
-  /** A prepared Zag collection. Property-only. */
-  @Prop() collection?: ListCollection<OptionData>;
-  /** The controlled selected values. Property-only. */
-  @Prop() value?: string[];
-  /** The initial selected values. Property-only. */
-  @Prop() defaultValue?: string[];
-  /** The form field name. */
-  @Prop() name?: string;
   /** Trigger text when no value is selected. */
   @Prop() placeholder = "Select an option";
-  /** Disables the select. */
-  @Prop() disabled = false;
-  /** Marks the select invalid. */
-  @Prop() invalid = false;
-  /** Makes the select read-only. */
-  @Prop() readOnly = false;
-  /** Marks the select required. */
-  @Prop() required = false;
-  /** Allows multiple selected values. */
-  @Prop() multiple = false;
-  /** Whether selecting an item closes the menu. */
-  @Prop() closeOnSelect?: boolean;
   /** Whether keyboard navigation wraps. */
   @Prop() loopFocus = false;
-  /** Whether clicking the selected item clears it. */
+  /** Whether selecting the current value clears it. */
   @Prop() deselectable = false;
-  /** The controlled open state. */
-  @Prop() open?: boolean;
-  /** The initial open state. */
-  @Prop() defaultOpen = false;
-  /** Popper positioning options. Property-only. */
-  @Prop() positioning?: PositioningOptions;
-  /** Text direction. */
-  @Prop() textDirection?: "ltr" | "rtl";
-  /** Additional class applied to the root element. */
-  @Prop() innerClass?: string;
+  /** Message shown when there are no options. */
+  @Prop() emptyText = "No options";
 
   /** Emitted whenever the selected values change. */
   @Event({ eventName: "valuechange", bubbles: true, composed: true })
-  valueChange!: EventEmitter<ValueChangeDetails<OptionData>>;
+  valueChange!: EventEmitter<SelectValueChangeDetails>;
 
-  /** Emitted whenever the menu opens or closes. */
+  /** Emitted whenever the list opens or closes. */
   @Event({ eventName: "openchange", bubbles: true, composed: true })
-  openChange!: EventEmitter<OpenChangeDetails>;
+  openChange!: EventEmitter<SelectOpenChangeDetails>;
 
-  private formDisabled = false;
-
-  private machine?: VanillaMachine<SelectSchema>;
-  private unsubscribe?: () => void;
-  private field?: FieldApi;
-  private fieldUnsubscribe?: () => void;
-  private observer?: MutationObserver;
-  private spreads: (() => void)[] = [];
   private rootEl?: HTMLDivElement;
-  private hiddenSelectEl?: HTMLSelectElement;
-  private controlEl?: HTMLDivElement;
   private triggerEl?: HTMLButtonElement;
-  private valueTextEl?: HTMLSpanElement;
-  private indicatorEl?: HTMLSpanElement;
-  private positionerEl?: HTMLDivElement;
-  private contentEl?: HTMLDivElement;
-  private wasOpen = false;
-  private initialValue: string[] = [];
-  private lastFormSignature = "";
+  private typeahead = "";
+  private typeaheadTimer?: ReturnType<typeof setTimeout>;
   private readonly generatedId = nextId("qui-select");
-
-  public componentWillLoad(): void {
-    this.initialValue = [...(this.defaultValue ?? this.value ?? [])];
-    this.attachField();
-    this.machine = new VanillaMachine(selectMachine, () => this.machineProps());
-    this.unsubscribe = this.machine.subscribe(() => {
+  private readonly listId = `${this.generatedId}-listbox`;
+  private readonly form = new FormController({
+    getHost: (): HTMLElement => this.host,
+    getInternals: (): ElementInternals => this.internals,
+    getName: (): string | undefined => this.name,
+    getMultiple: (): boolean => this.multiple,
+    getValue: (): string[] => this.selection.selected,
+    getDisabled: (): boolean => this.disabled,
+    getReadOnly: (): boolean => this.readOnly,
+    getRequired: (): boolean => this.required,
+    getInvalid: (): boolean => this.invalid,
+    getValidationElement: (): HTMLElement | undefined => this.triggerEl,
+    onReset: (): void => {
+      this.selection.reset();
+      this.navigation.closeMenu("reset");
+      this.window.scrollToStart();
+    },
+    onRestore: (values: string[]): void => {
+      this.selection.restore(values);
+    },
+    requestUpdate: (): void => {
       forceUpdate(this.host);
-    });
-    this.machine.start();
+    },
+  });
+
+  protected get formController(): FormController {
+    return this.form;
+  }
+  private readonly source = new OptionSourceController({
+    adapter: quiOptionSource,
+    getHost: (): HTMLElement => this.host,
+    getItems: (): readonly SelectOption[] | undefined => this.items,
+    getRenderedRoot: (): HTMLElement | undefined => this.rootEl,
+    requestUpdate: (): void => {
+      forceUpdate(this.host);
+    },
+  });
+  private readonly selection = new SelectionController({
+    getValue: (): string[] | undefined => this.value,
+    getDefaultValue: (): string[] | undefined => this.defaultValue,
+    getItems: (): readonly SelectOption[] => this.source.items,
+    getMultiple: (): boolean => this.multiple,
+    getDeselectable: (): boolean => this.deselectable,
+    isReadOnly: (): boolean => this.form.isReadOnly,
+    onChange: ({ value, items }): void => {
+      this.valueChange.emit({ value, items });
+      this.form.sync();
+    },
+    requestUpdate: (): void => {
+      forceUpdate(this.host);
+    },
+  });
+  private readonly window = new ListWindowController({
+    getEstimateSize: (): number => this.estimateSize,
+    fallbackViewportSize: PANEL_MAX_HEIGHT,
+    getOverscan: (): number => this.overscan,
+    requestUpdate: (): void => {
+      forceUpdate(this.host);
+    },
+  });
+  private readonly navigation = new OptionListNavigationController<SelectOption>({
+    getItems: (): readonly SelectOption[] => this.source.items,
+    getInitialActive: (): string | undefined => {
+      const { items } = this.source;
+      const selected = new Set(this.selection.selected);
+      return (
+        items.find((item) => selected.has(item.value) && !item.disabled)?.value ??
+        items.find((item) => !item.disabled)?.value
+      );
+    },
+    isDisabled: (): boolean => this.form.isDisabled,
+    isReadOnly: (): boolean => this.form.isReadOnly,
+    isLooping: (): boolean => this.loopFocus,
+    onOpenChange: (open: boolean, reason: string): void => {
+      this.openChange.emit({ open, reason });
+    },
+    onReveal: (index: number): void => {
+      this.window.revealIndex(index);
+    },
+    requestUpdate: (): void => {
+      forceUpdate(this.host);
+    },
+  });
+
+  constructor() {
+    super();
+    this.addController(this.form);
+    this.addController(this.source);
+    this.addController(this.selection);
+    this.addController(this.window);
+    this.addController(this.navigation);
   }
 
-  public componentDidLoad(): void {
-    if (this.field === undefined) {
-      this.attachField();
+  public componentWillLoad(): void {
+    super.componentWillLoad();
+    if (this.open ?? this.defaultOpen) {
+      this.navigation.openMenu("initial");
     }
-    this.observer = new MutationObserver((records) => {
-      const optionsChanged = records.some((record) => {
-        const nodes = [...record.addedNodes, ...record.removedNodes];
-        return nodes.some((node) => node instanceof HTMLElement && node.tagName === "QUI-OPTION");
-      });
-      if (optionsChanged) {
-        this.machine?.updateProps(this.machineProps());
-      }
-    });
-    this.observer.observe(this.host, { childList: true });
   }
 
   public componentDidRender(): void {
-    const { api } = this;
-    this.applySpreads(api);
-    const { open } = api;
-    // Zag's focus can run before props apply; focus after the DOM patch instead.
-    if (open && !this.wasOpen) {
-      this.contentEl?.focus({ preventScroll: true });
-    }
-    this.wasOpen = open;
-  }
-
-  public formResetCallback(): void {
-    this.value = [...this.initialValue];
-    this.syncMachineProps();
-    this.syncFormState();
-  }
-
-  public formDisabledCallback(disabled: boolean): void {
-    this.formDisabled = disabled;
-    this.machine?.updateProps(this.machineProps());
-  }
-
-  public formStateRestoreCallback(state: string | File | FormData | null): void {
-    if (typeof state !== "string") {
-      return;
-    }
-    try {
-      const value: unknown = JSON.parse(state);
-      if (Array.isArray(value)) {
-        this.value = value.map(String);
-        this.syncMachineProps();
-        this.syncFormState();
-      }
-    } catch {
-      // Ignore malformed restoration state.
-    }
+    super.componentDidRender();
   }
 
   public disconnectedCallback(): void {
-    this.observer?.disconnect();
-    for (const cleanup of this.spreads) {
-      cleanup();
+    super.disconnectedCallback();
+    if (this.typeaheadTimer !== undefined) {
+      clearTimeout(this.typeaheadTimer);
+      this.typeaheadTimer = undefined;
     }
-    this.spreads = [];
-    this.fieldUnsubscribe?.();
-    this.unsubscribe?.();
-    this.machine?.stop();
   }
 
   @Watch("value")
-  @Watch("name")
-  @Watch("disabled")
-  @Watch("invalid")
-  @Watch("readOnly")
-  @Watch("required")
-  @Watch("multiple")
-  @Watch("closeOnSelect")
-  @Watch("loopFocus")
-  @Watch("deselectable")
+  private syncForm(): void {
+    this.form.sync();
+  }
+
   @Watch("open")
-  @Watch("positioning")
-  @Watch("textDirection")
-  @Watch("collection")
-  private syncMachineProps(): void {
-    this.machine?.updateProps(this.machineProps());
-  }
-
-  private attachField(): void {
-    const field = consumeField(this.host);
-    if (field === undefined || field === this.field) {
+  private syncControlledOpen(value?: boolean): void {
+    if (value === undefined || value === this.navigation.open) {
       return;
     }
-    this.fieldUnsubscribe?.();
-    this.field = field;
-    this.fieldUnsubscribe = field.subscribe(() => {
-      this.machine?.updateProps(this.machineProps());
-    });
-    this.machine?.updateProps(this.machineProps());
-  }
-
-  private optionItems(): OptionData[] {
-    return [...this.host.querySelectorAll<OptionElement>("qui-option")].map((option) => ({
-      value: option.getAttribute("value") ?? "",
-      label: optionLabel(option),
-      disabled: option.hasAttribute("disabled"),
-    }));
-  }
-
-  private buildCollection(): ListCollection<OptionData> {
-    if (this.collection !== undefined) {
-      return this.collection;
-    }
-    return collection({
-      items: this.optionItems(),
-      itemToValue: (item) => item.value,
-      itemToString: (item) => item.label,
-      isItemDisabled: (item) => item.disabled,
-    });
-  }
-
-  private machineProps(): SelectProps<OptionData> {
-    const { field } = this;
-    return {
-      id: this.host.id || this.generatedId,
-      getRootNode: () => getRootNode(this.host),
-      collection: this.buildCollection(),
-      value: this.value,
-      defaultValue: this.defaultValue,
-      name: this.name,
-      disabled: this.formDisabled || (field?.disabled() ?? this.disabled),
-      invalid: field?.invalid() ?? this.invalid,
-      readOnly: field?.readOnly() ?? this.readOnly,
-      required: field?.required() ?? this.required,
-      multiple: this.multiple,
-      closeOnSelect: this.closeOnSelect,
-      loopFocus: this.loopFocus,
-      deselectable: this.deselectable,
-      open: this.open,
-      defaultOpen: this.defaultOpen,
-      positioning: this.positioning ?? defaultPositioning,
-      dir: this.textDirection,
-      ids:
-        field === undefined
-          ? undefined
-          : { hiddenSelect: field.ids.control, label: field.ids.label },
-      scrollToIndexFn: (details: ScrollToIndexDetails) => {
-        details.getElement()?.scrollIntoView({ block: "nearest" });
-      },
-      onValueChange: (details) => {
-        this.valueChange.emit(details);
-      },
-      onOpenChange: (details) => {
-        this.openChange.emit(details);
-      },
-    };
-  }
-
-  private triggerProps(api: SelectApi<PropTypes, OptionData>): Record<string, unknown> {
-    const trigger = api.getTriggerProps();
-    if (this.field === undefined) {
-      return trigger;
-    }
-    const control = this.field.getInputProps();
-    return {
-      ...trigger,
-      "aria-describedby": control["aria-describedby"],
-      "aria-errormessage": control["aria-errormessage"],
-    };
-  }
-
-  private get api(): SelectApi<PropTypes, OptionData> {
-    if (this.machine === undefined) {
-      throw new Error("qui-select has not been initialized");
-    }
-    return selectConnect<PropTypes, OptionData>(this.machine.service, normalizeProps);
-  }
-
-  private applySpreads(api: SelectApi<PropTypes, OptionData>): void {
-    this.spreads = [];
-    if (this.rootEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.rootEl, {
-          ...api.getRootProps(),
-          class: cx(styles.root, this.innerClass),
-        }),
-      );
-    }
-    this.applyHiddenSelect(api);
-    if (this.controlEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.controlEl, { ...api.getControlProps(), class: styles.control }),
-      );
-    }
-    if (this.triggerEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.triggerEl, { ...this.triggerProps(api), class: styles.trigger }),
-      );
-    }
-    if (this.valueTextEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.valueTextEl, { ...api.getValueTextProps(), class: styles.valueText }),
-      );
-    }
-    if (this.indicatorEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.indicatorEl, { ...api.getIndicatorProps(), class: styles.indicator }),
-      );
-    }
-    if (this.positionerEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.positionerEl, {
-          ...api.getPositionerProps(),
-          class: listStyles.positioner,
-        }),
-      );
-    }
-    if (this.contentEl !== undefined) {
-      this.spreads.push(
-        spreadProps(this.contentEl, {
-          ...api.getContentProps(),
-          class: cx(listStyles.content, styles.listContent),
-        }),
-      );
-    }
-    this.applyItemSpreads(api);
-    this.syncFormState(api);
-  }
-
-  private applyHiddenSelect(api: SelectApi<PropTypes, OptionData>): void {
-    if (this.hiddenSelectEl === undefined) {
+    if (value) {
+      this.navigation.openMenu("prop");
       return;
     }
-    const { name: _name, required: _required, ...hiddenSelectProps } = api.getHiddenSelectProps();
-    this.spreads.push(spreadProps(this.hiddenSelectEl, hiddenSelectProps));
+    this.closeMenu("prop");
   }
 
-  private formKey(values: readonly string[]): string {
-    return `${this.name ?? ""}\u0001${this.multiple}\u0001${this.isRequired}\u0001${this.isInvalid}\u0001${values.join("\u0000")}`;
+  private get valueText(): string {
+    const values = this.selection.selected;
+    return values.length === 0 ? this.placeholder : labelsForValues(this.source.items, values);
   }
 
-  private syncFormState(api: SelectApi<PropTypes, OptionData> = this.api): void {
-    const values = api.value;
-    const signature = this.formKey(values);
-    if (signature === this.lastFormSignature) {
+  private closeMenu(reason: string): void {
+    this.navigation.closeMenu(reason);
+    this.window.scrollToStart();
+  }
+
+  private readonly handleTriggerClick = (): void => {
+    if (this.form.isDisabled || this.form.isReadOnly) {
       return;
     }
-    this.lastFormSignature = signature;
-    let formValue: string | FormData = values[0] ?? "";
-    if (this.multiple) {
-      formValue = new FormData();
-      for (const value of values) {
-        if (this.name !== undefined) {
-          formValue.append(this.name, value);
+    this.navigation.toggleMenu("trigger");
+  };
+
+  private readonly handleDismiss = (): void => {
+    this.closeMenu("outside");
+  };
+
+  private readonly handleKeyDown = (event: KeyboardEvent): void => {
+    if (this.form.isDisabled || this.form.isReadOnly) {
+      return;
+    }
+    if (this.navigation.handleNavigationKey({ event })) {
+      return;
+    }
+    switch (event.key) {
+      case "Enter":
+      case " ": {
+        this.handleActivate(event);
+        break;
+      }
+      case "Escape": {
+        if (this.navigation.open) {
+          event.preventDefault();
+          this.closeMenu("escape");
         }
+        break;
+      }
+      case "Tab": {
+        this.closeMenu("tab");
+        break;
+      }
+      default: {
+        this.handleTypeahead(event);
+        break;
       }
     }
+  };
 
-    this.internals.setFormValue(formValue, JSON.stringify(values));
-    this.applyFormValidity(values.length);
-  }
-
-  private applyFormValidity(valueCount: number): void {
-    if (this.isRequired && valueCount === 0) {
-      this.internals.setValidity(
-        { valueMissing: true },
-        "Please select an option.",
-        this.triggerEl,
-      );
+  private handleActivate(event: KeyboardEvent): void {
+    event.preventDefault();
+    if (!this.navigation.open) {
+      this.navigation.openMenu("keyboard");
       return;
     }
-    if (this.isInvalid) {
-      this.internals.setValidity({ customError: true }, "Invalid value", this.triggerEl);
+    if (this.navigation.activeValue !== undefined) {
+      this.select(this.navigation.activeValue);
+    }
+  }
+
+  private handleTypeahead(event: KeyboardEvent): void {
+    if (event.key.length !== 1 || event.ctrlKey || event.metaKey || event.altKey) {
       return;
     }
-    this.internals.setValidity({});
-  }
-
-  private get isRequired(): boolean {
-    return this.field?.required() ?? this.required;
-  }
-
-  private get isInvalid(): boolean {
-    return this.field?.invalid() ?? this.invalid;
-  }
-
-  private applyItemSpreads(api: SelectApi<PropTypes, OptionData>): void {
-    if (this.contentEl === undefined || this.contentEl.hidden === true) {
-      return;
+    this.typeahead += event.key.toLowerCase();
+    if (this.typeaheadTimer !== undefined) {
+      clearTimeout(this.typeaheadTimer);
     }
-    const { items } = api.collection;
-    for (const element of this.contentEl.querySelectorAll<HTMLElement>("[data-qui-select-item]")) {
-      const index = Number(element.dataset.index);
-      const item = items.at(index);
-      if (item !== undefined) {
-        this.spreadItem(api, element, item);
+    this.typeaheadTimer = setTimeout(() => {
+      this.typeahead = "";
+      this.typeaheadTimer = undefined;
+    }, 500);
+    const match = this.navigation.findByPrefix(this.typeahead);
+    if (match !== undefined) {
+      if (!this.navigation.open) {
+        this.navigation.openMenu("typeahead");
       }
+      this.navigation.setActive(match.value);
     }
   }
 
-  private spreadItem(
-    api: SelectApi<PropTypes, OptionData>,
-    element: HTMLElement,
-    item: OptionData,
-  ): void {
-    this.spreads.push(
-      spreadProps(element, {
-        ...api.getItemProps({ item }),
-        class: listStyles.item,
-      }),
-    );
-    const textEl = element.querySelector<HTMLElement>("[data-qui-select-item-text]");
-    if (textEl !== null) {
-      this.spreads.push(
-        spreadProps(textEl, {
-          ...api.getItemTextProps({ item }),
-          class: listStyles.itemText,
-        }),
-      );
+  private select(value: string): void {
+    const item = this.selection.select(value);
+    if (item === undefined) {
+      return;
     }
-    const indicatorEl = element.querySelector<HTMLElement>("[data-qui-select-item-indicator]");
-    if (indicatorEl !== null) {
-      this.spreads.push(
-        spreadProps(indicatorEl, {
-          ...api.getItemIndicatorProps({ item }),
-          class: listStyles.itemIndicator,
-        }),
-      );
+    if (!this.multiple && this.closeOnSelect !== false) {
+      this.closeMenu("select");
     }
+  }
+
+  private activeDescendant(): string | undefined {
+    if (!this.navigation.open || this.navigation.activeValue === undefined) {
+      return undefined;
+    }
+    const index = this.source.items.findIndex((item) => item.value === this.navigation.activeValue);
+    return index === -1 ? undefined : `${this.listId}-${index}`;
   }
 
   public render(): VNode {
-    const { api } = this;
-    const { open, collection: fullCollection } = api;
-    const collectionItems = fullCollection.items;
-    const valueText = api.valueAsString || this.placeholder;
+    const list = this.window.getList(this.source.items);
+    const { selected } = this.selection;
+    const selectedValues = new Set(selected);
+    const status =
+      list.total === 0
+        ? this.emptyText
+        : `${list.total} ${list.total === 1 ? "option" : "options"}`;
+    const placeholderShown = selected.length === 0;
 
     return (
       <Host class={styles.host}>
         <div
           ref={(el) => {
-            if (el instanceof HTMLDivElement) {
+            if (isHTMLDivElement(el)) {
               this.rootEl = el;
             }
           }}
-          class={styles.root}
+          class={cx(styles.root, this.innerClass)}
           part="root"
+          dir={this.textDirection}
         >
-          <select
-            ref={(el) => {
-              if (el instanceof HTMLSelectElement) {
-                this.hiddenSelectEl = el;
-              }
-            }}
-            hidden
-          >
-            {fullCollection.items.map((item: OptionData) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-
-          <div
-            ref={(el) => {
-              if (el instanceof HTMLDivElement) {
-                this.controlEl = el;
-              }
-            }}
-            class={styles.control}
-            part="control"
-          >
+          <div class={styles.control} part="control">
             <button
               ref={(el) => {
-                if (el instanceof HTMLButtonElement) {
+                if (isHTMLButtonElement(el)) {
                   this.triggerEl = el;
                 }
               }}
+              id={this.form.fieldApi?.ids.control ?? (this.host.id || this.generatedId)}
               class={styles.trigger}
               part="trigger"
               type="button"
+              role="combobox"
+              aria-haspopup="listbox"
+              aria-controls={this.listId}
+              aria-expanded={this.navigation.open ? "true" : "false"}
+              aria-activedescendant={this.activeDescendant()}
+              aria-invalid={ariaAttr(this.form.isInvalid)}
+              aria-required={ariaAttr(this.form.isRequired)}
+              aria-describedby={this.form.fieldApi?.getInputProps()["aria-describedby"]}
+              aria-errormessage={this.form.fieldApi?.getInputProps()["aria-errormessage"]}
+              data-placeholder-shown={dataAttr(placeholderShown)}
+              data-invalid={dataAttr(this.form.isInvalid)}
+              data-disabled={dataAttr(this.form.isDisabled)}
+              disabled={this.form.isDisabled}
+              onClick={this.handleTriggerClick}
+              onKeyDown={this.handleKeyDown}
             >
-              <span
-                ref={(el) => {
-                  if (el instanceof HTMLSpanElement) {
-                    this.valueTextEl = el;
-                  }
-                }}
-                class={styles.valueText}
-                part="value-text"
-              >
-                {valueText}
+              <span class={styles.valueText} part="value-text">
+                {this.valueText}
               </span>
               <span
-                ref={(el) => {
-                  if (el instanceof HTMLSpanElement) {
-                    this.indicatorEl = el;
-                  }
-                }}
                 class={styles.indicator}
                 part="indicator"
+                data-state={this.navigation.open ? "open" : "closed"}
               >
                 <UnfoldMoreIcon />
               </span>
             </button>
           </div>
 
-          <div
-            ref={(el) => {
-              if (el instanceof HTMLDivElement) {
-                this.positionerEl = el;
-              }
-            }}
-            class={listStyles.positioner}
-            part="positioner"
-          >
-            <div
-              ref={(el) => {
-                if (el instanceof HTMLDivElement) {
-                  this.contentEl = el;
-                }
-              }}
-              hidden={!open}
-              class={cx(listStyles.content, styles.listContent)}
-              part="content"
-            >
-              <div class={styles.listViewport} part="viewport">
-                {collectionItems.map((item: OptionData, index: number) => (
-                  <div
-                    key={item.value}
-                    data-qui-select-item=""
-                    data-index={index}
-                    class={listStyles.item}
-                  >
-                    <span data-qui-select-item-text="" class={listStyles.itemText}>
-                      {item.label}
-                    </span>
-                    <span data-qui-select-item-indicator="" class={listStyles.itemIndicator}>
-                      <CheckIcon />
-                    </span>
-                  </div>
-                ))}
+          {renderOptionList({
+            list,
+            listId: this.listId,
+            open: this.navigation.open,
+            multiple: this.multiple,
+            status,
+            viewportRef: (el) => {
+              this.window.setViewport(el);
+            },
+            onDismiss: this.handleDismiss,
+            onScroll: (event) => {
+              this.window.handleScroll(event);
+            },
+            renderItem: (entry) =>
+              renderOptionRow({
+                entry,
+                listId: this.listId,
+                total: list.total,
+                activeValue: this.navigation.activeValue,
+                selected: selectedValues.has(entry.item.value),
+                optionRender: this.optionRender,
+                onSelect: (value) => {
+                  this.select(value);
+                },
+                onHighlight: (value) => {
+                  this.navigation.setActive(value);
+                },
+              }),
+            renderEmpty: () => (
+              <div class={listStyles.empty} part="empty">
+                {this.emptyText}
               </div>
-            </div>
-          </div>
+            ),
+          })}
         </div>
       </Host>
     );

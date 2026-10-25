@@ -12,7 +12,7 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { consumeDialog, type DialogContext } from "./dialog-context";
+import { consumeDialog, type DialogContext } from "./context";
 
 const styles = {
   host: css({ display: "block" }),

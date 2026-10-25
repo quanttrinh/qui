@@ -17,11 +17,13 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { ariaAttr, dataAttr } from "../../utilities/attr";
-import { nextId } from "../../utilities/id";
-import { applyMask, formatMask, unmask } from "../../utilities/mask";
-import { consumeField, type FieldApi } from "../qui-field/field-context";
+import { ariaAttr, dataAttr } from "../../helpers/attr";
+import { isHTMLInputElement } from "../../helpers/dom";
+import { nextId } from "../../helpers/id";
+import { applyMask, formatMask, unmask } from "../../helpers/mask";
 import { AddIcon, RemoveIcon, VisibilityIcon, VisibilityOffIcon } from "../qui-icon/icons";
+import { FormControlBase } from "../shared/form-control/component-base";
+import { FormController, type FormValidity } from "../shared/form-control/controller";
 
 /** The input types `qui-input` can render. */
 export type InputType = "text" | "email" | "tel" | "search" | "password" | "number";
@@ -183,9 +185,8 @@ const styles = {
   scoped: true,
   formAssociated: true,
 })
-export class QuiInput {
+export class QuiInput extends FormControlBase {
   @Element() host!: HTMLQuiInputElement;
-  // oxlint-disable-next-line eslint/new-cap
   @AttachInternals() internals!: ElementInternals;
 
   /** The input type to render. */
@@ -237,50 +238,68 @@ export class QuiInput {
 
   @State() private passwordVisible = false;
   @State() private currentValue = "";
-  @State() private formDisabled = false;
 
   private inputEl?: HTMLInputElement;
-  private field?: FieldApi;
-  private fieldUnsubscribe?: () => void;
   private holdDelay?: ReturnType<typeof setTimeout>;
   private holdRepeat?: ReturnType<typeof setInterval>;
   private initialValue = "";
   private readonly generatedId = nextId("qui-input");
+  private readonly form = new FormController({
+    getHost: (): HTMLElement => this.host,
+    getInternals: (): ElementInternals => this.internals,
+    getName: (): string | undefined => this.name,
+    getMultiple: (): boolean => false,
+    getValue: (): readonly string[] => {
+      const value = this.inputEl?.value;
+      return value === undefined ? [] : [value];
+    },
+    getDisabled: (): boolean => this.disabled,
+    getReadOnly: (): boolean => this.readOnly,
+    getRequired: (): boolean => this.required,
+    getInvalid: (): boolean => this.invalid,
+    getValidationElement: (): HTMLElement | undefined => this.inputEl,
+    getFormValue: (): string => this.inputEl?.value ?? "",
+    getValidity: (): FormValidity => this.validity(),
+    getSignature: (): string => this.formSignature(),
+    onReset: (): void => {
+      this.value = this.initialValue;
+      this.applyValue(this.initialValue);
+    },
+    onRestore: (values: string[]): void => {
+      const value = values.at(0) ?? "";
+      this.value = value;
+      this.applyValue(value);
+    },
+    requestUpdate: (): void => {
+      forceUpdate(this.host);
+    },
+  });
+
+  constructor() {
+    super();
+    this.addController(this.form);
+  }
+
+  protected get formController(): FormController {
+    return this.form;
+  }
 
   public componentWillLoad(): void {
+    super.componentWillLoad();
     this.initialValue = String(this.defaultValue ?? this.value ?? "");
-    this.attachField();
     this.syncInitialValue();
   }
 
   public componentDidLoad(): void {
-    if (this.field === undefined) {
-      this.attachField();
-    }
+    super.componentDidLoad();
     // Applies the initial value to the native input; state is already seeded.
     this.syncInitialValue();
-    this.syncFormState();
+    this.form.sync();
   }
 
   public disconnectedCallback(): void {
+    super.disconnectedCallback();
     this.clearHold();
-    this.fieldUnsubscribe?.();
-  }
-
-  public formResetCallback(): void {
-    this.value = this.initialValue;
-    this.applyValue(this.initialValue);
-  }
-
-  public formDisabledCallback(disabled: boolean): void {
-    this.formDisabled = disabled;
-  }
-
-  public formStateRestoreCallback(state: string | File | FormData | null): void {
-    if (typeof state === "string") {
-      this.value = state;
-      this.applyValue(state);
-    }
   }
 
   @Watch("value")
@@ -303,20 +322,7 @@ export class QuiInput {
   @Watch("required")
   @Watch("invalid")
   private syncFormValidity(): void {
-    this.syncFormState();
-  }
-
-  private attachField(): void {
-    const field = consumeField(this.host);
-    if (field === undefined || field === this.field) {
-      return;
-    }
-    this.fieldUnsubscribe?.();
-    this.field = field;
-    this.fieldUnsubscribe = field.subscribe(() => {
-      forceUpdate(this.host);
-      this.syncFormState();
-    });
+    this.form.sync();
   }
 
   private get pattern(): string | undefined {
@@ -325,22 +331,6 @@ export class QuiInput {
 
   private get isNumber(): boolean {
     return this.inputType === "number";
-  }
-
-  private get isInvalid(): boolean {
-    return this.field?.invalid() ?? this.invalid;
-  }
-
-  private get isDisabled(): boolean {
-    return this.formDisabled || (this.field?.disabled() ?? this.disabled);
-  }
-
-  private get isReadOnly(): boolean {
-    return this.field?.readOnly() ?? this.readOnly;
-  }
-
-  private get isRequired(): boolean {
-    return this.field?.required() ?? this.required;
   }
 
   private get resolvedType(): string {
@@ -352,19 +342,19 @@ export class QuiInput {
 
   private get inputProps(): Record<string, string | number | boolean | undefined> {
     const props: Record<string, unknown> =
-      this.field === undefined
+      this.form.fieldApi === undefined
         ? {
             id: this.inputId ?? (this.host.id || this.generatedId),
-            disabled: this.isDisabled,
-            readOnly: this.isReadOnly || undefined,
-            "aria-invalid": ariaAttr(this.isInvalid),
+            disabled: this.form.isDisabled,
+            readOnly: this.form.isReadOnly || undefined,
+            "aria-invalid": ariaAttr(this.form.isInvalid),
             "data-scope": "input",
             "data-part": "input",
-            "data-invalid": dataAttr(this.isInvalid),
-            "data-required": dataAttr(this.isRequired),
-            "data-readonly": dataAttr(this.isReadOnly),
+            "data-invalid": dataAttr(this.form.isInvalid),
+            "data-required": dataAttr(this.form.isRequired),
+            "data-readonly": dataAttr(this.form.isReadOnly),
           }
-        : { ...this.field.getInputProps() };
+        : { ...this.form.fieldApi.getInputProps() };
     delete props.required;
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     return props as Record<string, string | number | boolean | undefined>;
@@ -387,35 +377,30 @@ export class QuiInput {
     if (this.isNumber) {
       this.currentValue = next;
     }
-    this.syncFormState();
+    this.form.sync();
   }
 
-  private syncFormState(): void {
-    const el = this.inputEl;
-    if (el === undefined) {
-      return;
+  private validity(): FormValidity {
+    const element = this.inputEl;
+    if (element === undefined) {
+      return { flags: {} };
     }
-
-    this.internals.setFormValue(el.value);
-
-    if (this.isInvalid) {
-      this.internals.setValidity({ customError: true }, "Invalid value", el);
-      return;
+    if (this.form.isInvalid) {
+      return { flags: { customError: true }, message: "Invalid value", element };
     }
-
-    if (this.isRequired && el.value === "") {
-      this.internals.setValidity({ valueMissing: true }, "Please fill out this field.", el);
-      return;
+    if (this.form.isRequired && element.value === "") {
+      return {
+        flags: { valueMissing: true },
+        message: "Please fill out this field.",
+        element,
+      };
     }
-
-    const { validity } = el;
+    const { validity } = element;
     if (validity.valid) {
-      this.internals.setValidity({});
-      return;
+      return { flags: {} };
     }
-
-    this.internals.setValidity(
-      {
+    return {
+      flags: {
         badInput: validity.badInput,
         customError: validity.customError,
         patternMismatch: validity.patternMismatch,
@@ -427,14 +412,21 @@ export class QuiInput {
         typeMismatch: validity.typeMismatch,
         valueMissing: validity.valueMissing,
       },
-      el.validationMessage,
-      el,
-    );
+      message: element.validationMessage,
+      element,
+    };
+  }
+
+  private formSignature(): string {
+    const element = this.inputEl;
+    return `${element?.value ?? ""}\u0001${this.form.isRequired ? 1 : 0}\u0001${
+      this.form.isInvalid ? 1 : 0
+    }\u0001${element?.validity.valid === true ? 1 : 0}\u0001${element?.validationMessage ?? ""}`;
   }
 
   private readonly handleInput = (event: Event): void => {
     const el = event.target;
-    if (!(el instanceof HTMLInputElement)) {
+    if (!isHTMLInputElement(el)) {
       return;
     }
     const { pattern } = this;
@@ -443,7 +435,7 @@ export class QuiInput {
         this.currentValue = el.value;
       }
       this.emitValue(el.value, el.value);
-      this.syncFormState();
+      this.form.sync();
       return;
     }
 
@@ -457,7 +449,7 @@ export class QuiInput {
       this.currentValue = next.value;
     }
     this.emitValue(next.value, unmask(next.value));
-    this.syncFormState();
+    this.form.sync();
   };
 
   private emitValue(value: string, unmaskedValue: string): void {
@@ -538,9 +530,9 @@ export class QuiInput {
           <div
             data-scope="input"
             data-part="control"
-            data-invalid={dataAttr(this.isInvalid)}
-            data-disabled={dataAttr(this.isDisabled)}
-            data-readonly={dataAttr(this.isReadOnly)}
+            data-invalid={dataAttr(this.form.isInvalid)}
+            data-disabled={dataAttr(this.form.isDisabled)}
+            data-readonly={dataAttr(this.form.isReadOnly)}
             class={styles.control}
             part="control"
           >
@@ -551,7 +543,7 @@ export class QuiInput {
             <input
               {...this.inputProps}
               ref={(el) => {
-                if (el instanceof HTMLInputElement) {
+                if (isHTMLInputElement(el)) {
                   this.inputEl = el;
                 }
               }}
@@ -578,7 +570,7 @@ export class QuiInput {
                   data-part="increment-trigger"
                   aria-label="Increment"
                   class={styles.stepper}
-                  disabled={this.isDisabled || this.isReadOnly || !this.canStep(1)}
+                  disabled={this.form.isDisabled || this.form.isReadOnly || !this.canStep(1)}
                   onPointerDown={() => {
                     this.startHold(1);
                   }}
@@ -607,7 +599,7 @@ export class QuiInput {
                   data-part="decrement-trigger"
                   aria-label="Decrement"
                   class={styles.stepper}
-                  disabled={this.isDisabled || this.isReadOnly || !this.canStep(-1)}
+                  disabled={this.form.isDisabled || this.form.isReadOnly || !this.canStep(-1)}
                   onPointerDown={() => {
                     this.startHold(-1);
                   }}
@@ -641,7 +633,7 @@ export class QuiInput {
                 aria-label={this.passwordVisible ? "Hide password" : "Show password"}
                 aria-pressed={this.passwordVisible ? "true" : "false"}
                 class={styles.trigger}
-                disabled={this.isDisabled || this.isReadOnly}
+                disabled={this.form.isDisabled || this.form.isReadOnly}
                 onMouseDown={(event) => {
                   event.preventDefault();
                 }}
