@@ -153,7 +153,12 @@ export class FormController implements FormControl, ReactiveController {
     if (Build.isServer) {
       return;
     }
-    const signature = this.options.getSignature?.() ?? this.signatureFor();
+    // Always include controller-owned state.
+    // Components with a custom signature for native validity still need
+    // Disabled/read-only changes to invalidate the cached form value.
+    const signature = `${this.options.getSignature?.() ?? this.signatureFor()}\u0001${
+      this.isDisabled ? 1 : 0
+    }\u0001${this.isReadOnly ? 1 : 0}\u0001${this.isRequired ? 1 : 0}\u0001${this.isInvalid ? 1 : 0}`;
     if (signature === this.signature) {
       return;
     }

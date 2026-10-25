@@ -11,8 +11,9 @@ import { fieldStyles } from "./styles";
 /**
  * Groups a control with its label, helper text, and error text.
  *
- * Descendant `qui-input`, `qui-checkbox`, `qui-switch`, and `qui-radio-group`
- * read the field state through a DOM context instead of duplicating it.
+ * Descendant `qui-input`, `qui-textarea`, `qui-checkbox`, `qui-switch`, and
+ * `qui-radio-group` read the field state through a DOM context instead of
+ * duplicating it.
  *
  * @slot - Field label, control, helper text, and error text.
  */

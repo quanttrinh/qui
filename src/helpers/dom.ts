@@ -25,3 +25,7 @@ export function isHTMLDivElement(value: unknown): value is HTMLDivElement {
 export function isHTMLInputElement(value: unknown): value is HTMLInputElement {
   return isHTMLElement(value) && value.tagName === "INPUT";
 }
+
+export function isHTMLTextAreaElement(value: unknown): value is HTMLTextAreaElement {
+  return isHTMLElement(value) && value.tagName === "TEXTAREA";
+}
