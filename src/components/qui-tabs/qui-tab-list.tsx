@@ -78,12 +78,17 @@ export class QuiTabList {
 
   private readonly part = consumeContextPart({
     host: (): HTMLElement => this.host,
+    key: "tabs",
     consume: consumeTabs,
   });
   private listEl?: HTMLDivElement;
 
   private get tabs(): TabsContext | undefined {
     return this.part.context;
+  }
+
+  public connectedCallback(): void {
+    this.part.hostConnected();
   }
 
   public componentWillLoad(): void {

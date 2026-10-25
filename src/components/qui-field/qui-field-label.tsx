@@ -29,11 +29,16 @@ export class QuiFieldLabel {
 
   private readonly part = consumeContextPart({
     host: (): HTMLElement => this.host,
+    key: "field",
     consume: consumeField,
   });
 
   private get field(): FieldApi | undefined {
     return this.part.context;
+  }
+
+  public connectedCallback(): void {
+    this.part.hostConnected();
   }
 
   public componentWillLoad(): void {

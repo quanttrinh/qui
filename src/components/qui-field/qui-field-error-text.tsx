@@ -29,12 +29,17 @@ export class QuiFieldErrorText {
 
   private readonly part = consumeContextPart({
     host: (): HTMLElement => this.host,
+    key: "field",
     consume: consumeField,
     setup: (field): (() => void) => field.registerErrorText(),
   });
 
   private get field(): FieldApi | undefined {
     return this.part.context;
+  }
+
+  public connectedCallback(): void {
+    this.part.hostConnected();
   }
 
   public componentWillLoad(): void {

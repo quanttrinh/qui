@@ -107,11 +107,16 @@ export class QuiAccordionTrigger {
 
   private readonly part = consumeContextPart({
     host: (): HTMLElement => this.host,
+    key: "accordion-item",
     consume: consumeAccordionItem,
   });
 
   private get item(): AccordionItemContext | undefined {
     return this.part.context;
+  }
+
+  public connectedCallback(): void {
+    this.part.hostConnected();
   }
 
   public componentWillLoad(): void {

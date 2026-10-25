@@ -34,12 +34,17 @@ export class QuiDialogTitle {
 
   private readonly part = consumeContextPart({
     host: (): HTMLElement => this.host,
+    key: "dialog",
     consume: consumeDialog,
     subscribe: false,
   });
 
   private get dialog(): DialogContext | undefined {
     return this.part.context;
+  }
+
+  public connectedCallback(): void {
+    this.part.hostConnected();
   }
 
   public componentWillLoad(): void {

@@ -76,6 +76,7 @@ export class QuiDialogContent {
 
   private readonly part = consumeContextPart({
     host: (): HTMLElement => this.host,
+    key: "dialog",
     consume: consumeDialog,
     subscribe: false,
     setup: () => {
@@ -95,6 +96,10 @@ export class QuiDialogContent {
 
   private get dialogContext(): DialogContext | undefined {
     return this.part.context;
+  }
+
+  public connectedCallback(): void {
+    this.part.hostConnected();
   }
 
   public componentWillLoad(): void {

@@ -53,11 +53,16 @@ export class QuiDialogTrigger {
 
   private readonly part = consumeContextPart({
     host: (): HTMLElement => this.host,
+    key: "dialog",
     consume: consumeDialog,
   });
 
   private get dialog(): DialogContext | undefined {
     return this.part.context;
+  }
+
+  public connectedCallback(): void {
+    this.part.hostConnected();
   }
 
   public componentWillLoad(): void {

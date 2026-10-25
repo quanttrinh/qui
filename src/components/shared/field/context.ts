@@ -71,12 +71,13 @@ const fields = new WeakMap<HTMLElement, FieldApi>();
 /** Attach a field API to its host element. */
 function provideField(host: HTMLElement, field: FieldApi): void {
   fields.set(host, field);
-  notifyContextProvided();
+  notifyContextProvided("field");
 }
 
 /** Remove the field API from a host element. */
 function clearField(host: HTMLElement): void {
   fields.delete(host);
+  notifyContextProvided("field");
 }
 
 function parentElement(node: Element): Element | undefined {

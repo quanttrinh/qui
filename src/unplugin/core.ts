@@ -26,8 +26,8 @@ export function mayContainComponents(code: string): boolean {
 }
 
 /**
- * Parent contexts must be defined before the parts that consume them. The
- * values only order related tags; unrelated tags keep alphabetical order.
+ * Provider tags must be defined before the parts that consume them. Only
+ * providers need an entry here; all other tags inherit the default priority.
  */
 const COMPONENT_PRIORITY: Readonly<Record<string, number>> = {
   "qui-field": 0,
@@ -36,12 +36,6 @@ const COMPONENT_PRIORITY: Readonly<Record<string, number>> = {
   "qui-dialog": 0,
   "qui-accordion-item": 1,
   "qui-radio-group": 1,
-  "qui-tab-list": 1,
-  "qui-accordion-content": 2,
-  "qui-accordion-trigger": 2,
-  "qui-radio": 2,
-  "qui-tab-panel": 2,
-  "qui-tab-trigger": 2,
 };
 
 export function normalizeComponents(components: Iterable<string>): string[] {
@@ -120,6 +114,9 @@ export function createRegistrationModule(
   if (tags.length === 0) {
     return "";
   }
+  // Keep the previous alphabetical CSS order.
+  // Defining custom elements must not change the split CSS cascade.
+  const styleTags = normalizeComponents(components);
 
   const bindings: string[] = [];
   const lines = ['import { defineComponents } from "@quanttrinh/qui/register";'];
@@ -140,7 +137,9 @@ export function createRegistrationModule(
         : 'import "@quanttrinh/qui/base.css";',
     );
     if (strategy === "split") {
-      lines.push(...tags.map((tag) => `import "@quanttrinh/qui/split/components/${tag}.css";`));
+      lines.push(
+        ...styleTags.map((tag) => `import "@quanttrinh/qui/split/components/${tag}.css";`),
+      );
     }
   }
 

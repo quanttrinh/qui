@@ -141,6 +141,23 @@ describe("registrationOrder", () => {
       "qui-accordion-trigger",
     ]);
   });
+
+  it("keeps split CSS imports alphabetical", () => {
+    const code = createRegistrationModule(
+      ["qui-accordion-content", "qui-accordion-trigger", "qui-accordion", "qui-accordion-item"],
+      { strategy: "split" },
+    );
+    const styleImports = [...code.matchAll(/split\/components\/(?<tag>qui-[^"]+)\.css/gu)].map(
+      (match) => match.groups?.tag,
+    );
+
+    expect(styleImports).toEqual([
+      "qui-accordion",
+      "qui-accordion-content",
+      "qui-accordion-item",
+      "qui-accordion-trigger",
+    ]);
+  });
 });
 
 describe("virtual registration module", () => {

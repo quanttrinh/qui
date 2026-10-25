@@ -35,11 +35,12 @@ const accordionItems = new WeakMap<HTMLElement, AccordionItemContext>();
 
 function provideAccordion(host: HTMLElement, context: AccordionContext): void {
   accordions.set(host, context);
-  notifyContextProvided();
+  notifyContextProvided("accordion");
 }
 
 function clearAccordion(host: HTMLElement): void {
   accordions.delete(host);
+  notifyContextProvided("accordion");
 }
 
 function parentElement(node: Element): Element | undefined {
@@ -67,11 +68,12 @@ function consumeAccordion(host: HTMLElement): AccordionContext | undefined {
 
 function provideAccordionItem(host: HTMLElement, context: AccordionItemContext): void {
   accordionItems.set(host, context);
-  notifyContextProvided();
+  notifyContextProvided("accordion-item");
 }
 
 function clearAccordionItem(host: HTMLElement): void {
   accordionItems.delete(host);
+  notifyContextProvided("accordion-item");
 }
 
 function consumeAccordionItem(host: HTMLElement): AccordionItemContext | undefined {

@@ -46,6 +46,7 @@ export class QuiAccordionItem {
 
   private readonly part = consumeContextPart({
     host: (): HTMLElement => this.host,
+    key: "accordion",
     consume: consumeAccordion,
     setup: (accordion): (() => void) => {
       provideAccordionItem(this.host, this.context(accordion));
@@ -54,6 +55,10 @@ export class QuiAccordionItem {
       };
     },
   });
+
+  public connectedCallback(): void {
+    this.part.hostConnected();
+  }
 
   public componentWillLoad(): void {
     this.part.hostWillLoad();

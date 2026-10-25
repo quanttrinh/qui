@@ -41,11 +41,12 @@ const groups = new WeakMap<HTMLElement, RadioGroupContext>();
 
 function provideRadioGroup(host: HTMLElement, group: RadioGroupContext): void {
   groups.set(host, group);
-  notifyContextProvided();
+  notifyContextProvided("radio-group");
 }
 
 function clearRadioGroup(host: HTMLElement): void {
   groups.delete(host);
+  notifyContextProvided("radio-group");
 }
 
 function parentElement(node: Element): Element | undefined {

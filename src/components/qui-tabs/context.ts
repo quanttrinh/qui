@@ -29,11 +29,12 @@ const tabs = new WeakMap<HTMLElement, TabsContext>();
 
 function provideTabs(host: HTMLElement, context: TabsContext): void {
   tabs.set(host, context);
-  notifyContextProvided();
+  notifyContextProvided("tabs");
 }
 
 function clearTabs(host: HTMLElement): void {
   tabs.delete(host);
+  notifyContextProvided("tabs");
 }
 
 function parentElement(node: Element): Element | undefined {

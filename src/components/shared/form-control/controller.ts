@@ -205,7 +205,7 @@ export class FormController implements FormControl, ReactiveController {
   }
 
   private listenForField(): void {
-    this.stopListening ??= onContextProvided(() => {
+    this.stopListening ??= onContextProvided("field", () => {
       if (this.attach()) {
         this.options.onChange?.();
         this.options.requestUpdate();

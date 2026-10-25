@@ -8,6 +8,8 @@ interface ContextPartSource {
 interface ConsumeContextPartOptions<TContext extends ContextPartSource> {
   /** Resolves the host lazily so the controller can be created in the constructor. */
   host: () => HTMLElement;
+  /** The provider key to listen for while waiting to attach. */
+  key: string;
   /** Finds the nearest matching ancestor context. */
   consume: (host: HTMLElement) => TContext | undefined;
   /** Optional side effect when a context is attached. Returns a teardown. */
@@ -20,6 +22,8 @@ interface ConsumeContextPartOptions<TContext extends ContextPartSource> {
 
 interface ContextPart<TContext extends ContextPartSource> {
   readonly context: TContext | undefined;
+  /** Attach again after the host is reconnected. */
+  hostConnected: () => void;
   /** Attach during `componentWillLoad`. */
   hostWillLoad: () => void;
   /** Retry once after the first render, for late-mounted ancestors. */
@@ -28,26 +32,63 @@ interface ContextPart<TContext extends ContextPartSource> {
   hostDisconnected: () => void;
 }
 
-const contextProvidedListeners = new Set<() => void>();
+const contextProvidedListeners = new Map<string, Set<() => void>>();
+const pendingKeys = new Set<string>();
+let flushScheduled = false;
+
+function notifyKey(key: string): void {
+  const listeners = contextProvidedListeners.get(key);
+  if (listeners !== undefined) {
+    for (const listener of listeners) {
+      listener();
+    }
+  }
+}
+
+function flushNotifications(): void {
+  try {
+    // Drain iteratively so nested-provider notifications never recurse per item.
+    while (pendingKeys.size > 0) {
+      const keys = [...pendingKeys];
+      pendingKeys.clear();
+      for (const key of keys) {
+        notifyKey(key);
+      }
+    }
+  } finally {
+    flushScheduled = false;
+  }
+}
 
 /**
- * Notifies waiting parts that an ancestor context has been provided.
+ * Notifies waiting parts that an ancestor context for `key` was provided.
  *
  * Components are defined in an arbitrary order, so a part can upgrade before
  * its provider. Providers call this after storing their context so those parts
  * can attach without depending on custom element registration order.
  */
-function notifyContextProvided(): void {
-  for (const listener of contextProvidedListeners) {
-    listener();
+function notifyContextProvided(key: string): void {
+  pendingKeys.add(key);
+  if (flushScheduled) {
+    return;
   }
+  flushScheduled = true;
+  queueMicrotask(flushNotifications);
 }
 
-/** Subscribes to provider notifications. Returns an unsubscribe function. */
-function onContextProvided(listener: () => void): () => void {
-  contextProvidedListeners.add(listener);
+/** Subscribes to provider notifications for `key`. Returns an unsubscribe function. */
+function onContextProvided(key: string, listener: () => void): () => void {
+  let listeners = contextProvidedListeners.get(key);
+  if (listeners === undefined) {
+    listeners = new Set();
+    contextProvidedListeners.set(key, listeners);
+  }
+  listeners.add(listener);
   return (): void => {
-    contextProvidedListeners.delete(listener);
+    listeners.delete(listener);
+    if (listeners.size === 0) {
+      contextProvidedListeners.delete(key);
+    }
   };
 }
 
@@ -80,11 +121,14 @@ function consumeContextPart<TContext extends ContextPartSource>(
 
   const attach = (): boolean => {
     const next = options.consume(options.host());
-    if (next === undefined || next === context) {
+    if (next === context) {
       return false;
     }
     detach();
     context = next;
+    if (next === undefined) {
+      return true;
+    }
     teardown = options.setup?.(next);
     if (options.subscribe !== false) {
       unsubscribe = next.subscribe(() => {
@@ -95,13 +139,18 @@ function consumeContextPart<TContext extends ContextPartSource>(
   };
 
   const handleProvided = (): void => {
-    if (attach() && context !== undefined) {
+    if (!attach()) {
+      return;
+    }
+    if (context === undefined) {
+      forceUpdate(options.host());
+    } else {
       requestUpdate(context);
     }
   };
 
-  const hostWillLoad = (): void => {
-    stopListening ??= onContextProvided(handleProvided);
+  const start = (): void => {
+    stopListening ??= onContextProvided(options.key, handleProvided);
     attach();
   };
 
@@ -115,12 +164,14 @@ function consumeContextPart<TContext extends ContextPartSource>(
     get context(): TContext | undefined {
       return context;
     },
-    hostWillLoad,
+    hostConnected: start,
+    hostWillLoad: start,
     hostDidLoad,
     hostDisconnected: (): void => {
       stopListening?.();
       stopListening = undefined;
       detach();
+      context = undefined;
     },
   };
 }

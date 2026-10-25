@@ -97,12 +97,17 @@ export class QuiRadio {
 
   private readonly part = consumeContextPart({
     host: (): HTMLElement => this.host,
+    key: "radio-group",
     consume: consumeRadioGroup,
   });
   private inputEl?: HTMLInputElement;
 
   private get group(): RadioGroupContext | undefined {
     return this.part.context;
+  }
+
+  public connectedCallback(): void {
+    this.part.hostConnected();
   }
 
   public componentWillLoad(): void {

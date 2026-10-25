@@ -135,11 +135,16 @@ export class QuiTabTrigger {
 
   private readonly part = consumeContextPart({
     host: (): HTMLElement => this.host,
+    key: "tabs",
     consume: consumeTabs,
   });
 
   private get tabs(): TabsContext | undefined {
     return this.part.context;
+  }
+
+  public connectedCallback(): void {
+    this.part.hostConnected();
   }
 
   public componentWillLoad(): void {

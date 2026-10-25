@@ -33,11 +33,12 @@ const dialogs = new WeakMap<HTMLElement, DialogContext>();
 
 function provideDialog(host: HTMLElement, context: DialogContext): void {
   dialogs.set(host, context);
-  notifyContextProvided();
+  notifyContextProvided("dialog");
 }
 
 function clearDialog(host: HTMLElement): void {
   dialogs.delete(host);
+  notifyContextProvided("dialog");
 }
 
 function consumeDialog(host: HTMLElement): DialogContext | undefined {
