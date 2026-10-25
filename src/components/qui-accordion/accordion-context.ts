@@ -1,3 +1,5 @@
+import { notifyContextChanged } from "../shared/context-part";
+
 export interface AccordionItem {
   value: string;
   disabled?: boolean;
@@ -5,8 +7,6 @@ export interface AccordionItem {
 
 /** The accordion state and ids shared with descendant parts. */
 export interface AccordionContext {
-  value: () => string[];
-  focusedValue: () => string | undefined;
   isExpanded: (value: string) => boolean;
   isFocused: (value: string) => boolean;
   isDisabled: () => boolean;
@@ -26,6 +26,8 @@ export interface AccordionContext {
 
 export interface AccordionItemContext extends AccordionContext {
   item: () => AccordionItem;
+  /** Whether this item or its accordion is disabled. */
+  isItemDisabled: () => boolean;
 }
 
 const accordions = new WeakMap<HTMLElement, AccordionContext>();
@@ -33,10 +35,12 @@ const accordionItems = new WeakMap<HTMLElement, AccordionItemContext>();
 
 function provideAccordion(host: HTMLElement, context: AccordionContext): void {
   accordions.set(host, context);
+  notifyContextChanged("accordion");
 }
 
 function clearAccordion(host: HTMLElement): void {
   accordions.delete(host);
+  notifyContextChanged("accordion");
 }
 
 function parentElement(node: Element): Element | undefined {
@@ -64,10 +68,12 @@ function consumeAccordion(host: HTMLElement): AccordionContext | undefined {
 
 function provideAccordionItem(host: HTMLElement, context: AccordionItemContext): void {
   accordionItems.set(host, context);
+  notifyContextChanged("accordion-item");
 }
 
 function clearAccordionItem(host: HTMLElement): void {
   accordionItems.delete(host);
+  notifyContextChanged("accordion-item");
 }
 
 function consumeAccordionItem(host: HTMLElement): AccordionItemContext | undefined {

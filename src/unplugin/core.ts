@@ -25,6 +25,20 @@ export function mayContainComponents(code: string): boolean {
   return code.includes("qui-") || ESCAPED_CHARACTER.test(code);
 }
 
+// Keep provider tags in sync with ContextPartKey in src/components/shared/context-part.ts.
+/**
+ * Provider tags must be defined before the parts that consume them. Only
+ * providers need an entry here; all other tags inherit the default priority.
+ */
+const COMPONENT_PRIORITY: Readonly<Record<string, number>> = {
+  "qui-field": 0,
+  "qui-accordion": 0,
+  "qui-tabs": 0,
+  "qui-dialog": 0,
+  "qui-accordion-item": 1,
+  "qui-radio-group": 1,
+};
+
 export function normalizeComponents(components: Iterable<string>): string[] {
   const normalized = new Set<string>();
   for (const component of components) {
@@ -33,6 +47,23 @@ export function normalizeComponents(components: Iterable<string>): string[] {
     }
   }
   return [...normalized].sort();
+}
+
+/**
+ * Sorts tags so providers are defined before the parts that consume them.
+ * Falls back to alphabetical order for unrelated components.
+ */
+export function registrationOrder(components: Iterable<string>): string[] {
+  return normalizeComponents(components).sort((left, right) => {
+    const priority = (COMPONENT_PRIORITY[left] ?? 100) - (COMPONENT_PRIORITY[right] ?? 100);
+    if (priority !== 0) {
+      return priority;
+    }
+    if (left === right) {
+      return 0;
+    }
+    return left < right ? -1 : 1;
+  });
 }
 
 /**
@@ -86,10 +117,13 @@ export function createRegistrationModule(
     throw new Error(`[unplugin-qui] Unknown strategy "${strategy}". Expected "shared" or "split".`);
   }
 
-  const tags = normalizeComponents(components);
+  const tags = registrationOrder(components);
   if (tags.length === 0) {
     return "";
   }
+  // Keep the previous alphabetical CSS order.
+  // Defining custom elements must not change the split CSS cascade.
+  const styleTags = [...tags].sort();
 
   const bindings: string[] = [];
   const lines = ['import { defineComponents } from "@quanttrinh/qui/register";'];
@@ -110,7 +144,9 @@ export function createRegistrationModule(
         : 'import "@quanttrinh/qui/base.css";',
     );
     if (strategy === "split") {
-      lines.push(...tags.map((tag) => `import "@quanttrinh/qui/split/components/${tag}.css";`));
+      lines.push(
+        ...styleTags.map((tag) => `import "@quanttrinh/qui/split/components/${tag}.css";`),
+      );
     }
   }
 

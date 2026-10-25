@@ -82,11 +82,11 @@ export class QuiDialog {
   };
 
   public componentWillLoad(): void {
-    provideDialog(this.host, this.context());
+    provideDialog(this.host, this.context);
   }
 
   public connectedCallback(): void {
-    provideDialog(this.host, this.context());
+    provideDialog(this.host, this.context);
   }
 
   public disconnectedCallback(): void {
@@ -144,45 +144,43 @@ export class QuiDialog {
     return this.closeOnInteractOutside !== false;
   }
 
-  private context(): DialogContext {
-    return {
-      ids: this.ids,
-      open: () => this.isOpen,
-      modal: () => this.isModal(),
-      closeOnEscape: () => this.allowsEscape(),
-      closeOnInteractOutside: () => this.allowsInteractOutside(),
-      requestOpen: () => {
-        this.requestOpen();
-      },
-      requestClose: (returnValue) => {
-        this.requestClose(returnValue);
-      },
-      notifyOpen: (open, returnValue) => {
-        this.notifyOpen(open, returnValue);
-      },
-      notifyCancel: () => {
-        this.notifyCancel();
-      },
-      register: (control) => {
-        this.control = control;
-        this.applyControlSettings();
-        if (this.open === true || (this.open === undefined && this.defaultOpen)) {
-          control.show(this.isModal());
+  private readonly context: DialogContext = {
+    ids: this.ids,
+    open: () => this.isOpen,
+    modal: () => this.isModal(),
+    closeOnEscape: () => this.allowsEscape(),
+    closeOnInteractOutside: () => this.allowsInteractOutside(),
+    requestOpen: () => {
+      this.requestOpen();
+    },
+    requestClose: (returnValue) => {
+      this.requestClose(returnValue);
+    },
+    notifyOpen: (open, returnValue) => {
+      this.notifyOpen(open, returnValue);
+    },
+    notifyCancel: () => {
+      this.notifyCancel();
+    },
+    register: (control) => {
+      this.control = control;
+      this.applyControlSettings();
+      if (this.open === true || (this.open === undefined && this.defaultOpen)) {
+        control.show(this.isModal());
+      }
+      return () => {
+        if (this.control === control) {
+          this.control = undefined;
         }
-        return () => {
-          if (this.control === control) {
-            this.control = undefined;
-          }
-        };
-      },
-      subscribe: (listener) => {
-        this.listeners.add(listener);
-        return () => {
-          this.listeners.delete(listener);
-        };
-      },
-    };
-  }
+      };
+    },
+    subscribe: (listener) => {
+      this.listeners.add(listener);
+      return () => {
+        this.listeners.delete(listener);
+      };
+    },
+  };
 
   private requestOpen(): void {
     if (this.control !== undefined) {

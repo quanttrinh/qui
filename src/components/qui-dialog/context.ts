@@ -1,3 +1,5 @@
+import { notifyContextChanged } from "../shared/context-part";
+
 export interface DialogIds {
   title: string;
   description: string;
@@ -31,10 +33,12 @@ const dialogs = new WeakMap<HTMLElement, DialogContext>();
 
 function provideDialog(host: HTMLElement, context: DialogContext): void {
   dialogs.set(host, context);
+  notifyContextChanged("dialog");
 }
 
 function clearDialog(host: HTMLElement): void {
   dialogs.delete(host);
+  notifyContextChanged("dialog");
 }
 
 function consumeDialog(host: HTMLElement): DialogContext | undefined {
