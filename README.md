@@ -85,6 +85,8 @@ Do not mix shared and split component modules, hydrate modules, or CSS.
 - `<qui-field>` + label, helper text, error text and required indicator parts
 - `<qui-input>` — text/email/tel/search/password/number, masks, text case,
   prefix/suffix slots, number stepping, password visibility, `valuechange`
+- `<qui-textarea>` — multi-line text, auto-growth, character counter, native
+  resize modes, `valuechange`
 - `<qui-accordion>` + item, trigger and content parts
 - `<qui-tabs>` + tab list, tab trigger and tab panel parts
 - `<qui-dialog>` + trigger, content, title, description, actions and close parts
@@ -131,8 +133,8 @@ Use one field per control.
 
 ## Forms
 
-Checkbox, switch, radio group, input, select and combobox are form-associated
-custom elements. They support:
+Checkbox, switch, radio group, input, textarea, select and combobox are
+form-associated custom elements. They support:
 
 - form values and reset
 - `required`, `invalid`, `disabled` and `readOnly`
@@ -173,6 +175,31 @@ qui-input::part(input) {
     text-transform: uppercase;
 }
 ```
+
+### Long text
+
+Use `qui-textarea` for multi-line values. It shares the field, form and validation
+behavior of `qui-input`.
+
+```html
+<qui-field id="bio">
+    <qui-field-label>Bio</qui-field-label>
+    <qui-textarea
+        rows="5"
+        max-length="500"
+        show-count
+        resize="auto"
+        placeholder="Write a short bio..."
+    ></qui-textarea>
+    <qui-field-helper-text>Keep it under 500 characters.</qui-field-helper-text>
+</qui-field>
+```
+
+`resize` accepts `none`, `vertical` (the default) or `auto`. Auto-growth uses
+`rows` as the minimum height and optionally caps growth with `max-rows`.
+`show-count` renders a character counter; with `max-length` it displays
+`current/max`. If `max-rows` is smaller than `rows`, `rows` remains the minimum
+height.
 
 ## Registering components
 

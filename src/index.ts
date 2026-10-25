@@ -32,6 +32,9 @@ export type {
   InputValueDetails,
 } from "./components/qui-input/qui-input";
 
+export { QuiTextarea } from "./components/qui-textarea/qui-textarea";
+export type { TextareaResize, TextareaValueDetails } from "./components/qui-textarea/qui-textarea";
+
 export { QuiAccordion } from "./components/qui-accordion/qui-accordion";
 export { QuiAccordionItem } from "./components/qui-accordion/qui-accordion-item";
 export { QuiAccordionTrigger } from "./components/qui-accordion/qui-accordion-trigger";

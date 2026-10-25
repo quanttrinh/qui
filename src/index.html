@@ -197,6 +197,18 @@
                         <qui-input input-type="password" value="secret"></qui-input>
                     </qui-field>
 
+                    <qui-field id="field-bio">
+                        <qui-field-label>Bio</qui-field-label>
+                        <qui-textarea
+                            rows="4"
+                            max-length="160"
+                            show-count
+                            resize="auto"
+                            placeholder="Tell us about yourself..."
+                        ></qui-textarea>
+                        <qui-field-helper-text>Keep it under 160 characters.</qui-field-helper-text>
+                    </qui-field>
+
                     <qui-field id="field-plan">
                         <qui-field-label>Plan</qui-field-label>
                         <qui-radio-group name="plan-field" value="pro">
