@@ -231,14 +231,23 @@
   .font_inherit {
     font: inherit;
   }
+  .inset_auto {
+    inset: auto;
+  }
   .m_0 {
     margin: var(--spacing-0);
+  }
+  .m_-1px {
+    margin: -1px;
   }
   .m_auto {
     margin: auto;
   }
   .p_0 {
     padding: var(--spacing-0);
+  }
+  .p_3 {
+    padding: var(--spacing-3);
   }
   .p_4 {
     padding: var(--spacing-4);
@@ -311,9 +320,6 @@
   }
   .contain-intrinsic-size_auto_100px {
     contain-intrinsic-size: auto 100px;
-  }
-  .contain-intrinsic-size_auto_40px {
-    contain-intrinsic-size: auto 40px;
   }
   .flex_1 {
     flex: 1 1 0%;
@@ -437,6 +443,12 @@
   }
   .bx-sh_xl {
     box-shadow: var(--shadows-xl);
+  }
+  .bx-s_border-box {
+    box-sizing: border-box;
+  }
+  .clip_rect\(0\,_0\,_0\,_0\) {
+    clip: rect(0, 0, 0, 0);
   }
   .c_currentColor {
     color: currentColor;
@@ -570,6 +582,9 @@
   .pos_absolute {
     position: absolute;
   }
+  .pos_fixed {
+    position: fixed;
+  }
   .pos_relative {
     position: relative;
   }
@@ -597,9 +612,6 @@
   }
   .white-space_nowrap {
     white-space: nowrap;
-  }
-  .z_50 {
-    z-index: 50;
   }
   .ov-y_auto {
     overflow-y: auto;
@@ -631,6 +643,9 @@
   .h_1em {
     height: 1em;
   }
+  .h_1px {
+    height: 1px;
+  }
   .h_3px {
     height: 3px;
   }
@@ -639,9 +654,6 @@
   }
   .max-h_calc\(100dvh_-_2rem\) {
     max-height: calc(100dvh - 2rem);
-  }
-  .max-h_min\(320px\,_var\(--available-height\)\) {
-    max-height: min(320px, var(--available-height));
   }
   .max-h_none {
     max-height: none;
@@ -670,6 +682,9 @@
   .min-w_72 {
     min-width: var(--sizes-72);
   }
+  .top_0 {
+    top: var(--spacing-0);
+  }
   .top_50\% {
     top: 50%;
   }
@@ -694,11 +709,11 @@
   .w_1em {
     width: 1em;
   }
+  .w_1px {
+    width: 1px;
+  }
   .w_full {
     width: var(--sizes-full);
-  }
-  .w_var\(--reference-width\) {
-    width: var(--reference-width);
   }
   .\[\&_svg\]\:trs_opacity_150ms_ease svg {
     transition: opacity 150ms ease;
@@ -1010,6 +1025,9 @@
   }
   .\[\&\[data-variant\=tonal\]\]\:c_onSecondaryContainer[data-variant=tonal] {
     color: var(--colors-on-secondary-container);
+  }
+  .\[\&\[hidden\]\]\:d_none[hidden] {
+    display: none;
   }
   .\[\&\[type\=number\]\]\:ap_textfield[type=number] {
     -webkit-appearance: textfield;
