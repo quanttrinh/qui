@@ -24,6 +24,7 @@ import { normalizeChecked, type CheckedState } from "../shared/checkable/checked
 import { CheckableController } from "../shared/checkable/controller";
 import { FormControlBase } from "../shared/form-control/component-base";
 import { FormController, type FormValidity } from "../shared/form-control/controller";
+import { requiredIndicatorStyle } from "../shared/required-indicator";
 
 const styles = {
   host: css({ display: "inline-flex" }),
@@ -134,6 +135,7 @@ export class QuiCheckbox extends FormControlBase {
   checkedChange!: EventEmitter<{ checked: CheckedState }>;
 
   private inputEl?: HTMLInputElement;
+  private readonly defaultMarker = "*";
   private readonly generatedId = nextId("qui-checkbox");
   private readonly checkable = new CheckableController({
     getChecked: (): CheckedState | undefined => normalizeChecked(this.checked),
@@ -254,6 +256,9 @@ export class QuiCheckbox extends FormControlBase {
           }
         : { ...field.getInputProps() };
     delete props.required;
+    if (this.form.isRequired) {
+      props["aria-required"] = "true";
+    }
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     return props as Record<string, string | number | boolean | undefined>;
   }
@@ -340,6 +345,16 @@ export class QuiCheckbox extends FormControlBase {
             part="label"
           >
             <slot>{this.label}</slot>
+            <span
+              data-scope="checkbox"
+              data-part="required-indicator"
+              aria-hidden="true"
+              data-required={dataAttr(this.form.isRequired)}
+              class={requiredIndicatorStyle}
+              part="required-indicator"
+            >
+              {this.defaultMarker}
+            </span>
           </span>
           <input
             {...this.inputProps}
