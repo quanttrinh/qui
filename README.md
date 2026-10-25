@@ -83,8 +83,8 @@ Do not mix shared and split component modules, hydrate modules, or CSS.
 - `<qui-switch>` — checked, disabled, required, `checkedchange`
 - `<qui-radio-group>` + `<qui-radio>` — orientation, disabled, required, `valuechange`
 - `<qui-field>` + label, helper text, error text and required indicator parts
-- `<qui-input>` — text/email/tel/search/password/number, masks, prefix/suffix slots,
-  number stepping, password visibility, `valuechange`
+- `<qui-input>` — text/email/tel/search/password/number, masks, text case,
+  prefix/suffix slots, number stepping, password visibility, `valuechange`
 - `<qui-accordion>` + item, trigger and content parts
 - `<qui-tabs>` + tab list, tab trigger and tab panel parts
 - `<qui-dialog>` + trigger, content, title, description, actions and close parts
@@ -144,6 +144,34 @@ Register every tag used by the form. For a field with an input:
 
 ```ts
 defineComponents(defineField, defineFieldLabel, defineFieldHelperText, defineInput);
+```
+
+### Input text case
+
+Use `text-case` to normalize the value itself, not just its appearance:
+
+```html
+<qui-input text-case="uppercase"></qui-input>
+<qui-input text-case="lowercase" input-type="email"></qui-input>
+<qui-input text-case="uppercase" mask-pattern="aa-####"></qui-input>
+```
+
+Casing runs before masking, so mask literals keep their authored case and the
+formatted value, the unmasked value and form submission all use the normalized
+case. For example, `ab1234` becomes `AB-1234` with the masked example above.
+`text-case` is ignored for `number` inputs.
+
+`autocapitalize` on the inner input is derived from `text-case`: `characters`
+for uppercase and `none` for lowercase. Set `autocapitalize-hint` to override
+that hint, e.g. `autocapitalize-hint="words"`.
+
+If you only need display casing and want to preserve the original form value, use
+CSS instead:
+
+```css
+qui-input::part(input) {
+    text-transform: uppercase;
+}
 ```
 
 ## Registering components
