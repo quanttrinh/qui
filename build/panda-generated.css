@@ -588,6 +588,12 @@
   .pos_relative {
     position: relative;
   }
+  .resize_vertical {
+    resize: vertical;
+  }
+  .ta_end {
+    text-align: end;
+  }
   .ta_start {
     text-align: start;
   }
@@ -681,6 +687,9 @@
   }
   .min-w_72 {
     min-width: var(--sizes-72);
+  }
+  .pb_2 {
+    padding-bottom: var(--spacing-2);
   }
   .top_0 {
     top: var(--spacing-0);
@@ -860,6 +869,9 @@
   }
   .\[\&\[data-readonly\]\]\:bg-c_surfaceContainerLow[data-readonly] {
     background-color: var(--colors-surface-container-low);
+  }
+  .\[\&\[data-resize\=auto\]\,_\&\[data-resize\=none\]\]\:resize_none[data-resize=auto], .\[\&\[data-resize\=auto\]\,_\&\[data-resize\=none\]\]\:resize_none[data-resize=none] {
+    resize: none;
   }
   .\[\&\[data-selected\]\]\:c_primary[data-selected] {
     color: var(--colors-primary);
