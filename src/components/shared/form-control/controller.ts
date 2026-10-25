@@ -1,5 +1,6 @@
 import { Build } from "@stencil/core";
 
+import { onContextProvided } from "../context-part";
 import { consumeField, type FieldApi } from "../field/context";
 import { type ReactiveController } from "../reactive-control/controller";
 import { type FormControl } from "./component-base";
@@ -99,6 +100,7 @@ export class FormController implements FormControl, ReactiveController {
   private readonly options: FormControllerOptions;
   private field?: FieldApi;
   private unsubscribe?: () => void;
+  private stopListening?: () => void;
   private formDisabled = false;
   private signature = "";
 
@@ -176,10 +178,12 @@ export class FormController implements FormControl, ReactiveController {
   }
 
   public hostConnected(): void {
+    this.listenForField();
     this.attach();
   }
 
   public hostWillLoad(): void {
+    this.listenForField();
     this.attach();
   }
 
@@ -193,26 +197,41 @@ export class FormController implements FormControl, ReactiveController {
   }
 
   public hostDisconnected(): void {
+    this.stopListening?.();
+    this.stopListening = undefined;
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     this.field = undefined;
   }
 
-  private attach(): void {
+  private listenForField(): void {
+    this.stopListening ??= onContextProvided("field", () => {
+      if (this.attach()) {
+        this.options.onChange?.();
+        this.options.requestUpdate();
+      }
+    });
+  }
+
+  private attach(): boolean {
     const field = consumeField(this.options.getHost());
-    if (field === undefined || field === this.field) {
-      return;
+    if (field === this.field) {
+      return false;
     }
     this.unsubscribe?.();
+    this.unsubscribe = undefined;
     this.field = field;
-    this.unsubscribe = field.subscribe(() => {
-      this.signature = "";
-      this.options.onChange?.();
-      this.options.requestUpdate();
-      this.sync();
-    });
     this.signature = "";
+    if (field !== undefined) {
+      this.unsubscribe = field.subscribe(() => {
+        this.signature = "";
+        this.options.onChange?.();
+        this.options.requestUpdate();
+        this.sync();
+      });
+    }
     this.sync();
+    return true;
   }
 
   private signatureFor(): string {

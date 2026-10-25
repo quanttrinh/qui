@@ -1,19 +1,11 @@
-import {
-  resolveVar,
-  Component,
-  Element,
-  forceUpdate,
-  h,
-  Host,
-  Prop,
-  type VNode,
-} from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
 import { dataAttr } from "../../helpers/attr";
 import { ExpandMoreIcon } from "../qui-icon/icons";
+import { consumeContextPart } from "../shared/context-part";
 import { consumeAccordionItem, type AccordionItemContext } from "./accordion-context";
 
 const styles = {
@@ -113,38 +105,34 @@ export class QuiAccordionTrigger {
   /** Additional class applied to the trigger button. */
   @Prop() innerClass?: string;
 
-  private item?: AccordionItemContext;
-  private unsubscribe?: () => void;
+  private readonly part = consumeContextPart({
+    host: (): HTMLElement => this.host,
+    key: "accordion-item",
+    consume: consumeAccordionItem,
+  });
+
+  private get item(): AccordionItemContext | undefined {
+    return this.part.context;
+  }
+
+  public connectedCallback(): void {
+    this.part.hostConnected();
+  }
 
   public componentWillLoad(): void {
-    this.attachItem();
+    this.part.hostWillLoad();
   }
 
   public componentDidLoad(): void {
-    if (this.item === undefined) {
-      this.attachItem();
-      forceUpdate(this.host);
-    }
+    this.part.hostDidLoad();
   }
 
   public disconnectedCallback(): void {
-    this.unsubscribe?.();
-  }
-
-  private attachItem(): void {
-    const item = consumeAccordionItem(this.host);
-    if (item === undefined || item === this.item) {
-      return;
-    }
-    this.unsubscribe?.();
-    this.item = item;
-    this.unsubscribe = item.subscribe(() => {
-      forceUpdate(this.host);
-    });
+    this.part.hostDisconnected();
   }
 
   private disabled(): boolean {
-    return this.item?.item().disabled === true || (this.item?.isDisabled() ?? false);
+    return this.item?.isItemDisabled() ?? false;
   }
 
   private readonly handleClick = (): void => {

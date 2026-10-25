@@ -91,8 +91,6 @@ export class QuiAccordion extends ReactiveControlBase {
     },
   });
   private readonly context: AccordionContext = {
-    value: (): string[] => this.controller.value,
-    focusedValue: (): string | undefined => this.controller.focusedValue,
     isExpanded: (value: string): boolean => this.controller.value.includes(value),
     isFocused: (value: string): boolean => this.controller.focusedValue === value,
     isDisabled: (): boolean => this.disabled,

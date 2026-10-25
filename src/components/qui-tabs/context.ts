@@ -1,3 +1,5 @@
+import { notifyContextChanged } from "../shared/context-part";
+
 export type TabsVariant = "primary" | "secondary";
 export type TabsOrientation = "horizontal" | "vertical";
 
@@ -27,10 +29,12 @@ const tabs = new WeakMap<HTMLElement, TabsContext>();
 
 function provideTabs(host: HTMLElement, context: TabsContext): void {
   tabs.set(host, context);
+  notifyContextChanged("tabs");
 }
 
 function clearTabs(host: HTMLElement): void {
   tabs.delete(host);
+  notifyContextChanged("tabs");
 }
 
 function parentElement(node: Element): Element | undefined {

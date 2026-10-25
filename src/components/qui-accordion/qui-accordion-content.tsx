@@ -1,19 +1,11 @@
-import {
-  resolveVar,
-  Component,
-  Element,
-  forceUpdate,
-  h,
-  Host,
-  Prop,
-  type VNode,
-} from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
 import { dataAttr } from "../../helpers/attr";
-import { consumeAccordionItem, type AccordionItemContext } from "./accordion-context";
+import { consumeContextPart } from "../shared/context-part";
+import { consumeAccordionItem } from "./accordion-context";
 
 const styles = {
   host: css({ display: "block" }),
@@ -59,42 +51,34 @@ export class QuiAccordionContent {
   /** Additional class applied to the content element. */
   @Prop() innerClass?: string;
 
-  private item?: AccordionItemContext;
-  private unsubscribe?: () => void;
+  private readonly part = consumeContextPart({
+    host: (): HTMLElement => this.host,
+    key: "accordion-item",
+    consume: consumeAccordionItem,
+  });
+
+  public connectedCallback(): void {
+    this.part.hostConnected();
+  }
 
   public componentWillLoad(): void {
-    this.attachItem();
+    this.part.hostWillLoad();
   }
 
   public componentDidLoad(): void {
-    if (this.item === undefined) {
-      this.attachItem();
-      forceUpdate(this.host);
-    }
+    this.part.hostDidLoad();
   }
 
   public disconnectedCallback(): void {
-    this.unsubscribe?.();
-  }
-
-  private attachItem(): void {
-    const item = consumeAccordionItem(this.host);
-    if (item === undefined || item === this.item) {
-      return;
-    }
-    this.unsubscribe?.();
-    this.item = item;
-    this.unsubscribe = item.subscribe(() => {
-      forceUpdate(this.host);
-    });
+    this.part.hostDisconnected();
   }
 
   public render(): VNode {
-    const { item } = this;
+    const item = this.part.context;
     const value = item?.item().value ?? "";
     const expanded = item?.isExpanded(value) ?? false;
     const focused = item?.isFocused(value) ?? false;
-    const disabled = item?.item().disabled === true || (item?.isDisabled() ?? false);
+    const disabled = item?.isItemDisabled() ?? false;
 
     return (
       <Host class={styles.host}>

@@ -5,6 +5,7 @@ import {
   createRegistrationModule,
   extractComponents,
   isTransformableId,
+  registrationOrder,
   virtualModuleId,
 } from "./core";
 
@@ -84,6 +85,101 @@ describe("extractComponents", () => {
 
     expect(extractComponents(deep, "/app/deep.tsx")).toEqual(["qui-button"]);
     expect(extractComponents(wide, "/app/wide.tsx")).toEqual(["qui-card"]);
+  });
+});
+
+function* singleUseComponents(): Generator<string> {
+  yield "qui-accordion-content";
+  yield "qui-accordion";
+}
+
+describe("registrationOrder", () => {
+  it("defines parent contexts before the parts that consume them", () => {
+    expect(
+      registrationOrder([
+        "qui-accordion-content",
+        "qui-accordion-trigger",
+        "qui-accordion-item",
+        "qui-accordion",
+      ]),
+    ).toEqual([
+      "qui-accordion",
+      "qui-accordion-item",
+      "qui-accordion-content",
+      "qui-accordion-trigger",
+    ]);
+
+    expect(
+      registrationOrder(["qui-tab-panel", "qui-tab-trigger", "qui-tab-list", "qui-tabs"]),
+    ).toEqual(["qui-tabs", "qui-tab-list", "qui-tab-panel", "qui-tab-trigger"]);
+
+    expect(registrationOrder(["qui-radio", "qui-field", "qui-radio-group"])).toEqual([
+      "qui-field",
+      "qui-radio-group",
+      "qui-radio",
+    ]);
+
+    expect(
+      registrationOrder([
+        "qui-dialog-title",
+        "qui-dialog-content",
+        "qui-dialog",
+        "qui-dialog-trigger",
+      ]),
+    ).toEqual(["qui-dialog", "qui-dialog-content", "qui-dialog-title", "qui-dialog-trigger"]);
+  });
+
+  it("keeps unrelated components alphabetical", () => {
+    expect(registrationOrder(["qui-select", "qui-button", "qui-input"])).toEqual([
+      "qui-button",
+      "qui-input",
+      "qui-select",
+    ]);
+  });
+
+  it("emits definitions in dependency order", () => {
+    const code = createRegistrationModule(
+      ["qui-accordion-content", "qui-accordion-trigger", "qui-accordion", "qui-accordion-item"],
+      { styles: false },
+    );
+    const definitions = [
+      ...code.matchAll(
+        /defineCustomElement as __qui_\d+\s+\} from "@quanttrinh\/qui\/shared\/(?<tag>qui-[^"]+)"/gu,
+      ),
+    ].map((match) => match.groups?.tag);
+
+    expect(definitions).toEqual([
+      "qui-accordion",
+      "qui-accordion-item",
+      "qui-accordion-content",
+      "qui-accordion-trigger",
+    ]);
+  });
+
+  it("consumes one-shot component iterables once", () => {
+    const code = createRegistrationModule(singleUseComponents(), { strategy: "split" });
+    const styleImports = [...code.matchAll(/split\/components\/(?<tag>qui-[^"]+)\.css/gu)].map(
+      (match) => match.groups?.tag,
+    );
+
+    expect(styleImports).toEqual(["qui-accordion", "qui-accordion-content"]);
+  });
+
+  it("keeps split CSS imports alphabetical", () => {
+    const code = createRegistrationModule(
+      ["qui-accordion-content", "qui-accordion-trigger", "qui-accordion", "qui-accordion-item"],
+      { strategy: "split" },
+    );
+    const styleImports = [...code.matchAll(/split\/components\/(?<tag>qui-[^"]+)\.css/gu)].map(
+      (match) => match.groups?.tag,
+    );
+
+    expect(styleImports).toEqual([
+      "qui-accordion",
+      "qui-accordion-content",
+      "qui-accordion-item",
+      "qui-accordion-trigger",
+    ]);
   });
 });
 

@@ -1,18 +1,10 @@
-import {
-  resolveVar,
-  Component,
-  Element,
-  forceUpdate,
-  h,
-  Host,
-  Prop,
-  type VNode,
-} from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
 import { dataAttr } from "../../helpers/attr";
+import { consumeContextPart } from "../shared/context-part";
 import {
   clearAccordionItem,
   consumeAccordion,
@@ -52,36 +44,36 @@ export class QuiAccordionItem {
   /** Additional class applied to the item element. */
   @Prop() innerClass?: string;
 
-  private accordion?: AccordionContext;
-  private unsubscribe?: () => void;
+  private readonly part = consumeContextPart({
+    host: (): HTMLElement => this.host,
+    key: "accordion",
+    consume: consumeAccordion,
+    setup: (accordion): (() => void) => {
+      provideAccordionItem(this.host, this.context(accordion));
+      return (): void => {
+        clearAccordionItem(this.host);
+      };
+    },
+  });
+
+  public connectedCallback(): void {
+    this.part.hostConnected();
+  }
 
   public componentWillLoad(): void {
-    this.attachAccordion();
+    this.part.hostWillLoad();
   }
 
   public componentDidLoad(): void {
-    if (this.accordion === undefined) {
-      this.attachAccordion();
-      forceUpdate(this.host);
-    }
+    this.part.hostDidLoad();
   }
 
   public disconnectedCallback(): void {
-    clearAccordionItem(this.host);
-    this.unsubscribe?.();
+    this.part.hostDisconnected();
   }
 
-  private attachAccordion(): void {
-    const accordion = consumeAccordion(this.host);
-    if (accordion === undefined || accordion === this.accordion) {
-      return;
-    }
-    this.unsubscribe?.();
-    this.accordion = accordion;
-    this.unsubscribe = accordion.subscribe(() => {
-      forceUpdate(this.host);
-    });
-    provideAccordionItem(this.host, this.context(accordion));
+  private isDisabled(accordion: AccordionContext): boolean {
+    return this.disabled || accordion.isDisabled();
   }
 
   private item(): AccordionItem {
@@ -95,14 +87,15 @@ export class QuiAccordionItem {
     return {
       ...accordion,
       item: (): AccordionItem => this.item(),
+      isItemDisabled: (): boolean => this.isDisabled(accordion),
     };
   }
 
   public render(): VNode {
-    const { accordion } = this;
+    const accordion = this.part.context;
     const expanded = accordion?.isExpanded(this.value) ?? false;
     const focused = accordion?.isFocused(this.value) ?? false;
-    const disabled = this.disabled || (accordion?.isDisabled() ?? false);
+    const disabled = accordion === undefined ? this.disabled : this.isDisabled(accordion);
 
     return (
       <Host class={styles.host}>
