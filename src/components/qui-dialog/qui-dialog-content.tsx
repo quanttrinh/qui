@@ -74,7 +74,7 @@ export class QuiDialogContent {
   @State() private dialogRole: "dialog" | "alertdialog" = "dialog";
   @State() private dialogLabel?: string;
 
-  private readonly part = consumeContextPart({
+  private readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "dialog",
     consume: consumeDialog,
@@ -95,19 +95,19 @@ export class QuiDialogContent {
   private keyHandler?: (event: KeyboardEvent) => void;
 
   private get dialogContext(): DialogContext | undefined {
-    return this.part.context;
+    return this.contextPart.context;
   }
 
   public connectedCallback(): void {
-    this.part.hostConnected();
+    this.contextPart.hostConnected();
   }
 
   public componentWillLoad(): void {
-    this.part.hostWillLoad();
+    this.contextPart.hostWillLoad();
   }
 
   public componentDidLoad(): void {
-    this.part.hostDidLoad();
+    this.contextPart.hostDidLoad();
     // The native <dialog> ref does not exist during componentWillLoad.
     // The first registration therefore waits until after the initial render.
     this.registerControl();
@@ -119,7 +119,7 @@ export class QuiDialogContent {
   }
 
   public disconnectedCallback(): void {
-    this.part.hostDisconnected();
+    this.contextPart.hostDisconnected();
   }
 
   private registerControl(): void {

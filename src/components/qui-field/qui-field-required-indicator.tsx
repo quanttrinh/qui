@@ -27,7 +27,7 @@ export class QuiFieldRequiredIndicator {
   /** Additional class applied to the indicator element. */
   @Prop() innerClass?: string;
 
-  private readonly part = consumeContextPart({
+  private readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "field",
     consume: consumeField,
@@ -35,23 +35,23 @@ export class QuiFieldRequiredIndicator {
   private readonly defaultMarker = "*";
 
   private get field(): FieldApi | undefined {
-    return this.part.context;
+    return this.contextPart.context;
   }
 
   public connectedCallback(): void {
-    this.part.hostConnected();
+    this.contextPart.hostConnected();
   }
 
   public componentWillLoad(): void {
-    this.part.hostWillLoad();
+    this.contextPart.hostWillLoad();
   }
 
   public componentDidLoad(): void {
-    this.part.hostDidLoad();
+    this.contextPart.hostDidLoad();
   }
 
   public disconnectedCallback(): void {
-    this.part.hostDisconnected();
+    this.contextPart.hostDisconnected();
   }
 
   public render(): VNode {
