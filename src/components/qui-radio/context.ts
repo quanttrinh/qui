@@ -1,4 +1,4 @@
-import { notifyContextProvided } from "../shared/context-part";
+import { notifyContextChanged } from "../shared/context-part";
 
 /** A radio item's component-owned props. */
 export interface RadioItem {
@@ -41,12 +41,12 @@ const groups = new WeakMap<HTMLElement, RadioGroupContext>();
 
 function provideRadioGroup(host: HTMLElement, group: RadioGroupContext): void {
   groups.set(host, group);
-  notifyContextProvided("radio-group");
+  notifyContextChanged("radio-group");
 }
 
 function clearRadioGroup(host: HTMLElement): void {
   groups.delete(host);
-  notifyContextProvided("radio-group");
+  notifyContextChanged("radio-group");
 }
 
 function parentElement(node: Element): Element | undefined {

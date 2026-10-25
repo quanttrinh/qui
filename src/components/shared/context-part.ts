@@ -1,5 +1,6 @@
-import { forceUpdate } from "@stencil/core";
+import { Build, forceUpdate } from "@stencil/core";
 
+// Keep provider keys in sync with COMPONENT_PRIORITY in src/unplugin/core.ts.
 /** A provider key shared by a context family. */
 type ContextPartKey = "accordion" | "accordion-item" | "dialog" | "field" | "radio-group" | "tabs";
 
@@ -17,7 +18,10 @@ interface ConsumeContextPartOptions<TContext extends ContextPartSource> {
   consume: (host: HTMLElement) => TContext | undefined;
   /** Optional side effect when a context is attached. Returns a teardown. */
   setup?: (context: TContext) => (() => void) | undefined;
-  /** Called when the attached context changes. Defaults to `forceUpdate(host)`. */
+  /**
+   * Extension point for parts that need custom update behavior. Defaults to
+   * `forceUpdate(host)` when omitted.
+   */
   update?: (context: TContext) => void;
   /** Whether to re-render on context changes. Defaults to `true`. */
   subscribe?: boolean;
@@ -36,45 +40,58 @@ interface ContextPart<TContext extends ContextPartSource> {
 }
 
 // Notifications are scoped by context family, not by provider host.
-// Parts re-walk their ancestors when a matching provider changes.
+// Each matching provider wakes every consumer of that family.
+// Consumers re-walk ancestors, which is O(consumers x depth) at mount time.
 // Attach is a no-op for the current context.
 // A provider-to-consumer index would be more complex than this is worth.
-const contextProvidedListeners = new Map<ContextPartKey, Set<() => void>>();
+const contextChangedListeners = new Map<ContextPartKey, Set<() => void>>();
 const pendingKeys = new Set<ContextPartKey>();
 let flushScheduled = false;
 
-function notifyKey(key: ContextPartKey): void {
-  const listeners = contextProvidedListeners.get(key);
+function notifyKey(key: ContextPartKey, errors: unknown[]): void {
+  const listeners = contextChangedListeners.get(key);
   if (listeners !== undefined) {
     for (const listener of listeners) {
-      listener();
+      try {
+        listener();
+      } catch (error) {
+        errors.push(error);
+      }
     }
   }
 }
 
 function flushNotifications(): void {
+  const errors: unknown[] = [];
   try {
     // Drain iteratively so nested-provider notifications never recurse per item.
     while (pendingKeys.size > 0) {
       const keys = [...pendingKeys];
       pendingKeys.clear();
       for (const key of keys) {
-        notifyKey(key);
+        notifyKey(key, errors);
       }
     }
   } finally {
     flushScheduled = false;
   }
+  if (errors.length > 0) {
+    throw errors[0];
+  }
 }
 
 /**
- * Notifies waiting parts that an ancestor context for `key` was provided.
+ * Notifies waiting parts that context availability for `key` changed.
+ * Providers call this after storing or clearing their context.
  *
  * Components are defined in an arbitrary order, so a part can upgrade before
- * its provider. Providers call this after storing their context so those parts
- * can attach without depending on custom element registration order.
+ * its provider. Those parts attach when this notification arrives instead of
+ * depending on custom element registration order.
  */
-function notifyContextProvided(key: ContextPartKey): void {
+function notifyContextChanged(key: ContextPartKey): void {
+  if (Build.isServer) {
+    return;
+  }
   pendingKeys.add(key);
   if (flushScheduled) {
     return;
@@ -85,16 +102,19 @@ function notifyContextProvided(key: ContextPartKey): void {
 
 /** Subscribes to provider notifications for `key`. Returns an unsubscribe function. */
 function onContextProvided(key: ContextPartKey, listener: () => void): () => void {
-  let listeners = contextProvidedListeners.get(key);
+  if (Build.isServer) {
+    return (): void => undefined;
+  }
+  let listeners = contextChangedListeners.get(key);
   if (listeners === undefined) {
     listeners = new Set();
-    contextProvidedListeners.set(key, listeners);
+    contextChangedListeners.set(key, listeners);
   }
   listeners.add(listener);
   return (): void => {
     listeners.delete(listener);
-    if (listeners.size === 0 && contextProvidedListeners.get(key) === listeners) {
-      contextProvidedListeners.delete(key);
+    if (listeners.size === 0 && contextChangedListeners.get(key) === listeners) {
+      contextChangedListeners.delete(key);
     }
   };
 }
@@ -196,7 +216,7 @@ function consumeContextPart<TContext extends ContextPartSource>(
 
 export {
   consumeContextPart,
-  notifyContextProvided,
+  notifyContextChanged,
   onContextProvided,
   type ContextPart,
   type ContextPartKey,

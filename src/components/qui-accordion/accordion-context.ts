@@ -1,4 +1,4 @@
-import { notifyContextProvided } from "../shared/context-part";
+import { notifyContextChanged } from "../shared/context-part";
 
 export interface AccordionItem {
   value: string;
@@ -35,12 +35,12 @@ const accordionItems = new WeakMap<HTMLElement, AccordionItemContext>();
 
 function provideAccordion(host: HTMLElement, context: AccordionContext): void {
   accordions.set(host, context);
-  notifyContextProvided("accordion");
+  notifyContextChanged("accordion");
 }
 
 function clearAccordion(host: HTMLElement): void {
   accordions.delete(host);
-  notifyContextProvided("accordion");
+  notifyContextChanged("accordion");
 }
 
 function parentElement(node: Element): Element | undefined {
@@ -68,12 +68,12 @@ function consumeAccordion(host: HTMLElement): AccordionContext | undefined {
 
 function provideAccordionItem(host: HTMLElement, context: AccordionItemContext): void {
   accordionItems.set(host, context);
-  notifyContextProvided("accordion-item");
+  notifyContextChanged("accordion-item");
 }
 
 function clearAccordionItem(host: HTMLElement): void {
   accordionItems.delete(host);
-  notifyContextProvided("accordion-item");
+  notifyContextChanged("accordion-item");
 }
 
 function consumeAccordionItem(host: HTMLElement): AccordionItemContext | undefined {

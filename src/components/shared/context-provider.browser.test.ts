@@ -10,6 +10,19 @@ import {
   type AccordionContext,
   type AccordionItemContext,
 } from "../qui-accordion/accordion-context";
+import {
+  clearDialog,
+  consumeDialog,
+  provideDialog,
+  type DialogContext,
+} from "../qui-dialog/context";
+import {
+  clearRadioGroup,
+  consumeRadioGroup,
+  provideRadioGroup,
+  type RadioGroupContext,
+} from "../qui-radio/context";
+import { clearTabs, consumeTabs, provideTabs, type TabsContext } from "../qui-tabs/context";
 import { consumeContextPart, type ContextPart } from "./context-part";
 import { clearField, consumeField, provideField, type FieldApi } from "./field/context";
 import { FormController } from "./form-control/controller";
@@ -54,6 +67,21 @@ function createFieldApi(): FieldApi {
     registerErrorText: () => () => undefined,
     subscribe: () => () => undefined,
   };
+}
+
+function createTabsContext(): TabsContext {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  return { subscribe: () => () => undefined } as unknown as TabsContext;
+}
+
+function createRadioGroupContext(): RadioGroupContext {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  return { subscribe: () => () => undefined } as unknown as RadioGroupContext;
+}
+
+function createDialogContext(): DialogContext {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  return { subscribe: () => () => undefined } as unknown as DialogContext;
 }
 
 function createAccordionContext(): AccordionContext {
@@ -163,6 +191,98 @@ describe("context provider notifications", () => {
     expect(requestUpdate).toHaveBeenCalledTimes(2);
 
     controller.hostDisconnected();
+    provider.remove();
+  });
+
+  it("replaces a field and tears down the previous registration", async () => {
+    const { provider, consumer } = createTree();
+    const first = createFieldApi();
+    const second = createFieldApi();
+    const teardown = vi.fn();
+    const setup = vi.fn(() => teardown);
+    const part = consumeContextPart({
+      host: () => consumer,
+      key: "field",
+      consume: consumeField,
+      setup,
+    });
+
+    part.hostWillLoad();
+    provideField(provider, first);
+    await Promise.resolve();
+    expect(part.context).toBe(first);
+
+    provideField(provider, second);
+    await Promise.resolve();
+
+    expect(part.context).toBe(second);
+    expect(teardown).toHaveBeenCalledOnce();
+    expect(setup).toHaveBeenLastCalledWith(second);
+
+    part.hostDisconnected();
+    clearField(provider);
+    provider.remove();
+  });
+});
+
+describe("late providers for other context families", () => {
+  it("attaches a tabs part after its provider", async () => {
+    const { provider, consumer } = createTree();
+    const tabs = createTabsContext();
+    const part = consumeContextPart({
+      host: () => consumer,
+      key: "tabs",
+      consume: consumeTabs,
+    });
+
+    part.hostWillLoad();
+    provideTabs(provider, tabs);
+    await Promise.resolve();
+
+    expect(part.context).toBe(tabs);
+
+    part.hostDisconnected();
+    clearTabs(provider);
+    provider.remove();
+  });
+
+  it("attaches a radio part after its group", async () => {
+    const { provider, consumer } = createTree();
+    const group = createRadioGroupContext();
+    const part = consumeContextPart({
+      host: () => consumer,
+      key: "radio-group",
+      consume: consumeRadioGroup,
+    });
+
+    part.hostWillLoad();
+    provideRadioGroup(provider, group);
+    await Promise.resolve();
+
+    expect(part.context).toBe(group);
+
+    part.hostDisconnected();
+    clearRadioGroup(provider);
+    provider.remove();
+  });
+
+  it("attaches a dialog part after its provider", async () => {
+    const { provider, consumer } = createTree();
+    const dialog = createDialogContext();
+    const part = consumeContextPart({
+      host: () => consumer,
+      key: "dialog",
+      consume: consumeDialog,
+    });
+
+    part.hostWillLoad();
+    provideDialog(provider, dialog);
+    await Promise.resolve();
+
+    expect(part.context).toBe(dialog);
+
+    part.hostDisconnected();
+    clearDialog(provider);
     provider.remove();
   });
 });

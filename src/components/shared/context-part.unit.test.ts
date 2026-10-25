@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { consumeContextPart, notifyContextProvided, onContextProvided } from "./context-part";
+import { consumeContextPart, notifyContextChanged, onContextProvided } from "./context-part";
 
 const KEY = "field";
 
@@ -155,14 +155,14 @@ describe("consumeContextPart provider notifications", () => {
     expect(part.context).toBeUndefined();
 
     state.current = context;
-    notifyContextProvided(KEY);
+    notifyContextChanged(KEY);
     await flush();
 
     expect(part.context).toBe(context);
     expect(update).toHaveBeenCalledOnce();
     expect(context.listenerCount()).toBe(1);
 
-    notifyContextProvided(KEY);
+    notifyContextChanged(KEY);
     await flush();
     expect(update).toHaveBeenCalledOnce();
     expect(context.listenerCount()).toBe(1);
@@ -181,7 +181,7 @@ describe("consumeContextPart provider notifications", () => {
     part.hostWillLoad();
     part.hostDisconnected();
     state.current = createContext();
-    notifyContextProvided(KEY);
+    notifyContextChanged(KEY);
     await flush();
 
     expect(part.context).toBeUndefined();
@@ -198,12 +198,12 @@ describe("consumeContextPart provider notifications", () => {
 
     part.hostWillLoad();
     state.current = context;
-    notifyContextProvided("dialog");
+    notifyContextChanged("dialog");
     await flush();
 
     expect(part.context).toBeUndefined();
 
-    notifyContextProvided(KEY);
+    notifyContextChanged(KEY);
     await flush();
     expect(part.context).toBe(context);
     part.hostDisconnected();
@@ -223,7 +223,7 @@ describe("consumeContextPart provider notifications", () => {
 
     part.hostWillLoad();
     state.current = context;
-    notifyContextProvided(KEY);
+    notifyContextChanged(KEY);
     await flush();
 
     expect(part.context).toBe(context);
@@ -242,7 +242,7 @@ describe("consumeContextPart provider notifications", () => {
     const unsubscribe = onContextProvided(KEY, listener);
 
     stale();
-    notifyContextProvided(KEY);
+    notifyContextChanged(KEY);
     await flush();
 
     expect(listener).toHaveBeenCalledOnce();
@@ -263,9 +263,9 @@ describe("consumeContextPart provider notifications", () => {
     state.current = context;
     consume.mockClear();
 
-    notifyContextProvided(KEY);
-    notifyContextProvided(KEY);
-    notifyContextProvided(KEY);
+    notifyContextChanged(KEY);
+    notifyContextChanged(KEY);
+    notifyContextChanged(KEY);
     await flush();
 
     expect(consume).toHaveBeenCalledOnce();
@@ -290,7 +290,7 @@ describe("consumeContextPart provider notifications", () => {
     expect(first.listenerCount()).toBe(1);
 
     state.current = second;
-    notifyContextProvided(KEY);
+    notifyContextChanged(KEY);
     await flush();
 
     expect(part.context).toBe(second);
@@ -315,7 +315,7 @@ describe("consumeContextPart provider notifications", () => {
 
     part.hostWillLoad();
     state.current = undefined;
-    notifyContextProvided(KEY);
+    notifyContextChanged(KEY);
     await flush();
 
     expect(part.context).toBeUndefined();

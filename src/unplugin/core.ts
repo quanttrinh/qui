@@ -25,6 +25,7 @@ export function mayContainComponents(code: string): boolean {
   return code.includes("qui-") || ESCAPED_CHARACTER.test(code);
 }
 
+// Keep provider tags in sync with ContextPartKey in src/components/shared/context-part.ts.
 /**
  * Provider tags must be defined before the parts that consume them. Only
  * providers need an entry here; all other tags inherit the default priority.
