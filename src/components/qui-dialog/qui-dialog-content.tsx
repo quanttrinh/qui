@@ -108,6 +108,8 @@ export class QuiDialogContent {
 
   public componentDidLoad(): void {
     this.part.hostDidLoad();
+    // The native <dialog> ref does not exist during componentWillLoad.
+    // The first registration therefore waits until after the initial render.
     this.registerControl();
     this.applyDialogAttributes();
   }

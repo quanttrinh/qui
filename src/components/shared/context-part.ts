@@ -1,5 +1,8 @@
 import { forceUpdate } from "@stencil/core";
 
+/** A provider key shared by a context family. */
+type ContextPartKey = "accordion" | "accordion-item" | "dialog" | "field" | "radio-group" | "tabs";
+
 /** A context object that can notify a subscribed part when it changes. */
 interface ContextPartSource {
   subscribe: (listener: () => void) => () => void;
@@ -9,7 +12,7 @@ interface ConsumeContextPartOptions<TContext extends ContextPartSource> {
   /** Resolves the host lazily so the controller can be created in the constructor. */
   host: () => HTMLElement;
   /** The provider key to listen for while waiting to attach. */
-  key: string;
+  key: ContextPartKey;
   /** Finds the nearest matching ancestor context. */
   consume: (host: HTMLElement) => TContext | undefined;
   /** Optional side effect when a context is attached. Returns a teardown. */
@@ -32,11 +35,11 @@ interface ContextPart<TContext extends ContextPartSource> {
   hostDisconnected: () => void;
 }
 
-const contextProvidedListeners = new Map<string, Set<() => void>>();
-const pendingKeys = new Set<string>();
+const contextProvidedListeners = new Map<ContextPartKey, Set<() => void>>();
+const pendingKeys = new Set<ContextPartKey>();
 let flushScheduled = false;
 
-function notifyKey(key: string): void {
+function notifyKey(key: ContextPartKey): void {
   const listeners = contextProvidedListeners.get(key);
   if (listeners !== undefined) {
     for (const listener of listeners) {
@@ -67,7 +70,7 @@ function flushNotifications(): void {
  * its provider. Providers call this after storing their context so those parts
  * can attach without depending on custom element registration order.
  */
-function notifyContextProvided(key: string): void {
+function notifyContextProvided(key: ContextPartKey): void {
   pendingKeys.add(key);
   if (flushScheduled) {
     return;
@@ -77,7 +80,7 @@ function notifyContextProvided(key: string): void {
 }
 
 /** Subscribes to provider notifications for `key`. Returns an unsubscribe function. */
-function onContextProvided(key: string, listener: () => void): () => void {
+function onContextProvided(key: ContextPartKey, listener: () => void): () => void {
   let listeners = contextProvidedListeners.get(key);
   if (listeners === undefined) {
     listeners = new Set();
@@ -86,7 +89,7 @@ function onContextProvided(key: string, listener: () => void): () => void {
   listeners.add(listener);
   return (): void => {
     listeners.delete(listener);
-    if (listeners.size === 0) {
+    if (listeners.size === 0 && contextProvidedListeners.get(key) === listeners) {
       contextProvidedListeners.delete(key);
     }
   };
@@ -138,14 +141,17 @@ function consumeContextPart<TContext extends ContextPartSource>(
     return true;
   };
 
-  const handleProvided = (): void => {
-    if (!attach()) {
-      return;
-    }
+  const updateAttached = (): void => {
     if (context === undefined) {
       forceUpdate(options.host());
     } else {
       requestUpdate(context);
+    }
+  };
+
+  const handleProvided = (): void => {
+    if (attach()) {
+      updateAttached();
     }
   };
 
@@ -156,7 +162,7 @@ function consumeContextPart<TContext extends ContextPartSource>(
 
   const hostDidLoad = (): void => {
     if (attach()) {
-      forceUpdate(options.host());
+      updateAttached();
     }
   };
 
@@ -181,5 +187,6 @@ export {
   notifyContextProvided,
   onContextProvided,
   type ContextPart,
+  type ContextPartKey,
   type ContextPartSource,
 };

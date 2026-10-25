@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { consumeContextPart, notifyContextProvided } from "./context-part";
+import { consumeContextPart, notifyContextProvided, onContextProvided } from "./context-part";
 
-const KEY = "test";
+const KEY = "field";
 
 function createContext() {
   const listeners = new Set<() => void>();
@@ -90,6 +90,7 @@ describe("consumeContextPart lifecycle", () => {
     part.hostDidLoad();
     expect(part.context).toBe(context);
     expect(context.listenerCount()).toBe(1);
+    part.hostDisconnected();
   });
 
   it("reattaches after a reconnect", () => {
@@ -109,6 +110,7 @@ describe("consumeContextPart lifecycle", () => {
     part.hostConnected();
     expect(part.context).toBe(context);
     expect(context.listenerCount()).toBe(1);
+    part.hostDisconnected();
   });
 
   it("can skip the subscription for one-shot consumers", () => {
@@ -126,6 +128,7 @@ describe("consumeContextPart lifecycle", () => {
     context.notify();
     expect(update).not.toHaveBeenCalled();
     expect(context.listenerCount()).toBe(0);
+    part.hostDisconnected();
   });
 });
 
@@ -157,6 +160,7 @@ describe("consumeContextPart provider notifications", () => {
     await flush();
     expect(update).toHaveBeenCalledOnce();
     expect(context.listenerCount()).toBe(1);
+    part.hostDisconnected();
   });
 
   it("stops listening after disconnect", async () => {
@@ -188,7 +192,7 @@ describe("consumeContextPart provider notifications", () => {
 
     part.hostWillLoad();
     state.current = context;
-    notifyContextProvided("other");
+    notifyContextProvided("dialog");
     await flush();
 
     expect(part.context).toBeUndefined();
@@ -196,6 +200,24 @@ describe("consumeContextPart provider notifications", () => {
     notifyContextProvided(KEY);
     await flush();
     expect(part.context).toBe(context);
+    part.hostDisconnected();
+  });
+
+  it("keeps a newer listener set when an old unsubscribe runs twice", async () => {
+    const stale = onContextProvided(
+      KEY,
+      vi.fn((): void => undefined),
+    );
+    stale();
+    const listener = vi.fn((): void => undefined);
+    const unsubscribe = onContextProvided(KEY, listener);
+
+    stale();
+    notifyContextProvided(KEY);
+    await flush();
+
+    expect(listener).toHaveBeenCalledOnce();
+    unsubscribe();
   });
 
   it("coalesces notifications for the same provider key", async () => {
@@ -219,6 +241,7 @@ describe("consumeContextPart provider notifications", () => {
 
     expect(consume).toHaveBeenCalledOnce();
     expect(part.context).toBe(context);
+    part.hostDisconnected();
   });
 
   it("replaces the context and tears down the previous one", async () => {
@@ -246,6 +269,7 @@ describe("consumeContextPart provider notifications", () => {
     expect(first.listenerCount()).toBe(0);
     expect(second.listenerCount()).toBe(1);
     expect(setup).toHaveBeenLastCalledWith(second);
+    part.hostDisconnected();
   });
 
   it("detaches when the provider disappears", async () => {
@@ -268,5 +292,6 @@ describe("consumeContextPart provider notifications", () => {
     expect(part.context).toBeUndefined();
     expect(teardown).toHaveBeenCalledOnce();
     expect(context.listenerCount()).toBe(0);
+    part.hostDisconnected();
   });
 });

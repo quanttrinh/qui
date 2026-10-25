@@ -113,6 +113,15 @@ describe("registrationOrder", () => {
       "qui-radio-group",
       "qui-radio",
     ]);
+
+    expect(
+      registrationOrder([
+        "qui-dialog-title",
+        "qui-dialog-content",
+        "qui-dialog",
+        "qui-dialog-trigger",
+      ]),
+    ).toEqual(["qui-dialog", "qui-dialog-content", "qui-dialog-title", "qui-dialog-trigger"]);
   });
 
   it("keeps unrelated components alphabetical", () => {
