@@ -1,17 +1,9 @@
-import {
-  resolveVar,
-  Component,
-  Element,
-  forceUpdate,
-  h,
-  Host,
-  Prop,
-  type VNode,
-} from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
+import { consumeContextPart } from "../shared/context-part";
 import { consumeDialog, type DialogContext } from "./context";
 
 const styles = {
@@ -38,25 +30,26 @@ export class QuiDialogDescription {
   /** Additional class applied to the description. */
   @Prop() innerClass?: string;
 
-  private dialog?: DialogContext;
+  private readonly part = consumeContextPart({
+    host: (): HTMLElement => this.host,
+    consume: consumeDialog,
+    subscribe: false,
+  });
+
+  private get dialog(): DialogContext | undefined {
+    return this.part.context;
+  }
 
   public componentWillLoad(): void {
-    this.attachDialog();
+    this.part.hostWillLoad();
   }
 
   public componentDidLoad(): void {
-    if (this.dialog === undefined) {
-      this.attachDialog();
-      forceUpdate(this.host);
-    }
+    this.part.hostDidLoad();
   }
 
-  private attachDialog(): void {
-    const dialog = consumeDialog(this.host);
-    if (dialog === undefined || dialog === this.dialog) {
-      return;
-    }
-    this.dialog = dialog;
+  public disconnectedCallback(): void {
+    this.part.hostDisconnected();
   }
 
   public render(): VNode {

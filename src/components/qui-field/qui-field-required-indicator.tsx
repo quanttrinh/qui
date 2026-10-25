@@ -1,17 +1,9 @@
-import {
-  resolveVar,
-  Component,
-  Element,
-  forceUpdate,
-  h,
-  Host,
-  Prop,
-  type VNode,
-} from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
+import { consumeContextPart } from "../shared/context-part";
 import { consumeField, type FieldApi } from "../shared/field/context";
 import { fieldStyles } from "./styles";
 
@@ -35,34 +27,26 @@ export class QuiFieldRequiredIndicator {
   /** Additional class applied to the indicator element. */
   @Prop() innerClass?: string;
 
-  private field?: FieldApi;
-  private unsubscribe?: () => void;
+  private readonly part = consumeContextPart({
+    host: (): HTMLElement => this.host,
+    consume: consumeField,
+  });
   private readonly defaultMarker = "*";
 
+  private get field(): FieldApi | undefined {
+    return this.part.context;
+  }
+
   public componentWillLoad(): void {
-    this.attachField();
+    this.part.hostWillLoad();
   }
 
   public componentDidLoad(): void {
-    if (this.field === undefined) {
-      this.attachField();
-    }
+    this.part.hostDidLoad();
   }
 
   public disconnectedCallback(): void {
-    this.unsubscribe?.();
-  }
-
-  private attachField(): void {
-    const field = consumeField(this.host);
-    if (field === undefined || field === this.field) {
-      return;
-    }
-    this.unsubscribe?.();
-    this.field = field;
-    this.unsubscribe = field.subscribe(() => {
-      forceUpdate(this.host);
-    });
+    this.part.hostDisconnected();
   }
 
   public render(): VNode {

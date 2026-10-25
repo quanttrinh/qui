@@ -1,18 +1,10 @@
-import {
-  resolveVar,
-  Component,
-  Element,
-  forceUpdate,
-  h,
-  Host,
-  Prop,
-  type VNode,
-} from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
 import { dataAttr } from "../../helpers/attr";
+import { consumeContextPart } from "../shared/context-part";
 import { consumeTabs, type TabsContext, type TabsVariant } from "./context";
 
 const styles = {
@@ -141,34 +133,25 @@ export class QuiTabTrigger {
   /** Additional class applied to the trigger button. */
   @Prop() innerClass?: string;
 
-  private tabs?: TabsContext;
-  private unsubscribe?: () => void;
+  private readonly part = consumeContextPart({
+    host: (): HTMLElement => this.host,
+    consume: consumeTabs,
+  });
+
+  private get tabs(): TabsContext | undefined {
+    return this.part.context;
+  }
 
   public componentWillLoad(): void {
-    this.attachTabs();
+    this.part.hostWillLoad();
   }
 
   public componentDidLoad(): void {
-    if (this.tabs === undefined) {
-      this.attachTabs();
-      forceUpdate(this.host);
-    }
+    this.part.hostDidLoad();
   }
 
   public disconnectedCallback(): void {
-    this.unsubscribe?.();
-  }
-
-  private attachTabs(): void {
-    const tabs = consumeTabs(this.host);
-    if (tabs === undefined || tabs === this.tabs) {
-      return;
-    }
-    this.unsubscribe?.();
-    this.tabs = tabs;
-    this.unsubscribe = tabs.subscribe(() => {
-      forceUpdate(this.host);
-    });
+    this.part.hostDisconnected();
   }
 
   private readonly handleClick = (): void => {

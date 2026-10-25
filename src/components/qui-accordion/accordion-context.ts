@@ -5,8 +5,6 @@ export interface AccordionItem {
 
 /** The accordion state and ids shared with descendant parts. */
 export interface AccordionContext {
-  value: () => string[];
-  focusedValue: () => string | undefined;
   isExpanded: (value: string) => boolean;
   isFocused: (value: string) => boolean;
   isDisabled: () => boolean;
@@ -26,6 +24,8 @@ export interface AccordionContext {
 
 export interface AccordionItemContext extends AccordionContext {
   item: () => AccordionItem;
+  /** Whether this item or its accordion is disabled. */
+  isItemDisabled: () => boolean;
 }
 
 const accordions = new WeakMap<HTMLElement, AccordionContext>();

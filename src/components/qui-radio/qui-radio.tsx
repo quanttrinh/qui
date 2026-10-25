@@ -1,19 +1,11 @@
-import {
-  resolveVar,
-  Component,
-  Element,
-  forceUpdate,
-  h,
-  Host,
-  Prop,
-  type VNode,
-} from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
 import { ariaAttr, dataAttr } from "../../helpers/attr";
 import { isHTMLInputElement } from "../../helpers/dom";
+import { consumeContextPart } from "../shared/context-part";
 import {
   consumeRadioGroup,
   type RadioGroupContext,
@@ -103,19 +95,22 @@ export class QuiRadio {
   /** Additional class applied to the item label. */
   @Prop() innerClass?: string;
 
-  private group?: RadioGroupContext;
-  private groupUnsubscribe?: () => void;
+  private readonly part = consumeContextPart({
+    host: (): HTMLElement => this.host,
+    consume: consumeRadioGroup,
+  });
   private inputEl?: HTMLInputElement;
 
+  private get group(): RadioGroupContext | undefined {
+    return this.part.context;
+  }
+
   public componentWillLoad(): void {
-    this.attachGroup();
+    this.part.hostWillLoad();
   }
 
   public componentDidLoad(): void {
-    if (this.group === undefined) {
-      this.attachGroup();
-      forceUpdate(this.host);
-    }
+    this.part.hostDidLoad();
   }
 
   public componentDidRender(): void {
@@ -126,19 +121,7 @@ export class QuiRadio {
   }
 
   public disconnectedCallback(): void {
-    this.groupUnsubscribe?.();
-  }
-
-  private attachGroup(): void {
-    const group = consumeRadioGroup(this.host);
-    if (group === undefined || group === this.group) {
-      return;
-    }
-    this.groupUnsubscribe?.();
-    this.group = group;
-    this.groupUnsubscribe = group.subscribe(() => {
-      forceUpdate(this.host);
-    });
+    this.part.hostDisconnected();
   }
 
   private item(): RadioItem {

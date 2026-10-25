@@ -1,17 +1,9 @@
-import {
-  resolveVar,
-  Component,
-  Element,
-  forceUpdate,
-  h,
-  Host,
-  Prop,
-  type VNode,
-} from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
+import { consumeContextPart } from "../shared/context-part";
 import { consumeDialog, type DialogContext } from "./context";
 
 const styles = {
@@ -59,33 +51,25 @@ export class QuiDialogTrigger {
   /** Additional class applied to the trigger button. */
   @Prop() innerClass?: string;
 
-  private dialog?: DialogContext;
-  private unsubscribe?: () => void;
+  private readonly part = consumeContextPart({
+    host: (): HTMLElement => this.host,
+    consume: consumeDialog,
+  });
+
+  private get dialog(): DialogContext | undefined {
+    return this.part.context;
+  }
 
   public componentWillLoad(): void {
-    this.attachDialog();
+    this.part.hostWillLoad();
   }
 
   public componentDidLoad(): void {
-    if (this.dialog === undefined) {
-      this.attachDialog();
-    }
+    this.part.hostDidLoad();
   }
 
   public disconnectedCallback(): void {
-    this.unsubscribe?.();
-  }
-
-  private attachDialog(): void {
-    const dialog = consumeDialog(this.host);
-    if (dialog === undefined || dialog === this.dialog) {
-      return;
-    }
-    this.unsubscribe?.();
-    this.dialog = dialog;
-    this.unsubscribe = dialog.subscribe(() => {
-      forceUpdate(this.host);
-    });
+    this.part.hostDisconnected();
   }
 
   public render(): VNode {
