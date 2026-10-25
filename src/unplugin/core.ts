@@ -25,6 +25,25 @@ export function mayContainComponents(code: string): boolean {
   return code.includes("qui-") || ESCAPED_CHARACTER.test(code);
 }
 
+/**
+ * Parent contexts must be defined before the parts that consume them. The
+ * values only order related tags; unrelated tags keep alphabetical order.
+ */
+const COMPONENT_PRIORITY: Readonly<Record<string, number>> = {
+  "qui-field": 0,
+  "qui-accordion": 0,
+  "qui-tabs": 0,
+  "qui-dialog": 0,
+  "qui-accordion-item": 1,
+  "qui-radio-group": 1,
+  "qui-tab-list": 1,
+  "qui-accordion-content": 2,
+  "qui-accordion-trigger": 2,
+  "qui-radio": 2,
+  "qui-tab-panel": 2,
+  "qui-tab-trigger": 2,
+};
+
 export function normalizeComponents(components: Iterable<string>): string[] {
   const normalized = new Set<string>();
   for (const component of components) {
@@ -33,6 +52,17 @@ export function normalizeComponents(components: Iterable<string>): string[] {
     }
   }
   return [...normalized].sort();
+}
+
+/**
+ * Sorts tags so providers are defined before the parts that consume them.
+ * Falls back to alphabetical order for unrelated components.
+ */
+export function registrationOrder(components: Iterable<string>): string[] {
+  return normalizeComponents(components).sort((left, right) => {
+    const priority = (COMPONENT_PRIORITY[left] ?? 100) - (COMPONENT_PRIORITY[right] ?? 100);
+    return priority === 0 ? left.localeCompare(right) : priority;
+  });
 }
 
 /**
@@ -86,7 +116,7 @@ export function createRegistrationModule(
     throw new Error(`[unplugin-qui] Unknown strategy "${strategy}". Expected "shared" or "split".`);
   }
 
-  const tags = normalizeComponents(components);
+  const tags = registrationOrder(components);
   if (tags.length === 0) {
     return "";
   }

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { consumeContextPart } from "./context-part";
+import { consumeContextPart, notifyContextProvided } from "./context-part";
 
 function createContext() {
   const listeners = new Set<() => void>();
@@ -81,6 +81,37 @@ describe("consumeContextPart", () => {
     part.hostDidLoad();
     expect(part.context).toBe(context);
     expect(context.listenerCount()).toBe(1);
+  });
+
+  it("attaches when a provider is registered after the first render", () => {
+    const context = createContext();
+    const state: { current?: ReturnType<typeof createContext> } = {};
+    const update = vi.fn((): void => undefined);
+    const part = consumeContextPart({
+      host: createHost,
+      consume: () => state.current,
+      update,
+    });
+
+    part.hostWillLoad();
+    part.hostDidLoad();
+    expect(part.context).toBeUndefined();
+
+    state.current = context;
+    notifyContextProvided();
+
+    expect(part.context).toBe(context);
+    expect(update).toHaveBeenCalledOnce();
+    expect(context.listenerCount()).toBe(1);
+
+    notifyContextProvided();
+    expect(update).toHaveBeenCalledOnce();
+    expect(context.listenerCount()).toBe(1);
+
+    part.hostDisconnected();
+    state.current = createContext();
+    notifyContextProvided();
+    expect(part.context).toBe(context);
   });
 
   it("can skip the subscription for one-shot consumers", () => {

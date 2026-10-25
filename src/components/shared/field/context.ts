@@ -1,3 +1,5 @@
+import { notifyContextProvided } from "../context-part";
+
 /** Resolved ids for the parts of a field. */
 export interface FieldIds {
   root: string;
@@ -69,6 +71,7 @@ const fields = new WeakMap<HTMLElement, FieldApi>();
 /** Attach a field API to its host element. */
 function provideField(host: HTMLElement, field: FieldApi): void {
   fields.set(host, field);
+  notifyContextProvided();
 }
 
 /** Remove the field API from a host element. */

@@ -14,6 +14,7 @@ import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
 import { isHTMLDialogElement } from "../../helpers/dom";
+import { consumeContextPart } from "../shared/context-part";
 import { consumeDialog, type DialogContext, type DialogControl } from "./context";
 
 const styles = {
@@ -73,22 +74,37 @@ export class QuiDialogContent {
   @State() private dialogRole: "dialog" | "alertdialog" = "dialog";
   @State() private dialogLabel?: string;
 
-  private dialogContext?: DialogContext;
+  private readonly part = consumeContextPart({
+    host: (): HTMLElement => this.host,
+    consume: consumeDialog,
+    subscribe: false,
+    setup: () => {
+      this.registerControl();
+      return (): void => {
+        this.detachDocumentListeners();
+        this.unregister?.();
+        this.unregister = undefined;
+      };
+    },
+  });
+
   private unregister?: () => void;
   private dialogEl?: HTMLDialogElement;
   private pointerHandler?: (event: PointerEvent) => void;
   private keyHandler?: (event: KeyboardEvent) => void;
 
+  private get dialogContext(): DialogContext | undefined {
+    return this.part.context;
+  }
+
   public componentWillLoad(): void {
-    this.resolveContext();
+    this.part.hostWillLoad();
   }
 
   public componentDidLoad(): void {
-    if (this.dialogContext === undefined) {
-      this.resolveContext();
-      this.applyDialogAttributes();
-    }
+    this.part.hostDidLoad();
     this.registerControl();
+    this.applyDialogAttributes();
   }
 
   public componentDidRender(): void {
@@ -96,23 +112,15 @@ export class QuiDialogContent {
   }
 
   public disconnectedCallback(): void {
-    this.detachDocumentListeners();
-    this.unregister?.();
-  }
-
-  private resolveContext(): void {
-    const context = consumeDialog(this.host);
-    if (context === undefined || context === this.dialogContext) {
-      return;
-    }
-    this.dialogContext = context;
+    this.part.hostDisconnected();
   }
 
   private registerControl(): void {
-    if (this.dialogContext === undefined || this.unregister !== undefined) {
+    const context = this.dialogContext;
+    if (context === undefined || this.unregister !== undefined || this.dialogEl === undefined) {
       return;
     }
-    this.unregister = this.dialogContext.register(this.control());
+    this.unregister = context.register(this.control());
     this.attachDocumentListeners();
   }
 

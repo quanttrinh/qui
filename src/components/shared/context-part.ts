@@ -28,6 +28,29 @@ interface ContextPart<TContext extends ContextPartSource> {
   hostDisconnected: () => void;
 }
 
+const contextProvidedListeners = new Set<() => void>();
+
+/**
+ * Notifies waiting parts that an ancestor context has been provided.
+ *
+ * Components are defined in an arbitrary order, so a part can upgrade before
+ * its provider. Providers call this after storing their context so those parts
+ * can attach without depending on custom element registration order.
+ */
+function notifyContextProvided(): void {
+  for (const listener of contextProvidedListeners) {
+    listener();
+  }
+}
+
+/** Subscribes to provider notifications. Returns an unsubscribe function. */
+function onContextProvided(listener: () => void): () => void {
+  contextProvidedListeners.add(listener);
+  return (): void => {
+    contextProvidedListeners.delete(listener);
+  };
+}
+
 /**
  * Connects a part component to its nearest ancestor context and handles the
  * retry, subscription, and teardown lifecycle that every context part repeats.
@@ -38,6 +61,7 @@ function consumeContextPart<TContext extends ContextPartSource>(
   let context: TContext | undefined = undefined;
   let unsubscribe: (() => void) | undefined = undefined;
   let teardown: (() => void) | undefined = undefined;
+  let stopListening: (() => void) | undefined = undefined;
 
   const detach = (): void => {
     teardown?.();
@@ -46,41 +70,65 @@ function consumeContextPart<TContext extends ContextPartSource>(
     unsubscribe = undefined;
   };
 
-  const attach = (): void => {
+  const requestUpdate = (next: TContext): void => {
+    if (options.update === undefined) {
+      forceUpdate(options.host());
+    } else {
+      options.update(next);
+    }
+  };
+
+  const attach = (): boolean => {
     const next = options.consume(options.host());
     if (next === undefined || next === context) {
-      return;
+      return false;
     }
     detach();
     context = next;
     teardown = options.setup?.(next);
     if (options.subscribe !== false) {
       unsubscribe = next.subscribe(() => {
-        if (options.update === undefined) {
-          forceUpdate(options.host());
-        } else {
-          options.update(next);
-        }
+        requestUpdate(next);
       });
+    }
+    return true;
+  };
+
+  const handleProvided = (): void => {
+    if (attach() && context !== undefined) {
+      requestUpdate(context);
     }
   };
 
-  const hostDidLoad = (): void => {
-    if (context !== undefined) {
-      return;
-    }
+  const hostWillLoad = (): void => {
+    stopListening ??= onContextProvided(handleProvided);
     attach();
-    forceUpdate(options.host());
+  };
+
+  const hostDidLoad = (): void => {
+    if (attach()) {
+      forceUpdate(options.host());
+    }
   };
 
   return {
     get context(): TContext | undefined {
       return context;
     },
-    hostWillLoad: attach,
+    hostWillLoad,
     hostDidLoad,
-    hostDisconnected: detach,
+    hostDisconnected: (): void => {
+      stopListening?.();
+      stopListening = undefined;
+      detach();
+    },
   };
 }
 
-export { consumeContextPart, type ContextPart, type ContextPartSource };
+export {
+  consumeContextPart,
+  notifyContextProvided,
+  onContextProvided,
+  type ContextPart,
+  type ContextPartSource,
+};
