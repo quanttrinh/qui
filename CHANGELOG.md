@@ -1,5 +1,26 @@
 # @quanttrinh/qui
 
+## 0.2.1
+
+### Patch Changes
+
+- fc18cef: Render a required indicator for required checkboxes.
+  
+  `qui-checkbox` now shows the same red `*` marker as field labels when
+  `required` is set directly or inherited from a wrapping `qui-field`. The
+  indicator is hidden otherwise and is exposed through the `required-indicator`
+  part for styling.
+- a60c063: Avoid collisions with the native `Element.part` property.
+  
+  The context-part controllers were stored in a field named `part`. The field
+  helper text, error text, and required indicator render a `part` attribute on
+  their host element, which shadows that field with the native `DOMTokenList`.
+  Component lifecycle hooks then failed with
+  `this.part.hostDidLoad is not a function`.
+  
+  Rename the internal controller to `contextPart` across all context-part
+  components for consistency and to prevent future host-attribute collisions.
+
 ## 0.2.0
 
 ### Minor Changes
