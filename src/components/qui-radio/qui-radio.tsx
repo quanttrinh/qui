@@ -95,7 +95,7 @@ export class QuiRadio {
   /** Additional class applied to the item label. */
   @Prop() innerClass?: string;
 
-  private readonly part = consumeContextPart({
+  private readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "radio-group",
     consume: consumeRadioGroup,
@@ -103,19 +103,19 @@ export class QuiRadio {
   private inputEl?: HTMLInputElement;
 
   private get group(): RadioGroupContext | undefined {
-    return this.part.context;
+    return this.contextPart.context;
   }
 
   public connectedCallback(): void {
-    this.part.hostConnected();
+    this.contextPart.hostConnected();
   }
 
   public componentWillLoad(): void {
-    this.part.hostWillLoad();
+    this.contextPart.hostWillLoad();
   }
 
   public componentDidLoad(): void {
-    this.part.hostDidLoad();
+    this.contextPart.hostDidLoad();
   }
 
   public componentDidRender(): void {
@@ -126,7 +126,7 @@ export class QuiRadio {
   }
 
   public disconnectedCallback(): void {
-    this.part.hostDisconnected();
+    this.contextPart.hostDisconnected();
   }
 
   private item(): RadioItem {

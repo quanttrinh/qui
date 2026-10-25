@@ -76,7 +76,7 @@ export class QuiTabList {
   /** Additional class applied to the tab list. */
   @Prop() innerClass?: string;
 
-  private readonly part = consumeContextPart({
+  private readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "tabs",
     consume: consumeTabs,
@@ -84,23 +84,23 @@ export class QuiTabList {
   private listEl?: HTMLDivElement;
 
   private get tabs(): TabsContext | undefined {
-    return this.part.context;
+    return this.contextPart.context;
   }
 
   public connectedCallback(): void {
-    this.part.hostConnected();
+    this.contextPart.hostConnected();
   }
 
   public componentWillLoad(): void {
-    this.part.hostWillLoad();
+    this.contextPart.hostWillLoad();
   }
 
   public componentDidLoad(): void {
-    this.part.hostDidLoad();
+    this.contextPart.hostDidLoad();
   }
 
   public disconnectedCallback(): void {
-    this.part.hostDisconnected();
+    this.contextPart.hostDisconnected();
   }
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {

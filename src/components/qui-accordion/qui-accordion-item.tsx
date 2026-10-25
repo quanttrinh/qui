@@ -44,7 +44,7 @@ export class QuiAccordionItem {
   /** Additional class applied to the item element. */
   @Prop() innerClass?: string;
 
-  private readonly part = consumeContextPart({
+  private readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "accordion",
     consume: consumeAccordion,
@@ -57,19 +57,19 @@ export class QuiAccordionItem {
   });
 
   public connectedCallback(): void {
-    this.part.hostConnected();
+    this.contextPart.hostConnected();
   }
 
   public componentWillLoad(): void {
-    this.part.hostWillLoad();
+    this.contextPart.hostWillLoad();
   }
 
   public componentDidLoad(): void {
-    this.part.hostDidLoad();
+    this.contextPart.hostDidLoad();
   }
 
   public disconnectedCallback(): void {
-    this.part.hostDisconnected();
+    this.contextPart.hostDisconnected();
   }
 
   private isDisabled(accordion: AccordionContext): boolean {
@@ -92,7 +92,7 @@ export class QuiAccordionItem {
   }
 
   public render(): VNode {
-    const accordion = this.part.context;
+    const accordion = this.contextPart.context;
     const expanded = accordion?.isExpanded(this.value) ?? false;
     const focused = accordion?.isFocused(this.value) ?? false;
     const disabled = accordion === undefined ? this.disabled : this.isDisabled(accordion);
