@@ -60,6 +60,31 @@ describe("extractComponents", () => {
       "qui-button",
     ]);
   });
+
+  it("skips source that cannot contain a component tag", () => {
+    expect(extractComponents("export const value = 1;", "/app/value.ts")).toEqual([]);
+  });
+
+  it("drops malformed component tags", () => {
+    expect(extractComponents("const value = <qui- />;", "/app/value.tsx")).toEqual([]);
+  });
+
+  it("resolves escaped static tag names", () => {
+    const stringTag = String.raw`h("qui\u002Dbutton");`;
+    const templateTag = ["h(`", String.raw`\u0071ui-button`, "`);"].join("");
+
+    expect(extractComponents(stringTag, "/app/render.ts")).toEqual(["qui-button"]);
+    expect(extractComponents(templateTag, "/app/render.ts")).toEqual(["qui-button"]);
+  });
+
+  it("walks deeply nested and wide JSX trees", () => {
+    const depth = 2000;
+    const deep = `const view = ${"<div>".repeat(depth)}<qui-button />${"</div>".repeat(depth)};`;
+    const wide = `const view = <div>${"<qui-card />".repeat(5000)}</div>;`;
+
+    expect(extractComponents(deep, "/app/deep.tsx")).toEqual(["qui-button"]);
+    expect(extractComponents(wide, "/app/wide.tsx")).toEqual(["qui-card"]);
+  });
 });
 
 describe("virtual registration module", () => {

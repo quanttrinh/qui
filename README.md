@@ -179,6 +179,9 @@ full component barrel. Use component subpaths when bundle size matters.
 set of components. It also injects the matching styles, so the component modules
 and CSS always use the same distribution.
 
+The plugin uses unplugin v3, which is ESM-only and requires Node.js `20.19+`
+within Node 20, or `22.12+`. Node 21 is not supported.
+
 ```ts
 import Qui from "@quanttrinh/qui/unplugin";
 // vite.config.ts

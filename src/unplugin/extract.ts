@@ -9,18 +9,28 @@ function isNode(value: unknown): value is Node {
   );
 }
 
-function walk(node: Node, visit: (node: Node) => void): void {
-  visit(node);
+function pushChildNodes(node: Node, stack: Node[]): void {
   for (const key of visitorKeys[node.type] ?? []) {
     const value: unknown = Reflect.get(node, key);
     if (Array.isArray(value)) {
-      for (const child of value) {
+      for (const child of value as unknown[]) {
         if (isNode(child)) {
-          walk(child, visit);
+          stack.push(child);
         }
       }
     } else if (isNode(value)) {
-      walk(value, visit);
+      stack.push(value);
+    }
+  }
+}
+
+function walk(node: Node, visit: (node: Node) => void): void {
+  const stack: Node[] = [node];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (current !== undefined) {
+      visit(current);
+      pushChildNodes(current, stack);
     }
   }
 }

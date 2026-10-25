@@ -17,19 +17,12 @@ export interface QuiPluginOptions {
 const COMPONENT_TAG_NAME = /^qui-[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const JAVASCRIPT_FILE = /\.(?:[cm]?[jt]sx?)$/u;
 const TRANSFORMABLE_FILE = /\.(?:[cm]?[jt]sx?|astro|mdx)$/u;
+const ESCAPED_CHARACTER = /\\[ux]/u;
 
 export const VIRTUAL_MODULE_ID = "virtual:qui/register";
 
-/**
- * Finds opening component tags in JavaScript-family source using Oxc's AST,
- * with a lexical fallback for Astro, MDX, and files the parser rejects.
- */
-export function extractComponents(code: string, id = "component.tsx"): string[] {
-  const file = (id.split("?")[0] ?? id).replaceAll("\\", "/");
-  if (JAVASCRIPT_FILE.test(file)) {
-    return extractComponentsFromJavaScript(code, file) ?? extractComponentsFromText(code);
-  }
-  return extractComponentsFromText(code);
+export function mayContainComponents(code: string): boolean {
+  return code.includes("qui-") || ESCAPED_CHARACTER.test(code);
 }
 
 export function normalizeComponents(components: Iterable<string>): string[] {
@@ -40,6 +33,23 @@ export function normalizeComponents(components: Iterable<string>): string[] {
     }
   }
   return [...normalized].sort();
+}
+
+/**
+ * Finds opening component tags in JavaScript-family source using Oxc's AST,
+ * with a lexical fallback for Astro, MDX, and files the parser rejects.
+ */
+export function extractComponents(code: string, id = "component.tsx"): string[] {
+  // Every detectable tag either contains this prefix or an escaped character.
+  // Oxc resolves escaped characters in static tag names.
+  if (!mayContainComponents(code)) {
+    return [];
+  }
+  const file = (id.split("?")[0] ?? id).replaceAll("\\", "/");
+  const components = JAVASCRIPT_FILE.test(file)
+    ? (extractComponentsFromJavaScript(code, file) ?? extractComponentsFromText(code))
+    : extractComponentsFromText(code);
+  return normalizeComponents(components);
 }
 
 export function virtualModuleId(components: Iterable<string>): string {
