@@ -22,9 +22,4 @@ export const fieldStyles = {
     color: "error",
     "&:not([data-invalid])": { display: "none" },
   }),
-  requiredIndicator: css({
-    color: "error",
-    marginInlineStart: "0.5",
-    "&:not([data-required])": { display: "none" },
-  }),
 };
