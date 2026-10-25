@@ -15,15 +15,17 @@ import {
 } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { cx } from "#styled-system/css";
 
 import { ariaAttr, dataAttr } from "../../helpers/attr";
+import { applyTextCase, type TextCase } from "../../helpers/case";
 import { isHTMLInputElement } from "../../helpers/dom";
 import { nextId } from "../../helpers/id";
-import { applyMask, formatMask, unmask } from "../../helpers/mask";
+import { applyMask, formatMask, rawFromMasked, unmask } from "../../helpers/mask";
 import { AddIcon, RemoveIcon, VisibilityIcon, VisibilityOffIcon } from "../qui-icon/icons";
 import { FormControlBase } from "../shared/form-control/component-base";
 import { FormController, type FormValidity } from "../shared/form-control/controller";
+import { styles } from "./styles";
 
 /** The input types `qui-input` can render. */
 export type InputType = "text" | "email" | "tel" | "search" | "password" | "number";
@@ -38,6 +40,14 @@ export type InputMode =
   | "numeric"
   | "decimal"
   | "search";
+
+/** How the input normalizes the value's case. */
+export type InputTextCase = TextCase;
+
+/** The native `autocapitalize` hints supported by the inner input. */
+export type InputAutocapitalize = "none" | "off" | "sentences" | "on" | "words" | "characters";
+
+const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password"]);
 
 /**
  * A character mask for text-like inputs. `#` matches a digit, `a` a letter and
@@ -56,120 +66,6 @@ export interface InputValueDetails {
   /** The value with every mask literal removed. */
   unmaskedValue: string;
 }
-
-const styles = {
-  host: css({ display: "block" }),
-  root: css({ width: "full" }),
-  control: css({
-    display: "flex",
-    alignItems: "center",
-    width: "full",
-    height: "10",
-    backgroundColor: "surface",
-    borderWidth: "1px",
-    borderStyle: "solid",
-    borderColor: "outlineVariant",
-    rounded: "lg",
-    overflow: "hidden",
-    transition: "border-color 150ms, outline-color 150ms",
-    "&:hover": { borderColor: "outline" },
-    "&:focus-within": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "0",
-      borderColor: "primary",
-    },
-    "&[data-invalid]": { borderColor: "error" },
-    "&[data-readonly]": { backgroundColor: "surfaceContainerLow" },
-    "&[data-disabled]": { opacity: 0.38, cursor: "not-allowed" },
-  }),
-  input: css({
-    flex: "1",
-    minWidth: "0",
-    height: "full",
-    paddingX: "3",
-    fontSize: "sm",
-    color: "onSurface",
-    backgroundColor: "transparent",
-    outlineStyle: "none",
-    outlineWidth: "0",
-    borderWidth: "0",
-    "&::placeholder": { color: "onSurfaceVariant" },
-    "&:disabled": { cursor: "not-allowed" },
-    "&[type=number]": { appearance: "textfield" },
-    "&[type=number]::-webkit-outer-spin-button, &[type=number]::-webkit-inner-spin-button": {
-      appearance: "none",
-      margin: "0",
-    },
-  }),
-  affix: css({
-    display: "flex",
-    alignItems: "center",
-    flexShrink: 0,
-    fontSize: "sm",
-    color: "onSurfaceVariant",
-    "&:empty": { display: "none" },
-  }),
-  affixStart: css({ paddingInlineStart: "3" }),
-  affixEnd: css({ paddingInlineEnd: "3" }),
-  numberTriggers: css({
-    display: "flex",
-    flexDirection: "column",
-    flexShrink: 0,
-    alignSelf: "stretch",
-    marginBlock: "1.5",
-    marginInlineEnd: "2",
-    rounded: "sm",
-    overflow: "hidden",
-    backgroundColor: "surfaceContainerHighest",
-    boxShadow: "sm",
-  }),
-  stepper: css({
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flex: "1",
-    minHeight: "0",
-    paddingX: "1",
-    color: "onSurfaceVariant",
-    cursor: "pointer",
-    fontSize: "sm",
-    backgroundColor: "transparent",
-    borderWidth: "0",
-    "& svg": { width: "10px", height: "10px" },
-    "&:hover": { color: "onSurface", backgroundColor: "surfaceContainerHighest" },
-    "&:focus-visible": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "-2px",
-    },
-    "&:disabled": { opacity: 0.38, cursor: "not-allowed" },
-  }),
-  trigger: css({
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    width: "10",
-    height: "full",
-    color: "onSurfaceVariant",
-    cursor: "pointer",
-    fontSize: "md",
-    backgroundColor: "transparent",
-    borderWidth: "0",
-    "& svg": { width: "20px", height: "20px" },
-    "&:hover": { color: "onSurface" },
-    "&:focus-visible": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "-2px",
-    },
-    "&:disabled": { opacity: 0.38, cursor: "not-allowed" },
-  }),
-};
 
 /**
  * A single-line input with optional masks, number stepping, and a password
@@ -195,6 +91,13 @@ export class QuiInput extends FormControlBase {
   @Prop() mask?: InputMask;
   /** A mask pattern, e.g. `"### ###-####"`. */
   @Prop() maskPattern?: string;
+  /** Normalizes the value's case before masking. Ignored for number inputs. */
+  @Prop() textCase: InputTextCase = "none";
+  /**
+   * Native `autocapitalize` hint for the inner input. When omitted, derives
+   * from `textCase`: `characters` for uppercase and `none` for lowercase.
+   */
+  @Prop() autocapitalizeHint?: InputAutocapitalize;
   /** The controlled value. */
   @Prop() value?: string | number;
   /** The initial value for an uncontrolled input. */
@@ -243,6 +146,7 @@ export class QuiInput extends FormControlBase {
   private holdDelay?: ReturnType<typeof setTimeout>;
   private holdRepeat?: ReturnType<typeof setInterval>;
   private initialValue = "";
+  private rawValue = "";
   private readonly generatedId = nextId("qui-input");
   private readonly form = new FormController({
     getHost: (): HTMLElement => this.host,
@@ -312,11 +216,18 @@ export class QuiInput extends FormControlBase {
 
   @Watch("mask")
   @Watch("maskPattern")
-  private resyncMaskedValue(): void {
-    if (this.inputEl === undefined) {
+  @Watch("textCase")
+  private resyncFormattedValue(): void {
+    const el = this.inputEl;
+    if (el === undefined) {
       return;
     }
-    this.applyValue(this.inputEl.value);
+    const caret = el.selectionStart ?? el.value.length;
+    this.applyValue(this.rawValue);
+    if (this.supportsSelection && el.ownerDocument.activeElement === el) {
+      const position = Math.min(caret, el.value.length);
+      el.setSelectionRange(position, position);
+    }
   }
 
   @Watch("required")
@@ -333,11 +244,31 @@ export class QuiInput extends FormControlBase {
     return this.inputType === "number";
   }
 
+  private get supportsSelection(): boolean {
+    return SELECTABLE_INPUT_TYPES.has(this.inputType);
+  }
+
   private get resolvedType(): string {
     if (this.inputType === "password") {
       return this.passwordVisible ? "text" : "password";
     }
     return this.inputType;
+  }
+
+  private get resolvedAutocapitalize(): InputAutocapitalize | undefined {
+    if (this.autocapitalizeHint !== undefined) {
+      return this.autocapitalizeHint;
+    }
+    if (this.isNumber) {
+      return undefined;
+    }
+    if (this.textCase === "uppercase") {
+      return "characters";
+    }
+    if (this.textCase === "lowercase") {
+      return "none";
+    }
+    return undefined;
   }
 
   private get inputProps(): Record<string, string | number | boolean | undefined> {
@@ -369,8 +300,10 @@ export class QuiInput extends FormControlBase {
   }
 
   private applyValue(raw: string): void {
+    this.rawValue = raw;
     const { pattern } = this;
-    const next = pattern === undefined ? raw : applyMask(raw, pattern);
+    const cased = this.isNumber ? raw : applyTextCase(raw, this.textCase);
+    const next = pattern === undefined ? cased : applyMask(cased, pattern);
     if (this.inputEl !== undefined && this.inputEl.value !== next) {
       this.inputEl.value = next;
     }
@@ -424,32 +357,54 @@ export class QuiInput extends FormControlBase {
     }\u0001${element?.validity.valid === true ? 1 : 0}\u0001${element?.validationMessage ?? ""}`;
   }
 
+  private caseAtCaret(value: string, caret: number): { caret: number; value: string } {
+    if (this.isNumber) {
+      return { caret, value };
+    }
+    const cased = applyTextCase(value, this.textCase);
+    if (cased === value) {
+      return { caret, value };
+    }
+    return { caret: applyTextCase(value.slice(0, caret), this.textCase).length, value: cased };
+  }
+
+  private commitInput(
+    el: HTMLInputElement,
+    result: { caret: number; unmaskedValue: string; value: string },
+  ): void {
+    if (result.value !== el.value) {
+      el.value = result.value;
+      if (this.supportsSelection) {
+        el.setSelectionRange(result.caret, result.caret);
+      }
+    }
+    if (this.isNumber) {
+      this.currentValue = result.value;
+    }
+    this.emitValue(result.value, result.unmaskedValue);
+    this.form.sync();
+  }
+
   private readonly handleInput = (event: Event): void => {
     const el = event.target;
     if (!isHTMLInputElement(el)) {
       return;
     }
     const { pattern } = this;
+    const caret = el.selectionStart ?? el.value.length;
+    const raw = pattern === undefined ? el.value : rawFromMasked(el.value, pattern);
+    const rawCaret =
+      pattern === undefined ? caret : rawFromMasked(el.value.slice(0, caret), pattern).length;
+    this.rawValue = raw;
+    const cased = this.caseAtCaret(raw, rawCaret);
+
     if (pattern === undefined) {
-      if (this.isNumber) {
-        this.currentValue = el.value;
-      }
-      this.emitValue(el.value, el.value);
-      this.form.sync();
+      this.commitInput(el, { ...cased, unmaskedValue: cased.value });
       return;
     }
 
-    const caret = el.selectionStart ?? el.value.length;
-    const next = formatMask(el.value, pattern, caret);
-    if (next.value !== el.value) {
-      el.value = next.value;
-      el.setSelectionRange(next.caret, next.caret);
-    }
-    if (this.isNumber) {
-      this.currentValue = next.value;
-    }
-    this.emitValue(next.value, unmask(next.value));
-    this.form.sync();
+    const next = formatMask(cased.value, pattern, cased.caret);
+    this.commitInput(el, { ...next, unmaskedValue: unmask(next.value) });
   };
 
   private emitValue(value: string, unmaskedValue: string): void {
@@ -550,6 +505,7 @@ export class QuiInput extends FormControlBase {
               type={this.resolvedType}
               placeholder={this.placeholder}
               autocomplete={this.autocomplete}
+              autocapitalize={this.resolvedAutocapitalize}
               inputMode={this.inputModeHint}
               maxLength={this.maxLength}
               minLength={this.minLength}

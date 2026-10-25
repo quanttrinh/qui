@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { applyMask, formatMask, unmask } from "./mask";
+import { applyMask, formatMask, rawFromMasked, unmask } from "./mask";
 
 describe("mask helpers", () => {
   it("applies digits, letters, and alphanumeric placeholders", () => {
@@ -25,5 +25,11 @@ describe("mask helpers", () => {
     expect(formatMask("1234", "###-###", 3)).toEqual({ value: "123-4", caret: 3 });
     expect(formatMask("1234", "###-###", 1)).toEqual({ value: "123-4", caret: 1 });
     expect(formatMask("12a", "###-###", 3)).toEqual({ value: "12", caret: 2 });
+  });
+
+  it("extracts raw data without consuming mask literals", () => {
+    expect(rawFromMasked("+1 555 123 4567", "+1 ### ### ####")).toBe("5551234567");
+    expect(rawFromMasked("X-AB-1234", "X-aa-####")).toBe("AB1234");
+    expect(rawFromMasked("AB-1234", "aa-####")).toBe("AB1234");
   });
 });
