@@ -2,7 +2,6 @@ import { SHADOW_STYLES_MARKER } from "./styles";
 
 export interface ShadowStylesheetOptions {
   href: string | string[];
-  attribute?: string;
 }
 
 /**
@@ -19,16 +18,15 @@ type StylesheetRoot = Document | ShadowRoot;
 interface InjectionContext {
   document: Document;
   hrefs: string[];
-  attribute: string;
 }
 
 const DEFAULT_ATTRIBUTE = "data-qui-styles";
 
 function injectStylesheetLinks(context: InjectionContext, root: StylesheetRoot): void {
-  const { attribute, document, hrefs } = context;
+  const { document, hrefs } = context;
   const existing = new Set<string>();
   for (const link of root.querySelectorAll("link")) {
-    if (link.hasAttribute(attribute)) {
+    if (link.hasAttribute(DEFAULT_ATTRIBUTE)) {
       existing.add(link.getAttribute("href") ?? "");
     }
   }
@@ -39,7 +37,7 @@ function injectStylesheetLinks(context: InjectionContext, root: StylesheetRoot):
       const link = document.createElement("link");
       link.setAttribute("rel", "stylesheet");
       link.setAttribute("href", href);
-      link.setAttribute(attribute, "");
+      link.setAttribute(DEFAULT_ATTRIBUTE, "");
       if (reference) {
         // Stencil's mock document does not implement Element.before().
         // oxlint-disable-next-line unicorn/prefer-modern-dom-apis
@@ -71,16 +69,11 @@ function visitRoot(context: InjectionContext, root: StylesheetRoot): void {
  * touches the document it is given and performs no work at module load.
  */
 export function injectShadowStylesheet(document: Document, options: ShadowStylesheetOptions): void {
-  const hrefs = Array.isArray(options.href) ? options.href : [options.href];
+  const hrefs = (Array.isArray(options.href) ? options.href : [options.href]).filter(
+    (href) => href.length > 0,
+  );
   if (hrefs.length > 0) {
-    visitRoot(
-      {
-        document,
-        hrefs,
-        attribute: options.attribute ?? DEFAULT_ATTRIBUTE,
-      },
-      document,
-    );
+    visitRoot({ document, hrefs }, document);
   }
 }
 

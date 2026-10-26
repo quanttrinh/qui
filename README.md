@@ -226,8 +226,11 @@ component subpaths when bundle size matters.
 `@quanttrinh/qui/unplugin` scans JSX/TSX and MDX source for used `qui-*` tags.
 For client modules it injects one static registration module per set of
 components. It also configures the shared stylesheet used by shadow roots, so
-plugin-managed styling works without a separate `data-qui-styles` link. Astro
-pages need the explicit registration script described below.
+plugin-managed styling works without a separate `data-qui-styles` link. With
+the default `styles` option the virtual styles module imports `theme.css` and
+embeds `styles.css`; do not also add the Quick start CSS imports, or the shared
+CSS is emitted twice. Astro pages need the explicit registration script
+described below.
 
 The plugin uses unplugin v3, which is ESM-only and requires Node.js `20.19+`
 within Node 20, or `22.12+`. Node 21 is not supported.

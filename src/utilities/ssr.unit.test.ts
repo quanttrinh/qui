@@ -102,6 +102,16 @@ describe("injectShadowStylesheet", () => {
     expect(linkHrefs(root)).toEqual(["theme.css"]);
   });
 
+  it("ignores empty hrefs", () => {
+    const document = createFakeDocument();
+    const { host, root } = createHost(document, "qui-card");
+    markStyled(host);
+
+    injectShadowStylesheet(document as unknown as Document, { href: "" });
+
+    expect(linkHrefs(root)).toEqual([]);
+  });
+
   it("inserts multiple hrefs as the first children in order", () => {
     const document = createFakeDocument();
     const { host, root } = createHost(document, "qui-card");

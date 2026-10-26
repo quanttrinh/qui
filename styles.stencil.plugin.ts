@@ -35,6 +35,8 @@ const STYLED_SYSTEM = "styled-system";
 const COMPONENTS = "components";
 const SHARED_PLACEHOLDER = "/* Styles are provided by the shared stylesheet. */\n";
 const CONFIG_INPUTS = ["panda.config.ts", "panda.theme.config.ts"];
+const KEBAB_SEGMENT = /-([a-z])/gu;
+const COMPONENT_TAG = /tag:\s*"([^"]+)"/u;
 
 let pluginState: PluginState | undefined;
 
@@ -54,7 +56,7 @@ function relativePath(root: string, file: string): string {
 }
 
 function styleUrlKey(name: string): string {
-  return name.replaceAll(/-([a-z])/g, (_match, character: string) => character.toUpperCase());
+  return name.replaceAll(KEBAB_SEGMENT, (_match, character: string) => character.toUpperCase());
 }
 
 function writeIfChanged(file: string, contents: string | Buffer): void {
@@ -145,7 +147,7 @@ function findComponents(root: string): ComponentEntry[] {
       if (!source.includes("@Component(")) {
         return [];
       }
-      const tag = source.match(/tag:\s*"([^"]+)"/)?.[1];
+      const tag = source.match(COMPONENT_TAG)?.[1];
       if (tag === undefined) {
         return [];
       }
