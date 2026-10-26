@@ -59,13 +59,13 @@ export class QuiIcon {
   public render(): VNode {
     const labelled = this.label !== undefined && this.label !== "";
     return (
-      <Host
-        class={styles.host}
-        role={labelled ? "img" : undefined}
-        aria-label={labelled ? this.label : undefined}
-        aria-hidden={labelled ? undefined : "true"}
-      >
-        <span class={styles.root} part="icon">
+      <Host class={styles.host} aria-hidden={labelled ? undefined : "true"}>
+        <span
+          class={styles.root}
+          part="icon"
+          role={labelled ? "img" : undefined}
+          aria-label={labelled ? this.label : undefined}
+        >
           <svg
             class={styles.svg}
             viewBox={this.viewBox}

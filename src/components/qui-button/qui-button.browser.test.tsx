@@ -40,6 +40,17 @@ describe("qui-button", () => {
     expect(anchor.getAttribute("href")).toBe("/target");
   });
 
+  it("labels an icon-only button through the internal control", async () => {
+    const { root } = await render(
+      <qui-button iconOnly label="Add">
+        +
+      </qui-button>,
+    );
+    const button = queryPartIn<HTMLButtonElement>(root, "button");
+
+    expect(button).toHaveAttribute("aria-label", "Add");
+  });
+
   it("disables the native button", async () => {
     const { root } = await render(<qui-button disabled>Save</qui-button>);
     const button = queryPartIn<HTMLButtonElement>(root, "button");

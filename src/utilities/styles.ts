@@ -12,7 +12,7 @@ export const DEFAULT_SKIP_TAGS = [
 
 const SKIPPED_TAGS = new Set<string>(DEFAULT_SKIP_TAGS);
 const discoveredHrefs = new WeakMap<Document, string[] | undefined>();
-const observedDocuments = new WeakSet<Document>();
+const documentObservers = new WeakMap<Document, MutationObserver>();
 // oxlint-disable-next-line stencil/ban-side-effects -- Symbol.for is a pure global registry lookup.
 const GLOBAL_HREF_KEY = Symbol.for("@quanttrinh/qui/styles-href");
 
@@ -55,8 +55,9 @@ function getDocument(host?: HTMLElement): Document | undefined {
 }
 
 function invalidateDocumentLinkCache(document: Document): void {
+  documentObservers.get(document)?.disconnect();
+  documentObservers.delete(document);
   discoveredHrefs.delete(document);
-  observedDocuments.delete(document);
 }
 
 function discoverDocumentHrefs(document: Document): string[] | undefined {
@@ -77,9 +78,8 @@ function discoverDocumentHrefs(document: Document): string[] | undefined {
   const result = hrefs.length > 0 ? hrefs : undefined;
   discoveredHrefs.set(document, result);
 
-  if (!observedDocuments.has(document) && typeof MutationObserver !== "undefined") {
+  if (!documentObservers.has(document) && typeof MutationObserver !== "undefined") {
     const observer = new MutationObserver(() => {
-      observer.disconnect();
       invalidateDocumentLinkCache(document);
     });
     observer.observe(document.head, {
@@ -88,7 +88,7 @@ function discoverDocumentHrefs(document: Document): string[] | undefined {
       attributes: true,
       attributeFilter: ["href", DEFAULT_ATTRIBUTE],
     });
-    observedDocuments.add(document);
+    documentObservers.set(document, observer);
   }
 
   return result;
@@ -119,6 +119,27 @@ function createStylesheetLink(document: Document, href: string): HTMLLinkElement
   link.setAttribute("href", href);
   link.setAttribute(DEFAULT_ATTRIBUTE, "");
   return link;
+}
+
+/** Reconciles marked document links so their hrefs match the configured list. */
+function reconcileDocumentStylesheetLinks(document: Document, hrefs: string[]): void {
+  const links: HTMLLinkElement[] = [];
+  for (const link of document.querySelectorAll("link")) {
+    if (link.hasAttribute(DEFAULT_ATTRIBUTE)) {
+      links.push(link);
+    }
+  }
+
+  for (const [index, link] of links.entries()) {
+    if (index < hrefs.length) {
+      const href = hrefs[index];
+      if (link.getAttribute("href") !== href) {
+        link.setAttribute("href", href);
+      }
+    } else {
+      link.remove();
+    }
+  }
 }
 
 /**
@@ -227,10 +248,11 @@ export function ensureShadowStylesheet(host: HTMLElement): void {
 /**
  * Configures the stylesheet href(s) used by `ensureShadowStylesheet`.
  *
- * When a document is available, existing `qui-*` shadow roots and roots that
- * already contain a managed link are reconciled immediately. Components that
- * connect later pick up the configuration through `ensureShadowStylesheet`.
- * This call is safe during SSR; without a document it only stores the value.
+ * When a document is available, marked document links, existing `qui-*` shadow
+ * roots, and roots that already contain a managed link are reconciled
+ * immediately. Components that connect later pick up the configuration through
+ * `ensureShadowStylesheet`. This call is safe during SSR; without a document it
+ * only stores the value.
  */
 export function setQuiStylesHref(href: string | string[]): void {
   const value = Array.isArray(href) ? uniqueHrefs(href) : href;
@@ -242,6 +264,8 @@ export function setQuiStylesHref(href: string | string[]): void {
   }
 
   const hrefs = uniqueHrefs(value);
+  invalidateDocumentLinkCache(document);
+  reconcileDocumentStylesheetLinks(document, hrefs);
   for (const root of collectShadowRoots(document)) {
     reconcileStylesheetLinks(root, document, hrefs);
   }
@@ -254,6 +278,7 @@ export function resetQuiStylesHref(): void {
   if (!document) {
     return;
   }
+  invalidateDocumentLinkCache(document);
   for (const root of collectShadowRoots(document)) {
     reconcileStylesheetLinks(root, document, []);
   }

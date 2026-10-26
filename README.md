@@ -93,16 +93,22 @@ required:
 
 ```html
 <qui-button>
-    <qui-icon label="Add" view-box="0 0 24 24" path="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5z"></qui-icon>
+    <qui-icon view-box="0 0 24 24" path="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5z"></qui-icon>
     Add item
+</qui-button>
+
+<qui-button icon-only label="Add">
+    <qui-icon view-box="0 0 24 24" path="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5z"></qui-icon>
 </qui-button>
 ```
 
 `view-box` defaults to `0 0 24 24`. Material Symbols paths use
 `view-box="0 -960 960 960"`. Omit `label` for a decorative icon; provide it to
-expose an accessible name. The icon inherits `font-size` and `color`. Its host
-uses `display: contents`; style the icon box through `qui-icon::part(icon)`.
-Any icon element can be used in a qui slot, so other icon packages work too.
+expose an accessible name on the icon box. The icon inherits `font-size` and
+`color`. Its host uses `display: contents`; the inner icon box carries the
+accessible role and can be styled or resized through
+`qui-icon::part(icon)`. Any icon element can be used in a qui slot, so other
+icon packages work too.
 
 ## Field composition
 
@@ -302,6 +308,12 @@ together so field, tabs, dialog and option context works during SSR.
 Cross-shadow-root ARIA relationships activate after hydration. DSD provides the
 structure and styles before JavaScript loads, but element-reflection wiring is
 established by the client component lifecycle.
+
+IDREF lookup is scoped to a node tree, so the `aria-labelledby` and
+`aria-controls` fallback cannot resolve a target in a different shadow root.
+Browsers without ARIA element reflection keep the attributes but may not
+announce those cross-root relationships. Servers should therefore treat
+cross-root accessible names as a post-hydration enhancement.
 
 After hydration, register the same components on the client with
 `defineComponents()`. Dynamically created components use the stylesheet URL from

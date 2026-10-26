@@ -3,6 +3,7 @@ import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/co
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
+import { isElement } from "../../helpers/dom";
 import { consumeContextPart } from "../shared/context-part";
 import { ContextPartElement } from "../shared/context-part-element";
 import { consumeField, type FieldApi } from "../shared/field/context";
@@ -11,6 +12,9 @@ import { fieldStyles } from "./styles";
 const styles = {
   host: css({ display: "block" }),
 };
+
+const INTERACTIVE_DESCENDANT =
+  'a[href], button, input, select, textarea, summary, [contenteditable="true"], [role="button"], [tabindex]:not([tabindex="-1"])';
 
 /**
  * The label part of a `qui-field`.
@@ -39,9 +43,22 @@ export class QuiFieldLabel extends ContextPartElement<FieldApi> {
     return this.contextPart.context;
   }
 
-  private readonly handleClick = (): void => {
-    this.field?.focusControl();
-    this.field?.clickControl();
+  private readonly handleClick = (event: MouseEvent): void => {
+    const { field } = this;
+    if (field === undefined || field.disabled()) {
+      return;
+    }
+
+    const { currentTarget } = event;
+    const path = event.composedPath();
+    const labelIndex = currentTarget === null ? -1 : path.indexOf(currentTarget);
+    const labelContent = labelIndex === -1 ? path : path.slice(0, labelIndex);
+    if (labelContent.some((node) => isElement(node) && node.matches(INTERACTIVE_DESCENDANT))) {
+      return;
+    }
+
+    field.focusControl();
+    field.clickControl();
   };
 
   public render(): VNode {

@@ -2,8 +2,9 @@ import { describe, expect, h, it, render } from "@stencil/vitest";
 
 import { expectAriaElements } from "../../test-utils/aria";
 import { queryHost, queryPartIn } from "../../test-utils/component";
+import { waitForShadowStyles } from "../../test-utils/dom-ready";
 import { expectFocusedDeep } from "../../test-utils/interactions";
-import { shadowOf } from "../../test-utils/shadow";
+import { isDeepActiveElement, shadowOf } from "../../test-utils/shadow";
 
 function queryParts(root: HTMLElement): {
   labelHost: HTMLElement;
@@ -22,6 +23,7 @@ function queryParts(root: HTMLElement): {
   };
 }
 
+// oxlint-disable-next-line eslint/max-lines-per-function -- Integration-style browser coverage.
 describe("qui-field", () => {
   it("wires ids and ARIA across label, helper text, and error text", async () => {
     const { root, waitForChanges } = await render(
@@ -57,12 +59,14 @@ describe("qui-field", () => {
   });
 
   it("keeps host layout minimal and styles the inner root", async () => {
-    const { root } = await render(
+    const { root, waitForChanges } = await render(
       <qui-field id="email" disabled>
         <qui-field-label>Email</qui-field-label>
         <qui-input />
       </qui-field>,
     );
+    await waitForChanges();
+    await waitForShadowStyles(root);
     const visualRoot = queryPartIn(root, "root");
 
     expect(getComputedStyle(root).display).toBe("block");
@@ -153,6 +157,66 @@ describe("qui-field", () => {
     label.click();
 
     expectFocusedDeep(input);
+  });
+
+  it("does not activate or focus a disabled control from its label", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-field id="disabled" disabled>
+        <qui-field-label>Disabled</qui-field-label>
+        <qui-checkbox />
+      </qui-field>,
+    );
+
+    await waitForChanges();
+
+    const label = queryPartIn<HTMLLabelElement>(queryHost(root, "qui-field-label"), "label");
+    const input = queryPartIn<HTMLInputElement>(queryHost(root, "qui-checkbox"), "input");
+    input.blur();
+    label.click();
+    await waitForChanges();
+
+    expect(input.checked).toBe(false);
+    expect(isDeepActiveElement(input)).toBe(false);
+  });
+
+  it("focuses a read-only control from its label", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-field id="readonly" readOnly>
+        <qui-field-label>Read only</qui-field-label>
+        <qui-input />
+      </qui-field>,
+    );
+
+    await waitForChanges();
+
+    const label = queryPartIn<HTMLLabelElement>(queryHost(root, "qui-field-label"), "label");
+    const input = queryPartIn<HTMLInputElement>(queryHost(root, "qui-input"), "input");
+    input.blur();
+    label.click();
+
+    expectFocusedDeep(input);
+  });
+
+  it("does not focus the control when an interactive label descendant is clicked", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-field id="interactive-label">
+        <qui-field-label>
+          Email
+          <button type="button">Help</button>
+        </qui-field-label>
+        <qui-input />
+      </qui-field>,
+    );
+
+    await waitForChanges();
+
+    const labelHost = queryHost(root, "qui-field-label");
+    const input = queryPartIn<HTMLInputElement>(queryHost(root, "qui-input"), "input");
+    const button = queryHost<HTMLButtonElement>(labelHost, "button");
+    input.blur();
+    button.click();
+
+    expect(isDeepActiveElement(input)).toBe(false);
   });
 
   it("does not let host part attributes break context lifecycles", async () => {

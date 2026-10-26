@@ -5,7 +5,7 @@
 Add the `@quanttrinh/qui/runtime` stylesheet helpers.
 
 - `setQuiStylesHref()` configures one or more stylesheet URLs and updates
-  existing shadow roots.
+  existing shadow roots and marked document links.
 - `getQuiStylesHref()` returns the configured URL or the document
   `link[data-qui-styles]` fallback.
 - `ensureShadowStylesheet()` adds or reconciles the managed stylesheet link in a

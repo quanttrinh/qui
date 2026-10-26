@@ -20,4 +20,5 @@ const { html } = await renderToString(
 `injectShadowStylesheet()` is also exported for callers that already own the
 hydration document. Data-only and host-only roots such as `qui-option`, `qui-dialog`, and the
 field helper/error/required parts are skipped by default; `skipTags` customizes
-the list.
+the list. The README documents that cross-root ARIA wiring starts after
+hydration.

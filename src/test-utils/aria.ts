@@ -17,7 +17,19 @@ export type AriaElementProperty =
 export type AriaExpectations = Partial<Record<AriaElementProperty, readonly Element[]>>;
 
 /** Direction of a trigger/target relationship. */
-export type AriaLinkDirection = "controls" | "labelledby";
+export type AriaLinkDirection = "controls" | "describedby" | "labelledby";
+
+const linkedProperties: Record<AriaLinkDirection, AriaElementProperty> = {
+  controls: "ariaControlsElements",
+  describedby: "ariaDescribedByElements",
+  labelledby: "ariaLabelledByElements",
+};
+
+const linkedAttributes: Record<AriaLinkDirection, string> = {
+  controls: "aria-controls",
+  describedby: "aria-describedby",
+  labelledby: "aria-labelledby",
+};
 
 const ariaElementProperties = [
   "ariaControlsElements",
@@ -51,19 +63,20 @@ export function expectAriaElements(element: Element, expected: AriaExpectations)
 }
 
 /**
- * Asserts a trigger/target link. `controls` checks the trigger's
- * `ariaControlsElements`; `labelledby` checks the target's
- * `ariaLabelledByElements`.
+ * Asserts a trigger/target link using element reflection when available and
+ * the IDREF attribute otherwise.
  */
 export function expectLinked(
   element: Element,
   target: Element,
   direction: AriaLinkDirection,
 ): void {
-  if (direction === "controls") {
-    expectAriaElements(element, { ariaControlsElements: [target] });
+  const property = linkedProperties[direction];
+  const reflected = ariaElements(element, property);
+  if (reflected.length > 0) {
+    expect(reflected, `${property} on ${element.tagName}`).toEqual([target]);
     return;
   }
 
-  expectAriaElements(element, { ariaLabelledByElements: [target] });
+  expect(element.getAttribute(linkedAttributes[direction])).toBe(target.id);
 }

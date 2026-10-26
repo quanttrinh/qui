@@ -136,9 +136,36 @@ describe("ensureShadowStylesheet", () => {
     expect(linkHrefs(root)).toEqual(["discovered.css"]);
     expect(styles.getQuiStylesHref()).toBe("discovered.css");
   });
+
+  it("caches document link discovery between components", () => {
+    const document = createFakeDocument();
+    useDocument(document);
+    createDocumentLink(document, "discovered.css");
+    const first = createHost(document);
+    const second = createHost(document);
+    const querySelectorAll = vi.spyOn(document, "querySelectorAll");
+
+    styles.ensureShadowStylesheet(first.host as unknown as HTMLElement);
+    styles.ensureShadowStylesheet(second.host as unknown as HTMLElement);
+
+    expect(linkHrefs(first.root)).toEqual(["discovered.css"]);
+    expect(linkHrefs(second.root)).toEqual(["discovered.css"]);
+    expect(querySelectorAll).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("setQuiStylesHref", () => {
+  it("updates marked document links", () => {
+    const document = createFakeDocument();
+    useDocument(document);
+    const documentLink = createDocumentLink(document, "old.css");
+
+    styles.setQuiStylesHref("new.css");
+
+    expect(documentLink.getAttribute("href")).toBe("new.css");
+    expect(styles.getQuiStylesHref()).toBe("new.css");
+  });
+
   it("updates links in existing qui shadow roots", () => {
     const document = createFakeDocument();
     useDocument(document);
@@ -195,5 +222,6 @@ describe("setQuiStylesHref", () => {
 
     expect(linkHrefs(root)).toEqual([]);
     expect(styles.getQuiStylesHref()).toEqual([]);
+    expect(document.querySelectorAll("link")).toEqual([]);
   });
 });

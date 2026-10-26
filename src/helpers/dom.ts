@@ -6,6 +6,10 @@
  * narrowing in browsers and server rendering without relying on those globals.
  */
 
+export function isElement(value: unknown): value is Element {
+  return value instanceof Element;
+}
+
 export function isHTMLElement(value: unknown): value is HTMLElement {
   return value instanceof HTMLElement;
 }

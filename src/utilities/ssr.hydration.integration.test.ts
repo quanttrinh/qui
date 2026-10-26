@@ -37,6 +37,7 @@ let origin: string;
 let buttonHtml: string;
 let fieldHtml: string;
 let iconHtml: string;
+let iconButtonHtml: string;
 
 function buildPage(hydrate: boolean, content = buttonHtml): string {
   return `<!doctype html><html><head>
@@ -93,6 +94,10 @@ function handleRequest(request: http.IncomingMessage, response: http.ServerRespo
     serveHtml(response, true, iconHtml);
     return;
   }
+  if (request.url === "/icon-button") {
+    serveHtml(response, true, iconButtonHtml);
+    return;
+  }
   if (serveStatic(response, request.url)) {
     return;
   }
@@ -129,8 +134,10 @@ async function buttonMetrics(page: Page): Promise<{ background: string; height: 
 
 async function waitForShadowStylesheet(page: Page, tagName: string): Promise<void> {
   await page.waitForFunction((tag) => {
-    const link = document.querySelector(tag)?.shadowRoot?.querySelector("link[data-qui-styles]");
-    return link instanceof HTMLLinkElement && link.sheet !== null;
+    const link = document
+      .querySelector(tag)
+      ?.shadowRoot?.querySelector<HTMLLinkElement>("link[data-qui-styles]");
+    return link !== null && link !== undefined && link.sheet !== null;
   }, tagName);
 }
 
@@ -171,7 +178,7 @@ async function accessibilityTree(page: Page): Promise<AxNode[]> {
 
 beforeAll(async () => {
   const { renderToString } = await loadHydrate();
-  const [buttonResult, fieldResult, iconResult] = await Promise.all([
+  const [buttonResult, fieldResult, iconResult, iconButtonResult] = await Promise.all([
     renderToString(
       '<qui-button variant="filled">Save</qui-button>',
       withShadowStylesheet({ href: "/styles.css" }, { fullDocument: false }),
@@ -184,13 +191,22 @@ beforeAll(async () => {
       '<qui-icon label="Add" path="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5z"></qui-icon>',
       withShadowStylesheet({ href: "/styles.css" }, { fullDocument: false }),
     ),
+    renderToString(
+      '<qui-button icon-only label="Add"><qui-icon path="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5z"></qui-icon></qui-button>',
+      withShadowStylesheet({ href: "/styles.css" }, { fullDocument: false }),
+    ),
   ]);
   buttonHtml = buttonResult.html;
   fieldHtml = fieldResult.html;
   iconHtml = iconResult.html;
+  iconButtonHtml = iconButtonResult.html;
   expect(buttonResult.diagnostics).toEqual([]);
   expect(fieldResult.diagnostics).toEqual([]);
   expect(iconResult.diagnostics).toEqual([]);
+  expect(iconButtonResult.diagnostics).toEqual([]);
+  // SSR emits the IDREF fallback; cross-root reflection is wired on hydration.
+  expect(fieldHtml).toContain('aria-labelledby="email::label"');
+  expect(fieldHtml).toContain('aria-describedby="email::helper-text"');
   await startServer();
 }, 15_000);
 
@@ -220,6 +236,45 @@ describe.each(engines)("shadow DOM hydration in $name", ({ type }) => {
       const metrics = await buttonMetrics(page);
       expect(metrics.height).toBe("40px");
       expect(metrics.background).not.toBe("rgba(0, 0, 0, 0)");
+    } finally {
+      await page.close();
+    }
+  }, 15_000);
+
+  it("exposes the button by role and name", async () => {
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${origin}/hydrated`, { waitUntil: "load" });
+      await page.waitForFunction(() => customElements.get("qui-button") !== undefined);
+      await waitForShadowStylesheet(page, "qui-button");
+
+      expect(await page.getByRole("button", { name: "Save" }).count()).toBe(1);
+    } finally {
+      await page.close();
+    }
+  }, 15_000);
+
+  it("exposes a labelled icon by role and name", async () => {
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${origin}/icon`, { waitUntil: "load" });
+      await page.waitForFunction(() => customElements.get("qui-icon") !== undefined);
+      await waitForShadowStylesheet(page, "qui-icon");
+
+      expect(await page.getByRole("img", { name: "Add" }).count()).toBe(1);
+    } finally {
+      await page.close();
+    }
+  }, 15_000);
+
+  it("names an icon-only button from its labelled icon", async () => {
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${origin}/icon-button`, { waitUntil: "load" });
+      await page.waitForFunction(() => customElements.get("qui-button") !== undefined);
+      await waitForShadowStylesheet(page, "qui-button");
+
+      expect(await page.getByRole("button", { name: "Add" }).count()).toBe(1);
     } finally {
       await page.close();
     }
@@ -298,6 +353,25 @@ describe("Chromium accessibility tree", () => {
       );
 
       expect(icon).toBeDefined();
+    } finally {
+      await page.close();
+    }
+  }, 15_000);
+
+  it("exposes an icon-only button by role and name", async () => {
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${origin}/icon-button`, { waitUntil: "load" });
+      await page.waitForFunction(() => customElements.get("qui-button") !== undefined);
+      await waitForShadowStylesheet(page, "qui-button");
+
+      const nodes = await accessibilityTree(page);
+      const button = nodes.find(
+        (node) =>
+          node.ignored !== true && node.role?.value === "button" && node.name?.value === "Add",
+      );
+
+      expect(button).toBeDefined();
     } finally {
       await page.close();
     }

@@ -224,6 +224,16 @@ describe("importInjectionOffset", () => {
     expect(crlf.slice(importInjectionOffset(crlf))).toBe("<qui-button />");
   });
 
+  it("handles frontmatter ending at EOF and trailing fence whitespace", () => {
+    const eof = "---\n---";
+    const crlfEof = "---\r\n---";
+    const trailing = "---\ntitle: Example\n---   \n<qui-button />";
+
+    expect(importInjectionOffset(eof)).toBe(eof.length);
+    expect(importInjectionOffset(crlfEof)).toBe(crlfEof.length);
+    expect(trailing.slice(importInjectionOffset(trailing))).toBe("<qui-button />");
+  });
+
   it("uses the start when there is no frontmatter", () => {
     expect(importInjectionOffset("export const value = 1;")).toBe(0);
   });

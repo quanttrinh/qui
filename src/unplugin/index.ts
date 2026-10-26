@@ -116,7 +116,9 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
         if (offset === 0) {
           source.prepend(importStatement);
         } else {
-          source.appendLeft(offset, importStatement);
+          // A frontmatter block may end at EOF without a trailing newline.
+          const separator = code.slice(0, offset).endsWith("\n") ? "" : "\n";
+          source.appendLeft(offset, `${separator}${importStatement}`);
         }
         return {
           code: source.toString(),

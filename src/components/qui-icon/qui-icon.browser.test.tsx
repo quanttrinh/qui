@@ -18,11 +18,13 @@ describe("qui-icon", () => {
     expect(queryPartIn(root, "icon").localName).toBe("span");
   });
 
-  it("exposes an accessible name when labelled", async () => {
+  it("exposes an accessible name on the icon box when labelled", async () => {
     const { root } = await render(<qui-icon label="Add" path={ADD_PATH} />);
+    const icon = queryPartIn(root, "icon");
 
-    expect(root).toHaveAttribute("role", "img");
-    expect(root).toHaveAttribute("aria-label", "Add");
+    expect(icon).toHaveAttribute("role", "img");
+    expect(icon).toHaveAttribute("aria-label", "Add");
+    expect(root).not.toHaveAttribute("role");
     expect(root).not.toHaveAttribute("aria-hidden");
   });
 });

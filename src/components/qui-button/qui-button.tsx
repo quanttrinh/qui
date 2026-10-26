@@ -97,6 +97,8 @@ export class QuiButton {
   @Prop() size: ButtonSize = "md";
   /** Renders a square button sized for a single icon. */
   @Prop() iconOnly = false;
+  /** Accessible name, primarily for icon-only buttons. */
+  @Prop() label?: string;
   /** Disables the control. */
   @Prop() disabled = false;
   /** When provided, renders an anchor instead of a button. */
@@ -137,6 +139,7 @@ export class QuiButton {
             rel={this.rel}
             download={this.download}
             tabIndex={this.disabled ? -1 : undefined}
+            aria-label={this.label === undefined || this.label === "" ? undefined : this.label}
             aria-disabled={this.disabled ? "true" : undefined}
             onClick={(event) => {
               if (this.disabled) {
@@ -153,6 +156,7 @@ export class QuiButton {
             class={styles.root}
             type={this.type}
             disabled={this.disabled}
+            aria-label={this.label === undefined || this.label === "" ? undefined : this.label}
           >
             <slot />
           </button>

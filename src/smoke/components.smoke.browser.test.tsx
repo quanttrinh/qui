@@ -1,7 +1,8 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { expectAriaElements } from "../test-utils/aria";
+import { expectLinked } from "../test-utils/aria";
 import { queryControl, queryHost, queryPartIn } from "../test-utils/component";
+import { waitForShadowStyles } from "../test-utils/dom-ready";
 
 describe("cross-browser smoke", () => {
   it("renders a component in a shadow root", async () => {
@@ -14,11 +15,13 @@ describe("cross-browser smoke", () => {
   });
 
   it("keeps host layout separate from the visual root", async () => {
-    const { root } = await render(
+    const { root, waitForChanges } = await render(
       <qui-card variant="filled">
         <span>Content</span>
       </qui-card>,
     );
+    await waitForChanges();
+    await waitForShadowStyles(root);
     const visualRoot = queryPartIn(root, "root");
 
     expect(getComputedStyle(root).display).toBe("block");
@@ -43,7 +46,7 @@ describe("cross-browser smoke", () => {
     expect(label.htmlFor).toBe(input.id);
     expect(label).toHaveAttribute("data-required");
     expect(input.type).toBe("email");
-    expectAriaElements(input, { ariaLabelledByElements: [labelHost] });
+    expectLinked(input, labelHost, "labelledby");
   });
 
   it("names a dialog across shadow roots", async () => {
@@ -62,9 +65,49 @@ describe("cross-browser smoke", () => {
     const titleHost = queryHost(root, "qui-dialog-title");
     const descriptionHost = queryHost(root, "qui-dialog-description");
 
-    expectAriaElements(dialog, {
-      ariaLabelledByElements: [titleHost],
-      ariaDescribedByElements: [descriptionHost],
-    });
+    expectLinked(dialog, titleHost, "labelledby");
+    expectLinked(dialog, descriptionHost, "describedby");
+  });
+
+  it("links tabs across shadow roots", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-tabs defaultValue="one">
+        <qui-tab-list>
+          <qui-tab-trigger value="one">One</qui-tab-trigger>
+        </qui-tab-list>
+        <qui-tab-panel value="one">One panel</qui-tab-panel>
+      </qui-tabs>,
+    );
+
+    await waitForChanges();
+
+    const triggerHost = queryHost(root, "qui-tab-trigger");
+    const trigger = queryPartIn<HTMLButtonElement>(triggerHost, "trigger");
+    const panelHost = queryHost(root, "qui-tab-panel");
+    const panel = queryPartIn<HTMLDivElement>(panelHost, "panel");
+
+    expectLinked(trigger, panelHost, "controls");
+    expectLinked(panel, triggerHost, "labelledby");
+  });
+
+  it("links accordion parts across shadow roots", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-accordion>
+        <qui-accordion-item value="one">
+          <qui-accordion-trigger>One</qui-accordion-trigger>
+          <qui-accordion-content>One content</qui-accordion-content>
+        </qui-accordion-item>
+      </qui-accordion>,
+    );
+
+    await waitForChanges();
+
+    const triggerHost = queryHost(root, "qui-accordion-trigger");
+    const trigger = queryPartIn<HTMLButtonElement>(triggerHost, "trigger");
+    const contentHost = queryHost(root, "qui-accordion-content");
+    const content = queryPartIn<HTMLDivElement>(contentHost, "content");
+
+    expectLinked(trigger, contentHost, "controls");
+    expectLinked(content, triggerHost, "labelledby");
   });
 });

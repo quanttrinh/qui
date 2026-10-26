@@ -111,7 +111,7 @@ export function importInjectionOffset(code: string): number {
   if (!code.startsWith("---")) {
     return 0;
   }
-  const match = /^---\r?\n(?:[\s\S]*?\r?\n)?---(?:\r?\n|$)/u.exec(code);
+  const match = /^---[^\S\r\n]*(?:\r?\n)(?:[\s\S]*?\r?\n)?---[^\S\r\n]*(?:\r?\n|$)/u.exec(code);
   return match?.[0].length ?? 0;
 }
 
