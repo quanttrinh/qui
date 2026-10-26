@@ -23,6 +23,28 @@ Create an `.npmrc` in the project or user config:
 bun add @quanttrinh/qui
 ```
 
+## TypeScript
+
+Importing from the package root loads Stencil's global element declarations.
+Use the generated `HTMLQui*Element` types instead of intersecting `HTMLElement`
+with the component props:
+
+```ts
+import type { Components } from "@quanttrinh/qui";
+
+const button = document.querySelector("qui-button") as HTMLQuiButtonElement;
+button.disabled = true;
+
+const input = document.querySelector("qui-input") as HTMLQuiInputElement;
+input.value = "hello";
+
+// Component prop interfaces are also available by name.
+const props: Components.QuiButton = button;
+```
+
+Component subpath imports such as `@quanttrinh/qui/shared/qui-button` load the
+same declarations.
+
 ## Quick start
 
 Load the theme once and the shared component stylesheet once:
