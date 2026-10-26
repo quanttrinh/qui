@@ -61,7 +61,7 @@ export class QuiRadioGroup extends FormControlBase {
   @AttachInternals() internals!: ElementInternals;
 
   /** The controlled selected value. */
-  @Prop() value?: string;
+  @Prop({ mutable: true }) value?: string;
   /** The initial selected value for an uncontrolled group. */
   @Prop() defaultValue?: string;
   /** The form field name shared by the radio inputs. */

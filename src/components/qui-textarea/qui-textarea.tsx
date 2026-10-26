@@ -58,7 +58,7 @@ export class QuiTextarea extends FormControlBase {
   @AttachInternals() internals!: ElementInternals;
 
   /** The controlled value. */
-  @Prop() value?: string;
+  @Prop({ mutable: true }) value?: string;
   /** The initial value for an uncontrolled textarea. */
   @Prop() defaultValue?: string;
   /** The form field name. */

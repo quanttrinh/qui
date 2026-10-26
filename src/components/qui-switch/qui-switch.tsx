@@ -121,7 +121,7 @@ export class QuiSwitch extends FormControlBase {
   @AttachInternals() internals!: ElementInternals;
 
   /** The controlled checked state. Leave unset for an uncontrolled switch. */
-  @Prop() checked?: boolean;
+  @Prop({ mutable: true }) checked?: boolean;
   /** The initial checked state for an uncontrolled switch. */
   @Prop() defaultChecked?: boolean;
   /** Disables the control. */

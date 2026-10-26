@@ -103,7 +103,7 @@ export class QuiInput extends FormControlBase {
    */
   @Prop() autocapitalizeHint?: InputAutocapitalize;
   /** The controlled value. */
-  @Prop() value?: string | number;
+  @Prop({ mutable: true }) value?: string | number;
   /** The initial value for an uncontrolled input. */
   @Prop() defaultValue?: string | number;
   /** Overrides the generated input id. */

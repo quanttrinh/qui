@@ -106,7 +106,7 @@ export class QuiCheckbox extends FormControlBase {
   @AttachInternals() internals!: ElementInternals;
 
   /** The controlled checked state. Leave unset for an uncontrolled checkbox. */
-  @Prop() checked?: CheckedState;
+  @Prop({ mutable: true }) checked?: CheckedState;
   /** The initial checked state for an uncontrolled checkbox. */
   @Prop() defaultChecked?: CheckedState;
   /** Renders the indeterminate state instead of checked/unchecked. */
