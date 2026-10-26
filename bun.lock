@@ -8,6 +8,7 @@
         "@stencil/core": "^4.45.2",
         "magic-string": "^1.4.3",
         "oxc-parser": "^0.155.0",
+        "parse5": "^8.0.1",
         "unplugin": "^3.4.0",
       },
       "devDependencies": {

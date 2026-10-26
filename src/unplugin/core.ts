@@ -1,3 +1,5 @@
+import { parse, type DefaultTreeAdapterTypes } from "parse5";
+
 import { extractComponentsFromJavaScript, extractComponentsFromText } from "./extract";
 
 export interface QuiStylesOptions {
@@ -33,17 +35,8 @@ const JAVASCRIPT_FILE = /\.(?:[cm]?[jt]sx?)$/u;
 const TRANSFORMABLE_FILE = /\.(?:[cm]?[jt]sx?|mdx)$/u;
 const ESCAPED_CHARACTER = /\\[ux]/u;
 const MDX_FRONTMATTER = /^---[^\S\r\n]*(?:\r?\n)(?:[\s\S]*?\r?\n)?---[^\S\r\n]*(?:\r?\n|$)/u;
-const LINK_TAG = /<link\b(?:"[^"]*"|'[^']*'|[^'">])*>/giu;
-const STYLESHEET_ATTRIBUTE = /(?:^|\s)data-qui-styles(?=[\s=/>])/iu;
-const HREF_ATTRIBUTE =
-  /(?:^|\s)href\s*=\s*(?:(?<quote>["'])(?<quoted>.*?)\k<quote>|(?<unquoted>[^\s>]+))/iu;
-const REL_ATTRIBUTE =
-  /(?:^|\s)rel\s*=\s*(?:(?<quote>["'])(?<quoted>.*?)\k<quote>|(?<unquoted>[^\s>]+))/iu;
+const STYLESHEET_ATTRIBUTE = "data-qui-styles";
 const REL_TOKEN_SPLIT = /\s+/u;
-const SELF_CLOSING_TAG_END = /\/>$/u;
-const TAG_END = />$/u;
-const PROTECTED_HTML =
-  /<!--[\s\S]*?-->|<script\b[\s\S]*?<\/script\s*>|<style\b[\s\S]*?<\/style\s*>|<template\b[\s\S]*?<\/template\s*>|<textarea\b[\s\S]*?<\/textarea\s*>/giu;
 
 export const VIRTUAL_MODULE_ID = "virtual:qui/register";
 export const VIRTUAL_STYLES_ID = "virtual:qui/styles";
@@ -201,52 +194,74 @@ function isPrimaryStylesheet(rel: string): boolean {
   return tokens.includes("stylesheet") && !tokens.includes("alternate");
 }
 
+function isElementNode(
+  node: DefaultTreeAdapterTypes.Node,
+): node is DefaultTreeAdapterTypes.Element {
+  return "tagName" in node;
+}
+
+function attributeValue(
+  element: DefaultTreeAdapterTypes.Element,
+  name: string,
+): string | undefined {
+  return element.attrs.find((attribute) => attribute.name === name)?.value;
+}
+
 /**
  * Adds `data-qui-styles` to stylesheet links that point at a configured
  * external component/app stylesheet. Vite calls this through
  * `transformIndexHtml` during dev and build, so the marker is present in the
  * emitted HTML without client-side rewriting.
  *
- * The configured href must be a stable public URL. Hashed asset URLs are
- * intentionally not guessed; mark those links in the app instead. The runtime
- * prefers an already-marked document link, so its final hashed href is kept.
+ * parse5 supplies source offsets, so the marker is inserted into the original
+ * markup instead of reserializing the document. Links inside scripts, comments,
+ * textareas, and template content are not elements in the main tree and are
+ * therefore left untouched.
  */
-function markLinksInMarkup(html: string, hrefs: Set<string>): string {
-  return html.replaceAll(LINK_TAG, (tag) => {
-    if (STYLESHEET_ATTRIBUTE.test(tag)) {
-      return tag;
-    }
-    const hrefMatch = HREF_ATTRIBUTE.exec(tag);
-    const hrefValue = hrefMatch?.groups?.quoted ?? hrefMatch?.groups?.unquoted;
-    if (hrefValue === undefined || !hrefs.has(hrefValue)) {
-      return tag;
-    }
-    const relMatch = REL_ATTRIBUTE.exec(tag);
-    const relValue = relMatch?.groups?.quoted ?? relMatch?.groups?.unquoted;
-    if (relValue === undefined || !isPrimaryStylesheet(relValue)) {
-      return tag;
-    }
-    return tag.endsWith("/>")
-      ? tag.replace(SELF_CLOSING_TAG_END, " data-qui-styles />")
-      : tag.replace(TAG_END, " data-qui-styles>");
-  });
-}
-
 export function markStylesheetLinks(html: string, href: string | string[]): string {
   const hrefs = new Set(stylesheetHrefs(href));
   if (hrefs.size === 0) {
     return html;
   }
 
-  let result = "";
-  let offset = 0;
-  for (const match of html.matchAll(PROTECTED_HTML)) {
-    const { 0: protectedMarkup, index } = match;
-    result += markLinksInMarkup(html.slice(offset, index), hrefs);
-    result += protectedMarkup;
-    offset = index + protectedMarkup.length;
+  const document = parse(html, { sourceCodeLocationInfo: true });
+  const offsets: number[] = [];
+
+  const visit = (node: DefaultTreeAdapterTypes.Node): void => {
+    if (
+      isElementNode(node) &&
+      node.tagName === "link" &&
+      attributeValue(node, STYLESHEET_ATTRIBUTE) === undefined
+    ) {
+      const hrefValue = attributeValue(node, "href");
+      const relValue = attributeValue(node, "rel");
+      const startTag = node.sourceCodeLocation?.startTag;
+      if (
+        hrefValue !== undefined &&
+        hrefs.has(hrefValue) &&
+        relValue !== undefined &&
+        isPrimaryStylesheet(relValue) &&
+        startTag !== undefined
+      ) {
+        const selfClosing = html.slice(startTag.endOffset - 2, startTag.endOffset) === "/>";
+        offsets.push(startTag.endOffset - (selfClosing ? 2 : 1));
+      }
+    }
+
+    if ("childNodes" in node) {
+      for (const child of node.childNodes) {
+        visit(child);
+      }
+    }
+  };
+
+  visit(document);
+
+  let result = html;
+  for (const offset of offsets.sort((left, right) => right - left)) {
+    result = `${result.slice(0, offset)} data-qui-styles${result.slice(offset)}`;
   }
-  return result + markLinksInMarkup(html.slice(offset), hrefs);
+  return result;
 }
 
 /**
