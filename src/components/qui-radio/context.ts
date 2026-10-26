@@ -1,4 +1,4 @@
-import { notifyContextChanged } from "../shared/context-part";
+import { createContextStore } from "../shared/context-store";
 
 /** A radio item's component-owned props. */
 export interface RadioItem {
@@ -29,6 +29,7 @@ export interface RadioGroupContext {
   select: (value: string) => void;
   focus: (value: string, focusVisible: boolean) => void;
   blur: () => void;
+  registerInput: (value: string, input: HTMLInputElement) => () => void;
   rootId: () => string;
   itemId: (value: string) => string;
   inputId: (value: string) => string;
@@ -37,40 +38,20 @@ export interface RadioGroupContext {
   subscribe: (listener: () => void) => () => void;
 }
 
-const groups = new WeakMap<HTMLElement, RadioGroupContext>();
+// oxlint-disable-next-line stencil/ban-side-effects -- Allocating a context map has no side effects.
+const groups = createContextStore<RadioGroupContext>("radio-group");
 
 function provideRadioGroup(host: HTMLElement, group: RadioGroupContext): void {
-  groups.set(host, group);
-  notifyContextChanged("radio-group");
+  groups.provide(host, group);
 }
 
 function clearRadioGroup(host: HTMLElement): void {
-  groups.delete(host);
-  notifyContextChanged("radio-group");
-}
-
-function parentElement(node: Element): Element | undefined {
-  const parent = node.parentElement;
-  if (parent) {
-    return parent;
-  }
-  const root = node.getRootNode();
-  return root instanceof ShadowRoot ? root.host : undefined;
+  groups.clear(host);
 }
 
 /** Find the closest ancestor radio group, crossing shadow boundaries. */
 function consumeRadioGroup(host: HTMLElement): RadioGroupContext | undefined {
-  let node = parentElement(host);
-  while (node !== undefined) {
-    if (node instanceof HTMLElement) {
-      const group = groups.get(node);
-      if (group !== undefined) {
-        return group;
-      }
-    }
-    node = parentElement(node);
-  }
-  return undefined;
+  return groups.consume(host);
 }
 
 export { clearRadioGroup, consumeRadioGroup, provideRadioGroup };

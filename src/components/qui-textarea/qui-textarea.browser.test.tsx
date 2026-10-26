@@ -1,43 +1,31 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-function isTextareaHost(element: HTMLElement): element is HTMLQuiTextareaElement {
-  return element.tagName === "QUI-TEXTAREA";
-}
-
-function queryHost(root: HTMLElement): HTMLQuiTextareaElement | null {
-  if (isTextareaHost(root)) {
-    return root;
-  }
-  return root.querySelector<HTMLQuiTextareaElement>("qui-textarea");
-}
-
-function queryTextarea(root: HTMLElement): HTMLTextAreaElement {
-  const textarea = root.querySelector("textarea");
-  if (!(textarea instanceof HTMLTextAreaElement)) {
-    throw new TypeError("Expected a native textarea");
-  }
-  return textarea;
-}
+import { isHTMLFormElement } from "../../helpers/dom";
+import { queryControl, queryPartIn, resolveHost } from "../../test-utils/component";
+import { nextFrame, waitForShadowStyles } from "../../test-utils/dom-ready";
+import { expectFocusedDeep, typeInto } from "../../test-utils/interactions";
+import { deepQuery, queryInside } from "../../test-utils/shadow";
 
 // oxlint-disable-next-line unicorn/prefer-number-coercion
 const pixels = (value: string): number => Number.parseFloat(value);
 
-async function nextFrame(): Promise<void> {
-  await new Promise<void>((resolve) => {
-    requestAnimationFrame(() => {
-      resolve();
-    });
-  });
+function queryCounter(root: HTMLElement): HTMLElement | null {
+  return queryInside<HTMLElement>(
+    resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea"),
+    "[data-part=counter]",
+  );
 }
 
 describe("qui-textarea", () => {
   it("emits the current value on input", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(<qui-textarea />);
     const spy = spyOnEvent("valuechange");
-    const textarea = queryTextarea(root);
+    const textarea = queryControl<HTMLTextAreaElement>(
+      resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea"),
+      "textarea",
+    );
 
-    textarea.value = "first line\nsecond line";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    typeInto(textarea, "first line\nsecond line");
     await waitForChanges();
 
     expect(textarea.value).toBe("first line\nsecond line");
@@ -48,7 +36,10 @@ describe("qui-textarea", () => {
     const { root, setProps, waitForChanges } = await render(
       <qui-textarea defaultValue="initial" />,
     );
-    const textarea = queryTextarea(root);
+    const textarea = queryControl<HTMLTextAreaElement>(
+      resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea"),
+      "textarea",
+    );
 
     await waitForChanges();
     expect(textarea.value).toBe("initial");
@@ -62,17 +53,19 @@ describe("qui-textarea", () => {
     const { root, waitForChanges } = await render(
       <qui-textarea value="abc" maxLength={5} showCount />,
     );
-    const textarea = queryTextarea(root);
-    const counter = root.querySelector("[data-part=counter]");
+    const textarea = queryControl<HTMLTextAreaElement>(
+      resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea"),
+      "textarea",
+    );
+    const counter = queryCounter(root);
 
     await waitForChanges();
     expect(textarea.maxLength).toBe(5);
     expect(counter?.textContent).toBe("3/5");
     expect(counter?.getAttribute("part")).toBe("counter");
-    expect(textarea.getAttribute("aria-describedby")).toContain(counter?.id);
+    expect(Reflect.get(textarea, "ariaDescribedByElements")).toEqual([counter]);
 
-    textarea.value = "abcd";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    typeInto(textarea, "abcd");
     await waitForChanges();
     expect(counter?.textContent).toBe("4/5");
   });
@@ -81,7 +74,7 @@ describe("qui-textarea", () => {
     const { root, setProps, waitForChanges } = await render(
       <qui-textarea value="abc" maxLength={5} showCount />,
     );
-    const counter = root.querySelector("[data-part=counter]");
+    const counter = queryCounter(root);
 
     await waitForChanges();
     await setProps({ value: "ab" });
@@ -91,14 +84,17 @@ describe("qui-textarea", () => {
 
   it("forwards minLength and maxLength attributes", async () => {
     const { root, waitForChanges } = await render(<qui-textarea minLength={3} maxLength={5} />);
-    const textarea = queryTextarea(root);
+    const textarea = queryControl<HTMLTextAreaElement>(
+      resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea"),
+      "textarea",
+    );
 
     await waitForChanges();
     expect(textarea.minLength).toBe(3);
     expect(textarea.maxLength).toBe(5);
   });
 
-  it("merges the counter and helper text into aria-describedby", async () => {
+  it("merges the counter and helper text into ariaDescribedByElements", async () => {
     const { root, waitForChanges } = await render(
       <qui-field id="bio">
         <qui-field-label>Bio</qui-field-label>
@@ -107,26 +103,30 @@ describe("qui-textarea", () => {
       </qui-field>,
     );
     await waitForChanges();
-    const textarea = queryTextarea(root);
-    const counter = root.querySelector("[data-part=counter]");
-    const helper = root.querySelector("[part=helper-text]");
-    const describedBy = textarea.getAttribute("aria-describedby") ?? "";
+    const textarea = queryControl<HTMLTextAreaElement>(
+      resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea"),
+      "textarea",
+    );
+    const counter = queryCounter(root);
+    const helperHost = deepQuery<HTMLElement>(root, "qui-field-helper-text");
+    if (helperHost === null || counter === null) {
+      throw new TypeError("Expected the counter and helper text");
+    }
 
-    expect(counter?.id).not.toBe("");
-    expect(helper?.id).not.toBe("");
-    expect(describedBy).toContain(counter?.id);
-    expect(describedBy).toContain(helper?.id);
+    expect(counter.id).not.toBe("");
+    expect(helperHost.id).not.toBe("");
+    expect(Reflect.get(textarea, "ariaDescribedByElements")).toEqual([helperHost, counter]);
   });
 
   it("omits the counter by default", async () => {
     const { root } = await render(<qui-textarea />);
 
-    expect(root.querySelector("[data-part=counter]")).toBeNull();
+    expect(queryCounter(root)).toBeNull();
   });
 
   it("shows a plain character count without maxLength", async () => {
     const { root, waitForChanges } = await render(<qui-textarea value="abc" showCount />);
-    const counter = root.querySelector("[data-part=counter]");
+    const counter = queryCounter(root);
 
     await waitForChanges();
     expect(counter?.textContent).toBe("3");
@@ -139,11 +139,18 @@ describe("qui-textarea", () => {
         <qui-textarea />
       </qui-field>,
     );
-    const textarea = queryTextarea(root);
-    const label = root.querySelector<HTMLLabelElement>("[part=label]");
+    const textarea = queryControl<HTMLTextAreaElement>(
+      resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea"),
+      "textarea",
+    );
+    const labelHost = deepQuery<HTMLElement>(root, "qui-field-label");
+    if (labelHost === null) {
+      throw new TypeError("Expected a field label");
+    }
+    const label = queryPartIn<HTMLLabelElement>(labelHost, "label");
 
     expect(textarea.id).toBe("bio::control");
-    expect(label?.htmlFor).toBe("bio::control");
+    expect(label.htmlFor).toBe("bio::control");
     expect(textarea.getAttribute("aria-invalid")).toBe("true");
     expect(textarea.getAttribute("aria-required")).toBe("true");
     expect(textarea).toHaveAttribute("data-required");
@@ -155,7 +162,10 @@ describe("qui-textarea", () => {
         <qui-textarea />
       </qui-field>,
     );
-    const textarea = queryTextarea(root);
+    const textarea = queryControl<HTMLTextAreaElement>(
+      resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea"),
+      "textarea",
+    );
 
     expect(textarea.disabled).toBe(true);
     expect(textarea.readOnly).toBe(true);
@@ -165,7 +175,10 @@ describe("qui-textarea", () => {
 describe("qui-textarea forms and sizing", () => {
   it("exposes the resize mode", async () => {
     const { root } = await render(<qui-textarea resize="auto" />);
-    const textarea = queryTextarea(root);
+    const textarea = queryControl<HTMLTextAreaElement>(
+      resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea"),
+      "textarea",
+    );
 
     expect(textarea.dataset.resize).toBe("auto");
     expect(textarea.getAttribute("rows")).toBe("4");
@@ -173,7 +186,9 @@ describe("qui-textarea forms and sizing", () => {
 
   it("maps resize modes to the native resize style", async () => {
     const { root, setProps, waitForChanges } = await render(<qui-textarea resize="none" />);
-    const textarea = queryTextarea(root);
+    const host = resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea");
+    await waitForShadowStyles(host);
+    const textarea = queryControl<HTMLTextAreaElement>(host, "textarea");
 
     expect(getComputedStyle(textarea).resize).toBe("none");
 
@@ -184,14 +199,18 @@ describe("qui-textarea forms and sizing", () => {
 
   it("grows a resize=auto textarea with its content", async () => {
     const { root, waitForChanges } = await render(<qui-textarea resize="auto" rows={2} />);
-    const textarea = queryTextarea(root);
+    const host = resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea");
+    await waitForShadowStyles(host);
+    const textarea = queryControl<HTMLTextAreaElement>(host, "textarea");
 
     await nextFrame();
     await waitForChanges();
     const initialHeight = textarea.getBoundingClientRect().height;
 
-    textarea.value = Array.from({ length: 8 }, (_value, position) => `line ${position}`).join("\n");
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    typeInto(
+      textarea,
+      Array.from({ length: 8 }, (_value, position) => `line ${position}`).join("\n"),
+    );
     await waitForChanges();
     await nextFrame();
     await waitForChanges();
@@ -205,12 +224,14 @@ describe("qui-textarea forms and sizing", () => {
     const { root, waitForChanges } = await render(
       <qui-textarea resize="auto" rows={2} maxRows={3} />,
     );
-    const textarea = queryTextarea(root);
+    const host = resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea");
+    await waitForShadowStyles(host);
+    const textarea = queryControl<HTMLTextAreaElement>(host, "textarea");
 
-    textarea.value = Array.from({ length: 20 }, (_value, position) => `line ${position}`).join(
-      "\n",
+    typeInto(
+      textarea,
+      Array.from({ length: 20 }, (_value, position) => `line ${position}`).join("\n"),
     );
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
     await waitForChanges();
     await nextFrame();
     await waitForChanges();
@@ -235,16 +256,13 @@ describe("qui-textarea form state", () => {
       </form>,
     );
     await waitForChanges();
-    const form = root instanceof HTMLFormElement ? root : root.querySelector("form");
-    if (!(form instanceof HTMLFormElement)) {
+    const form = isHTMLFormElement(root) ? root : root.querySelector("form");
+    if (!isHTMLFormElement(form)) {
       throw new TypeError("Expected a form");
     }
     expect(new FormData(form).get("bio")).toBe("initial");
 
-    const host = queryHost(root);
-    if (host === null) {
-      throw new TypeError("Expected a textarea host");
-    }
+    const host = resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea");
     host.disabled = true;
     await waitForChanges();
     expect(new FormData(form).get("bio")).toBeNull();
@@ -261,13 +279,15 @@ describe("qui-textarea form state", () => {
       </form>,
     );
     await waitForChanges();
-    const form = root instanceof HTMLFormElement ? root : root.querySelector("form");
-    if (!(form instanceof HTMLFormElement)) {
+    const form = isHTMLFormElement(root) ? root : root.querySelector("form");
+    if (!isHTMLFormElement(form)) {
       throw new TypeError("Expected a form");
     }
-    const textarea = queryTextarea(root);
-    textarea.value = "edited";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    const textarea = queryControl<HTMLTextAreaElement>(
+      resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea"),
+      "textarea",
+    );
+    typeInto(textarea, "edited");
     await waitForChanges();
     expect(new FormData(form).get("bio")).toBe("edited");
 
@@ -279,11 +299,11 @@ describe("qui-textarea form state", () => {
 
   it("restores form state", async () => {
     const { root, waitForChanges } = await render(<qui-textarea defaultValue="initial" />);
-    const textarea = queryTextarea(root);
-    const host = queryHost(root);
-    if (host === null) {
-      throw new TypeError("Expected a textarea host");
-    }
+    const textarea = queryControl<HTMLTextAreaElement>(
+      resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea"),
+      "textarea",
+    );
+    const host = resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea");
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     const restore = Reflect.get(host, "formStateRestoreCallback") as (state: string) => void;
 
@@ -299,15 +319,17 @@ describe("qui-textarea form state", () => {
       </form>,
     );
     await waitForChanges();
-    const form = root instanceof HTMLFormElement ? root : root.querySelector("form");
-    if (!(form instanceof HTMLFormElement)) {
+    const form = isHTMLFormElement(root) ? root : root.querySelector("form");
+    if (!isHTMLFormElement(form)) {
       throw new TypeError("Expected a form");
     }
     expect(form.checkValidity()).toBe(false);
 
-    const textarea = queryTextarea(root);
-    textarea.value = "hello";
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    const textarea = queryControl<HTMLTextAreaElement>(
+      resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea"),
+      "textarea",
+    );
+    typeInto(textarea, "hello");
     await waitForChanges();
     expect(form.checkValidity()).toBe(true);
   });
@@ -316,7 +338,9 @@ describe("qui-textarea form state", () => {
     const { root, waitForChanges } = await render(
       <qui-textarea resize="auto" rows={4} maxRows={2} />,
     );
-    const textarea = queryTextarea(root);
+    const host = resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea");
+    await waitForShadowStyles(host);
+    const textarea = queryControl<HTMLTextAreaElement>(host, "textarea");
 
     await nextFrame();
     await waitForChanges();
@@ -335,7 +359,9 @@ describe("qui-textarea form state", () => {
     const { root, setProps, waitForChanges } = await render(
       <qui-textarea resize="auto" rows={2} />,
     );
-    const textarea = queryTextarea(root);
+    const host = resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea");
+    await waitForShadowStyles(host);
+    const textarea = queryControl<HTMLTextAreaElement>(host, "textarea");
 
     await nextFrame();
     await waitForChanges();
@@ -349,7 +375,9 @@ describe("qui-textarea form state", () => {
 
   it("re-establishes auto-growth after re-attachment", async () => {
     const { root, waitForChanges } = await render(<qui-textarea resize="auto" rows={2} />);
-    const textarea = queryTextarea(root);
+    const host = resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea");
+    await waitForShadowStyles(host);
+    const textarea = queryControl<HTMLTextAreaElement>(host, "textarea");
 
     root.remove();
     document.body.append(root);
@@ -358,5 +386,16 @@ describe("qui-textarea form state", () => {
 
     expect(textarea.style.height).toMatch(/px$/u);
     root.remove();
+  });
+
+  it("focuses the internal native textarea", async () => {
+    const { root, waitForChanges } = await render(<qui-textarea />);
+    const host = resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea");
+    const textarea = queryControl<HTMLTextAreaElement>(host, "textarea");
+
+    await host.focusControl();
+    await waitForChanges();
+
+    expectFocusedDeep(textarea);
   });
 });

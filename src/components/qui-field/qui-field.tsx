@@ -1,11 +1,13 @@
 import { resolveVar, Component, Element, h, Host, Prop, Watch, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { cx } from "#styled-system/css";
 
 import { dataAttr } from "../../helpers/attr";
 import { nextId } from "../../helpers/id";
+import { ensureShadowStylesheet } from "../../utilities/styles";
 import { clearField, provideField, type FieldApi, type FieldIds } from "../shared/field/context";
+import { FieldPartRegistry } from "../shared/field/registry";
+import { createListenerStore } from "../shared/listener-store";
 import { fieldStyles } from "./styles";
 
 /**
@@ -20,7 +22,7 @@ import { fieldStyles } from "./styles";
 @Component({
   tag: "qui-field",
   styleUrl: resolveVar(styleUrls.quiField),
-  scoped: true,
+  shadow: true,
 })
 export class QuiField {
   @Element() host!: HTMLQuiFieldElement;
@@ -37,14 +39,10 @@ export class QuiField {
   @Prop() readOnly = false;
   /** Marks the field required. */
   @Prop() required = false;
-  /** Additional class applied to the root element. */
-  @Prop() innerClass?: string;
-
-  private helperCount = 0;
-  private errorCount = 0;
 
   private readonly generatedId = nextId("qui-field");
-  private readonly listeners = new Set<() => void>();
+  private readonly registry = new FieldPartRegistry();
+  private readonly listeners = createListenerStore();
   private field?: FieldApi;
 
   public componentWillLoad(): void {
@@ -56,6 +54,7 @@ export class QuiField {
     if (this.field !== undefined) {
       provideField(this.host, this.field);
     }
+    ensureShadowStylesheet(this.host);
   }
 
   public disconnectedCallback(): void {
@@ -70,9 +69,7 @@ export class QuiField {
   @Watch("readOnly")
   @Watch("required")
   private notify(): void {
-    for (const listener of this.listeners) {
-      listener();
-    }
+    this.listeners.notify();
   }
 
   private get ids(): FieldIds {
@@ -104,8 +101,6 @@ export class QuiField {
           required: this.required,
           readOnly: this.readOnly || undefined,
           "aria-invalid": this.invalid ? "true" : undefined,
-          "aria-describedby": this.helperCount > 0 ? ids.helperText : undefined,
-          "aria-errormessage": this.errorCount > 0 ? ids.errorText : undefined,
           "data-scope": "field" as const,
           "data-part": "input" as const,
           "data-invalid": dataAttr(this.invalid),
@@ -138,31 +133,28 @@ export class QuiField {
         "data-part": "error-text" as const,
         "aria-live": "polite" as const,
       }),
-      registerHelperText: () => this.registerHelperText(),
-      registerErrorText: () => this.registerErrorText(),
-      subscribe: (listener) => {
-        this.listeners.add(listener);
-        return () => {
-          this.listeners.delete(listener);
-        };
+      getLabelHost: () => this.registry.labelHost,
+      getHelperTextHosts: () => this.registry.helperTextHosts,
+      getErrorTextHosts: () => this.registry.errorTextHosts,
+      registerLabel: (host) => this.registerPart(() => this.registry.registerLabel(host)),
+      registerHelperText: (host) => this.registerPart(() => this.registry.registerHelperText(host)),
+      registerErrorText: (host) => this.registerPart(() => this.registry.registerErrorText(host)),
+      registerControl: (control) => this.registry.registerControl(control),
+      focusControl: (options) => {
+        this.registry.focusControl(options);
       },
+      clickControl: () => {
+        this.registry.clickControl();
+      },
+      subscribe: this.listeners.subscribe,
     };
   }
 
-  private registerHelperText(): () => void {
-    this.helperCount += 1;
+  private registerPart(register: () => () => void): () => void {
+    const teardown = register();
     this.notify();
     return () => {
-      this.helperCount = Math.max(0, this.helperCount - 1);
-      this.notify();
-    };
-  }
-
-  private registerErrorText(): () => void {
-    this.errorCount += 1;
-    this.notify();
-    return () => {
-      this.errorCount = Math.max(0, this.errorCount - 1);
+      teardown();
       this.notify();
     };
   }
@@ -176,9 +168,19 @@ export class QuiField {
         data-disabled={dataAttr(this.disabled)}
         data-invalid={dataAttr(this.invalid)}
         data-readonly={dataAttr(this.readOnly)}
-        class={cx(fieldStyles.root, this.innerClass)}
+        class={fieldStyles.host}
       >
-        <slot />
+        <div
+          class={fieldStyles.root}
+          part="root"
+          data-scope="field"
+          data-part="root"
+          data-disabled={dataAttr(this.disabled)}
+          data-invalid={dataAttr(this.invalid)}
+          data-readonly={dataAttr(this.readOnly)}
+        >
+          <slot />
+        </div>
       </Host>
     );
   }

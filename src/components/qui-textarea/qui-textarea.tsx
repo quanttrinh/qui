@@ -8,6 +8,7 @@ import {
   forceUpdate,
   h,
   Host,
+  Method,
   Prop,
   State,
   Watch,
@@ -16,11 +17,13 @@ import {
 } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { cx } from "#styled-system/css";
 
 import { ariaAttr, dataAttr } from "../../helpers/attr";
 import { isHTMLTextAreaElement } from "../../helpers/dom";
 import { nextId } from "../../helpers/id";
+import { ensureShadowStylesheet } from "../../utilities/styles";
+import { applyFieldAria } from "../shared/field/aria";
+import { createFieldControl, focusElement } from "../shared/field/control";
 import { FormControlBase } from "../shared/form-control/component-base";
 import { FormController, type FormValidity } from "../shared/form-control/controller";
 import { styles } from "./styles";
@@ -47,7 +50,7 @@ export interface TextareaValueDetails {
 @Component({
   tag: "qui-textarea",
   styleUrl: resolveVar(styleUrls.quiTextarea),
-  scoped: true,
+  shadow: true,
   formAssociated: true,
 })
 export class QuiTextarea extends FormControlBase {
@@ -88,8 +91,6 @@ export class QuiTextarea extends FormControlBase {
   @Prop() readOnly = false;
   /** Marks the textarea required. Ignored while nested in a `qui-field`. */
   @Prop() required = false;
-  /** Additional class applied to the root element. */
-  @Prop() innerClass?: string;
 
   /** Emitted after every edit. */
   @StencilEvent({ eventName: "valuechange", bubbles: true, composed: true })
@@ -98,6 +99,7 @@ export class QuiTextarea extends FormControlBase {
   @State() private currentValue = "";
 
   private textareaEl?: HTMLTextAreaElement;
+  private counterEl?: HTMLElement;
   private initialValue = "";
   private autoResizeFrame?: number;
   private resizeObserver?: ResizeObserver;
@@ -105,6 +107,7 @@ export class QuiTextarea extends FormControlBase {
   private wasAutoResize = false;
   private readonly generatedId = nextId("qui-textarea");
   private readonly counterId = nextId("qui-textarea-counter");
+  private readonly fieldControl = createFieldControl(() => this.textareaEl);
   private readonly form = new FormController({
     getHost: (): HTMLElement => this.host,
     getInternals: (): ElementInternals => this.internals,
@@ -139,6 +142,7 @@ export class QuiTextarea extends FormControlBase {
   constructor() {
     super();
     this.addController(this.form);
+    this.form.setControl(this.fieldControl);
   }
 
   protected get formController(): FormController {
@@ -162,16 +166,26 @@ export class QuiTextarea extends FormControlBase {
   public connectedCallback(): void {
     super.connectedCallback();
     this.syncAutoResize();
+    ensureShadowStylesheet(this.host);
   }
 
   public componentDidRender(): void {
     super.componentDidRender();
+    applyFieldAria(this.textareaEl, this.form.fieldApi, {
+      describedBy: this.counterEl === undefined ? [] : [this.counterEl],
+    });
     this.scheduleAutoResize();
   }
 
   public disconnectedCallback(): void {
     super.disconnectedCallback();
     this.stopAutoResize();
+  }
+
+  /** Moves focus to the internal native textarea. */
+  @Method()
+  public async focusControl(options?: FocusOptions): Promise<void> {
+    await focusElement(this.textareaEl, options);
   }
 
   @Watch("value")
@@ -221,12 +235,6 @@ export class QuiTextarea extends FormControlBase {
     delete props.required;
     if (this.form.isRequired) {
       props["aria-required"] = "true";
-    }
-    if (this.showCount) {
-      const describedBy = [props["aria-describedby"], this.counterId]
-        .filter((value): value is string => typeof value === "string" && value !== "")
-        .join(" ");
-      props["aria-describedby"] = describedBy;
     }
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     return props as Record<string, string | number | boolean | undefined>;
@@ -402,7 +410,7 @@ export class QuiTextarea extends FormControlBase {
   public render(): VNode {
     return (
       <Host class={styles.host}>
-        <div data-scope="textarea" data-part="root" class={cx(styles.root, this.innerClass)}>
+        <div data-scope="textarea" data-part="root" part="root" class={styles.root}>
           <div
             data-scope="textarea"
             data-part="control"
@@ -415,9 +423,7 @@ export class QuiTextarea extends FormControlBase {
             <textarea
               {...this.controlProps}
               ref={(el) => {
-                if (isHTMLTextAreaElement(el)) {
-                  this.textareaEl = el;
-                }
+                this.textareaEl = el;
               }}
               rows={this.rows}
               placeholder={this.placeholder}
@@ -431,7 +437,15 @@ export class QuiTextarea extends FormControlBase {
               onInput={this.handleInput}
             />
             {this.showCount ? (
-              <span id={this.counterId} data-part="counter" part="counter" class={styles.counter}>
+              <span
+                ref={(el) => {
+                  this.counterEl = el;
+                }}
+                id={this.counterId}
+                data-part="counter"
+                part="counter"
+                class={styles.counter}
+              >
                 {this.counterText}
               </span>
             ) : undefined}

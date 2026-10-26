@@ -105,9 +105,9 @@ export class ListWindowController implements ReactiveController {
     });
   }
 
-  public handleScroll(event: Event): void {
-    const viewport = event.currentTarget;
-    if (viewport instanceof HTMLElement && viewport.scrollTop !== this.offset) {
+  public handleScroll(): void {
+    const { viewport } = this;
+    if (viewport !== undefined && viewport.scrollTop !== this.offset) {
       this.offset = viewport.scrollTop;
       this.options.requestUpdate();
     }

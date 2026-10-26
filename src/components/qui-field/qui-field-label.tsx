@@ -1,9 +1,10 @@
-import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
 
 import { consumeContextPart } from "../shared/context-part";
+import { ContextPartElement } from "../shared/context-part-element";
 import { consumeField, type FieldApi } from "../shared/field/context";
 import { fieldStyles } from "./styles";
 
@@ -19,47 +20,38 @@ const styles = {
 @Component({
   tag: "qui-field-label",
   styleUrl: resolveVar(styleUrls.quiFieldLabel),
-  scoped: true,
+  shadow: true,
 })
-export class QuiFieldLabel {
+export class QuiFieldLabel extends ContextPartElement<FieldApi> {
   @Element() host!: HTMLQuiFieldLabelElement;
 
-  /** Additional class applied to the label element. */
-  @Prop() innerClass?: string;
-
-  private readonly contextPart = consumeContextPart({
+  protected readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "field",
     consume: consumeField,
+    setup: (field): (() => void) => {
+      this.host.id = field.getLabelProps().id;
+      return field.registerLabel(this.host);
+    },
   });
 
   private get field(): FieldApi | undefined {
     return this.contextPart.context;
   }
 
-  public connectedCallback(): void {
-    this.contextPart.hostConnected();
-  }
-
-  public componentWillLoad(): void {
-    this.contextPart.hostWillLoad();
-  }
-
-  public componentDidLoad(): void {
-    this.contextPart.hostDidLoad();
-  }
-
-  public disconnectedCallback(): void {
-    this.contextPart.hostDisconnected();
-  }
+  private readonly handleClick = (): void => {
+    this.field?.focusControl();
+    this.field?.clickControl();
+  };
 
   public render(): VNode {
     const props = this.field?.getLabelProps();
 
     return (
-      <Host class={styles.host}>
+      <Host id={props?.id} class={styles.host}>
+        {/* A label is interactive even though it has no widget role. Slot text is resolved at runtime. */}
+        {/* oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/label-has-associated-control */}
         <label
-          id={props?.id}
           htmlFor={props?.htmlFor}
           data-scope="field"
           data-part="label"
@@ -67,8 +59,9 @@ export class QuiFieldLabel {
           data-invalid={props?.["data-invalid"]}
           data-readonly={props?.["data-readonly"]}
           data-required={props?.["data-required"]}
-          class={cx(fieldStyles.label, this.innerClass)}
+          class={fieldStyles.label}
           part="label"
+          onClick={this.handleClick}
         >
           <slot />
         </label>

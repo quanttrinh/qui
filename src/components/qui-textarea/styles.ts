@@ -1,25 +1,17 @@
 import { css } from "#styled-system/css";
 
+import { fieldSurface, focusRingFlush } from "../shared/styles";
+
 export const styles = {
   host: css({ display: "block" }),
   root: css({ width: "full" }),
   control: css({
+    ...fieldSurface,
     display: "flex",
     flexDirection: "column",
     width: "full",
-    backgroundColor: "surface",
-    borderWidth: "1px",
-    borderStyle: "solid",
-    borderColor: "outlineVariant",
-    rounded: "lg",
-    overflow: "hidden",
-    transition: "border-color 150ms, outline-color 150ms",
-    "&:hover": { borderColor: "outline" },
     "&:focus-within": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "0",
+      ...focusRingFlush,
       borderColor: "primary",
     },
     "&[data-invalid]": { borderColor: "error" },

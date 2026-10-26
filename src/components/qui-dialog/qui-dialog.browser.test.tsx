@@ -1,11 +1,69 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
+import { expectAriaElements } from "../../test-utils/aria";
+import { queryHost, queryPartIn } from "../../test-utils/component";
+import { shadowOf } from "../../test-utils/shadow";
+
 function queryDialog(root: HTMLElement): HTMLDialogElement {
-  const dialog = root.querySelector("dialog");
-  if (!(dialog instanceof HTMLDialogElement)) {
-    throw new TypeError("Expected a native dialog");
-  }
-  return dialog;
+  return queryPartIn<HTMLDialogElement>(queryHost(root, "qui-dialog-content"), "dialog");
+}
+
+function queryControls(root: HTMLElement): {
+  trigger: HTMLButtonElement;
+  close: HTMLButtonElement;
+} {
+  const trigger = queryPartIn<HTMLButtonElement>(queryHost(root, "qui-dialog-trigger"), "trigger");
+  const close = queryPartIn<HTMLButtonElement>(queryHost(root, "qui-dialog-close"), "close");
+  return { trigger, close };
+}
+
+interface DialogParts {
+  dialog: HTMLDialogElement;
+  contentHost: HTMLElement;
+  titleHost: HTMLElement;
+  descriptionHost: HTMLElement;
+  trigger: HTMLButtonElement;
+  close: HTMLButtonElement;
+}
+
+function queryParts(root: HTMLElement): DialogParts {
+  return {
+    dialog: queryDialog(root),
+    contentHost: queryHost(root, "qui-dialog-content"),
+    titleHost: queryHost(root, "qui-dialog-title"),
+    descriptionHost: queryHost(root, "qui-dialog-description"),
+    ...queryControls(root),
+  };
+}
+
+function expectScrollLocked(locked: boolean): void {
+  expect(Object.hasOwn(document.documentElement.dataset, "quiScrollLocked")).toBe(locked);
+}
+
+function expectContentWiring({
+  contentHost,
+  dialog,
+  titleHost,
+  descriptionHost,
+}: Pick<DialogParts, "contentHost" | "dialog" | "titleHost" | "descriptionHost">): void {
+  expect(shadowOf(contentHost).contains(dialog)).toBe(true);
+  expect(titleHost).toHaveTextContent("Title");
+  expect(descriptionHost).toHaveTextContent("Description");
+  expect(titleHost.id).not.toBe("");
+  expect(descriptionHost.id).not.toBe("");
+  expect(queryPartIn(titleHost, "title")).toHaveAttribute("part", "title");
+  expect(queryPartIn(descriptionHost, "description")).toHaveAttribute("part", "description");
+}
+
+function expectDialogAria(
+  dialog: HTMLDialogElement,
+  titleHost: HTMLElement,
+  descriptionHost: HTMLElement,
+): void {
+  expectAriaElements(dialog, {
+    ariaLabelledByElements: [titleHost],
+    ariaDescribedByElements: [descriptionHost],
+  });
 }
 
 describe("qui-dialog", () => {
@@ -22,30 +80,29 @@ describe("qui-dialog", () => {
         </qui-dialog-content>
       </qui-dialog>,
     );
+
+    await waitForChanges();
+
     const spy = spyOnEvent("openchange");
-    const dialog = queryDialog(root);
-    const trigger = root.querySelector<HTMLButtonElement>("[part=trigger]");
-    const close = root.querySelector<HTMLButtonElement>("[part=close]");
-    if (trigger === null || close === null) {
-      throw new TypeError("Expected dialog controls");
-    }
+    const { dialog, contentHost, titleHost, descriptionHost, trigger, close } = queryParts(root);
+
+    expectContentWiring({ contentHost, dialog, titleHost, descriptionHost });
 
     trigger.click();
     await waitForChanges();
 
     expect(dialog.open).toBe(true);
     expect(dialog.getAttribute("role")).toBe("dialog");
-    expect(dialog.getAttribute("aria-labelledby")).not.toBeNull();
-    expect(dialog.getAttribute("aria-describedby")).not.toBeNull();
+    expectDialogAria(dialog, titleHost, descriptionHost);
     expect(spy.firstEvent?.detail).toEqual({ open: true, returnValue: "" });
-    expect(Object.hasOwn(document.documentElement.dataset, "quiScrollLocked")).toBe(true);
+    expectScrollLocked(true);
 
     close.click();
     await waitForChanges();
 
     expect(dialog.open).toBe(false);
     expect(spy.lastEvent?.detail).toEqual({ open: false, returnValue: "" });
-    expect(Object.hasOwn(document.documentElement.dataset, "quiScrollLocked")).toBe(false);
+    expectScrollLocked(false);
   });
 
   it("opens and closes from the open prop", async () => {
@@ -56,14 +113,89 @@ describe("qui-dialog", () => {
         </qui-dialog-content>
       </qui-dialog>,
     );
+
+    await waitForChanges();
+
+    const dialog = queryDialog(root);
+
+    await setProps({ open: true });
+    await waitForChanges();
+    expect(dialog.open).toBe(true);
+    expectScrollLocked(true);
+
+    await setProps({ open: false });
+    await waitForChanges();
+    expect(dialog.open).toBe(false);
+    expectScrollLocked(false);
+  });
+
+  it("reopens when modality changes while open", async () => {
+    const { root, setProps, waitForChanges } = await render(
+      <qui-dialog open>
+        <qui-dialog-content>
+          <qui-dialog-title>Title</qui-dialog-title>
+        </qui-dialog-content>
+      </qui-dialog>,
+    );
+
+    await waitForChanges();
+    const dialog = queryDialog(root);
+
+    expect(dialog.matches(":modal")).toBe(true);
+    expectScrollLocked(true);
+
+    await setProps({ modal: false });
+    await waitForChanges();
+
+    expect(dialog.open).toBe(true);
+    expect(dialog.matches(":modal")).toBe(false);
+    expectScrollLocked(false);
+  });
+
+  it("closes on an outside pointer press and stays open for inside presses", async () => {
+    const { root, setProps, waitForChanges } = await render(
+      <qui-dialog modal={false}>
+        <qui-dialog-trigger>Open</qui-dialog-trigger>
+        <qui-dialog-content>
+          <qui-dialog-title>Title</qui-dialog-title>
+        </qui-dialog-content>
+      </qui-dialog>,
+    );
+
+    await waitForChanges();
+
     const dialog = queryDialog(root);
 
     await setProps({ open: true });
     await waitForChanges();
     expect(dialog.open).toBe(true);
 
-    await setProps({ open: false });
+    dialog.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, composed: true }));
+    await waitForChanges();
+    expect(dialog.open).toBe(true);
+
+    document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, composed: true }));
     await waitForChanges();
     expect(dialog.open).toBe(false);
+  });
+
+  it("emits dialogcancel when the native dialog is cancelled", async () => {
+    const { root, spyOnEvent, waitForChanges } = await render(
+      <qui-dialog modal={false} open>
+        <qui-dialog-content>
+          <qui-dialog-title>Title</qui-dialog-title>
+        </qui-dialog-content>
+      </qui-dialog>,
+    );
+
+    await waitForChanges();
+
+    const spy = spyOnEvent("dialogcancel");
+    const dialog = queryDialog(root);
+
+    dialog.dispatchEvent(new Event("cancel", { bubbles: true, composed: true }));
+    await waitForChanges();
+
+    expect(spy).toHaveReceivedEvent();
   });
 });

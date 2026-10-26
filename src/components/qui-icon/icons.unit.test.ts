@@ -33,8 +33,9 @@ describe("inline icons", () => {
 
       const [path] = node.$children$;
       expect(path.$tag$, name).toBe("path");
-      expect(path.$attrs$, name).toMatchObject({ fill: "currentColor" });
-      expect(path.$attrs$.d, name).toEqual(expect.stringMatching(/\S/u));
+      const attrs = path.$attrs$ as Record<string, string>;
+      expect(attrs, name).toMatchObject({ fill: "currentColor" });
+      expect(attrs.d, name).toEqual(expect.stringMatching(/\S/u));
     }
   });
 });

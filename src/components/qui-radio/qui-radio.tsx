@@ -1,11 +1,14 @@
-import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, Method, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
 
 import { ariaAttr, dataAttr } from "../../helpers/attr";
 import { isHTMLInputElement } from "../../helpers/dom";
 import { consumeContextPart } from "../shared/context-part";
+import { ContextPartElement } from "../shared/context-part-element";
+import { focusElement } from "../shared/field/control";
+import { focusRing } from "../shared/styles";
 import {
   consumeRadioGroup,
   type RadioGroupContext,
@@ -46,12 +49,7 @@ const styles = {
       },
     },
     "&[data-invalid]": { borderColor: "error" },
-    "&[data-focus-visible]": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "2px",
-    },
+    "&[data-focus-visible]": focusRing,
   }),
   label: css({
     fontSize: "sm",
@@ -79,9 +77,9 @@ const styles = {
 @Component({
   tag: "qui-radio",
   styleUrl: resolveVar(styleUrls.quiRadio),
-  scoped: true,
+  shadow: true,
 })
-export class QuiRadio {
+export class QuiRadio extends ContextPartElement<RadioGroupContext> {
   @Element() host!: HTMLQuiRadioElement;
 
   /** The value submitted when this item is selected. */
@@ -92,30 +90,19 @@ export class QuiRadio {
   @Prop() invalid = false;
   /** Plain-text label fallback when no slot content is supplied. */
   @Prop() label?: string;
-  /** Additional class applied to the item label. */
-  @Prop() innerClass?: string;
 
-  private readonly contextPart = consumeContextPart({
+  protected readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "radio-group",
     consume: consumeRadioGroup,
   });
   private inputEl?: HTMLInputElement;
+  private registeredInput?: HTMLInputElement;
+  private registeredValue?: string;
+  private unregisterInput?: () => void;
 
   private get group(): RadioGroupContext | undefined {
     return this.contextPart.context;
-  }
-
-  public connectedCallback(): void {
-    this.contextPart.hostConnected();
-  }
-
-  public componentWillLoad(): void {
-    this.contextPart.hostWillLoad();
-  }
-
-  public componentDidLoad(): void {
-    this.contextPart.hostDidLoad();
   }
 
   public componentDidRender(): void {
@@ -123,10 +110,31 @@ export class QuiRadio {
     if (this.inputEl !== undefined && this.inputEl.checked !== checked) {
       this.inputEl.checked = checked;
     }
+    const { group } = this;
+    if (
+      group !== undefined &&
+      this.inputEl !== undefined &&
+      (this.registeredInput !== this.inputEl || this.registeredValue !== this.value)
+    ) {
+      this.unregisterInput?.();
+      this.unregisterInput = group.registerInput(this.value, this.inputEl);
+      this.registeredInput = this.inputEl;
+      this.registeredValue = this.value;
+    }
   }
 
   public disconnectedCallback(): void {
-    this.contextPart.hostDisconnected();
+    super.disconnectedCallback();
+    this.unregisterInput?.();
+    this.unregisterInput = undefined;
+    this.registeredInput = undefined;
+    this.registeredValue = undefined;
+  }
+
+  /** Moves focus to the internal native radio input. */
+  @Method()
+  public async focusControl(options?: FocusOptions): Promise<void> {
+    await focusElement(this.inputEl, options);
   }
 
   private item(): RadioItem {
@@ -191,7 +199,7 @@ export class QuiRadio {
           data-scope="radio-group"
           data-part="item"
           {...dataAttrs}
-          class={cx(styles.item, this.innerClass)}
+          class={styles.item}
           part="root"
         >
           <span
@@ -215,9 +223,7 @@ export class QuiRadio {
           </span>
           <input
             ref={(el) => {
-              if (isHTMLInputElement(el)) {
-                this.inputEl = el;
-              }
+              this.inputEl = el;
             }}
             id={group?.inputId(this.value)}
             type="radio"

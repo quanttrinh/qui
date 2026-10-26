@@ -6,6 +6,7 @@ import {
   forceUpdate,
   h,
   Host,
+  Method,
   Prop,
   resolveVar,
   Watch,
@@ -14,11 +15,10 @@ import {
 } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { cx } from "#styled-system/css";
 
 import { ariaAttr, dataAttr } from "../../helpers/attr";
-import { isHTMLButtonElement, isHTMLDivElement } from "../../helpers/dom";
 import { nextId } from "../../helpers/id";
+import { ensureShadowStylesheet } from "../../utilities/styles";
 import { UnfoldMoreIcon } from "../qui-icon/icons";
 import { quiOptionSource } from "../qui-option/option-source";
 import {
@@ -28,6 +28,8 @@ import {
   OptionSourceController,
   SelectionController,
 } from "../shared/controllers";
+import { applyFieldAria } from "../shared/field/aria";
+import { createFieldControl, focusElement } from "../shared/field/control";
 import { OptionControlBase } from "../shared/option/component-base";
 import { labelForValue, type OptionItem } from "../shared/option/option";
 import {
@@ -68,7 +70,7 @@ function labelsForValues(
 @Component({
   tag: "qui-select",
   styleUrl: resolveVar(styleUrls.quiSelect),
-  scoped: true,
+  shadow: true,
   formAssociated: true,
 })
 export class QuiSelect extends OptionControlBase {
@@ -98,6 +100,7 @@ export class QuiSelect extends OptionControlBase {
   private typeaheadTimer?: ReturnType<typeof setTimeout>;
   private readonly generatedId = nextId("qui-select");
   private readonly listId = `${this.generatedId}-listbox`;
+  private readonly fieldControl = createFieldControl(() => this.triggerEl);
   private readonly form = new FormController({
     getHost: (): HTMLElement => this.host,
     getInternals: (): ElementInternals => this.internals,
@@ -188,6 +191,12 @@ export class QuiSelect extends OptionControlBase {
     this.addController(this.selection);
     this.addController(this.window);
     this.addController(this.navigation);
+    this.form.setControl(this.fieldControl);
+  }
+
+  public connectedCallback(): void {
+    super.connectedCallback();
+    ensureShadowStylesheet(this.host);
   }
 
   public componentWillLoad(): void {
@@ -199,6 +208,7 @@ export class QuiSelect extends OptionControlBase {
 
   public componentDidRender(): void {
     super.componentDidRender();
+    applyFieldAria(this.triggerEl, this.form.fieldApi);
   }
 
   public disconnectedCallback(): void {
@@ -207,6 +217,12 @@ export class QuiSelect extends OptionControlBase {
       clearTimeout(this.typeaheadTimer);
       this.typeaheadTimer = undefined;
     }
+  }
+
+  /** Moves focus to the internal trigger button. */
+  @Method()
+  public async focusControl(options?: FocusOptions): Promise<void> {
+    await focusElement(this.triggerEl, options);
   }
 
   @Watch("value")
@@ -342,20 +358,16 @@ export class QuiSelect extends OptionControlBase {
       <Host class={styles.host}>
         <div
           ref={(el) => {
-            if (isHTMLDivElement(el)) {
-              this.rootEl = el;
-            }
+            this.rootEl = el;
           }}
-          class={cx(styles.root, this.innerClass)}
+          class={styles.root}
           part="root"
           dir={this.textDirection}
         >
           <div class={styles.control} part="control">
             <button
               ref={(el) => {
-                if (isHTMLButtonElement(el)) {
-                  this.triggerEl = el;
-                }
+                this.triggerEl = el;
               }}
               id={this.form.fieldApi?.ids.control ?? (this.host.id || this.generatedId)}
               class={styles.trigger}
@@ -368,8 +380,6 @@ export class QuiSelect extends OptionControlBase {
               aria-activedescendant={this.activeDescendant()}
               aria-invalid={ariaAttr(this.form.isInvalid)}
               aria-required={ariaAttr(this.form.isRequired)}
-              aria-describedby={this.form.fieldApi?.getInputProps()["aria-describedby"]}
-              aria-errormessage={this.form.fieldApi?.getInputProps()["aria-errormessage"]}
               data-placeholder-shown={dataAttr(placeholderShown)}
               data-invalid={dataAttr(this.form.isInvalid)}
               data-disabled={dataAttr(this.form.isDisabled)}
@@ -400,8 +410,8 @@ export class QuiSelect extends OptionControlBase {
               this.window.setViewport(el);
             },
             onDismiss: this.handleDismiss,
-            onScroll: (event) => {
-              this.window.handleScroll(event);
+            onScroll: () => {
+              this.window.handleScroll();
             },
             renderItem: (entry) =>
               renderOptionRow({

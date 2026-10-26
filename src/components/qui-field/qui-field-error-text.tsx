@@ -1,9 +1,10 @@
-import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
 import { consumeContextPart } from "../shared/context-part";
+import { ContextPartElement } from "../shared/context-part-element";
 import { consumeField, type FieldApi } from "../shared/field/context";
 import { fieldStyles } from "./styles";
 
@@ -19,39 +20,23 @@ const styles = {
 @Component({
   tag: "qui-field-error-text",
   styleUrl: resolveVar(styleUrls.quiFieldErrorText),
-  scoped: true,
+  shadow: true,
 })
-export class QuiFieldErrorText {
+export class QuiFieldErrorText extends ContextPartElement<FieldApi> {
   @Element() host!: HTMLQuiFieldErrorTextElement;
 
-  /** Additional class applied to the error text element. */
-  @Prop() innerClass?: string;
-
-  private readonly contextPart = consumeContextPart({
+  protected readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "field",
     consume: consumeField,
-    setup: (field): (() => void) => field.registerErrorText(),
+    setup: (field): (() => void) => {
+      this.host.id = field.getErrorTextProps().id;
+      return field.registerErrorText(this.host);
+    },
   });
 
   private get field(): FieldApi | undefined {
     return this.contextPart.context;
-  }
-
-  public connectedCallback(): void {
-    this.contextPart.hostConnected();
-  }
-
-  public componentWillLoad(): void {
-    this.contextPart.hostWillLoad();
-  }
-
-  public componentDidLoad(): void {
-    this.contextPart.hostDidLoad();
-  }
-
-  public disconnectedCallback(): void {
-    this.contextPart.hostDisconnected();
   }
 
   public render(): VNode {
@@ -65,7 +50,7 @@ export class QuiFieldErrorText {
         data-part="error-text"
         data-invalid={invalid ? "" : undefined}
         aria-live="polite"
-        class={cx(styles.host, fieldStyles.errorText, this.innerClass)}
+        class={cx(styles.host, fieldStyles.errorText)}
         part="error-text"
       >
         <slot />

@@ -1,25 +1,18 @@
 import { css } from "#styled-system/css";
 
+import { fieldSurface, focusRingFlush, focusRingInset } from "../shared/styles";
+
 export const comboboxStyles = {
-  host: css({ display: "block", position: "relative", width: "full" }),
+  host: css({ display: "block" }),
   root: css({ position: "relative", width: "full" }),
   control: css({
+    ...fieldSurface,
     display: "flex",
     alignItems: "center",
     width: "full",
     height: "10",
-    backgroundColor: "surface",
-    borderWidth: "1px",
-    borderColor: "outlineVariant",
-    rounded: "lg",
-    overflow: "hidden",
-    transition: "border-color 150ms, outline-color 150ms",
-    "&:hover": { borderColor: "outline" },
     "&:focus-within": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "0",
+      ...focusRingFlush,
       borderColor: "primary",
     },
     "&[data-invalid]": { borderColor: "error" },
@@ -51,12 +44,7 @@ export const comboboxStyles = {
     backgroundColor: "transparent",
     borderWidth: "0",
     "&:hover": { color: "onSurface" },
-    "&:focus-visible": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "-2px",
-    },
+    "&:focus-visible": focusRingInset,
     "&:disabled": { cursor: "not-allowed" },
     "& svg": { width: "1em", height: "1em" },
   }),

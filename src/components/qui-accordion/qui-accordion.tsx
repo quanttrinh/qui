@@ -13,15 +13,17 @@ import {
 } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
 
 import { nextId } from "../../helpers/id";
+import { ensureShadowStylesheet } from "../../utilities/styles";
+import { createListenerStore } from "../shared/listener-store";
 import { ReactiveControlBase } from "../shared/reactive-control/component-base";
 import { clearAccordion, provideAccordion, type AccordionContext } from "./accordion-context";
 import { AccordionController } from "./controller";
 
 const styles = {
-  host: css({ display: "block", width: "full" }),
+  host: css({ display: "block" }),
   root: css({
     width: "full",
     borderWidth: "1px",
@@ -46,7 +48,7 @@ export interface AccordionValueChangeDetails {
 @Component({
   tag: "qui-accordion",
   styleUrl: resolveVar(styleUrls.quiAccordion),
-  scoped: true,
+  shadow: true,
 })
 export class QuiAccordion extends ReactiveControlBase {
   @Element() host!: HTMLQuiAccordionElement;
@@ -65,29 +67,25 @@ export class QuiAccordion extends ReactiveControlBase {
   @Prop() orientation: "horizontal" | "vertical" = "vertical";
   /** Text direction. */
   @Prop() textDirection?: "ltr" | "rtl";
-  /** Additional class applied to the root element. */
-  @Prop() innerClass?: string;
 
   /** Emitted whenever the expanded values change. */
   @Event({ eventName: "valuechange", bubbles: true, composed: true })
   valueChange!: EventEmitter<AccordionValueChangeDetails>;
 
   private idBase = "";
-  private readonly listeners = new Set<() => void>();
+  private readonly listeners = createListenerStore();
   private readonly generatedId = nextId("qui-accordion");
   private readonly controller = new AccordionController({
-    getHost: (): HTMLElement => this.host,
     getValue: (): string[] | undefined => this.value,
     getDefaultValue: (): string[] | undefined => this.defaultValue,
     getMultiple: (): boolean => this.multiple,
     getCollapsible: (): boolean => this.collapsible,
-    getTriggerId: (value: string): string => this.triggerId(value),
     onChange: (value: string[]): void => {
       this.valueChange.emit({ value });
     },
     requestUpdate: (): void => {
       forceUpdate(this.host);
-      this.notifyListeners();
+      this.listeners.notify();
     },
   });
   private readonly context: AccordionContext = {
@@ -111,16 +109,20 @@ export class QuiAccordion extends ReactiveControlBase {
     edge: (edge: "first" | "last"): void => {
       this.controller.edge(edge);
     },
+    registerTrigger: (value: string, triggerHost: HTMLElement, trigger: HTMLButtonElement) =>
+      this.controller.registerTrigger(value, triggerHost, trigger),
+    registerContent: (value: string, contentHost: HTMLElement) =>
+      this.controller.registerContent(value, contentHost),
+    getTrigger: (value: string) => this.controller.getTrigger(value),
+    getContent: (value: string): HTMLElement | undefined => this.controller.getContent(value),
+    focusTrigger: (value: string): void => {
+      this.controller.focusTrigger(value);
+    },
     rootId: (): string => this.rootId,
     itemId: (value: string): string => this.itemId(value),
     triggerId: (value: string): string => this.triggerId(value),
     contentId: (value: string): string => this.contentId(value),
-    subscribe: (listener: () => void): (() => void) => {
-      this.listeners.add(listener);
-      return (): void => {
-        this.listeners.delete(listener);
-      };
-    },
+    subscribe: this.listeners.subscribe,
   };
 
   constructor() {
@@ -134,6 +136,7 @@ export class QuiAccordion extends ReactiveControlBase {
       this.idBase = this.host.id || this.generatedId;
     }
     provideAccordion(this.host, this.context);
+    ensureShadowStylesheet(this.host);
   }
 
   public componentWillLoad(): void {
@@ -156,7 +159,7 @@ export class QuiAccordion extends ReactiveControlBase {
   @Watch("textDirection")
   private syncContext(): void {
     forceUpdate(this.host);
-    this.notifyListeners();
+    this.listeners.notify();
   }
 
   private get rootId(): string {
@@ -175,12 +178,6 @@ export class QuiAccordion extends ReactiveControlBase {
     return `${this.rootId}:content:${value}`;
   }
 
-  private notifyListeners(): void {
-    for (const listener of this.listeners) {
-      listener();
-    }
-  }
-
   public render(): VNode {
     return (
       <Host class={styles.host}>
@@ -190,7 +187,7 @@ export class QuiAccordion extends ReactiveControlBase {
           data-part="root"
           data-orientation={this.orientation}
           dir={this.textDirection}
-          class={cx(styles.root, this.innerClass)}
+          class={styles.root}
           part="root"
         >
           <slot />

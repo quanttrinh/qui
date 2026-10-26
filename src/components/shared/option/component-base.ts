@@ -40,8 +40,6 @@ export abstract class OptionControlBase extends FormControlBase {
   @Prop() defaultOpen = false;
   /** Text direction. */
   @Prop() textDirection?: "ltr" | "rtl";
-  /** Additional class applied to the root element. */
-  @Prop() innerClass?: string;
   /** Extra rows rendered above and below the visible window. */
   @Prop() overscan = 6;
   /**

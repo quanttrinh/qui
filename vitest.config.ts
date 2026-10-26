@@ -14,14 +14,35 @@ export default defineVitestConfig({
       },
       {
         test: {
+          name: "integration",
+          include: ["src/**/*.integration.test.ts"],
+          environment: "node",
+        },
+      },
+      {
+        test: {
           name: "browser",
           include: ["src/**/*.browser.test.{ts,tsx}"],
-          setupFiles: ["./vitest-setup.ts"],
+          exclude: ["src/**/*.smoke.browser.test.{ts,tsx}"],
+          setupFiles: ["./vitest.setup.ts"],
           browser: {
             enabled: true,
             provider: playwright(),
             headless: true,
             instances: [{ browser: "chromium" }],
+          },
+        },
+      },
+      {
+        test: {
+          name: "smoke",
+          include: ["src/**/*.smoke.browser.test.{ts,tsx}"],
+          setupFiles: ["./vitest.setup.ts"],
+          browser: {
+            enabled: true,
+            provider: playwright(),
+            headless: true,
+            instances: [{ browser: "chromium" }, { browser: "firefox" }, { browser: "webkit" }],
           },
         },
       },

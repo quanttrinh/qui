@@ -7,6 +7,7 @@ import {
   forceUpdate,
   h,
   Host,
+  Method,
   Prop,
   State,
   Watch,
@@ -22,7 +23,10 @@ import { applyTextCase, type TextCase } from "../../helpers/case";
 import { isHTMLInputElement } from "../../helpers/dom";
 import { nextId } from "../../helpers/id";
 import { applyMask, formatMask, rawFromMasked, unmask } from "../../helpers/mask";
+import { ensureShadowStylesheet } from "../../utilities/styles";
 import { AddIcon, RemoveIcon, VisibilityIcon, VisibilityOffIcon } from "../qui-icon/icons";
+import { applyFieldAria } from "../shared/field/aria";
+import { createFieldControl, focusElement } from "../shared/field/control";
 import { FormControlBase } from "../shared/form-control/component-base";
 import { FormController, type FormValidity } from "../shared/form-control/controller";
 import { styles } from "./styles";
@@ -78,7 +82,7 @@ export interface InputValueDetails {
 @Component({
   tag: "qui-input",
   styleUrl: resolveVar(styleUrls.quiInput),
-  scoped: true,
+  shadow: true,
   formAssociated: true,
 })
 export class QuiInput extends FormControlBase {
@@ -132,8 +136,6 @@ export class QuiInput extends FormControlBase {
   @Prop() min?: number;
   /** Upper bound enforced while stepping. */
   @Prop() max?: number;
-  /** Additional class applied to the root element. */
-  @Prop() innerClass?: string;
 
   /** Emitted after every edit with the masked and unmasked values. */
   @StencilEvent({ eventName: "valuechange", bubbles: true, composed: true })
@@ -148,6 +150,7 @@ export class QuiInput extends FormControlBase {
   private initialValue = "";
   private rawValue = "";
   private readonly generatedId = nextId("qui-input");
+  private readonly fieldControl = createFieldControl(() => this.inputEl);
   private readonly form = new FormController({
     getHost: (): HTMLElement => this.host,
     getInternals: (): ElementInternals => this.internals,
@@ -182,10 +185,16 @@ export class QuiInput extends FormControlBase {
   constructor() {
     super();
     this.addController(this.form);
+    this.form.setControl(this.fieldControl);
   }
 
   protected get formController(): FormController {
     return this.form;
+  }
+
+  public connectedCallback(): void {
+    super.connectedCallback();
+    ensureShadowStylesheet(this.host);
   }
 
   public componentWillLoad(): void {
@@ -201,9 +210,20 @@ export class QuiInput extends FormControlBase {
     this.form.sync();
   }
 
+  public componentDidRender(): void {
+    super.componentDidRender();
+    applyFieldAria(this.inputEl, this.form.fieldApi);
+  }
+
   public disconnectedCallback(): void {
     super.disconnectedCallback();
     this.clearHold();
+  }
+
+  /** Moves focus to the internal native input. */
+  @Method()
+  public async focusControl(options?: FocusOptions): Promise<void> {
+    await focusElement(this.inputEl, options);
   }
 
   @Watch("value")
@@ -481,7 +501,7 @@ export class QuiInput extends FormControlBase {
   public render(): VNode {
     return (
       <Host class={styles.host}>
-        <div data-scope="input" data-part="root" class={cx(styles.root, this.innerClass)}>
+        <div data-scope="input" data-part="root" part="root" class={styles.root}>
           <div
             data-scope="input"
             data-part="control"
@@ -498,9 +518,7 @@ export class QuiInput extends FormControlBase {
             <input
               {...this.inputProps}
               ref={(el) => {
-                if (isHTMLInputElement(el)) {
-                  this.inputEl = el;
-                }
+                this.inputEl = el;
               }}
               type={this.resolvedType}
               placeholder={this.placeholder}

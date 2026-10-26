@@ -1,11 +1,14 @@
-import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
 
 import { dataAttr } from "../../helpers/attr";
+import { setAriaControls, setAriaLabelledBy } from "../shared/aria";
 import { consumeContextPart } from "../shared/context-part";
-import { consumeAccordionItem } from "./accordion-context";
+import { ContextPartElement } from "../shared/context-part-element";
+import { RegistrationReconciler } from "../shared/registration-reconciler";
+import { consumeAccordionItem, type AccordionItemContext } from "./accordion-context";
 
 const styles = {
   host: css({ display: "block" }),
@@ -43,34 +46,51 @@ const styles = {
 @Component({
   tag: "qui-accordion-content",
   styleUrl: resolveVar(styleUrls.quiAccordionContent),
-  scoped: true,
+  shadow: true,
 })
-export class QuiAccordionContent {
+export class QuiAccordionContent extends ContextPartElement<AccordionItemContext> {
   @Element() host!: HTMLQuiAccordionContentElement;
 
-  /** Additional class applied to the content element. */
-  @Prop() innerClass?: string;
+  private contentEl?: HTMLElement;
+  private readonly registration = new RegistrationReconciler();
 
-  private readonly contextPart = consumeContextPart({
+  protected readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "accordion-item",
     consume: consumeAccordionItem,
   });
 
-  public connectedCallback(): void {
-    this.contextPart.hostConnected();
-  }
-
-  public componentWillLoad(): void {
-    this.contextPart.hostWillLoad();
-  }
-
-  public componentDidLoad(): void {
-    this.contextPart.hostDidLoad();
+  public componentDidRender(): void {
+    this.syncRegistration();
+    this.syncAria();
   }
 
   public disconnectedCallback(): void {
-    this.contextPart.hostDisconnected();
+    this.registration.clear();
+    super.disconnectedCallback();
+  }
+
+  private syncRegistration(): void {
+    const item = this.contextPart.context;
+    if (item === undefined) {
+      return;
+    }
+    const { value } = item.item();
+    this.registration.reconcile([item, value], () => item.registerContent(value, this.host));
+  }
+
+  private syncAria(): void {
+    const item = this.contextPart.context;
+    const { contentEl } = this;
+    if (item === undefined || contentEl === undefined) {
+      return;
+    }
+    const trigger = item.getTrigger(item.item().value);
+    setAriaLabelledBy(contentEl, trigger === undefined ? [] : [trigger.host]);
+    if (trigger !== undefined) {
+      // Set the reverse relationship so a late trigger registration is reflected too.
+      setAriaControls(trigger.trigger, [this.host]);
+    }
   }
 
   public render(): VNode {
@@ -81,10 +101,11 @@ export class QuiAccordionContent {
     const disabled = item?.isItemDisabled() ?? false;
 
     return (
-      <Host class={styles.host}>
-        <div
-          id={item?.contentId(value)}
-          role="region"
+      <Host id={item?.contentId(value)} class={styles.host}>
+        <section
+          ref={(el) => {
+            this.contentEl = el;
+          }}
           aria-labelledby={item?.triggerId(value)}
           data-scope="accordion"
           data-part="item-content"
@@ -93,7 +114,7 @@ export class QuiAccordionContent {
           data-focus={dataAttr(focused)}
           data-orientation={item?.orientation() ?? "vertical"}
           dir={item?.textDirection()}
-          class={cx(styles.content, this.innerClass)}
+          class={styles.content}
           part="content"
           inert={expanded ? undefined : true}
         >
@@ -102,7 +123,7 @@ export class QuiAccordionContent {
               <slot />
             </div>
           </div>
-        </div>
+        </section>
       </Host>
     );
   }

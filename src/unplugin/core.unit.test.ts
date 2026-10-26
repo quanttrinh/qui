@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   componentsFromVirtualModuleId,
   createRegistrationModule,
+  createStylesModule,
   extractComponents,
+  importInjectionOffset,
   isTransformableId,
   registrationOrder,
   virtualModuleId,
@@ -157,29 +159,12 @@ describe("registrationOrder", () => {
   });
 
   it("consumes one-shot component iterables once", () => {
-    const code = createRegistrationModule(singleUseComponents(), { strategy: "split" });
-    const styleImports = [...code.matchAll(/split\/components\/(?<tag>qui-[^"]+)\.css/gu)].map(
-      (match) => match.groups?.tag,
-    );
+    const code = createRegistrationModule(singleUseComponents(), { styles: false });
+    const definitions = [
+      ...code.matchAll(/from "@quanttrinh\/qui\/shared\/(?<tag>qui-[^"]+)"/gu),
+    ].map((match) => match.groups?.tag);
 
-    expect(styleImports).toEqual(["qui-accordion", "qui-accordion-content"]);
-  });
-
-  it("keeps split CSS imports alphabetical", () => {
-    const code = createRegistrationModule(
-      ["qui-accordion-content", "qui-accordion-trigger", "qui-accordion", "qui-accordion-item"],
-      { strategy: "split" },
-    );
-    const styleImports = [...code.matchAll(/split\/components\/(?<tag>qui-[^"]+)\.css/gu)].map(
-      (match) => match.groups?.tag,
-    );
-
-    expect(styleImports).toEqual([
-      "qui-accordion",
-      "qui-accordion-content",
-      "qui-accordion-item",
-      "qui-accordion-trigger",
-    ]);
+    expect(definitions).toEqual(["qui-accordion", "qui-accordion-content"]);
   });
 });
 
@@ -191,30 +176,18 @@ describe("virtual registration module", () => {
   });
 
   it("emits shared registration and shared styles", () => {
-    const code = createRegistrationModule(["qui-button"], { strategy: "shared" });
+    const code = createRegistrationModule(["qui-button"]);
 
     expect(code).toContain('from "@quanttrinh/qui/register"');
     expect(code).toContain('from "@quanttrinh/qui/shared/qui-button"');
-    expect(code).toContain('import "@quanttrinh/qui/theme.css";');
-    expect(code).toContain('import "@quanttrinh/qui/styles.css";');
+    expect(code).toContain('import "virtual:qui/styles";');
     expect(code).toContain("defineComponents(__qui_0);");
-  });
-
-  it("emits split registration, base styles, and per-component styles", () => {
-    const code = createRegistrationModule(["qui-button", "qui-input"], { strategy: "split" });
-
-    expect(code).toContain('from "@quanttrinh/qui/split/qui-button"');
-    expect(code).toContain('from "@quanttrinh/qui/split/qui-input"');
-    expect(code).toContain('import "@quanttrinh/qui/base.css";');
-    expect(code).toContain('import "@quanttrinh/qui/split/components/qui-button.css";');
-    expect(code).toContain('import "@quanttrinh/qui/split/components/qui-input.css";');
-    expect(code).toContain("defineComponents(__qui_0, __qui_1);");
   });
 
   it("can omit styles", () => {
     const code = createRegistrationModule(["qui-button"], { styles: false });
 
-    expect(code).not.toContain(".css");
+    expect(code).not.toContain("virtual:qui/styles");
   });
 
   it("returns an empty module when there are no components", () => {
@@ -222,10 +195,35 @@ describe("virtual registration module", () => {
   });
 });
 
+describe("virtual styles module", () => {
+  it("configures a document and shadow-root URL only when none exists", () => {
+    const code = createStylesModule(":host { display: block; }");
+
+    expect(code).toContain('import "@quanttrinh/qui/theme.css";');
+    expect(code).toContain('from "@quanttrinh/qui/runtime"');
+    expect(code).toContain('":host { display: block; }"');
+    expect(code).toContain("URL.createObjectURL");
+    expect(code).toContain('link.setAttribute("data-qui-styles", "");');
+    expect(code).toContain("getQuiStylesHref() === undefined");
+    expect(code).toContain("setQuiStylesHref(url);");
+  });
+});
+
+describe("importInjectionOffset", () => {
+  it("inserts after MDX frontmatter", () => {
+    const code = "---\ntitle: Example\n---\n<qui-button />";
+    expect(code.slice(importInjectionOffset(code))).toBe("<qui-button />");
+  });
+
+  it("uses the start when there is no frontmatter", () => {
+    expect(importInjectionOffset("export const value = 1;")).toBe(0);
+  });
+});
+
 describe("isTransformableId", () => {
-  it("accepts JavaScript, TypeScript, JSX, Astro, and MDX", () => {
+  it("accepts JavaScript, TypeScript, JSX, and MDX", () => {
     expect(isTransformableId("/app/src/page.tsx")).toBe(true);
-    expect(isTransformableId("/app/src/page.astro")).toBe(true);
+    expect(isTransformableId("/app/src/page.astro")).toBe(false);
     expect(isTransformableId("/app/src/page.mdx")).toBe(true);
     expect(isTransformableId("/app/src/page.mjs")).toBe(true);
   });

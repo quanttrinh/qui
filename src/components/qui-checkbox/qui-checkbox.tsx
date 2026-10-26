@@ -7,6 +7,7 @@ import {
   forceUpdate,
   h,
   Host,
+  Method,
   Prop,
   Watch,
   type EventEmitter,
@@ -14,17 +15,19 @@ import {
 } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
 
 import { dataAttr } from "../../helpers/attr";
-import { isHTMLInputElement } from "../../helpers/dom";
 import { nextId } from "../../helpers/id";
+import { ensureShadowStylesheet } from "../../utilities/styles";
 import { CheckIcon, RemoveIcon } from "../qui-icon/icons";
 import { normalizeChecked, type CheckedState } from "../shared/checkable/checked-state";
 import { CheckableController } from "../shared/checkable/controller";
+import { applyFieldAria } from "../shared/field/aria";
+import { createFieldControl, focusElement } from "../shared/field/control";
 import { FormControlBase } from "../shared/form-control/component-base";
 import { FormController, type FormValidity } from "../shared/form-control/controller";
-import { requiredIndicatorStyle } from "../shared/required-indicator";
+import { focusRing, requiredIndicatorStyle } from "../shared/styles";
 
 const styles = {
   host: css({ display: "inline-flex" }),
@@ -58,12 +61,7 @@ const styles = {
       color: "onPrimary",
     },
     "&[data-invalid]": { borderColor: "error" },
-    "&[data-focus-visible]": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "2px",
-    },
+    "&[data-focus-visible]": focusRing,
   }),
   indicator: css({
     display: "flex",
@@ -100,7 +98,7 @@ const styles = {
 @Component({
   tag: "qui-checkbox",
   styleUrl: resolveVar(styleUrls.quiCheckbox),
-  scoped: true,
+  shadow: true,
   formAssociated: true,
 })
 export class QuiCheckbox extends FormControlBase {
@@ -127,16 +125,16 @@ export class QuiCheckbox extends FormControlBase {
   @Prop() value?: string;
   /** Plain-text label fallback when no slot content is supplied. */
   @Prop() label?: string;
-  /** Additional class applied to the root label. */
-  @Prop() innerClass?: string;
 
   /** Emitted whenever the checked state changes. */
   @Event({ eventName: "checkedchange", bubbles: true, composed: true })
   checkedChange!: EventEmitter<{ checked: CheckedState }>;
 
   private inputEl?: HTMLInputElement;
+  private labelEl?: HTMLElement;
   private readonly defaultMarker = "*";
   private readonly generatedId = nextId("qui-checkbox");
+  private readonly fieldControl = createFieldControl(() => this.inputEl);
   private readonly checkable = new CheckableController({
     getChecked: (): CheckedState | undefined => normalizeChecked(this.checked),
     getDefaultChecked: (): CheckedState | undefined => normalizeChecked(this.defaultChecked),
@@ -185,6 +183,7 @@ export class QuiCheckbox extends FormControlBase {
     super();
     this.addController(this.checkable);
     this.addController(this.form);
+    this.form.setControl(this.fieldControl);
   }
 
   protected get formController(): FormController {
@@ -194,22 +193,20 @@ export class QuiCheckbox extends FormControlBase {
   public connectedCallback(): void {
     super.connectedCallback();
     this.checkable.setInput(this.inputEl);
-  }
-
-  public componentWillLoad(): void {
-    super.componentWillLoad();
-  }
-
-  public componentDidLoad(): void {
-    super.componentDidLoad();
+    ensureShadowStylesheet(this.host);
   }
 
   public componentDidRender(): void {
     super.componentDidRender();
+    applyFieldAria(this.inputEl, this.form.fieldApi, {
+      labelledBy: this.labelEl === undefined ? [] : [this.labelEl],
+    });
   }
 
-  public disconnectedCallback(): void {
-    super.disconnectedCallback();
+  /** Moves focus to the internal native input. */
+  @Method()
+  public async focusControl(options?: FocusOptions): Promise<void> {
+    await focusElement(this.inputEl, options);
   }
 
   @Watch("checked")
@@ -313,7 +310,7 @@ export class QuiCheckbox extends FormControlBase {
           {...stateAttrs}
           id={this.rootId}
           htmlFor={this.inputId}
-          class={cx(styles.root, this.innerClass)}
+          class={styles.root}
           part="root"
         >
           <span
@@ -337,6 +334,9 @@ export class QuiCheckbox extends FormControlBase {
             </span>
           </span>
           <span
+            ref={(el) => {
+              this.labelEl = el;
+            }}
             data-scope="checkbox"
             data-part="label"
             {...stateAttrs}
@@ -359,10 +359,8 @@ export class QuiCheckbox extends FormControlBase {
           <input
             {...this.inputProps}
             ref={(el) => {
-              if (isHTMLInputElement(el)) {
-                this.inputEl = el;
-                this.checkable.setInput(el);
-              }
+              this.inputEl = el;
+              this.checkable.setInput(el);
             }}
             type="checkbox"
             value={this.value ?? "on"}

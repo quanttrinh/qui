@@ -1,14 +1,19 @@
 import { resolveVar, Component, Element, h, Host, Prop, State, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
 
 import { dataAttr } from "../../helpers/attr";
+import { hasFocusableDescendant } from "../../helpers/dom";
+import { setAriaControls, setAriaLabelledBy } from "../shared/aria";
 import { consumeContextPart } from "../shared/context-part";
+import { ContextPartElement } from "../shared/context-part-element";
+import { RegistrationReconciler } from "../shared/registration-reconciler";
+import { focusRing } from "../shared/styles";
 import { consumeTabs, type TabsContext } from "./context";
 
 const styles = {
-  host: css({ display: "block", flex: "1" }),
+  host: css({ display: "contents" }),
   panel: css({
     flex: "1",
     paddingY: "3",
@@ -20,12 +25,7 @@ const styles = {
     contentVisibility: "auto",
     containIntrinsicSize: "auto 100px",
     "&[data-orientation=vertical]": { paddingY: "0", paddingInlineStart: "4" },
-    "&:focus-visible": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "2px",
-    },
+    "&:focus-visible": focusRing,
   }),
 };
 
@@ -37,19 +37,20 @@ const styles = {
 @Component({
   tag: "qui-tab-panel",
   styleUrl: resolveVar(styleUrls.quiTabPanel),
-  scoped: true,
+  shadow: true,
 })
-export class QuiTabPanel {
+export class QuiTabPanel extends ContextPartElement<TabsContext> {
   @Element() host!: HTMLQuiTabPanelElement;
 
   /** The value linking this panel to its trigger. */
   @Prop() value!: string;
-  /** Additional class applied to the panel. */
-  @Prop() innerClass?: string;
 
   @State() private tabbable = true;
 
-  private readonly contextPart = consumeContextPart({
+  private panelEl?: HTMLDivElement;
+  private readonly registration = new RegistrationReconciler();
+
+  protected readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "tabs",
     consume: consumeTabs,
@@ -59,36 +60,45 @@ export class QuiTabPanel {
     return this.contextPart.context;
   }
 
-  public connectedCallback(): void {
-    this.contextPart.hostConnected();
-  }
-
-  public componentWillLoad(): void {
-    this.contextPart.hostWillLoad();
-  }
-
-  public componentDidLoad(): void {
-    this.contextPart.hostDidLoad();
-  }
-
   public componentDidRender(): void {
+    this.syncRegistration();
+    this.syncAria();
     this.syncTabIndex(this.tabs?.isSelected(this.value) ?? false);
   }
 
   public disconnectedCallback(): void {
-    this.contextPart.hostDisconnected();
+    this.registration.clear();
+    super.disconnectedCallback();
+  }
+
+  private syncRegistration(): void {
+    const { tabs } = this;
+    if (tabs === undefined) {
+      return;
+    }
+    this.registration.reconcile([tabs, this.value], () =>
+      tabs.registerPanel(this.value, this.host),
+    );
+  }
+
+  private syncAria(): void {
+    const { tabs, panelEl } = this;
+    if (tabs === undefined || panelEl === undefined) {
+      return;
+    }
+    const trigger = tabs.getTrigger(this.value);
+    setAriaLabelledBy(panelEl, trigger === undefined ? [] : [trigger.host]);
+    if (trigger !== undefined) {
+      // Set the reverse relationship so a late trigger registration is reflected too.
+      setAriaControls(trigger.trigger, [this.host]);
+    }
   }
 
   private syncTabIndex(selected: boolean): void {
     if (!selected) {
       return;
     }
-    const focusable = [
-      ...this.host.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      ),
-    ].some((element) => element.getAttribute("part") !== "panel");
-    const tabbable = !focusable;
+    const tabbable = !hasFocusableDescendant(this.host);
     if (this.tabbable !== tabbable) {
       this.tabbable = tabbable;
     }
@@ -100,9 +110,11 @@ export class QuiTabPanel {
     const textDirection = this.tabs?.textDirection() ?? "ltr";
 
     return (
-      <Host class={styles.host}>
+      <Host id={this.tabs?.panelId(this.value)} class={styles.host}>
         <div
-          id={this.tabs?.panelId(this.value)}
+          ref={(el) => {
+            this.panelEl = el;
+          }}
           role="tabpanel"
           aria-labelledby={this.tabs?.triggerId(this.value)}
           tabIndex={this.tabbable ? 0 : undefined}
@@ -113,7 +125,7 @@ export class QuiTabPanel {
           data-orientation={orientation}
           data-ownedby={this.tabs?.listId()}
           dir={textDirection}
-          class={cx(styles.panel, this.innerClass)}
+          class={styles.panel}
           part="panel"
         >
           <slot />

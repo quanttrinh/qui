@@ -13,16 +13,18 @@ import {
 } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
 
 import { dataAttr } from "../../helpers/attr";
 import { nextId } from "../../helpers/id";
+import { ensureShadowStylesheet } from "../../utilities/styles";
+import { createListenerStore } from "../shared/listener-store";
 import { ReactiveControlBase } from "../shared/reactive-control/component-base";
 import { clearTabs, provideTabs, type TabsContext, type TabsVariant } from "./context";
 import { TabsController } from "./controller";
 
 const styles = {
-  host: css({ display: "block", width: "full" }),
+  host: css({ display: "block" }),
   root: css({
     display: "flex",
     flexDirection: "column",
@@ -48,7 +50,7 @@ export interface TabsValueChangeDetails {
 @Component({
   tag: "qui-tabs",
   styleUrl: resolveVar(styleUrls.quiTabs),
-  scoped: true,
+  shadow: true,
 })
 export class QuiTabs extends ReactiveControlBase {
   @Element() host!: HTMLQuiTabsElement;
@@ -69,18 +71,15 @@ export class QuiTabs extends ReactiveControlBase {
   @Prop() textDirection?: "ltr" | "rtl";
   /** The MD3 tab style. */
   @Prop() variant: TabsVariant = "primary";
-  /** Additional class applied to the root element. */
-  @Prop() innerClass?: string;
 
   /** Emitted whenever the selected tab changes. */
   @Event({ eventName: "valuechange", bubbles: true, composed: true })
   valueChange!: EventEmitter<TabsValueChangeDetails>;
 
-  private readonly listeners = new Set<() => void>();
+  private readonly listeners = createListenerStore();
   private readonly generatedId = nextId("qui-tabs");
   private idBase = "";
   private readonly controller = new TabsController({
-    getHost: (): HTMLElement => this.host,
     getValue: (): string | undefined => this.value,
     getDefaultValue: (): string | undefined => this.defaultValue,
     getActivationMode: (): "manual" | "automatic" => this.activationMode,
@@ -91,7 +90,7 @@ export class QuiTabs extends ReactiveControlBase {
     },
     requestUpdate: (): void => {
       forceUpdate(this.host);
-      this.notifyListeners();
+      this.listeners.notify();
     },
   });
   private readonly context: TabsContext = {
@@ -115,6 +114,17 @@ export class QuiTabs extends ReactiveControlBase {
     edge: (edge: "first" | "last"): void => {
       this.controller.edge(edge);
     },
+    registerList: (host: HTMLElement) => this.controller.registerList(host),
+    registerTrigger: (value: string, triggerHost: HTMLElement, trigger: HTMLButtonElement) =>
+      this.controller.registerTrigger(value, triggerHost, trigger),
+    registerPanel: (value: string, panelHost: HTMLElement) =>
+      this.controller.registerPanel(value, panelHost),
+    getList: (): HTMLElement | undefined => this.controller.getList(),
+    getTrigger: (value: string) => this.controller.getTrigger(value),
+    getPanel: (value: string): HTMLElement | undefined => this.controller.getPanel(value),
+    focusTrigger: (value: string): void => {
+      this.controller.focusTrigger(value);
+    },
     variant: (): TabsVariant => this.variant,
     orientation: (): "horizontal" | "vertical" => this.orientation,
     textDirection: (): "ltr" | "rtl" => this.textDirection ?? "ltr",
@@ -122,12 +132,7 @@ export class QuiTabs extends ReactiveControlBase {
     listId: (): string => this.listId,
     triggerId: (value: string): string => this.triggerId(value),
     panelId: (value: string): string => this.panelId(value),
-    subscribe: (listener: () => void): (() => void) => {
-      this.listeners.add(listener);
-      return (): void => {
-        this.listeners.delete(listener);
-      };
-    },
+    subscribe: this.listeners.subscribe,
   };
 
   constructor() {
@@ -141,6 +146,7 @@ export class QuiTabs extends ReactiveControlBase {
       this.idBase = this.host.id || this.generatedId;
     }
     provideTabs(this.host, this.context);
+    ensureShadowStylesheet(this.host);
   }
 
   public componentWillLoad(): void {
@@ -164,7 +170,7 @@ export class QuiTabs extends ReactiveControlBase {
   @Watch("variant")
   private syncContext(): void {
     forceUpdate(this.host);
-    this.notifyListeners();
+    this.listeners.notify();
   }
 
   private get rootId(): string {
@@ -183,12 +189,6 @@ export class QuiTabs extends ReactiveControlBase {
     return `${this.rootId}:content-${value}`;
   }
 
-  private notifyListeners(): void {
-    for (const listener of this.listeners) {
-      listener();
-    }
-  }
-
   public render(): VNode {
     return (
       <Host class={styles.host}>
@@ -200,7 +200,7 @@ export class QuiTabs extends ReactiveControlBase {
           data-focus={dataAttr(this.controller.hasFocus)}
           data-variant={this.variant}
           dir={this.textDirection ?? "ltr"}
-          class={cx(styles.root, this.innerClass)}
+          class={styles.root}
           part="root"
         >
           <slot />

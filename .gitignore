@@ -13,3 +13,4 @@ __pycache__/
 .npmrc
 .vitest/
 coverage/
+.stencil-test/
