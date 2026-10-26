@@ -18,10 +18,10 @@ describe("injectShadowStylesheet", () => {
     markStyled(outer.host);
     markStyled(inner.host);
 
-    injectShadowStylesheet(document as unknown as Document, { href: "theme.css" });
+    injectShadowStylesheet(document as unknown as Document, { href: "components.css" });
 
-    expect(linkHrefs(outer.root)).toEqual(["theme.css"]);
-    expect(linkHrefs(inner.root)).toEqual(["theme.css"]);
+    expect(linkHrefs(outer.root)).toEqual(["components.css"]);
+    expect(linkHrefs(inner.root)).toEqual(["components.css"]);
   });
 
   it("only injects into marked hosts", () => {
@@ -32,9 +32,9 @@ describe("injectShadowStylesheet", () => {
     other.root.append(document.createElement("div"));
     markStyled(qui.host);
 
-    injectShadowStylesheet(document as unknown as Document, { href: "theme.css" });
+    injectShadowStylesheet(document as unknown as Document, { href: "components.css" });
 
-    expect(linkHrefs(qui.root)).toEqual(["theme.css"]);
+    expect(linkHrefs(qui.root)).toEqual(["components.css"]);
     expect(linkHrefs(other.root)).toEqual([]);
   });
 
@@ -54,12 +54,12 @@ describe("injectShadowStylesheet", () => {
     button.root.append(document.createElement("div"));
     markStyled(button.host);
 
-    injectShadowStylesheet(document as unknown as Document, { href: "theme.css" });
+    injectShadowStylesheet(document as unknown as Document, { href: "components.css" });
 
     for (const host of skipped) {
       expect(linkHrefs(host.root)).toEqual([]);
     }
-    expect(linkHrefs(button.root)).toEqual(["theme.css"]);
+    expect(linkHrefs(button.root)).toEqual(["components.css"]);
   });
 
   it("does not add links to large option lists", () => {
@@ -72,9 +72,9 @@ describe("injectShadowStylesheet", () => {
       option.root.append(document.createElement("slot"));
     }
 
-    injectShadowStylesheet(document as unknown as Document, { href: "theme.css" });
+    injectShadowStylesheet(document as unknown as Document, { href: "components.css" });
 
-    expect(linkHrefs(select.root)).toEqual(["theme.css"]);
+    expect(linkHrefs(select.root)).toEqual(["components.css"]);
     expect(options.every((option) => linkHrefs(option.root).length === 0)).toBe(true);
   });
 
@@ -84,9 +84,9 @@ describe("injectShadowStylesheet", () => {
     root.append(document.createElement("slot"));
     markStyled(host);
 
-    injectShadowStylesheet(document as unknown as Document, { href: "theme.css" });
+    injectShadowStylesheet(document as unknown as Document, { href: "components.css" });
 
-    expect(linkHrefs(root)).toEqual(["theme.css"]);
+    expect(linkHrefs(root)).toEqual(["components.css"]);
   });
 
   it("does not duplicate an existing marked link", () => {
@@ -94,12 +94,12 @@ describe("injectShadowStylesheet", () => {
     const { host, root } = createHost(document, "qui-card");
     root.append(document.createElement("div"));
     markStyled(host);
-    const options = { href: "theme.css" };
+    const options = { href: "components.css" };
 
     injectShadowStylesheet(document as unknown as Document, options);
     injectShadowStylesheet(document as unknown as Document, options);
 
-    expect(linkHrefs(root)).toEqual(["theme.css"]);
+    expect(linkHrefs(root)).toEqual(["components.css"]);
   });
 
   it("ignores empty hrefs", () => {
@@ -136,12 +136,12 @@ describe("withShadowStylesheet", () => {
     const calls: string[] = [];
 
     const options = withShadowStylesheet(
-      { href: "theme.css" },
+      { href: "components.css" },
       {
         prettyHtml: true,
         afterHydrate(hydrated: Document) {
           calls.push("caller");
-          expect(linkHrefs(root)).toEqual(["theme.css"]);
+          expect(linkHrefs(root)).toEqual(["components.css"]);
           expect(hydrated).toBe(document);
         },
       },

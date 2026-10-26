@@ -14,8 +14,8 @@ Add external component stylesheet support and separate theme from shadow-root CS
   `@property` registrations, with no `:host` fallback or order-only layer
   declarations. Its values stay in the `tokens` layer so app tokens can override
   them normally.
-- Generated `styles.css` no longer contains order-only layer declarations, so
-  Panda's PostCSS integration does not re-expand the full design system into
-  dependency CSS files.
+- Generated `styles.css` removes the root layer order declaration that triggers
+  Panda's PostCSS integration, while preserving nested recipe layer
+  declarations and their precedence.
 - The published `@quanttrinh/qui/runtime` entry is self-contained and no longer
   imports an unpublished `dist/helpers/dom.js` module.

@@ -1,28 +1,68 @@
 /// <reference types="node" />
-import postcss from "postcss";
+import postcss, { type AtRule, type Root } from "postcss";
+
+const LAYER_ORDER = ["reset", "base", "tokens", "recipes", "utilities"] as const;
+
+function isLayerBlock(node: AtRule): boolean {
+  return node.type === "atrule" && node.name === "layer" && node.nodes !== undefined;
+}
+
+function layerRank(node: AtRule): number {
+  if (!isLayerBlock(node)) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+  const [name = ""] = node.params.split(".");
+  return LAYER_ORDER.indexOf(name.trim() as (typeof LAYER_ORDER)[number]);
+}
+
+function isFullLayerOrder(node: AtRule): boolean {
+  if (node.type !== "atrule" || node.name !== "layer" || node.nodes !== undefined) {
+    return false;
+  }
+  const names = node.params.split(",").map((name) => name.trim());
+  return LAYER_ORDER.every((name) => names.includes(name));
+}
 
 /**
- * Removes layer declarations that contain no rules.
+ * Removes the root layer order declaration that triggers Panda's PostCSS
+ * integration, while preserving nested recipe sublayer declarations and the
+ * effective layer order.
  *
- * Panda's PostCSS integration appends the full design-system stylesheet to every
- * CSS file that declares layer order. Generated dependency CSS must therefore
- * not contain standalone `@layer a, b;` statements. The remaining layer blocks
- * keep their original emission order, which is already reset, base, tokens,
- * recipes, utilities.
+ * Panda appends the full design-system stylesheet to every CSS file whose layer
+ * declaration contains all of `reset, base, tokens, recipes, utilities`. Nested
+ * declarations such as `@layer recipes{@layer base, slots;}` do not match that
+ * condition, so removing them would only risk changing recipe precedence.
  */
 export function stripEmptyLayerDeclarations(css: string): string {
   const root = postcss.parse(css);
-  let changed = true;
 
-  while (changed) {
-    changed = false;
-    root.walkAtRules("layer", (atrule) => {
-      if (atrule.nodes === undefined || atrule.nodes.length === 0) {
-        atrule.remove();
-        changed = true;
-      }
-    });
+  for (const node of [...root.nodes]) {
+    if (node.type === "atrule" && isFullLayerOrder(node)) {
+      node.remove();
+    }
   }
 
+  reorderLayerBlocks(root);
   return root.toString();
+}
+
+/**
+ * After removing the order declaration, layer precedence comes from first
+ * appearance. Move top-level layer blocks back into the canonical order so the
+ * nested recipe declarations keep their intended position.
+ */
+function reorderLayerBlocks(root: Root): void {
+  const blocks = root.nodes.filter(
+    (node): node is AtRule => node.type === "atrule" && isLayerBlock(node),
+  );
+  if (blocks.length < 2) {
+    return;
+  }
+
+  const firstLayer = root.nodes.findIndex((node) => node.type === "atrule" && isLayerBlock(node));
+  const sorted = [...blocks].sort((left, right) => layerRank(left) - layerRank(right));
+  for (const block of blocks) {
+    block.remove();
+  }
+  root.nodes.splice(firstLayer, 0, ...sorted);
 }

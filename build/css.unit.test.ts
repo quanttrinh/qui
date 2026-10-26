@@ -13,22 +13,30 @@ const SHARED_CSS = [
 ].join("");
 
 describe("stripEmptyLayerDeclarations", () => {
-  it("removes order-only layer declarations from dependency CSS", () => {
+  it("removes only the root layer order declaration", () => {
     const css = stripEmptyLayerDeclarations(SHARED_CSS);
 
     expect(css).not.toContain("@layer reset, base, tokens, recipes, utilities;");
-    expect(css).not.toContain("@layer recipes{");
-    expect(css).not.toContain("@layer recipes.slots{");
-    expect(css.indexOf("@layer reset{")).toBeLessThan(css.indexOf("@layer base{"));
-    expect(css.indexOf("@layer base{")).toBeLessThan(css.indexOf("@layer tokens{"));
-    expect(css.indexOf("@layer tokens{")).toBeLessThan(css.indexOf("@layer utilities{"));
+    expect(css).toContain("@layer recipes{@layer base, slots, variants, compound_variants;}");
+    expect(css).toContain("@layer recipes.slots{@layer base, variants, compound_variants;}");
   });
 
-  it("keeps non-empty layers and their content", () => {
+  it("keeps top-level layer blocks in canonical order", () => {
+    const css = stripEmptyLayerDeclarations(SHARED_CSS);
+
+    expect(css.indexOf("@layer reset{")).toBeLessThan(css.indexOf("@layer base{"));
+    expect(css.indexOf("@layer base{")).toBeLessThan(css.indexOf("@layer tokens{"));
+    expect(css.indexOf("@layer tokens{")).toBeLessThan(css.indexOf("@layer recipes{"));
+    expect(css.indexOf("@layer recipes{")).toBeLessThan(css.indexOf("@layer recipes.slots{"));
+    expect(css.indexOf("@layer recipes.slots{")).toBeLessThan(css.indexOf("@layer utilities{"));
+  });
+
+  it("leaves unrelated and non-empty layers alone", () => {
     const css = stripEmptyLayerDeclarations(
       "@layer reset, utilities;@layer utilities{.p_1{padding:1px}}",
     );
 
+    expect(css).toContain("@layer reset, utilities;");
     expect(css).toContain("@layer utilities{.p_1{padding:1px}}");
   });
 });

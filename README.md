@@ -278,12 +278,15 @@ of embedding a blob:
 Qui.vite({ styles: { href: "/assets/qui-app.css" } });
 ```
 
-In external mode the plugin does not create or rewrite document markup. Vite
-adds `data-qui-styles` to the matching document `<link>` at build time:
+In external mode the plugin does not create document markup at runtime. Vite
+adds `data-qui-styles` to the matching document `<link>` during the build:
 
 ```html
 <link rel="stylesheet" href="/assets/qui-app.css" data-qui-styles />
 ```
+
+Use the final public URL after Vite's `base` and asset hashing are applied. The
+marker matches that exact `href`; the same URL is used for shadow roots.
 
 The same URL is adopted by shadow roots. Load the theme separately, once:
 
@@ -490,22 +493,25 @@ That combined component/app stylesheet is loaded in the document and used by
 every shadow root. To opt out of sharing app styles with components, load
 `@quanttrinh/qui/styles.css` instead and keep the app stylesheet document-only.
 
-Load `theme.css` globally, once, at runtime. It is document-only and should not
-be part of the marked component/app stylesheet. With `Qui.vite()`:
+Load `theme.css` globally, once, from the client entry or document. It is
+document-only and should not be part of the marked component/app stylesheet.
 
 ```ts
+// src/main.ts (client entry)
 import "@quanttrinh/qui/theme.css";
+```
 
+```ts
+// vite.config.ts
 export default defineConfig({
     plugins: [Qui.vite({ styles: { href: "/assets/qui-app.css" } })],
 });
 ```
 
-The generated library CSS contains no order-only layer declarations, so Panda's
-PostCSS integration does not re-expand the design system into `theme.css`,
-`styles.css`, or app entry files that import them. Keep the app's own
-`@layer reset, base, tokens, recipes, utilities;` entry file once; do not point
-the shadow-root href at it.
+The generated library CSS removes the root layer order declaration that triggers
+Panda's PostCSS integration, while preserving nested recipe layer declarations.
+Keep the app's own `@layer reset, base, tokens, recipes, utilities;` entry file
+once; do not point the shadow-root href at it.
 
 Low-level generated exports are also available:
 

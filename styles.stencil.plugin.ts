@@ -36,6 +36,12 @@ const STYLED_SYSTEM = "styled-system";
 const COMPONENTS = "components";
 const SHARED_PLACEHOLDER = "/* Styles are provided by the shared stylesheet. */\n";
 const CONFIG_INPUTS = ["panda.config.ts"];
+const STYLE_BUILD_INPUTS = [
+  "build/css.ts",
+  "build/panda-driver.ts",
+  "build/theme-css.ts",
+  "styles.stencil.plugin.ts",
+];
 const KEBAB_SEGMENT = /-([a-z])/gu;
 const COMPONENT_TAG = /tag:\s*"([^"]+)"/u;
 
@@ -71,6 +77,7 @@ function writeIfChanged(file: string, contents: string | Buffer): void {
 function fileHashes(root: string): Map<string, string> {
   const files = [
     ...CONFIG_INPUTS.map((input) => join(root, input)),
+    ...STYLE_BUILD_INPUTS.map((input) => join(root, input)),
     ...walk(join(root, "src")).filter(
       (file) =>
         (file.endsWith(".ts") || file.endsWith(".tsx")) && !file.endsWith("components.d.ts"),

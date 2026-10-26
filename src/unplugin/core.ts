@@ -33,9 +33,11 @@ const TRANSFORMABLE_FILE = /\.(?:[cm]?[jt]sx?|mdx)$/u;
 const ESCAPED_CHARACTER = /\\[ux]/u;
 const MDX_FRONTMATTER = /^---[^\S\r\n]*(?:\r?\n)(?:[\s\S]*?\r?\n)?---[^\S\r\n]*(?:\r?\n|$)/u;
 const LINK_TAG = /<link\b[^>]*>/giu;
-const STYLESHEET_ATTRIBUTE = /\bdata-qui-styles\b/iu;
-const HREF_ATTRIBUTE = /\bhref\s*=\s*(?<quote>["'])(?<value>.*?)\k<quote>/iu;
-const REL_ATTRIBUTE = /\brel\s*=\s*(?<quote>["'])(?<value>.*?)\k<quote>/iu;
+const STYLESHEET_ATTRIBUTE = /(?:^|\s)data-qui-styles(?=[\s=/>])/iu;
+const HREF_ATTRIBUTE =
+  /(?:^|\s)href\s*=\s*(?:(?<quote>["'])(?<quoted>.*?)\k<quote>|(?<unquoted>[^\s>]+))/iu;
+const REL_ATTRIBUTE =
+  /(?:^|\s)rel\s*=\s*(?:(?<quote>["'])(?<quoted>.*?)\k<quote>|(?<unquoted>[^\s>]+))/iu;
 const STYLESHEET_REL = /\bstylesheet\b/iu;
 const SELF_CLOSING_TAG_END = /\/>$/u;
 const TAG_END = />$/u;
@@ -205,11 +207,13 @@ export function markStylesheetLinks(html: string, href: string | string[]): stri
       return tag;
     }
     const hrefMatch = HREF_ATTRIBUTE.exec(tag);
-    if (hrefMatch?.groups?.value === undefined || !hrefs.has(hrefMatch.groups.value)) {
+    const hrefValue = hrefMatch?.groups?.quoted ?? hrefMatch?.groups?.unquoted;
+    if (hrefValue === undefined || !hrefs.has(hrefValue)) {
       return tag;
     }
     const relMatch = REL_ATTRIBUTE.exec(tag);
-    if (relMatch?.groups?.value === undefined || !STYLESHEET_REL.test(relMatch.groups.value)) {
+    const relValue = relMatch?.groups?.quoted ?? relMatch?.groups?.unquoted;
+    if (relValue === undefined || !STYLESHEET_REL.test(relValue)) {
       return tag;
     }
     return tag.endsWith("/>")

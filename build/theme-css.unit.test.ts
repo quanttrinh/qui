@@ -1,3 +1,4 @@
+import postcss from "postcss";
 import { describe, expect, it } from "vitest";
 
 import { colorRoles, cssVariableNames } from "../src/utilities/theme/color-roles";
@@ -5,6 +6,8 @@ import { generateThemeCss } from "./theme-css";
 
 const LAYER_ORDER_DECLARATION = /@layer[^{;]*;/u;
 const PROPERTY_RULE = /@property/gu;
+const ROOT_PRIMARY = /:root\{--md-sys-color-primary:#[0-9a-f]{6};/u;
+const DARK_PRIMARY = /\.dark\{--md-sys-color-primary:#[0-9a-f]{6};/u;
 
 describe("generateThemeCss", () => {
   it("emits document-only color custom properties", async () => {
@@ -25,5 +28,13 @@ describe("generateThemeCss", () => {
 
     expect(css.match(PROPERTY_RULE)).toHaveLength(colorRoles.length);
     expect(css).toContain("@property --md-sys-color-primary{");
+  });
+
+  it("emits parseable light and dark values", async () => {
+    const css = await generateThemeCss();
+
+    expect(() => postcss.parse(css)).not.toThrow();
+    expect(css).toMatch(ROOT_PRIMARY);
+    expect(css).toMatch(DARK_PRIMARY);
   });
 });
