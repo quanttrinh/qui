@@ -9,6 +9,8 @@ import { deepQuery, queryInside } from "../../test-utils/shadow";
 // oxlint-disable-next-line unicorn/prefer-number-coercion
 const pixels = (value: string): number => Number.parseFloat(value);
 
+const PIXELS = /px$/u;
+
 function queryCounter(root: HTMLElement): HTMLElement | null {
   return queryInside<HTMLElement>(
     resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea"),
@@ -234,7 +236,7 @@ describe("qui-textarea forms and sizing", () => {
     await nextFrame();
     await waitForChanges();
 
-    expect(textarea.style.height).toMatch(/px$/u);
+    expect(textarea.style.height).toMatch(PIXELS);
     expect(textarea.getBoundingClientRect().height).toBeGreaterThan(initialHeight);
     expect(textarea.scrollHeight).toBeLessThanOrEqual(textarea.clientHeight);
   });
@@ -384,7 +386,7 @@ describe("qui-textarea form state", () => {
 
     await nextFrame();
     await waitForChanges();
-    expect(textarea.style.height).toMatch(/px$/u);
+    expect(textarea.style.height).toMatch(PIXELS);
 
     await setProps({ resize: "vertical" });
     await waitForChanges();
@@ -403,7 +405,7 @@ describe("qui-textarea form state", () => {
     await nextFrame();
     await waitForChanges();
 
-    expect(textarea.style.height).toMatch(/px$/u);
+    expect(textarea.style.height).toMatch(PIXELS);
     root.remove();
   });
 

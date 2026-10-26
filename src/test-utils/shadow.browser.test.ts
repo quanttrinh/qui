@@ -13,6 +13,9 @@ import {
   shadowOf,
 } from "./shadow";
 
+const MISSING_SHADOW_ROOT = /no open shadow root/u;
+const MISSING_ACTION_PART = /part "action"/u;
+
 interface Fixture {
   outer: HTMLElement;
   outerRoot: ShadowRoot;
@@ -97,7 +100,7 @@ describe("shadow test helpers", () => {
     document.body.append(host);
 
     try {
-      expect(() => shadowOf(host)).toThrow(/no open shadow root/u);
+      expect(() => shadowOf(host)).toThrow(MISSING_SHADOW_ROOT);
     } finally {
       host.remove();
     }
@@ -115,7 +118,7 @@ describe("shadow test helpers", () => {
     expect(queryParts(fixture.middleHost, "shared")).toEqual([fixture.deepButton]);
     expect(queryParts(fixture.middleHost, "label")).toEqual([]);
     const { outer } = fixture;
-    expect(() => queryPart(outer, "action")).toThrow(/part "action"/u);
+    expect(() => queryPart(outer, "action")).toThrow(MISSING_ACTION_PART);
   });
 
   it("scopes queryInside to the host's shadow root", () => {

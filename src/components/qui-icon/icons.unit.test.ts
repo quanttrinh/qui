@@ -10,6 +10,8 @@ import {
   VisibilityOffIcon,
 } from "./icons";
 
+const NON_WHITESPACE = /\S/u;
+
 const icons = {
   AddIcon,
   CheckIcon,
@@ -35,7 +37,7 @@ describe("inline icons", () => {
       expect(path.$tag$, name).toBe("path");
       const attrs = path.$attrs$ as Record<string, string>;
       expect(attrs, name).toMatchObject({ fill: "currentColor" });
-      expect(attrs.d, name).toEqual(expect.stringMatching(/\S/u));
+      expect(attrs.d, name).toEqual(expect.stringMatching(NON_WHITESPACE));
     }
   });
 });

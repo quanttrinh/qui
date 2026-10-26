@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest";
 import { loadHydrate } from "../test-utils/hydrate";
 import { withShadowStylesheet } from "./ssr";
 
+const SHADOW_LINK = /<link[^>]*data-qui-styles[^>]*>/gu;
+const INLINE_STYLE = /<style[^>]*>[^<]*\.d_inline-block/u;
+
 function shadowLinks(html: string): string[] {
-  return [...html.matchAll(/<link[^>]*data-qui-styles[^>]*>/gu)].map((match) => match[0]);
+  return [...html.matchAll(SHADOW_LINK)].map((match) => match[0]);
 }
 
 describe("shadow DOM SSR", () => {
@@ -20,7 +23,7 @@ describe("shadow DOM SSR", () => {
     expect(html).toContain('href="/assets/qui.css"');
     expect(html).toContain("data-qui-styles");
     expect(html).toContain('<button data-scope="button" data-part="root"');
-    expect(html).not.toMatch(/<style[^>]*>[^<]*\.d_inline-block/u);
+    expect(html).not.toMatch(INLINE_STYLE);
   });
 
   it("buffers streamToString into a single chunk", async () => {

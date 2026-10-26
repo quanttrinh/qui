@@ -11,6 +11,10 @@ import {
   virtualModuleId,
 } from "./core";
 
+const DEFINITION_PATTERN =
+  /defineCustomElement as __qui_\d+\s+\} from "@quanttrinh\/qui\/shared\/(?<tag>qui-[^"]+)"/gu;
+const IMPORT_PATTERN = /from "@quanttrinh\/qui\/shared\/(?<tag>qui-[^"]+)"/gu;
+
 describe("extractComponents", () => {
   it("finds opening component tags, ignores closing tags, and deduplicates", () => {
     const code = `
@@ -117,11 +121,7 @@ describe("registration order", () => {
       ["qui-accordion-content", "qui-accordion-trigger", "qui-accordion", "qui-accordion-item"],
       { styles: false },
     );
-    const definitions = [
-      ...code.matchAll(
-        /defineCustomElement as __qui_\d+\s+\} from "@quanttrinh\/qui\/shared\/(?<tag>qui-[^"]+)"/gu,
-      ),
-    ].map((match) => match.groups?.tag);
+    const definitions = [...code.matchAll(DEFINITION_PATTERN)].map((match) => match.groups?.tag);
 
     expect(definitions).toEqual([
       "qui-accordion",
@@ -133,9 +133,7 @@ describe("registration order", () => {
 
   it("consumes one-shot component iterables once", () => {
     const code = createRegistrationModule(singleUseComponents(), { styles: false });
-    const definitions = [
-      ...code.matchAll(/from "@quanttrinh\/qui\/shared\/(?<tag>qui-[^"]+)"/gu),
-    ].map((match) => match.groups?.tag);
+    const definitions = [...code.matchAll(IMPORT_PATTERN)].map((match) => match.groups?.tag);
 
     expect(definitions).toEqual(["qui-accordion", "qui-accordion-content"]);
   });

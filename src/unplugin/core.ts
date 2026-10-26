@@ -12,6 +12,7 @@ const COMPONENT_TAG_NAME = /^qui-[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const JAVASCRIPT_FILE = /\.(?:[cm]?[jt]sx?)$/u;
 const TRANSFORMABLE_FILE = /\.(?:[cm]?[jt]sx?|mdx)$/u;
 const ESCAPED_CHARACTER = /\\[ux]/u;
+const MDX_FRONTMATTER = /^---[^\S\r\n]*(?:\r?\n)(?:[\s\S]*?\r?\n)?---[^\S\r\n]*(?:\r?\n|$)/u;
 
 export const VIRTUAL_MODULE_ID = "virtual:qui/register";
 export const VIRTUAL_STYLES_ID = "virtual:qui/styles";
@@ -80,7 +81,7 @@ export function importInjectionOffset(code: string): number {
   if (!code.startsWith("---")) {
     return 0;
   }
-  const match = /^---[^\S\r\n]*(?:\r?\n)(?:[\s\S]*?\r?\n)?---[^\S\r\n]*(?:\r?\n|$)/u.exec(code);
+  const match = MDX_FRONTMATTER.exec(code);
   return match?.[0].length ?? 0;
 }
 
