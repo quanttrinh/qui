@@ -102,9 +102,10 @@
   "scripts": {
     "prepare": "bun -e \"try{require('husky')()}catch{}\"",
     "dev": "bun run build:utilities && stencil build --dev --watch --serve",
-    "build": "stencil build && bun run build:utilities && bun run build:unplugin",
+    "build": "stencil build && bun run build:utilities && bun run build:unplugin && bun run build:types",
     "build:utilities": "bun build/build-utilities.ts",
     "build:unplugin": "bun build/build-unplugin.ts",
+    "build:types": "bun build/finalize-types.ts",
     "codegen": "panda codegen",
     "lint": "oxlint --config oxlint.config.ts src",
     "test": "NODE_ENV=test stencil-test",
