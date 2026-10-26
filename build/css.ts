@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import postcss, { type AtRule, type Root } from "postcss";
 
-const LAYER_ORDER = ["reset", "base", "tokens", "recipes", "utilities"] as const;
+import { CANONICAL_LAYER_ORDER, LAYER_ORDER } from "./layer-order";
 
 function isLayerBlock(node: AtRule): boolean {
   return node.name === "layer" && node.nodes !== undefined;
@@ -16,16 +16,16 @@ function layerRank(node: AtRule): number {
   return index === -1 ? LAYER_ORDER.length : index;
 }
 
-function isFullLayerOrder(node: AtRule): boolean {
+function isCanonicalLayerOrder(node: AtRule): boolean {
   if (node.name !== "layer" || node.nodes !== undefined) {
     return false;
   }
   const names = node.params.split(",").map((name) => name.trim());
-  return LAYER_ORDER.every((name) => names.includes(name));
+  return names.join(", ") === CANONICAL_LAYER_ORDER;
 }
 
 /**
- * Removes the root layer order declaration that triggers Panda's PostCSS
+ * Removes the exact root layer order declaration that triggers Panda's PostCSS
  * integration, while preserving nested recipe sublayer declarations and the
  * effective layer order.
  *
@@ -36,11 +36,17 @@ function isFullLayerOrder(node: AtRule): boolean {
  */
 export function stripRootLayerOrder(css: string): string {
   const root = postcss.parse(css);
+  let removed = false;
 
   for (const node of [...root.nodes]) {
-    if (node.type === "atrule" && isFullLayerOrder(node)) {
+    if (node.type === "atrule" && isCanonicalLayerOrder(node)) {
       node.remove();
+      removed = true;
     }
+  }
+
+  if (!removed) {
+    return css;
   }
 
   reorderLayerBlocks(root);

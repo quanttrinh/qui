@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { vite } from "./index";
+import { rollup, vite } from "./index";
 
 type TransformHandler = (code: string, id: string) => { code: string; map: unknown } | undefined;
 type IdHandler = (id: string) => string | undefined;
 type LoadHandler = (id: string) => string | undefined | Promise<string | undefined>;
+
+const EXTERNAL_ADAPTER_ERROR = /Vite/u;
 
 describe("vite adapter", () => {
   it("keeps v3 hook filters and injects the virtual registration import", () => {
@@ -83,6 +85,16 @@ describe("vite adapter", () => {
 
     const html = transformIndexHtml.handler('<link rel="stylesheet" href="/assets/app.css">');
     expect(html).toContain("data-qui-styles");
+  });
+
+  it("rejects external styles outside Vite", () => {
+    try {
+      rollup({ styles: { href: "/assets/app.css" } });
+      expect.unreachable("Expected external styles to be rejected");
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toMatch(EXTERNAL_ADAPTER_ERROR);
+    }
   });
 
   it("injects after MDX frontmatter and skips Astro pages", () => {

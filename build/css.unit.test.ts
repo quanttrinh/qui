@@ -68,6 +68,21 @@ describe("stripRootLayerOrder", () => {
     expect(css.indexOf("@layer customB{")).toBeLessThan(css.indexOf("@layer customA{"));
   });
 
+  it("does not reorder when no canonical order declaration was removed", () => {
+    const css = stripRootLayerOrder("@layer utilities{.u{}}@layer reset{.r{}}");
+
+    expect(css).toBe("@layer utilities{.u{}}@layer reset{.r{}}");
+  });
+
+  it("leaves reordered or extended order declarations untouched", () => {
+    const reordered = "@layer utilities, recipes, tokens, base, reset;@layer utilities{.u{}}";
+    const extended =
+      "@layer reset, base, tokens, recipes, utilities, custom;@layer utilities{.u{}}";
+
+    expect(stripRootLayerOrder(reordered)).toBe(reordered);
+    expect(stripRootLayerOrder(extended)).toBe(extended);
+  });
+
   it("leaves unrelated and non-empty layers alone", () => {
     const css = stripRootLayerOrder("@layer reset, utilities;@layer utilities{.p_1{padding:1px}}");
 

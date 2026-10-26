@@ -2,8 +2,9 @@ import { extractComponentsFromJavaScript, extractComponentsFromText } from "./ex
 
 export interface QuiStylesOptions {
   /**
-   * URL of the component/app stylesheet used by the document and shadow roots.
-   * This must not point at `theme.css`; the theme is document-only.
+   * Stable public URL of the component/app stylesheet. Vite marks a matching
+   * document `<link>` during the build. This must not point at `theme.css`; the
+   * theme is document-only.
    */
   href?: string | string[];
   /**
@@ -120,7 +121,14 @@ export function isExternalStyles(
   styles: boolean | QuiStylesOptions | undefined,
 ): styles is QuiStylesOptions & { href: string | string[] } {
   const value: unknown = styles;
-  return typeof value === "object" && value !== null && Reflect.get(value, "href") !== undefined;
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const href: unknown = Reflect.get(value, "href");
+  return (
+    typeof href === "string" ||
+    (Array.isArray(href) && href.every((entry: unknown) => typeof entry === "string"))
+  );
 }
 
 function stylesheetHrefs(href: string | string[]): string[] {
@@ -179,19 +187,10 @@ export function createStylesModule(css: string, styles: boolean | QuiStylesOptio
 /**
  * Creates the external stylesheet module.
  *
- * The app owns the document `<link>` and the bundler/integration marks it at
- * build time. This module configures the component/app URL for shadow roots but
- * prefers an already-marked document link, which keeps Vite's base and hashed
- * URL instead of overwriting it with the configured fallback. It never creates
- * or rewrites document markup and never adopts `theme.css`.
- */
-/**
- * Creates the external stylesheet module.
- *
- * External mode relies on the marked document link, which the bundler or SSR
- * emits at build time. The runtime discovers that link, including Vite's base
- * and hashed URL. No client-side fallback is stored, so a later or replacement
- * marked link is always authoritative and HMR needs no cleanup.
+ * External mode relies on marked document links emitted by the bundler or SSR.
+ * The runtime discovers them when components connect, including Vite's base and
+ * hashed URL. No client-side fallback is stored, so the module does not create
+ * or rewrite markup and HMR needs no cleanup.
  */
 export function createExternalStylesModule(styles: QuiStylesOptions): string {
   return [...themeImport(styles), ""].join("\n");

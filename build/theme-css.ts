@@ -2,17 +2,9 @@
 import { createJiti } from "jiti";
 import { join } from "node:path";
 
+import { layerOrderDeclarations } from "./layer-order";
+
 type ThemeModule = typeof import("../src/utilities/theme/color");
-
-const LAYER_ORDER = ["reset", "base", "tokens", "recipes", "utilities"] as const;
-
-/**
- * Separate declarations establish order without matching Panda's PostCSS
- * trigger, which only looks for one declaration containing the full layer set.
- */
-function layerOrder(): string {
-  return LAYER_ORDER.map((name) => `@layer ${name};`).join("");
-}
 
 /**
  * Loads the runtime theme module through jiti so the build can use the same
@@ -66,5 +58,5 @@ export async function generateThemeCss(root: string): Promise<string> {
   const light = theme.schemeToCssVariables(theme.createScheme({ dark: false }));
   const dark = theme.schemeToCssVariables(theme.createScheme({ dark: true }));
 
-  return `${layerOrder()}${registrations(light, theme)}@layer tokens{:root{${declarations(light, theme)}}.dark{${declarations(dark, theme)}}}`;
+  return `${layerOrderDeclarations()}${registrations(light, theme)}@layer tokens{:root{${declarations(light, theme)}}.dark{${declarations(dark, theme)}}}`;
 }

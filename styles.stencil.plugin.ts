@@ -268,6 +268,9 @@ class StyleGenerator {
       this.generateBootstrap("config or theme changed");
       return true;
     }
+    if (changed.some((file) => this.isBuildInput(file))) {
+      return false;
+    }
 
     const nextComponents = findComponents(this.root);
     if (!sameComponents(this.components, nextComponents)) {
@@ -332,6 +335,10 @@ class StyleGenerator {
 
   private isConfigFile(file: string): boolean {
     return CONFIG_INPUTS.some((input) => resolve(this.root, input) === file);
+  }
+
+  private isBuildInput(file: string): boolean {
+    return STYLE_BUILD_INPUTS.some((input) => resolve(this.root, input) === file);
   }
 
   private isThemeFile(file: string): boolean {

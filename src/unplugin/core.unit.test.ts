@@ -7,10 +7,12 @@ import {
   createStylesModule,
   extractComponents,
   importInjectionOffset,
+  isExternalStyles,
   isTransformableId,
   markStylesheetLinks,
   normalizeComponents,
   virtualModuleId,
+  type QuiStylesOptions,
 } from "./core";
 
 describe("extractComponents", () => {
@@ -207,9 +209,9 @@ describe("virtual styles module", () => {
     expect(code).not.toContain("resetQuiStylesHref");
   });
 
-  it("supports multiple external hrefs and an explicit theme import", () => {
+  it("imports the theme for external styles when requested", () => {
     const code = createExternalStylesModule({
-      href: ["/assets/app.css", "/assets/overrides.css", "/assets/app.css"],
+      href: ["/assets/app.css", "/assets/overrides.css"],
       theme: true,
     });
 
@@ -227,6 +229,12 @@ describe("virtual styles module", () => {
 
   it("emits an empty module for an empty external stylesheet list", () => {
     expect(createExternalStylesModule({ href: [] })).toBe("");
+  });
+
+  it("validates external href values", () => {
+    expect(isExternalStyles({ href: "/app.css" })).toBe(true);
+    expect(isExternalStyles({ href: ["/app.css"] })).toBe(true);
+    expect(isExternalStyles({ href: [1] } as unknown as QuiStylesOptions)).toBe(false);
   });
 });
 
@@ -307,6 +315,15 @@ describe("markStylesheetLinks", () => {
 
   it("does nothing for an empty href list", () => {
     expect(markStylesheetLinks(html, [])).toBe(html);
+  });
+
+  it("deduplicates hrefs and ignores empty entries", () => {
+    const marked = markStylesheetLinks(
+      '<link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/app.css">',
+      ["/app.css", "/app.css", ""],
+    );
+
+    expect(marked.match(MARKER)).toHaveLength(2);
   });
 
   it("does not rewrite link-like text inside scripts, styles, or comments", () => {

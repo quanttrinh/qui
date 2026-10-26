@@ -72,6 +72,9 @@ import "@quanttrinh/qui/styles.css";
 <link rel="stylesheet" href="/assets/qui-components.css" data-qui-styles />
 ```
 
+Use the URL your bundler emits for that CSS. If it is hashed, mark the emitted
+link with `data-qui-styles` or copy/serve the sheet at a stable path.
+
 Do not put `theme.css` in that marked file and do not mark a bundle that
 contains it. The theme's custom properties inherit into shadow roots; adopting
 a second copy can override brand values. If the bundler injects CSS as a
@@ -301,6 +304,10 @@ exactly:
 asset URL, mark the generated link yourself. External mode has no runtime
 fallback: marked document links are the source of truth, so shadow roots always
 use their final URLs.
+
+External `href` mode is Vite/Astro-only because it relies on
+`transformIndexHtml`. Other adapters throw; use `styles: false` and mark the
+document link yourself there.
 
 Load the theme separately, once:
 

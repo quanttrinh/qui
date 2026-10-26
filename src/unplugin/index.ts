@@ -39,9 +39,15 @@ async function getStylesheetText(): Promise<string> {
 
 const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUnplugin<
   QuiPluginOptions | undefined
->((options = {}) => {
+>((options, meta: { framework: string }) => {
+  const pluginOptions = options ?? {};
+  if (isExternalStyles(pluginOptions.styles) && meta.framework !== "vite") {
+    throw new Error(
+      "qui external styles require Vite or an Astro integration; use styles: false and mark the document link yourself for other bundlers.",
+    );
+  }
   const componentCache = new Map<string, { code: string; components: string[] }>();
-  const externalStyles = isExternalStyles(options.styles) ? options.styles : undefined;
+  const externalStyles = isExternalStyles(pluginOptions.styles) ? pluginOptions.styles : undefined;
 
   function extractComponentsCached(code: string, id: string): string[] {
     const cached = componentCache.get(id);
@@ -95,17 +101,17 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
         id: string,
       ): Promise<string | undefined> {
         if (id === RESOLVED_VIRTUAL_STYLES_ID) {
-          if (isExternalStyles(options.styles)) {
-            return createExternalStylesModule(options.styles);
+          if (isExternalStyles(pluginOptions.styles)) {
+            return createExternalStylesModule(pluginOptions.styles);
           }
           this.addWatchFile?.(STYLESHEET_PATH);
-          return createStylesModule(await getStylesheetText(), options.styles);
+          return createStylesModule(await getStylesheetText(), pluginOptions.styles);
         }
         const components = componentsFromVirtualModuleId(id.slice(1));
         if (components === undefined || components.length === 0) {
           return undefined;
         }
-        return createRegistrationModule(components, options);
+        return createRegistrationModule(components, pluginOptions);
       },
     },
     transform: {
