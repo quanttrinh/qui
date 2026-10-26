@@ -1,5 +1,6 @@
 const DEFAULT_ATTRIBUTE = "data-qui-styles";
-const QUI_TAG_PREFIX = "qui-";
+/** Set by components that call `ensureShadowStylesheet`. */
+export const SHADOW_STYLES_MARKER = "data-qui-shadow-styles";
 
 const discoveredHrefs = new WeakMap<Document, string[] | undefined>();
 const documentObservers = new WeakMap<Document, MutationObserver>();
@@ -93,21 +94,6 @@ function resolveHrefs(document: Document): string[] | undefined {
   return discoverDocumentHrefs(document);
 }
 
-/**
- * Returns whether a shadow root renders visual content rather than only
- * forwarding slotted content. Host-only roots are styled by the document
- * stylesheet and do not need a shadow-root link.
- */
-export function shadowRootNeedsStyles(root: ShadowRoot): boolean {
-  for (const child of root.children) {
-    if (child.tagName !== "SLOT" && child.tagName !== "LINK") {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 function hasManagedLink(root: ShadowRoot): boolean {
   for (const link of root.querySelectorAll("link")) {
     if (link.hasAttribute(DEFAULT_ATTRIBUTE)) {
@@ -190,8 +176,8 @@ function reconcileStylesheetLinks(root: ShadowRoot, document: Document, hrefs: s
 }
 
 /**
- * Collects shadow roots belonging to styled `qui-*` hosts or roots that already
- * carry a managed stylesheet link. Nested shadow roots are visited as well.
+ * Collects shadow roots that opted into styling or already carry a managed
+ * stylesheet link. Nested shadow roots are visited as well.
  */
 function collectShadowRoots(root: ParentNode): ShadowRoot[] {
   const roots: ShadowRoot[] = [];
@@ -199,8 +185,7 @@ function collectShadowRoots(root: ParentNode): ShadowRoot[] {
   for (const element of root.querySelectorAll("*")) {
     const { shadowRoot } = element;
     if (shadowRoot) {
-      const isQuiHost = element.tagName.toLowerCase().startsWith(QUI_TAG_PREFIX);
-      if ((isQuiHost && shadowRootNeedsStyles(shadowRoot)) || hasManagedLink(shadowRoot)) {
+      if (element.hasAttribute(SHADOW_STYLES_MARKER) || hasManagedLink(shadowRoot)) {
         roots.push(shadowRoot);
       }
 
@@ -214,10 +199,10 @@ function collectShadowRoots(root: ParentNode): ShadowRoot[] {
 /**
  * Adds the configured stylesheet link(s) to a styled component shadow root.
  *
- * Styled components call this from their lifecycle. Data-only and host-only
- * parts deliberately do not call it because their shadow roots contain only a
- * slot. The helper is also conservative about missing roots, documents, and
- * existing `data-qui-styles` links.
+ * Styled components call this from their lifecycle, which also marks the host
+ * for SSR and later stylesheet updates. Data-only and host-only parts
+ * deliberately do not call it. The helper is conservative about missing roots,
+ * documents, and existing `data-qui-styles` links.
  *
  * If no href has been configured, the first document link marked with
  * `data-qui-styles` is used as the source of truth. Without either source the
@@ -229,6 +214,7 @@ export function ensureShadowStylesheet(host: HTMLElement): void {
     return;
   }
 
+  host.setAttribute(SHADOW_STYLES_MARKER, "");
   const document = getDocument(host);
   if (!document) {
     return;

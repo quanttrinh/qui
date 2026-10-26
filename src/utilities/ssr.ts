@@ -1,8 +1,7 @@
-import { shadowRootNeedsStyles } from "./styles";
+import { SHADOW_STYLES_MARKER } from "./styles";
 
 export interface ShadowStylesheetOptions {
   href: string | string[];
-  tagPrefix?: string;
   attribute?: string;
 }
 
@@ -20,11 +19,9 @@ type StylesheetRoot = Document | ShadowRoot;
 interface InjectionContext {
   document: Document;
   hrefs: string[];
-  tagPrefix: string;
   attribute: string;
 }
 
-const DEFAULT_TAG_PREFIX = "qui-";
 const DEFAULT_ATTRIBUTE = "data-qui-styles";
 
 function injectStylesheetLinks(context: InjectionContext, root: StylesheetRoot): void {
@@ -59,8 +56,7 @@ function visitRoot(context: InjectionContext, root: StylesheetRoot): void {
   for (const element of root.querySelectorAll("*")) {
     const { shadowRoot } = element;
     if (shadowRoot) {
-      const tagName = element.tagName.toLowerCase();
-      if (tagName.startsWith(context.tagPrefix) && shadowRootNeedsStyles(shadowRoot)) {
+      if (element.hasAttribute(SHADOW_STYLES_MARKER)) {
         injectStylesheetLinks(context, shadowRoot);
       }
       visitRoot(context, shadowRoot);
@@ -69,9 +65,10 @@ function visitRoot(context: InjectionContext, root: StylesheetRoot): void {
 }
 
 /**
- * Adds external stylesheet links to every matching custom element shadow root
- * in a hydrated document. Safe to call during SSR because it only touches the
- * document it is given and performs no work at module load.
+ * Adds external stylesheet links to every marked component shadow root in a
+ * hydrated document. Components mark their host when they call
+ * `ensureShadowStylesheet()` during SSR. Safe to call during SSR because it only
+ * touches the document it is given and performs no work at module load.
  */
 export function injectShadowStylesheet(document: Document, options: ShadowStylesheetOptions): void {
   const hrefs = Array.isArray(options.href) ? options.href : [options.href];
@@ -80,7 +77,6 @@ export function injectShadowStylesheet(document: Document, options: ShadowStyles
       {
         document,
         hrefs,
-        tagPrefix: (options.tagPrefix ?? DEFAULT_TAG_PREFIX).toLowerCase(),
         attribute: options.attribute ?? DEFAULT_ATTRIBUTE,
       },
       document,

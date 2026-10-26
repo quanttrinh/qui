@@ -18,7 +18,7 @@ const { html } = await renderToString(
 ```
 
 `injectShadowStylesheet()` is also exported for callers that already own the
-hydration document. Data-only and host-only roots such as `qui-option`,
-`qui-dialog`, and the field helper/error/required parts receive no link because
-their shadow roots contain only a slot. The README documents that cross-root
-ARIA wiring starts after hydration.
+hydration document. Components that request shadow styles mark their host during
+SSR; data-only and host-only roots such as `qui-option`, `qui-dialog`, and the
+field helper/error/required parts receive no link. The README documents that
+cross-root ARIA wiring starts after hydration.

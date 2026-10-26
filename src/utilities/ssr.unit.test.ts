@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { createFakeDocument, createHost, linkHrefs } from "../test-utils/fake-dom";
+import { createFakeDocument, createHost, type FakeNode, linkHrefs } from "../test-utils/fake-dom";
 import { injectShadowStylesheet, withShadowStylesheet } from "./ssr";
+import { SHADOW_STYLES_MARKER } from "./styles";
+
+function markStyled(host: FakeNode): void {
+  host.setAttribute(SHADOW_STYLES_MARKER, "");
+}
 
 describe("injectShadowStylesheet", () => {
   it("visits nested shadow roots", () => {
@@ -10,6 +15,8 @@ describe("injectShadowStylesheet", () => {
     const inner = createHost(document, "qui-button");
     outer.root.append(document.createElement("div"), inner.host);
     inner.root.append(document.createElement("div"));
+    markStyled(outer.host);
+    markStyled(inner.host);
 
     injectShadowStylesheet(document as unknown as Document, { href: "theme.css" });
 
@@ -17,12 +24,13 @@ describe("injectShadowStylesheet", () => {
     expect(linkHrefs(inner.root)).toEqual(["theme.css"]);
   });
 
-  it("only injects into hosts matching the tag prefix", () => {
+  it("only injects into marked hosts", () => {
     const document = createFakeDocument();
     const qui = createHost(document, "qui-card");
     const other = createHost(document, "other-card");
     qui.root.append(document.createElement("div"));
     other.root.append(document.createElement("div"));
+    markStyled(qui.host);
 
     injectShadowStylesheet(document as unknown as Document, { href: "theme.css" });
 
@@ -44,6 +52,7 @@ describe("injectShadowStylesheet", () => {
     }
     const button = createHost(document, "qui-button");
     button.root.append(document.createElement("div"));
+    markStyled(button.host);
 
     injectShadowStylesheet(document as unknown as Document, { href: "theme.css" });
 
@@ -57,6 +66,7 @@ describe("injectShadowStylesheet", () => {
     const document = createFakeDocument();
     const select = createHost(document, "qui-select");
     select.root.append(document.createElement("div"));
+    markStyled(select.host);
     const options = Array.from({ length: 1000 }, () => createHost(document, "qui-option"));
     for (const option of options) {
       option.root.append(document.createElement("slot"));
@@ -68,10 +78,22 @@ describe("injectShadowStylesheet", () => {
     expect(options.every((option) => linkHrefs(option.root).length === 0)).toBe(true);
   });
 
+  it("uses the component marker for slot-only styled roots", () => {
+    const document = createFakeDocument();
+    const { host, root } = createHost(document, "qui-card");
+    root.append(document.createElement("slot"));
+    markStyled(host);
+
+    injectShadowStylesheet(document as unknown as Document, { href: "theme.css" });
+
+    expect(linkHrefs(root)).toEqual(["theme.css"]);
+  });
+
   it("does not duplicate an existing marked link", () => {
     const document = createFakeDocument();
-    const { root } = createHost(document, "qui-card");
+    const { host, root } = createHost(document, "qui-card");
     root.append(document.createElement("div"));
+    markStyled(host);
     const options = { href: "theme.css" };
 
     injectShadowStylesheet(document as unknown as Document, options);
@@ -82,8 +104,9 @@ describe("injectShadowStylesheet", () => {
 
   it("inserts multiple hrefs as the first children in order", () => {
     const document = createFakeDocument();
-    const { root } = createHost(document, "qui-card");
+    const { host, root } = createHost(document, "qui-card");
     root.append(document.createElement("span"));
+    markStyled(host);
 
     injectShadowStylesheet(document as unknown as Document, {
       href: ["first.css", "second.css"],
@@ -97,8 +120,9 @@ describe("injectShadowStylesheet", () => {
 describe("withShadowStylesheet", () => {
   it("injects before running the caller's afterHydrate", () => {
     const document = createFakeDocument();
-    const { root } = createHost(document, "qui-card");
+    const { host, root } = createHost(document, "qui-card");
     root.append(document.createElement("div"));
+    markStyled(host);
     const calls: string[] = [];
 
     const options = withShadowStylesheet(

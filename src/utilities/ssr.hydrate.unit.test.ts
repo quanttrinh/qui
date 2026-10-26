@@ -22,6 +22,7 @@ describe("shadow DOM SSR", () => {
     expect(html).toContain('<template shadowrootmode="open">');
     expect(html).toContain('href="/assets/qui.css"');
     expect(html).toContain("data-qui-styles");
+    expect(html).toContain("data-qui-shadow-styles");
     expect(html).toContain('<button data-scope="button" data-part="root"');
     expect(html).not.toMatch(INLINE_STYLE);
   });

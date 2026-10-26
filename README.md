@@ -298,8 +298,8 @@ This renders real Declarative Shadow DOM and puts one external
 `<link rel="stylesheet" href="/assets/qui.css" data-qui-styles>` into every
 styled `qui-*` shadow root. Data-only and host-only roots such as `qui-option`,
 `qui-dialog`, and the field helper/error/required parts receive no link because
-their shadow roots contain only a slot. The same stylesheet is loaded in the
-document for host and app styling; the browser fetches the URL once.
+those components do not request shadow styles. The same stylesheet is loaded in
+the document for host and app styling; the browser fetches the URL once.
 
 `markup` should contain the complete component composition. Render nested parts
 together so field, tabs, dialog and option context works during SSR.

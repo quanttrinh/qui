@@ -9,6 +9,7 @@ import {
 } from "../test-utils/fake-dom";
 
 interface StylesModule {
+  SHADOW_STYLES_MARKER: string;
   ensureShadowStylesheet: (host: HTMLElement) => void;
   getQuiStylesHref: () => string | string[] | undefined;
   setQuiStylesHref: (href: string | string[]) => void;
@@ -98,15 +99,16 @@ describe("ensureShadowStylesheet", () => {
   it("adds links to existing styled roots", () => {
     const document = createFakeDocument();
     useDocument(document);
-    const { root } = createHost(document, "qui-card");
+    const { host, root } = createHost(document, "qui-card");
     root.append(document.createElement("div"));
+    host.setAttribute(styles.SHADOW_STYLES_MARKER, "");
 
     styles.setQuiStylesHref("/assets/qui.css");
 
     expect(linkHrefs(root)).toEqual(["/assets/qui.css"]);
   });
 
-  it("does not add links to data-only roots", () => {
+  it("does not add links to unmarked roots", () => {
     const document = createFakeDocument();
     useDocument(document);
     const skipped = [
