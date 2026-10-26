@@ -3,14 +3,13 @@ name: Deploy Pages
 on:
   workflow_call:
 
-# Pages expects one deployment at a time. Each deploy re-reads the latest
-# gh-pages tree, so superseding a queued deployment cannot roll the site back.
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
   deploy:
+    # Pages expects one deployment at a time. Each deploy re-reads the latest
+    # gh-pages tree, so superseding a queued deployment cannot roll the site back.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     permissions:
       contents: read
