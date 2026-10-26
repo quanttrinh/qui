@@ -6,6 +6,8 @@ import { generateThemeCss } from "./theme-css";
 
 const LAYER_ORDER_DECLARATION = /@layer[^{;]*;/u;
 const PROPERTY_RULE = /@property/gu;
+const ROOT_BLOCK = /:root\{(?<declarations>[^}]*)\}/u;
+const DARK_BLOCK = /\.dark\{(?<declarations>[^}]*)\}/u;
 const ROOT_PRIMARY = /:root\{--md-sys-color-primary:#[0-9a-f]{6};/u;
 const DARK_PRIMARY = /\.dark\{--md-sys-color-primary:#[0-9a-f]{6};/u;
 
@@ -36,5 +38,16 @@ describe("generateThemeCss", () => {
     expect(() => postcss.parse(css)).not.toThrow();
     expect(css).toMatch(ROOT_PRIMARY);
     expect(css).toMatch(DARK_PRIMARY);
+  });
+
+  it("emits every color role in both schemes", async () => {
+    const css = await generateThemeCss();
+    const root = ROOT_BLOCK.exec(css)?.groups?.declarations ?? "";
+    const dark = DARK_BLOCK.exec(css)?.groups?.declarations ?? "";
+
+    for (const role of colorRoles) {
+      expect(root).toContain(`${cssVariableNames[role]}:`);
+      expect(dark).toContain(`${cssVariableNames[role]}:`);
+    }
   });
 });

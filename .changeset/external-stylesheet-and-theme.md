@@ -5,8 +5,10 @@
 Add external component stylesheet support and separate theme from shadow-root CSS.
 
 - `Qui.vite({ styles: { href } })` now configures an existing app/component
-  stylesheet for shadow roots instead of embedding a blob. Vite marks the
-  matching document `<link>` with `data-qui-styles` at build time.
+  stylesheet for shadow roots instead of embedding a blob. Vite marks a document
+  `<link>` whose href matches the configured stable URL; external mode prefers
+  an already-marked link so hashed or `base`-prefixed asset URLs are preserved.
+  Add HMR cleanup for external styles.
 - External styles mode does not import `theme.css` by default. Use
   `styles: { href, theme: true }` when the plugin should load the library theme.
 - `theme.css` is now generated directly from the theme source instead of Panda's

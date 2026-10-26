@@ -196,7 +196,10 @@ describe("virtual styles module", () => {
     expect(code).not.toContain("URL.createObjectURL");
     expect(code).not.toContain("createElement");
     expect(code).toContain('from "@quanttrinh/qui/runtime"');
-    expect(code).toContain('setQuiStylesHref("/assets/app.css");');
+    expect(code).toContain('const configuredHref = "/assets/app.css";');
+    expect(code).toContain("getQuiStylesHref() === undefined");
+    expect(code).toContain("setQuiStylesHref(configuredHref);");
+    expect(code).toContain("resetQuiStylesHref();");
   });
 
   it("supports multiple external hrefs and an explicit theme import", () => {
@@ -206,7 +209,7 @@ describe("virtual styles module", () => {
     });
 
     expect(code).toContain('import "@quanttrinh/qui/theme.css";');
-    expect(code).toContain('setQuiStylesHref(["/assets/app.css","/assets/overrides.css"]);');
+    expect(code).toContain('const configuredHref = ["/assets/app.css","/assets/overrides.css"];');
   });
 
   it("keeps the theme out of external styles unless requested", () => {
@@ -216,14 +219,14 @@ describe("virtual styles module", () => {
     });
 
     expect(code).not.toContain("@quanttrinh/qui/theme.css");
-    expect(code).toContain('setQuiStylesHref("/assets/app.css");');
+    expect(code).toContain('const configuredHref = "/assets/app.css";');
   });
 
   it("supports an explicitly empty external stylesheet list", () => {
     const code = createExternalStylesModule({ href: [] });
 
     expect(code).not.toContain("@quanttrinh/qui/theme.css");
-    expect(code).toContain("setQuiStylesHref([]);");
+    expect(code).toContain("const configuredHref = [];");
   });
 });
 
@@ -281,6 +284,19 @@ describe("markStylesheetLinks", () => {
     );
 
     expect(marked).toContain("data-qui-styles-extra data-qui-styles");
+  });
+
+  it("does not guess hashed or alternate stylesheet URLs", () => {
+    const marked = markStylesheetLinks(
+      [
+        '<link rel="stylesheet" href="/assets/app-a1b2c3.css">',
+        '<link rel="alternate stylesheet" href="/app.css">',
+      ].join(""),
+      "/assets/app.css",
+    );
+
+    expect(marked).not.toMatch(MARKER);
+    expect(marked).not.toContain('href="/app.css" data-qui-styles');
   });
 
   it("supports unquoted attribute values", () => {

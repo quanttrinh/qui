@@ -9,10 +9,11 @@ function isLayerBlock(node: AtRule): boolean {
 
 function layerRank(node: AtRule): number {
   if (!isLayerBlock(node)) {
-    return Number.MAX_SAFE_INTEGER;
+    return LAYER_ORDER.length;
   }
   const [name = ""] = node.params.split(".");
-  return LAYER_ORDER.indexOf(name.trim() as (typeof LAYER_ORDER)[number]);
+  const index = LAYER_ORDER.indexOf(name.trim() as (typeof LAYER_ORDER)[number]);
+  return index === -1 ? LAYER_ORDER.length : index;
 }
 
 function isFullLayerOrder(node: AtRule): boolean {
@@ -60,9 +61,18 @@ function reorderLayerBlocks(root: Root): void {
   }
 
   const firstLayer = root.nodes.findIndex((node) => node.type === "atrule" && isLayerBlock(node));
+  const anchor =
+    root.nodes.slice(firstLayer).find((node) => node.type !== "atrule" || !isLayerBlock(node)) ??
+    null;
   const sorted = [...blocks].sort((left, right) => layerRank(left) - layerRank(right));
   for (const block of blocks) {
     block.remove();
   }
-  root.nodes.splice(firstLayer, 0, ...sorted);
+  for (const block of sorted) {
+    if (anchor?.parent) {
+      root.insertBefore(anchor, block);
+    } else {
+      root.append(block);
+    }
+  }
 }

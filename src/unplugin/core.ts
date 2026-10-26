@@ -38,7 +38,7 @@ const HREF_ATTRIBUTE =
   /(?:^|\s)href\s*=\s*(?:(?<quote>["'])(?<quoted>.*?)\k<quote>|(?<unquoted>[^\s>]+))/iu;
 const REL_ATTRIBUTE =
   /(?:^|\s)rel\s*=\s*(?:(?<quote>["'])(?<quoted>.*?)\k<quote>|(?<unquoted>[^\s>]+))/iu;
-const STYLESHEET_REL = /\bstylesheet\b/iu;
+const REL_TOKEN_SPLIT = /\s+/u;
 const SELF_CLOSING_TAG_END = /\/>$/u;
 const TAG_END = />$/u;
 
@@ -175,19 +175,31 @@ export function createStylesModule(css: string, styles: boolean | QuiStylesOptio
  * Creates the external stylesheet module.
  *
  * The app owns the document `<link>` and the bundler/integration marks it at
- * build time. This module only configures the same component/app URL for shadow
- * roots; it never creates or rewrites document markup and never adopts
- * `theme.css`.
+ * build time. This module configures the component/app URL for shadow roots but
+ * prefers an already-marked document link, which keeps Vite's base and hashed
+ * URL instead of overwriting it with the configured fallback. It never creates
+ * or rewrites document markup and never adopts `theme.css`.
  */
 export function createExternalStylesModule(styles: QuiStylesOptions): string {
   const hrefs = stylesheetHrefs(styles.href ?? []);
   return [
     ...themeImport(styles),
-    'import { setQuiStylesHref } from "@quanttrinh/qui/runtime";',
+    'import { getQuiStylesHref, resetQuiStylesHref, setQuiStylesHref } from "@quanttrinh/qui/runtime";',
     "",
-    `setQuiStylesHref(${JSON.stringify(hrefs.length === 1 ? hrefs[0] : hrefs)});`,
+    `const configuredHref = ${JSON.stringify(hrefs.length === 1 ? hrefs[0] : hrefs)};`,
+    'if (typeof document !== "undefined" && getQuiStylesHref() === undefined) {',
+    "  setQuiStylesHref(configuredHref);",
+    "}",
+    "import.meta.hot?.dispose(() => {",
+    "  resetQuiStylesHref();",
+    "});",
     "",
   ].join("\n");
+}
+
+function isPrimaryStylesheet(rel: string): boolean {
+  const tokens = rel.toLowerCase().split(REL_TOKEN_SPLIT);
+  return tokens.includes("stylesheet") && !tokens.includes("alternate");
 }
 
 /**
@@ -195,6 +207,10 @@ export function createExternalStylesModule(styles: QuiStylesOptions): string {
  * external component/app stylesheet. Vite calls this through
  * `transformIndexHtml` during dev and build, so the marker is present in the
  * emitted HTML without client-side rewriting.
+ *
+ * The configured href must be a stable public URL. Hashed asset URLs are
+ * intentionally not guessed; mark those links in the app instead. The runtime
+ * prefers an already-marked document link, so its final hashed href is kept.
  */
 export function markStylesheetLinks(html: string, href: string | string[]): string {
   const hrefs = new Set(stylesheetHrefs(href));
@@ -213,7 +229,7 @@ export function markStylesheetLinks(html: string, href: string | string[]): stri
     }
     const relMatch = REL_ATTRIBUTE.exec(tag);
     const relValue = relMatch?.groups?.quoted ?? relMatch?.groups?.unquoted;
-    if (relValue === undefined || !STYLESHEET_REL.test(relValue)) {
+    if (relValue === undefined || !isPrimaryStylesheet(relValue)) {
       return tag;
     }
     return tag.endsWith("/>")

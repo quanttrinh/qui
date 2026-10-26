@@ -47,6 +47,13 @@ same declarations.
 
 ## Quick start
 
+Declare the Panda layer order once in an app-level stylesheet loaded before the
+library CSS:
+
+```css
+@layer reset, base, tokens, recipes, utilities;
+```
+
 Load the theme once in the document:
 
 ```ts
@@ -55,7 +62,11 @@ import "@quanttrinh/qui/theme.css";
 
 Shadow roots need a component/app stylesheet URL. Load
 `@quanttrinh/qui/styles.css` (or the app's combined component stylesheet) once
-and mark _only that link_:
+in an asset you can mark separately, then mark _only that link_:
+
+```ts
+import "@quanttrinh/qui/styles.css";
+```
 
 ```html
 <link rel="stylesheet" href="/assets/qui-components.css" data-qui-styles />
@@ -279,16 +290,19 @@ Qui.vite({ styles: { href: "/assets/qui-app.css" } });
 ```
 
 In external mode the plugin does not create document markup at runtime. Vite
-adds `data-qui-styles` to the matching document `<link>` during the build:
+adds `data-qui-styles` when the document link matches the configured href
+exactly:
 
 ```html
 <link rel="stylesheet" href="/assets/qui-app.css" data-qui-styles />
 ```
 
-Use the final public URL after Vite's `base` and asset hashing are applied. The
-marker matches that exact `href`; the same URL is used for shadow roots.
+`href` should be a stable public URL. If Vite emits a hashed or `base`-prefixed
+asset URL, mark the generated link yourself. Shadow roots prefer an existing
+marked link, so the runtime keeps that final URL instead of overwriting it with
+the configured fallback.
 
-The same URL is adopted by shadow roots. Load the theme separately, once:
+Load the theme separately, once:
 
 ```ts
 import "@quanttrinh/qui/theme.css";
