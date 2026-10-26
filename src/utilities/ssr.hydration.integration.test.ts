@@ -9,13 +9,14 @@ import { withShadowStylesheet } from "./ssr";
 
 const { extname, join } = path;
 const repoRoot = join(import.meta.dirname, "../..");
-const wwwRoot = join(repoRoot, "www");
+const styledSystemRoot = join(repoRoot, "styled-system");
+const testBuildRoot = join(repoRoot, ".stencil-test");
 const serverFiles = new Map<string, { contentType: string; file: string }>([
-  ["/theme.css", { contentType: "text/css", file: join(wwwRoot, "theme.css") }],
-  ["/styles.css", { contentType: "text/css", file: join(wwwRoot, "styles.css") }],
+  ["/theme.css", { contentType: "text/css", file: join(styledSystemRoot, "theme.css") }],
+  ["/styles.css", { contentType: "text/css", file: join(styledSystemRoot, "styles.css") }],
   [
     "/build/qui.esm.js",
-    { contentType: "text/javascript", file: join(wwwRoot, "build/qui.esm.js") },
+    { contentType: "text/javascript", file: join(testBuildRoot, "build/qui.esm.js") },
   ],
 ]);
 
@@ -64,7 +65,7 @@ function serveStatic(response: http.ServerResponse, url: string | undefined): bo
   }
 
   if (url?.startsWith("/build/")) {
-    const file = join(wwwRoot, url.slice(1));
+    const file = join(testBuildRoot, url.slice(1));
     if (extname(file) === ".js") {
       serveFile(response, file, "text/javascript");
       return true;
