@@ -43,7 +43,7 @@ const REL_TOKEN_SPLIT = /\s+/u;
 const SELF_CLOSING_TAG_END = /\/>$/u;
 const TAG_END = />$/u;
 const PROTECTED_HTML =
-  /<!--[\s\S]*?-->|<script\b[\s\S]*?<\/script\s*>|<style\b[\s\S]*?<\/style\s*>/giu;
+  /<!--[\s\S]*?-->|<script\b[\s\S]*?<\/script\s*>|<style\b[\s\S]*?<\/style\s*>|<template\b[\s\S]*?<\/template\s*>|<textarea\b[\s\S]*?<\/textarea\s*>/giu;
 
 export const VIRTUAL_MODULE_ID = "virtual:qui/register";
 export const VIRTUAL_STYLES_ID = "virtual:qui/styles";

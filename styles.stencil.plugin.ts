@@ -36,6 +36,8 @@ const STYLED_SYSTEM = "styled-system";
 const COMPONENTS = "components";
 const SHARED_PLACEHOLDER = "/* Styles are provided by the shared stylesheet. */\n";
 const CONFIG_INPUTS = ["panda.config.ts"];
+// Hashed for fresh-process invalidation. These modules are statically imported,
+// so editing them during watch requires a restart to load the new code.
 const STYLE_BUILD_INPUTS = [
   "build/css.ts",
   "build/layer-order.ts",
@@ -97,7 +99,7 @@ function hashesDigest(hashes: Map<string, string>): string {
   return digest.digest("hex");
 }
 
-/** Theme source plus its generator, used to avoid reloading it on every rebuild. */
+/** Theme source files, used to avoid reloading Material on every rebuild. */
 function themeSourceHash(root: string): string {
   const files = [
     ...walk(join(root, "src", "utilities", "theme")).filter((file) => file.endsWith(".ts")),

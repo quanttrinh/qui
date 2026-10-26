@@ -60,6 +60,7 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
     typeof stylesValue === "object" &&
     stylesValue !== null &&
     "href" in stylesValue &&
+    Reflect.get(stylesValue, "href") !== undefined &&
     !isExternalStyles(pluginOptions.styles)
   ) {
     throw new Error("qui external styles href must be a string or string array.");

@@ -347,6 +347,8 @@ describe("markStylesheetLinks", () => {
       '<script>const t = \'<link rel="stylesheet" href="/app.css">\';</script>',
       '<style>/* <link rel="stylesheet" href="/app.css"> */</style>',
       '<!-- <link rel="stylesheet" href="/app.css"> -->',
+      '<template><link rel="stylesheet" href="/app.css"></template>',
+      '<textarea><link rel="stylesheet" href="/app.css"></textarea>',
       '<link rel="stylesheet" href="/app.css">',
     ].join("");
 

@@ -7,8 +7,8 @@ Add external component stylesheet support and separate theme from shadow-root CS
 - `Qui.vite({ styles: { href } })` now uses an existing app/component
   stylesheet instead of embedding a blob. Vite marks a document `<link>` whose
   href exactly matches the configured stable URL. Marked document links are the
-  runtime source of truth; hashed or `base`-prefixed links must be marked by the
-  app and are used in document order.
+  runtime source of truth; Vite applies its base automatically, hashed links must
+  be marked by the app, and links are used in document order.
 - External styles mode does not import `theme.css` by default. Use
   `styles: { href, theme: true }` when the plugin should load the library theme.
 - `theme.css` is now generated directly from the theme source instead of Panda's

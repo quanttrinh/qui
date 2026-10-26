@@ -304,11 +304,12 @@ exactly:
 <link rel="stylesheet" href="/assets/qui-app.css" data-qui-styles />
 ```
 
-`href` should be a stable public URL. If Vite emits a hashed or `base`-prefixed
-asset URL, mark the generated link yourself. External mode has no runtime
-fallback: marked document links are the source of truth, so shadow roots always
-use their final URLs. The marked link must exist when components connect; add it
-in the initial document head.
+`href` should be a stable public URL. Vite applies its configured `base` when
+matching and marking the document link. If Vite emits a content-hashed asset URL,
+mark the generated link yourself. External mode has no runtime fallback: marked
+document links are the source of truth, so shadow roots always use their final
+URLs. The marked link must exist when components connect; add it in the initial
+document head.
 
 External `href` mode is Vite-only because it relies on
 `transformIndexHtml`. Other adapters throw; use `styles: false` and mark the
