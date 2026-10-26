@@ -300,7 +300,7 @@ class StyleGenerator {
     }
     const themeKey = themeSourceHash(this.pandaRoot);
     if (this.themeCache?.key !== themeKey) {
-      this.themeCache = { key: themeKey, css: await generateThemeCss() };
+      this.themeCache = { key: themeKey, css: await generateThemeCss(this.pandaRoot) };
     }
     const themeCss = this.themeCache.css;
     const sharedCss = await this.driver.generateStyles();
