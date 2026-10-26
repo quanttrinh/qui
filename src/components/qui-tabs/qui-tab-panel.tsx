@@ -48,6 +48,7 @@ export class QuiTabPanel extends ContextPartElement<TabsContext> {
   @State() private tabbable = true;
 
   private panelEl?: HTMLDivElement;
+  private tabIndexQueued = false;
   private readonly registration = new RegistrationReconciler();
 
   protected readonly contextPart = consumeContextPart({
@@ -63,7 +64,7 @@ export class QuiTabPanel extends ContextPartElement<TabsContext> {
   public componentDidRender(): void {
     this.syncRegistration();
     this.syncAria();
-    this.syncTabIndex(this.tabs?.isSelected(this.value) ?? false);
+    this.scheduleTabIndex();
   }
 
   public disconnectedCallback(): void {
@@ -92,6 +93,21 @@ export class QuiTabPanel extends ContextPartElement<TabsContext> {
       // Set the reverse relationship so a late trigger registration is reflected too.
       setAriaControls(trigger.trigger, [this.host]);
     }
+  }
+
+  private scheduleTabIndex(): void {
+    if (this.tabIndexQueued) {
+      return;
+    }
+    this.tabIndexQueued = true;
+    // Read slotted content after the current render commits.
+    queueMicrotask(() => {
+      this.tabIndexQueued = false;
+      if (!this.host.isConnected) {
+        return;
+      }
+      this.syncTabIndex(this.tabs?.isSelected(this.value) ?? false);
+    });
   }
 
   private syncTabIndex(selected: boolean): void {
