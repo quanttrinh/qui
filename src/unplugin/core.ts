@@ -41,6 +41,8 @@ const REL_ATTRIBUTE =
 const REL_TOKEN_SPLIT = /\s+/u;
 const SELF_CLOSING_TAG_END = /\/>$/u;
 const TAG_END = />$/u;
+const PROTECTED_HTML =
+  /<!--[\s\S]*?-->|<script\b[\s\S]*?<\/script\s*>|<style\b[\s\S]*?<\/style\s*>/giu;
 
 export const VIRTUAL_MODULE_ID = "virtual:qui/register";
 export const VIRTUAL_STYLES_ID = "virtual:qui/styles";
@@ -183,31 +185,16 @@ export function createStylesModule(css: string, styles: boolean | QuiStylesOptio
  * URL instead of overwriting it with the configured fallback. It never creates
  * or rewrites document markup and never adopts `theme.css`.
  */
+/**
+ * Creates the external stylesheet module.
+ *
+ * External mode relies on the marked document link, which the bundler or SSR
+ * emits at build time. The runtime discovers that link, including Vite's base
+ * and hashed URL. No client-side fallback is stored, so a later or replacement
+ * marked link is always authoritative and HMR needs no cleanup.
+ */
 export function createExternalStylesModule(styles: QuiStylesOptions): string {
-  const hrefs = stylesheetHrefs(styles.href ?? []);
-  return [
-    ...themeImport(styles),
-    'import { getQuiStylesHref, resetQuiStylesHref, setQuiStylesHref } from "@quanttrinh/qui/runtime";',
-    "",
-    `const configuredHref = ${JSON.stringify(hrefs.length === 1 ? hrefs[0] : hrefs)};`,
-    "const applyFallback = () => {",
-    "  if (getQuiStylesHref() !== undefined) {",
-    "    return;",
-    "  }",
-    "  setQuiStylesHref(configuredHref);",
-    "  import.meta.hot?.dispose(() => {",
-    "    resetQuiStylesHref();",
-    "  });",
-    "};",
-    'if (typeof document !== "undefined" && configuredHref.length > 0) {',
-    '  if (document.readyState === "loading") {',
-    '    document.addEventListener("DOMContentLoaded", applyFallback, { once: true });',
-    "  } else {",
-    "    applyFallback();",
-    "  }",
-    "}",
-    "",
-  ].join("\n");
+  return [...themeImport(styles), ""].join("\n");
 }
 
 function isPrimaryStylesheet(rel: string): boolean {
@@ -225,12 +212,7 @@ function isPrimaryStylesheet(rel: string): boolean {
  * intentionally not guessed; mark those links in the app instead. The runtime
  * prefers an already-marked document link, so its final hashed href is kept.
  */
-export function markStylesheetLinks(html: string, href: string | string[]): string {
-  const hrefs = new Set(stylesheetHrefs(href));
-  if (hrefs.size === 0) {
-    return html;
-  }
-
+function markLinksInMarkup(html: string, hrefs: Set<string>): string {
   return html.replaceAll(LINK_TAG, (tag) => {
     if (STYLESHEET_ATTRIBUTE.test(tag)) {
       return tag;
@@ -249,6 +231,23 @@ export function markStylesheetLinks(html: string, href: string | string[]): stri
       ? tag.replace(SELF_CLOSING_TAG_END, " data-qui-styles />")
       : tag.replace(TAG_END, " data-qui-styles>");
   });
+}
+
+export function markStylesheetLinks(html: string, href: string | string[]): string {
+  const hrefs = new Set(stylesheetHrefs(href));
+  if (hrefs.size === 0) {
+    return html;
+  }
+
+  let result = "";
+  let offset = 0;
+  for (const match of html.matchAll(PROTECTED_HTML)) {
+    const { 0: protectedMarkup, index } = match;
+    result += markLinksInMarkup(html.slice(offset, index), hrefs);
+    result += protectedMarkup;
+    offset = index + protectedMarkup.length;
+  }
+  return result + markLinksInMarkup(html.slice(offset), hrefs);
 }
 
 /**

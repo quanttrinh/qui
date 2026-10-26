@@ -195,18 +195,16 @@ describe("virtual styles module", () => {
     expect(code).not.toContain("@quanttrinh/qui/theme.css");
   });
 
-  it("uses an external component stylesheet without creating markup", () => {
+  it("uses an external component stylesheet without runtime fallback", () => {
     const code = createExternalStylesModule({ href: "/assets/app.css" });
 
     expect(code).not.toContain("@quanttrinh/qui/theme.css");
+    expect(code).not.toContain("@quanttrinh/qui/runtime");
     expect(code).not.toContain("URL.createObjectURL");
     expect(code).not.toContain("createElement");
-    expect(code).toContain('from "@quanttrinh/qui/runtime"');
-    expect(code).toContain('const configuredHref = "/assets/app.css";');
-    expect(code).toContain("getQuiStylesHref() !== undefined");
-    expect(code).toContain("setQuiStylesHref(configuredHref);");
-    expect(code).toContain("DOMContentLoaded");
-    expect(code).toContain("resetQuiStylesHref();");
+    expect(code).not.toContain("setQuiStylesHref");
+    expect(code).not.toContain("getQuiStylesHref");
+    expect(code).not.toContain("resetQuiStylesHref");
   });
 
   it("supports multiple external hrefs and an explicit theme import", () => {
@@ -216,7 +214,6 @@ describe("virtual styles module", () => {
     });
 
     expect(code).toContain('import "@quanttrinh/qui/theme.css";');
-    expect(code).toContain('const configuredHref = ["/assets/app.css","/assets/overrides.css"];');
   });
 
   it("keeps the theme out of external styles unless requested", () => {
@@ -226,14 +223,10 @@ describe("virtual styles module", () => {
     });
 
     expect(code).not.toContain("@quanttrinh/qui/theme.css");
-    expect(code).toContain('const configuredHref = "/assets/app.css";');
   });
 
-  it("supports an explicitly empty external stylesheet list", () => {
-    const code = createExternalStylesModule({ href: [] });
-
-    expect(code).not.toContain("@quanttrinh/qui/theme.css");
-    expect(code).toContain("const configuredHref = [];");
+  it("emits an empty module for an empty external stylesheet list", () => {
+    expect(createExternalStylesModule({ href: [] })).toBe("");
   });
 });
 
@@ -314,6 +307,20 @@ describe("markStylesheetLinks", () => {
 
   it("does nothing for an empty href list", () => {
     expect(markStylesheetLinks(html, [])).toBe(html);
+  });
+
+  it("does not rewrite link-like text inside scripts, styles, or comments", () => {
+    const source = [
+      '<script>const t = \'<link rel="stylesheet" href="/app.css">\';</script>',
+      '<style>/* <link rel="stylesheet" href="/app.css"> */</style>',
+      '<!-- <link rel="stylesheet" href="/app.css"> -->',
+      '<link rel="stylesheet" href="/app.css">',
+    ].join("");
+
+    const marked = markStylesheetLinks(source, "/app.css");
+
+    expect(marked.match(MARKER)).toHaveLength(1);
+    expect(marked.endsWith('<link rel="stylesheet" href="/app.css" data-qui-styles>')).toBe(true);
   });
 });
 

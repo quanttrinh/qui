@@ -76,8 +76,8 @@ describe("vite adapter", () => {
     }
 
     const code = await load.handler(resolved);
-    expect(code).toContain('const configuredHref = "/assets/app.css";');
-    expect(code).toContain("setQuiStylesHref(configuredHref);");
+    expect(code).not.toContain("@quanttrinh/qui/runtime");
+    expect(code).not.toContain("setQuiStylesHref");
     expect(code).not.toContain("URL.createObjectURL");
     expect(code).not.toContain("@quanttrinh/qui/theme.css");
 

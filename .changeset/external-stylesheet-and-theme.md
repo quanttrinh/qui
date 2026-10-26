@@ -4,18 +4,18 @@
 
 Add external component stylesheet support and separate theme from shadow-root CSS.
 
-- `Qui.vite({ styles: { href } })` now configures an existing app/component
-  stylesheet for shadow roots instead of embedding a blob. Vite marks a document
-  `<link>` whose href matches the configured stable URL; external mode prefers
-  an already-marked link so hashed or `base`-prefixed asset URLs are preserved.
-  Add HMR cleanup for external styles.
+- `Qui.vite({ styles: { href } })` now uses an existing app/component
+  stylesheet instead of embedding a blob. Vite marks a document `<link>` whose
+  href matches the configured stable URL. Marked document links are the runtime
+  source of truth, so hashed or `base`-prefixed asset URLs are preserved without
+  a client-side fallback.
 - External styles mode does not import `theme.css` by default. Use
   `styles: { href, theme: true }` when the plugin should load the library theme.
 - `theme.css` is now generated directly from the theme source instead of Panda's
   CSS pipeline. It is document-only and contains custom properties plus
-  `@property` registrations, with no `:host` fallback or order-only layer
-  declarations. Its values stay in the `tokens` layer so app tokens can override
-  them normally.
+  `@property` registrations, with no `:host` fallback. Individual layer
+  declarations establish canonical layer order without triggering Panda's
+  full-order PostCSS expansion.
 - Generated `styles.css` removes the root layer order declaration that triggers
   Panda's PostCSS integration, while preserving nested recipe layer
   declarations and their precedence.

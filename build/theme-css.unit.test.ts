@@ -6,7 +6,8 @@ import { colorRoles, cssVariableNames } from "../src/utilities/theme/color-roles
 import { generateThemeCss } from "./theme-css";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const LAYER_ORDER_DECLARATION = /@layer[^{;]*;/u;
+const FULL_LAYER_ORDER = /@layer\s+reset\s*,\s*base[^;]*;/u;
+const INDIVIDUAL_LAYERS = ["reset", "base", "tokens", "recipes", "utilities"] as const;
 const PROPERTY_RULE = /@property/gu;
 const ROOT_BLOCK = /:root\{(?<declarations>[^}]*)\}/u;
 const DARK_BLOCK = /\.dark\{(?<declarations>[^}]*)\}/u;
@@ -17,7 +18,10 @@ describe("generateThemeCss", () => {
   it("emits document-only color custom properties", async () => {
     const css = await generateThemeCss(ROOT);
 
-    expect(css).not.toMatch(LAYER_ORDER_DECLARATION);
+    expect(css).not.toMatch(FULL_LAYER_ORDER);
+    for (const layer of INDIVIDUAL_LAYERS) {
+      expect(css).toContain(`@layer ${layer};`);
+    }
     expect(css).not.toContain(":host");
     expect(css).toContain("@layer tokens{");
     expect(css).toContain(":root{");

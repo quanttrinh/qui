@@ -47,8 +47,8 @@ same declarations.
 
 ## Quick start
 
-Declare the Panda layer order once in an app-level stylesheet loaded before the
-library CSS:
+`theme.css` establishes the canonical Panda layer order. If app CSS loads
+before the library theme, keep the same order in that entry file:
 
 ```css
 @layer reset, base, tokens, recipes, utilities;
@@ -298,9 +298,9 @@ exactly:
 ```
 
 `href` should be a stable public URL. If Vite emits a hashed or `base`-prefixed
-asset URL, mark the generated link yourself. Shadow roots prefer an existing
-marked link, so the runtime keeps that final URL instead of overwriting it with
-the configured fallback.
+asset URL, mark the generated link yourself. External mode has no runtime
+fallback: marked document links are the source of truth, so shadow roots always
+use their final URLs.
 
 Load the theme separately, once:
 
@@ -365,12 +365,12 @@ import { withShadowStylesheet } from "@quanttrinh/qui/ssr";
 
 const { html, diagnostics } = await renderToString(
     markup,
-    withShadowStylesheet({ href: "/assets/qui.css" }, { fullDocument: false }),
+    withShadowStylesheet({ href: "/assets/qui-components.css" }, { fullDocument: false }),
 );
 ```
 
 This renders real Declarative Shadow DOM and puts one external
-`<link rel="stylesheet" href="/assets/qui.css" data-qui-styles>` into every
+`<link rel="stylesheet" href="/assets/qui-components.css" data-qui-styles>` into every
 styled `qui-*` shadow root. Data-only and host-only roots such as `qui-option`,
 `qui-dialog`, and the field helper/error/required parts receive no link because
 those components do not request shadow styles. The same stylesheet is loaded in
@@ -396,7 +396,7 @@ After hydration, register the same components on the client with
 ```ts
 import { setQuiStylesHref } from "@quanttrinh/qui/runtime";
 
-setQuiStylesHref("/assets/qui.css");
+setQuiStylesHref("/assets/qui-components.css");
 ```
 
 ### Streaming
