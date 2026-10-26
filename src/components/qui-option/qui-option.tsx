@@ -3,8 +3,6 @@ import { Component, Element, h, Host, Prop, resolveVar, type VNode } from "@sten
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
-
 const styles = {
   host: css({ display: "none" }),
 };
@@ -30,10 +28,6 @@ export class QuiOption {
   @Prop({ reflect: true }) label?: string;
   /** Extra text matched by the combobox filter, e.g. synonyms or aliases. */
   @Prop({ reflect: true }) keywords?: string;
-
-  public connectedCallback(): void {
-    ensureShadowStylesheet(this.host);
-  }
 
   public render(): VNode {
     return (

@@ -17,7 +17,6 @@ import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
 import { nextId } from "../../helpers/id";
-import { ensureShadowStylesheet } from "../../utilities/styles";
 import { createListenerStore } from "../shared/listener-store";
 import { lockDocumentScroll } from "../shared/scroll-lock";
 import {
@@ -94,7 +93,6 @@ export class QuiDialog {
 
   public connectedCallback(): void {
     provideDialog(this.host, this.context);
-    ensureShadowStylesheet(this.host);
     this.syncScrollLock();
   }
 

@@ -1,16 +1,6 @@
 const DEFAULT_ATTRIBUTE = "data-qui-styles";
 const QUI_TAG_PREFIX = "qui-";
 
-/** Host-only components whose shadow roots do not need the shared stylesheet. */
-export const DEFAULT_SKIP_TAGS = [
-  "qui-dialog",
-  "qui-field-error-text",
-  "qui-field-helper-text",
-  "qui-field-required-indicator",
-  "qui-option",
-] as const;
-
-const SKIPPED_TAGS = new Set<string>(DEFAULT_SKIP_TAGS);
 const discoveredHrefs = new WeakMap<Document, string[] | undefined>();
 const documentObservers = new WeakMap<Document, MutationObserver>();
 // oxlint-disable-next-line stencil/ban-side-effects -- Symbol.for is a pure global registry lookup.
@@ -103,6 +93,21 @@ function resolveHrefs(document: Document): string[] | undefined {
   return discoverDocumentHrefs(document);
 }
 
+/**
+ * Returns whether a shadow root renders visual content rather than only
+ * forwarding slotted content. Host-only roots are styled by the document
+ * stylesheet and do not need a shadow-root link.
+ */
+export function shadowRootNeedsStyles(root: ShadowRoot): boolean {
+  for (const child of root.children) {
+    if (child.tagName !== "SLOT" && child.tagName !== "LINK") {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function hasManagedLink(root: ShadowRoot): boolean {
   for (const link of root.querySelectorAll("link")) {
     if (link.hasAttribute(DEFAULT_ATTRIBUTE)) {
@@ -185,8 +190,8 @@ function reconcileStylesheetLinks(root: ShadowRoot, document: Document, hrefs: s
 }
 
 /**
- * Collects shadow roots belonging to `qui-*` hosts or roots that already carry
- * a managed stylesheet link. Nested shadow roots are visited as well.
+ * Collects shadow roots belonging to styled `qui-*` hosts or roots that already
+ * carry a managed stylesheet link. Nested shadow roots are visited as well.
  */
 function collectShadowRoots(root: ParentNode): ShadowRoot[] {
   const roots: ShadowRoot[] = [];
@@ -194,9 +199,8 @@ function collectShadowRoots(root: ParentNode): ShadowRoot[] {
   for (const element of root.querySelectorAll("*")) {
     const { shadowRoot } = element;
     if (shadowRoot) {
-      const tagName = element.tagName.toLowerCase();
-      const isQuiHost = tagName.startsWith(QUI_TAG_PREFIX);
-      if ((isQuiHost && !SKIPPED_TAGS.has(tagName)) || hasManagedLink(shadowRoot)) {
+      const isQuiHost = element.tagName.toLowerCase().startsWith(QUI_TAG_PREFIX);
+      if ((isQuiHost && shadowRootNeedsStyles(shadowRoot)) || hasManagedLink(shadowRoot)) {
         roots.push(shadowRoot);
       }
 
@@ -208,21 +212,18 @@ function collectShadowRoots(root: ParentNode): ShadowRoot[] {
 }
 
 /**
- * Adds the configured stylesheet link(s) to a component shadow root.
+ * Adds the configured stylesheet link(s) to a styled component shadow root.
  *
- * The helper is intentionally conservative: it does nothing when the host has
- * no shadow root, when there is no document to create links with, or when the
- * root already contains a `data-qui-styles` link. This preserves links emitted
- * by SSR and prevents duplicate styles for dynamically created components.
+ * Styled components call this from their lifecycle. Data-only and host-only
+ * parts deliberately do not call it because their shadow roots contain only a
+ * slot. The helper is also conservative about missing roots, documents, and
+ * existing `data-qui-styles` links.
  *
  * If no href has been configured, the first document link marked with
  * `data-qui-styles` is used as the source of truth. Without either source the
  * helper is a no-op.
  */
 export function ensureShadowStylesheet(host: HTMLElement): void {
-  if (SKIPPED_TAGS.has(host.tagName.toLowerCase())) {
-    return;
-  }
   const root = host.shadowRoot;
   if (!root) {
     return;
@@ -248,9 +249,9 @@ export function ensureShadowStylesheet(host: HTMLElement): void {
 /**
  * Configures the stylesheet href(s) used by `ensureShadowStylesheet`.
  *
- * When a document is available, marked document links, existing `qui-*` shadow
- * roots, and roots that already contain a managed link are reconciled
- * immediately. Components that connect later pick up the configuration through
+ * When a document is available, marked document links, existing styled
+ * `qui-*` shadow roots, and roots that already contain a managed link are
+ * reconciled immediately. Components that connect later pick up the configuration through
  * `ensureShadowStylesheet`. This call is safe during SSR; without a document it
  * only stores the value.
  */

@@ -25,6 +25,8 @@ const styles = {
 export class QuiFieldRequiredIndicator extends ContextPartElement<FieldApi> {
   @Element() host!: HTMLQuiFieldRequiredIndicatorElement;
 
+  protected readonly needsShadowStyles = false;
+
   protected readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "field",

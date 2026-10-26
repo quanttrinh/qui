@@ -12,10 +12,14 @@ import { type ContextPart, type ContextPartSource } from "./context-part";
 export abstract class ContextPartElement<TContext extends ContextPartSource> {
   protected abstract readonly host: HTMLElement;
   protected abstract readonly contextPart: ContextPart<TContext>;
+  /** Host-only parts can opt out; their shadow root contains only a slot. */
+  protected readonly needsShadowStyles: boolean = true;
 
   public connectedCallback(): void {
     this.contextPart.hostConnected();
-    ensureShadowStylesheet(this.host);
+    if (this.needsShadowStyles) {
+      ensureShadowStylesheet(this.host);
+    }
   }
 
   public componentWillLoad(): void {

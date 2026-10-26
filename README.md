@@ -296,11 +296,10 @@ const { html, diagnostics } = await renderToString(
 
 This renders real Declarative Shadow DOM and puts one external
 `<link rel="stylesheet" href="/assets/qui.css" data-qui-styles>` into every
-styled `qui-*` shadow root. Data-only and host-only roots such as `qui-option`, `qui-dialog`, and the
-field label helper/error/required parts are skipped by default; use `skipTags`
-to customize that list. The
-same stylesheet is loaded in the document for host and app styling; the browser
-fetches the URL once.
+styled `qui-*` shadow root. Data-only and host-only roots such as `qui-option`,
+`qui-dialog`, and the field helper/error/required parts receive no link because
+their shadow roots contain only a slot. The same stylesheet is loaded in the
+document for host and app styling; the browser fetches the URL once.
 
 `markup` should contain the complete component composition. Render nested parts
 together so field, tabs, dialog and option context works during SSR.

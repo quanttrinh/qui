@@ -26,6 +26,8 @@ const styles = {
 export class QuiFieldHelperText extends ContextPartElement<FieldApi> {
   @Element() host!: HTMLQuiFieldHelperTextElement;
 
+  protected readonly needsShadowStyles = false;
+
   protected readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "field",

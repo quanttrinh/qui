@@ -1,11 +1,9 @@
-import { DEFAULT_SKIP_TAGS } from "./styles";
+import { shadowRootNeedsStyles } from "./styles";
 
 export interface ShadowStylesheetOptions {
   href: string | string[];
   tagPrefix?: string;
   attribute?: string;
-  /** Host tags whose shadow roots do not need a stylesheet link. */
-  skipTags?: string[];
 }
 
 /**
@@ -24,7 +22,6 @@ interface InjectionContext {
   hrefs: string[];
   tagPrefix: string;
   attribute: string;
-  skipTags: Set<string>;
 }
 
 const DEFAULT_TAG_PREFIX = "qui-";
@@ -63,7 +60,7 @@ function visitRoot(context: InjectionContext, root: StylesheetRoot): void {
     const { shadowRoot } = element;
     if (shadowRoot) {
       const tagName = element.tagName.toLowerCase();
-      if (tagName.startsWith(context.tagPrefix) && !context.skipTags.has(tagName)) {
+      if (tagName.startsWith(context.tagPrefix) && shadowRootNeedsStyles(shadowRoot)) {
         injectStylesheetLinks(context, shadowRoot);
       }
       visitRoot(context, shadowRoot);
@@ -85,7 +82,6 @@ export function injectShadowStylesheet(document: Document, options: ShadowStyles
         hrefs,
         tagPrefix: (options.tagPrefix ?? DEFAULT_TAG_PREFIX).toLowerCase(),
         attribute: options.attribute ?? DEFAULT_ATTRIBUTE,
-        skipTags: new Set((options.skipTags ?? DEFAULT_SKIP_TAGS).map((tag) => tag.toLowerCase())),
       },
       document,
     );

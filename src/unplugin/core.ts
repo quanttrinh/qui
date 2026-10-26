@@ -20,20 +20,6 @@ export function mayContainComponents(code: string): boolean {
   return code.includes("qui-") || ESCAPED_CHARACTER.test(code);
 }
 
-// Keep provider tags in sync with ContextPartKey in src/components/shared/context-part.ts.
-/**
- * Provider tags must be defined before the parts that consume them. Only
- * providers need an entry here; all other tags inherit the default priority.
- */
-const COMPONENT_PRIORITY: Readonly<Record<string, number>> = {
-  "qui-field": 0,
-  "qui-accordion": 0,
-  "qui-tabs": 0,
-  "qui-dialog": 0,
-  "qui-accordion-item": 1,
-  "qui-radio-group": 1,
-};
-
 export function normalizeComponents(components: Iterable<string>): string[] {
   const normalized = new Set<string>();
   for (const component of components) {
@@ -42,23 +28,6 @@ export function normalizeComponents(components: Iterable<string>): string[] {
     }
   }
   return [...normalized].sort();
-}
-
-/**
- * Sorts tags so providers are defined before the parts that consume them.
- * Falls back to alphabetical order for unrelated components.
- */
-export function registrationOrder(components: Iterable<string>): string[] {
-  return normalizeComponents(components).sort((left, right) => {
-    const priority = (COMPONENT_PRIORITY[left] ?? 100) - (COMPONENT_PRIORITY[right] ?? 100);
-    if (priority !== 0) {
-      return priority;
-    }
-    if (left === right) {
-      return 0;
-    }
-    return left < right ? -1 : 1;
-  });
 }
 
 /**
@@ -146,30 +115,36 @@ export function createStylesModule(css: string): string {
   ].join("\n");
 }
 
+/**
+ * Creates a static module that defines the discovered components.
+ *
+ * Tags are sorted for deterministic output. Context parts retry when their
+ * provider upgrades, so providers do not need a separate registration order.
+ */
 export function createRegistrationModule(
   components: Iterable<string>,
   options: QuiPluginOptions = {},
 ): string {
-  const tags = registrationOrder(components);
+  const tags = normalizeComponents(components);
   if (tags.length === 0) {
     return "";
   }
 
   const bindings: string[] = [];
-  const lines = [
-    ...(options.styles === false ? [] : [`import "${VIRTUAL_STYLES_ID}";`]),
-    'import { defineComponents } from "@quanttrinh/qui/register";',
-  ];
-
+  const definitions: string[] = [];
   for (const [index, tag] of tags.entries()) {
     const binding = `__qui_${index}`;
     bindings.push(binding);
-    lines.push(
+    definitions.push(
       `import { defineCustomElement as ${binding} } from "@quanttrinh/qui/shared/${tag}";`,
     );
   }
 
-  lines.push(`defineComponents(${bindings.join(", ")});`);
-
-  return `${lines.join("\n")}\n`;
+  return [
+    ...(options.styles === false ? [] : [`import "${VIRTUAL_STYLES_ID}";`]),
+    'import { defineComponents } from "@quanttrinh/qui/register";',
+    ...definitions,
+    `defineComponents(${bindings.join(", ")});`,
+    "",
+  ].join("\n");
 }

@@ -7,7 +7,7 @@ import {
   extractComponents,
   importInjectionOffset,
   isTransformableId,
-  registrationOrder,
+  normalizeComponents,
   virtualModuleId,
 } from "./core";
 
@@ -95,10 +95,10 @@ function* singleUseComponents(): Generator<string> {
   yield "qui-accordion";
 }
 
-describe("registrationOrder", () => {
-  it("defines parent contexts before the parts that consume them", () => {
+describe("registration order", () => {
+  it("sorts normalized components alphabetically", () => {
     expect(
-      registrationOrder([
+      normalizeComponents([
         "qui-accordion-content",
         "qui-accordion-trigger",
         "qui-accordion-item",
@@ -106,40 +106,13 @@ describe("registrationOrder", () => {
       ]),
     ).toEqual([
       "qui-accordion",
-      "qui-accordion-item",
       "qui-accordion-content",
+      "qui-accordion-item",
       "qui-accordion-trigger",
     ]);
-
-    expect(
-      registrationOrder(["qui-tab-panel", "qui-tab-trigger", "qui-tab-list", "qui-tabs"]),
-    ).toEqual(["qui-tabs", "qui-tab-list", "qui-tab-panel", "qui-tab-trigger"]);
-
-    expect(registrationOrder(["qui-radio", "qui-field", "qui-radio-group"])).toEqual([
-      "qui-field",
-      "qui-radio-group",
-      "qui-radio",
-    ]);
-
-    expect(
-      registrationOrder([
-        "qui-dialog-title",
-        "qui-dialog-content",
-        "qui-dialog",
-        "qui-dialog-trigger",
-      ]),
-    ).toEqual(["qui-dialog", "qui-dialog-content", "qui-dialog-title", "qui-dialog-trigger"]);
   });
 
-  it("keeps unrelated components alphabetical", () => {
-    expect(registrationOrder(["qui-select", "qui-button", "qui-input"])).toEqual([
-      "qui-button",
-      "qui-input",
-      "qui-select",
-    ]);
-  });
-
-  it("emits definitions in dependency order", () => {
+  it("emits definitions in sorted order", () => {
     const code = createRegistrationModule(
       ["qui-accordion-content", "qui-accordion-trigger", "qui-accordion", "qui-accordion-item"],
       { styles: false },
@@ -152,8 +125,8 @@ describe("registrationOrder", () => {
 
     expect(definitions).toEqual([
       "qui-accordion",
-      "qui-accordion-item",
       "qui-accordion-content",
+      "qui-accordion-item",
       "qui-accordion-trigger",
     ]);
   });

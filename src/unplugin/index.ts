@@ -12,7 +12,6 @@ import {
   isTransformableId,
   mayContainComponents,
   virtualModuleId,
-  VIRTUAL_MODULE_ID,
   VIRTUAL_STYLES_ID,
   type QuiPluginOptions,
 } from "./core";
@@ -20,7 +19,6 @@ import {
 export type { QuiPluginOptions } from "./core";
 
 const PLUGIN_NAME = "unplugin-qui";
-const RESOLVED_VIRTUAL_MODULE_ID = `\0${VIRTUAL_MODULE_ID}`;
 const RESOLVED_VIRTUAL_STYLES_ID = `\0${VIRTUAL_STYLES_ID}`;
 const VIRTUAL_MODULE_FILTER = /^virtual:qui\/(?:register|styles)(?:[?#]|$)/u;
 const RESOLVED_VIRTUAL_MODULE_FILTER = /^\0virtual:qui\/(?:register|styles)(?:[?#]|$)/u;
@@ -87,9 +85,6 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
         if (id === RESOLVED_VIRTUAL_STYLES_ID) {
           this.addWatchFile?.(STYLESHEET_PATH);
           return createStylesModule(await getStylesheetText());
-        }
-        if (!id.startsWith(RESOLVED_VIRTUAL_MODULE_ID)) {
-          return undefined;
         }
         const components = componentsFromVirtualModuleId(id.slice(1));
         if (components === undefined || components.length === 0) {

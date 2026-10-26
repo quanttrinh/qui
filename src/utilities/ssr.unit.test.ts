@@ -8,7 +8,8 @@ describe("injectShadowStylesheet", () => {
     const document = createFakeDocument();
     const outer = createHost(document, "qui-card");
     const inner = createHost(document, "qui-button");
-    outer.root.append(inner.host);
+    outer.root.append(document.createElement("div"), inner.host);
+    inner.root.append(document.createElement("div"));
 
     injectShadowStylesheet(document as unknown as Document, { href: "theme.css" });
 
@@ -20,6 +21,8 @@ describe("injectShadowStylesheet", () => {
     const document = createFakeDocument();
     const qui = createHost(document, "qui-card");
     const other = createHost(document, "other-card");
+    qui.root.append(document.createElement("div"));
+    other.root.append(document.createElement("div"));
 
     injectShadowStylesheet(document as unknown as Document, { href: "theme.css" });
 
@@ -36,7 +39,11 @@ describe("injectShadowStylesheet", () => {
       createHost(document, "qui-field-error-text"),
       createHost(document, "qui-field-required-indicator"),
     ];
+    for (const host of skipped) {
+      host.root.append(document.createElement("slot"));
+    }
     const button = createHost(document, "qui-button");
+    button.root.append(document.createElement("div"));
 
     injectShadowStylesheet(document as unknown as Document, { href: "theme.css" });
 
@@ -49,7 +56,11 @@ describe("injectShadowStylesheet", () => {
   it("does not add links to large option lists", () => {
     const document = createFakeDocument();
     const select = createHost(document, "qui-select");
+    select.root.append(document.createElement("div"));
     const options = Array.from({ length: 1000 }, () => createHost(document, "qui-option"));
+    for (const option of options) {
+      option.root.append(document.createElement("slot"));
+    }
 
     injectShadowStylesheet(document as unknown as Document, { href: "theme.css" });
 
@@ -57,21 +68,10 @@ describe("injectShadowStylesheet", () => {
     expect(options.every((option) => linkHrefs(option.root).length === 0)).toBe(true);
   });
 
-  it("supports additional skip tags", () => {
-    const document = createFakeDocument();
-    const card = createHost(document, "qui-card");
-
-    injectShadowStylesheet(document as unknown as Document, {
-      href: "theme.css",
-      skipTags: ["qui-card"],
-    });
-
-    expect(linkHrefs(card.root)).toEqual([]);
-  });
-
   it("does not duplicate an existing marked link", () => {
     const document = createFakeDocument();
     const { root } = createHost(document, "qui-card");
+    root.append(document.createElement("div"));
     const options = { href: "theme.css" };
 
     injectShadowStylesheet(document as unknown as Document, options);
@@ -98,6 +98,7 @@ describe("withShadowStylesheet", () => {
   it("injects before running the caller's afterHydrate", () => {
     const document = createFakeDocument();
     const { root } = createHost(document, "qui-card");
+    root.append(document.createElement("div"));
     const calls: string[] = [];
 
     const options = withShadowStylesheet(

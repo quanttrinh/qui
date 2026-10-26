@@ -243,6 +243,9 @@ describe("qui-field", () => {
     expect(indicatorHost).toHaveAttribute("data-required");
     expect(indicatorHost).toHaveAttribute("part", "required-indicator");
     expect(shadowOf(indicatorHost)).toBeInstanceOf(ShadowRoot);
+    for (const host of [helperHost, errorHost, indicatorHost]) {
+      expect(shadowOf(host).querySelector("link[data-qui-styles]")).toBeNull();
+    }
   });
 
   it("propagates disabled and read-only state to its control", async () => {

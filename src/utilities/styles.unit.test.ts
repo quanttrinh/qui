@@ -95,6 +95,17 @@ describe("ensureShadowStylesheet", () => {
     expect(styles.getQuiStylesHref()).toEqual(["first.css", "second.css"]);
   });
 
+  it("adds links to existing styled roots", () => {
+    const document = createFakeDocument();
+    useDocument(document);
+    const { root } = createHost(document, "qui-card");
+    root.append(document.createElement("div"));
+
+    styles.setQuiStylesHref("/assets/qui.css");
+
+    expect(linkHrefs(root)).toEqual(["/assets/qui.css"]);
+  });
+
   it("does not add links to data-only roots", () => {
     const document = createFakeDocument();
     useDocument(document);
@@ -105,10 +116,13 @@ describe("ensureShadowStylesheet", () => {
       createHost(document, "qui-field-error-text"),
       createHost(document, "qui-field-required-indicator"),
     ];
+    for (const host of skipped) {
+      host.root.append(document.createElement("slot"));
+    }
+
     styles.setQuiStylesHref("/assets/qui.css");
 
     for (const host of skipped) {
-      styles.ensureShadowStylesheet(host.host as unknown as HTMLElement);
       expect(linkHrefs(host.root)).toEqual([]);
     }
   });
