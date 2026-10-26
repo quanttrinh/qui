@@ -108,6 +108,21 @@ describe("ensureShadowStylesheet", () => {
     expect(linkHrefs(root)).toEqual(["/assets/qui.css"]);
   });
 
+  it("updates nested marked roots", () => {
+    const document = createFakeDocument();
+    useDocument(document);
+    const outer = createHost(document, "qui-card");
+    const inner = createHost(document, "qui-button");
+    outer.root.append(inner.host);
+    outer.host.setAttribute(styles.SHADOW_STYLES_MARKER, "");
+    inner.host.setAttribute(styles.SHADOW_STYLES_MARKER, "");
+
+    styles.setQuiStylesHref("/assets/qui.css");
+
+    expect(linkHrefs(outer.root)).toEqual(["/assets/qui.css"]);
+    expect(linkHrefs(inner.root)).toEqual(["/assets/qui.css"]);
+  });
+
   it("does not add links to unmarked roots", () => {
     const document = createFakeDocument();
     useDocument(document);

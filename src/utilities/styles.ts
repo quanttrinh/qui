@@ -1,3 +1,5 @@
+import { isElement } from "../helpers/dom";
+
 const DEFAULT_ATTRIBUTE = "data-qui-styles";
 /** Set by components that call `ensureShadowStylesheet`. */
 export const SHADOW_STYLES_MARKER = "data-qui-shadow-styles";
@@ -45,6 +47,19 @@ function getDocument(host?: HTMLElement): Document | undefined {
   return typeof document === "undefined" ? undefined : document;
 }
 
+function containsLink(node: Node): boolean {
+  return isElement(node) && (node.tagName === "LINK" || node.querySelector("link") !== null);
+}
+
+function hasLinkMutation(records: MutationRecord[]): boolean {
+  return records.some((record) => {
+    if (record.type === "attributes") {
+      return isElement(record.target) && record.target.tagName === "LINK";
+    }
+    return [...record.addedNodes, ...record.removedNodes].some((node) => containsLink(node));
+  });
+}
+
 function invalidateDocumentLinkCache(document: Document): void {
   documentObservers.get(document)?.disconnect();
   documentObservers.delete(document);
@@ -70,10 +85,12 @@ function discoverDocumentHrefs(document: Document): string[] | undefined {
   discoveredHrefs.set(document, result);
 
   if (!documentObservers.has(document) && typeof MutationObserver !== "undefined") {
-    const observer = new MutationObserver(() => {
-      invalidateDocumentLinkCache(document);
+    const observer = new MutationObserver((records) => {
+      if (hasLinkMutation(records)) {
+        invalidateDocumentLinkCache(document);
+      }
     });
-    observer.observe(document.head, {
+    observer.observe(document.documentElement, {
       subtree: true,
       childList: true,
       attributes: true,
@@ -176,23 +193,22 @@ function reconcileStylesheetLinks(root: ShadowRoot, document: Document, hrefs: s
 }
 
 /**
- * Collects shadow roots that opted into styling or already carry a managed
- * stylesheet link. Nested shadow roots are visited as well.
+ * Collects shadow roots whose hosts opted into styling. Nested marked hosts are
+ * visited as well, without walking unrelated shadow roots.
  */
 function collectShadowRoots(root: ParentNode): ShadowRoot[] {
   const roots: ShadowRoot[] = [];
-
-  for (const element of root.querySelectorAll("*")) {
-    const { shadowRoot } = element;
-    if (shadowRoot) {
-      if (element.hasAttribute(SHADOW_STYLES_MARKER) || hasManagedLink(shadowRoot)) {
+  const visit = (parent: ParentNode): void => {
+    for (const element of parent.querySelectorAll(`[${SHADOW_STYLES_MARKER}]`)) {
+      const { shadowRoot } = element;
+      if (shadowRoot) {
         roots.push(shadowRoot);
+        visit(shadowRoot);
       }
-
-      roots.push(...collectShadowRoots(shadowRoot));
     }
-  }
+  };
 
+  visit(root);
   return roots;
 }
 

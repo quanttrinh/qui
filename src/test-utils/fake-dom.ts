@@ -64,10 +64,16 @@ export class FakeNode {
 
   public querySelectorAll(selector: string): FakeNode[] {
     const matches: FakeNode[] = [];
+    const attribute =
+      selector.startsWith("[") && selector.endsWith("]") ? selector.slice(1, -1) : undefined;
 
     const visit = (nodes: FakeNode[]): void => {
       for (const node of nodes) {
-        if (selector === "*" || node.tagName.toLowerCase() === selector) {
+        if (
+          selector === "*" ||
+          node.tagName.toLowerCase() === selector ||
+          (attribute !== undefined && node.hasAttribute(attribute))
+        ) {
           matches.push(node);
         }
         visit(node.children);
