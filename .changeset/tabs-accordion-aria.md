@@ -10,5 +10,6 @@ Harden tabs and accordion ARIA and keyboard behavior.
 - Avoid redundant blur updates when focus moves between triggers.
 - Account for focusable descendants inside nested shadow roots before adding a
   tab panel to the tab order.
-- Defer panel tab-stop recalculation until after render to avoid Stencil
-  state-during-render warnings.
+- Recalculate panel tab stops after render and again after the first paint, so
+  nested custom elements can attach their shadow roots without a transient tab
+  stop or Stencil state-during-render warnings.

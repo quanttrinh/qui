@@ -45,10 +45,11 @@ export class QuiTabPanel extends ContextPartElement<TabsContext> {
   /** The value linking this panel to its trigger. */
   @Prop() value!: string;
 
-  @State() private tabbable = true;
+  @State() private tabbable = false;
 
   private panelEl?: HTMLDivElement;
   private tabIndexQueued = false;
+  private contentObserver?: MutationObserver;
   private readonly registration = new RegistrationReconciler();
 
   protected readonly contextPart = consumeContextPart({
@@ -61,6 +62,21 @@ export class QuiTabPanel extends ContextPartElement<TabsContext> {
     return this.contextPart.context;
   }
 
+  public connectedCallback(): void {
+    super.connectedCallback();
+    if (typeof MutationObserver !== "undefined") {
+      this.contentObserver = new MutationObserver(() => {
+        this.scheduleTabIndex();
+      });
+      this.contentObserver.observe(this.host, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: ["disabled", "hidden", "tabindex"],
+      });
+    }
+  }
+
   public componentDidRender(): void {
     this.syncRegistration();
     this.syncAria();
@@ -68,6 +84,8 @@ export class QuiTabPanel extends ContextPartElement<TabsContext> {
   }
 
   public disconnectedCallback(): void {
+    this.contentObserver?.disconnect();
+    this.contentObserver = undefined;
     this.registration.clear();
     super.disconnectedCallback();
   }
@@ -100,14 +118,21 @@ export class QuiTabPanel extends ContextPartElement<TabsContext> {
       return;
     }
     this.tabIndexQueued = true;
-    // Read slotted content after the current render commits.
-    queueMicrotask(() => {
-      this.tabIndexQueued = false;
+    const sync = (): void => {
       if (!this.host.isConnected) {
         return;
       }
       this.syncTabIndex(this.tabs?.isSelected(this.value) ?? false);
+    };
+    // Read slotted content after the current render commits, then confirm after
+    // The first paint so nested custom elements have attached their shadow roots.
+    queueMicrotask(() => {
+      this.tabIndexQueued = false;
+      sync();
     });
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(sync);
+    }
   }
 
   private syncTabIndex(selected: boolean): void {
