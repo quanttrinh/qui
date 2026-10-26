@@ -33,7 +33,7 @@ const JAVASCRIPT_FILE = /\.(?:[cm]?[jt]sx?)$/u;
 const TRANSFORMABLE_FILE = /\.(?:[cm]?[jt]sx?|mdx)$/u;
 const ESCAPED_CHARACTER = /\\[ux]/u;
 const MDX_FRONTMATTER = /^---[^\S\r\n]*(?:\r?\n)(?:[\s\S]*?\r?\n)?---[^\S\r\n]*(?:\r?\n|$)/u;
-const LINK_TAG = /<link\b[^>]*>/giu;
+const LINK_TAG = /<link\b(?:"[^"]*"|'[^']*'|[^'">])*>/giu;
 const STYLESHEET_ATTRIBUTE = /(?:^|\s)data-qui-styles(?=[\s=/>])/iu;
 const HREF_ATTRIBUTE =
   /(?:^|\s)href\s*=\s*(?:(?<quote>["'])(?<quoted>.*?)\k<quote>|(?<unquoted>[^\s>]+))/iu;

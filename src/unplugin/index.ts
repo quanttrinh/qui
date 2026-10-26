@@ -31,6 +31,20 @@ const COMPONENT_SOURCE = /qui-|\\[ux]/u;
 const IGNORED_ID = /(?:^|[\\/])node_modules[\\/]|^(?:virtual:|\0)/u;
 const COMPONENT_CACHE_LIMIT = 128;
 
+function withViteBase(href: string | string[], base: string): string[] {
+  const values = Array.isArray(href) ? href : [href];
+  if (base === "" || base === "/" || base.startsWith("./")) {
+    return values;
+  }
+  const normalizedBase = base.endsWith("/") ? base : `${base}/`;
+  return values.flatMap((value) => {
+    if (!value.startsWith("/") || value.startsWith("//")) {
+      return [value];
+    }
+    return [value, `${normalizedBase}${value.slice(1)}`];
+  });
+}
+
 /** Reads the shared stylesheet when the virtual styles module is loaded. */
 async function getStylesheetText(): Promise<string> {
   const text = await readFile(STYLESHEET_PATH, "utf8");
@@ -41,6 +55,15 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
   QuiPluginOptions | undefined
 >((options, meta: { framework: string }) => {
   const pluginOptions = options ?? {};
+  const stylesValue: unknown = pluginOptions.styles;
+  if (
+    typeof stylesValue === "object" &&
+    stylesValue !== null &&
+    "href" in stylesValue &&
+    !isExternalStyles(pluginOptions.styles)
+  ) {
+    throw new Error("qui external styles href must be a string or string array.");
+  }
   if (isExternalStyles(pluginOptions.styles)) {
     const configured = pluginOptions.styles.href;
     const values = Array.isArray(configured) ? configured : [configured];
@@ -50,11 +73,12 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
   }
   if (isExternalStyles(pluginOptions.styles) && meta.framework !== "vite") {
     throw new Error(
-      "qui external styles require Vite or an Astro integration; use styles: false and mark the document link yourself for other bundlers.",
+      "qui external styles require Vite; use styles: false and mark the document link yourself for other bundlers.",
     );
   }
   const componentCache = new Map<string, { code: string; components: string[] }>();
   const externalStyles = isExternalStyles(pluginOptions.styles) ? pluginOptions.styles : undefined;
+  let viteBase = "/";
 
   function extractComponentsCached(code: string, id: string): string[] {
     const cached = componentCache.get(id);
@@ -82,10 +106,15 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
     name: PLUGIN_NAME,
     enforce: "pre",
     vite: {
+      configResolved(config: { base: string }): void {
+        viteBase = config.base;
+      },
       transformIndexHtml: {
         order: "post",
         handler(html: string): string {
-          return externalStyles ? markStylesheetLinks(html, externalStyles.href) : html;
+          return externalStyles
+            ? markStylesheetLinks(html, withViteBase(externalStyles.href, viteBase))
+            : html;
         },
       },
     },

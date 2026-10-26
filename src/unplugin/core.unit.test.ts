@@ -313,6 +313,22 @@ describe("markStylesheetLinks", () => {
     expect(marked).toBe("<link rel=stylesheet href=/app.css data-qui-styles>");
   });
 
+  it("handles quoted greater-than signs and multiline attributes", () => {
+    const source = [
+      "<link",
+      '  rel="stylesheet"',
+      '  href="/app.css"',
+      '  data-note="a > b"',
+      ">",
+    ].join("\n");
+
+    const marked = markStylesheetLinks(source, "/app.css");
+
+    expect(marked).toContain('data-note="a > b"');
+    expect(marked).toContain("data-qui-styles>");
+    expect(marked).not.toContain('data-note="a "');
+  });
+
   it("does nothing for an empty href list", () => {
     expect(markStylesheetLinks(html, [])).toBe(html);
   });

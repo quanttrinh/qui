@@ -307,9 +307,10 @@ exactly:
 `href` should be a stable public URL. If Vite emits a hashed or `base`-prefixed
 asset URL, mark the generated link yourself. External mode has no runtime
 fallback: marked document links are the source of truth, so shadow roots always
-use their final URLs.
+use their final URLs. The marked link must exist when components connect; add it
+in the initial document head.
 
-External `href` mode is Vite/Astro-only because it relies on
+External `href` mode is Vite-only because it relies on
 `transformIndexHtml`. Other adapters throw; use `styles: false` and mark the
 document link yourself there.
 

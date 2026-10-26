@@ -8,6 +8,7 @@ type LoadHandler = (id: string) => string | undefined | Promise<string | undefin
 
 const EXTERNAL_ADAPTER_ERROR = /Vite/u;
 const EMPTY_HREF_ERROR = /non-empty href/u;
+const MALFORMED_HREF_ERROR = /string or string array/u;
 
 describe("vite adapter", () => {
   it("keeps v3 hook filters and injects the virtual registration import", () => {
@@ -88,6 +89,24 @@ describe("vite adapter", () => {
     expect(html).toContain("data-qui-styles");
   });
 
+  it("marks links after applying the Vite base", () => {
+    const plugin = vite({ styles: { href: "/assets/app.css" } });
+    const configResolved = plugin.configResolved as unknown as (config: { base: string }) => void;
+    const transformIndexHtml = plugin.transformIndexHtml as unknown as {
+      handler: (html: string) => string;
+    };
+    configResolved({ base: "/qui/" });
+
+    const html = transformIndexHtml.handler('<link rel="stylesheet" href="/qui/assets/app.css">');
+    expect(html).toContain("data-qui-styles");
+  });
+
+  it("rejects malformed external href values", () => {
+    expect(() => vite({ styles: { href: 123 } } as unknown as Parameters<typeof vite>[0])).toThrow(
+      MALFORMED_HREF_ERROR,
+    );
+  });
+
   it("rejects external styles outside Vite", () => {
     try {
       rollup({ styles: { href: "/assets/app.css" } });
@@ -101,6 +120,7 @@ describe("vite adapter", () => {
   it("rejects empty external hrefs", () => {
     expect(() => vite({ styles: { href: "" } })).toThrow(EMPTY_HREF_ERROR);
     expect(() => vite({ styles: { href: [] } })).toThrow(EMPTY_HREF_ERROR);
+    expect(() => vite({ styles: { href: ["", "/app.css"] } })).not.toThrow();
   });
 
   it("injects after MDX frontmatter and skips Astro pages", () => {

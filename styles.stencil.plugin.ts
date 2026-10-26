@@ -100,8 +100,6 @@ function hashesDigest(hashes: Map<string, string>): string {
 /** Theme source plus its generator, used to avoid reloading it on every rebuild. */
 function themeSourceHash(root: string): string {
   const files = [
-    join(root, "build", "layer-order.ts"),
-    join(root, "build", "theme-css.ts"),
     ...walk(join(root, "src", "utilities", "theme")).filter((file) => file.endsWith(".ts")),
   ];
   return hashesDigest(
@@ -394,7 +392,7 @@ export function stylesPlugin({ root, driver, logger }: StylesPluginOptions) {
   return {
     name: "qui-styles",
     async buildStart(this: StylePluginContext): Promise<void> {
-      for (const input of [...CONFIG_INPUTS, ...STYLE_BUILD_INPUTS]) {
+      for (const input of CONFIG_INPUTS) {
         this.addWatchFile(join(root, input));
       }
 

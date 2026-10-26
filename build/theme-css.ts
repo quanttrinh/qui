@@ -48,10 +48,9 @@ function registrations(
  *
  * Both Panda and the runtime consume these tokens, but the theme itself is just
  * custom properties and `@property` registrations. Generating it directly keeps
- * order-only cascade-layer declarations and the `:host` fallback out of the
- * file. The base layer matches the previous theme behavior, so app token layers override brand values.
- * while Panda's PostCSS plugin only re-expands standalone `@layer a, b;`
- * declarations.
+ * the `:host` fallback out of the file. Individual declarations preserve layer
+ * order without triggering Panda's full-order expansion, and values stay in the
+ * base layer so app token layers override them.
  */
 export async function generateThemeCss(root: string): Promise<string> {
   const theme = await loadThemeModule(root);

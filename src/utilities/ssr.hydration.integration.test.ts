@@ -41,7 +41,6 @@ let iconButtonHtml: string;
 
 function buildPage(hydrate: boolean, content = buttonHtml): string {
   return `<!doctype html><html><head>
-<style>@layer reset, base, tokens, recipes, utilities;</style>
 <link rel="stylesheet" href="/theme.css">
 <link rel="stylesheet" href="/styles.css" data-qui-styles>
 </head><body>
