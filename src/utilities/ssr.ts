@@ -1,3 +1,5 @@
+import { DEFAULT_SKIP_TAGS } from "./styles";
+
 export interface ShadowStylesheetOptions {
   href: string | string[];
   tagPrefix?: string;
@@ -27,7 +29,6 @@ interface InjectionContext {
 
 const DEFAULT_TAG_PREFIX = "qui-";
 const DEFAULT_ATTRIBUTE = "data-qui-styles";
-const DEFAULT_SKIP_TAGS = ["qui-option", "qui-dialog"];
 
 function injectStylesheetLinks(context: InjectionContext, root: StylesheetRoot): void {
   const { attribute, document, hrefs } = context;

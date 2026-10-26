@@ -13,5 +13,6 @@ Add the `@quanttrinh/qui/runtime` stylesheet helpers.
 
 Calling `setQuiStylesHref([])` explicitly removes managed links and disables the
 document-link fallback. `resetQuiStylesHref()` clears the configuration for HMR
-and teardown flows. These helpers support dynamically created components and SSR
-hydration without duplicating CSS in JavaScript.
+and teardown flows. Document signposting is cached and invalidated when stylesheet links change, and
+data-only/host-only roots are skipped. These helpers support dynamically created
+components and SSR hydration without duplicating CSS in JavaScript.

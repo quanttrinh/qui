@@ -1,6 +1,18 @@
 const DEFAULT_ATTRIBUTE = "data-qui-styles";
 const QUI_TAG_PREFIX = "qui-";
-const SKIPPED_TAGS = new Set(["qui-option", "qui-dialog"]);
+
+/** Host-only components whose shadow roots do not need the shared stylesheet. */
+export const DEFAULT_SKIP_TAGS = [
+  "qui-dialog",
+  "qui-field-error-text",
+  "qui-field-helper-text",
+  "qui-field-required-indicator",
+  "qui-option",
+] as const;
+
+const SKIPPED_TAGS = new Set<string>(DEFAULT_SKIP_TAGS);
+const discoveredHrefs = new WeakMap<Document, string[] | undefined>();
+const observedDocuments = new WeakSet<Document>();
 // oxlint-disable-next-line stencil/ban-side-effects -- Symbol.for is a pure global registry lookup.
 const GLOBAL_HREF_KEY = Symbol.for("@quanttrinh/qui/styles-href");
 
@@ -42,9 +54,17 @@ function getDocument(host?: HTMLElement): Document | undefined {
   return typeof document === "undefined" ? undefined : document;
 }
 
-function discoverDocumentHrefs(document: Document): string[] | undefined {
-  const hrefs: string[] = [];
+function invalidateDocumentLinkCache(document: Document): void {
+  discoveredHrefs.delete(document);
+  observedDocuments.delete(document);
+}
 
+function discoverDocumentHrefs(document: Document): string[] | undefined {
+  if (discoveredHrefs.has(document)) {
+    return discoveredHrefs.get(document);
+  }
+
+  const hrefs: string[] = [];
   for (const link of document.querySelectorAll("link")) {
     if (link.hasAttribute(DEFAULT_ATTRIBUTE)) {
       const href = link.getAttribute("href");
@@ -54,7 +74,24 @@ function discoverDocumentHrefs(document: Document): string[] | undefined {
     }
   }
 
-  return hrefs.length > 0 ? hrefs : undefined;
+  const result = hrefs.length > 0 ? hrefs : undefined;
+  discoveredHrefs.set(document, result);
+
+  if (!observedDocuments.has(document) && typeof MutationObserver !== "undefined") {
+    const observer = new MutationObserver(() => {
+      observer.disconnect();
+      invalidateDocumentLinkCache(document);
+    });
+    observer.observe(document.head, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["href", DEFAULT_ATTRIBUTE],
+    });
+    observedDocuments.add(document);
+  }
+
+  return result;
 }
 
 function resolveHrefs(document: Document): string[] | undefined {

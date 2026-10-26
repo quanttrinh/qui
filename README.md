@@ -290,8 +290,9 @@ const { html, diagnostics } = await renderToString(
 
 This renders real Declarative Shadow DOM and puts one external
 `<link rel="stylesheet" href="/assets/qui.css" data-qui-styles>` into every
-styled `qui-*` shadow root. Data-only roots such as `qui-option` and
-`qui-dialog` are skipped by default; use `skipTags` to customize that list. The
+styled `qui-*` shadow root. Data-only and host-only roots such as `qui-option`, `qui-dialog`, and the
+field label helper/error/required parts are skipped by default; use `skipTags`
+to customize that list. The
 same stylesheet is loaded in the document for host and app styling; the browser
 fetches the URL once.
 

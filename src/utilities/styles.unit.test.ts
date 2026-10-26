@@ -98,15 +98,19 @@ describe("ensureShadowStylesheet", () => {
   it("does not add links to data-only roots", () => {
     const document = createFakeDocument();
     useDocument(document);
-    const option = createHost(document, "qui-option");
-    const dialog = createHost(document, "qui-dialog");
+    const skipped = [
+      createHost(document, "qui-option"),
+      createHost(document, "qui-dialog"),
+      createHost(document, "qui-field-helper-text"),
+      createHost(document, "qui-field-error-text"),
+      createHost(document, "qui-field-required-indicator"),
+    ];
     styles.setQuiStylesHref("/assets/qui.css");
 
-    styles.ensureShadowStylesheet(option.host as unknown as HTMLElement);
-    styles.ensureShadowStylesheet(dialog.host as unknown as HTMLElement);
-
-    expect(linkHrefs(option.root)).toEqual([]);
-    expect(linkHrefs(dialog.root)).toEqual([]);
+    for (const host of skipped) {
+      styles.ensureShadowStylesheet(host.host as unknown as HTMLElement);
+      expect(linkHrefs(host.root)).toEqual([]);
+    }
   });
 
   it("does not duplicate links when called repeatedly", () => {

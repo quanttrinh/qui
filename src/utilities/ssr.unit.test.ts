@@ -29,15 +29,32 @@ describe("injectShadowStylesheet", () => {
 
   it("skips data-only host roots by default", () => {
     const document = createFakeDocument();
-    const option = createHost(document, "qui-option");
-    const dialog = createHost(document, "qui-dialog");
+    const skipped = [
+      createHost(document, "qui-option"),
+      createHost(document, "qui-dialog"),
+      createHost(document, "qui-field-helper-text"),
+      createHost(document, "qui-field-error-text"),
+      createHost(document, "qui-field-required-indicator"),
+    ];
     const button = createHost(document, "qui-button");
 
     injectShadowStylesheet(document as unknown as Document, { href: "theme.css" });
 
-    expect(linkHrefs(option.root)).toEqual([]);
-    expect(linkHrefs(dialog.root)).toEqual([]);
+    for (const host of skipped) {
+      expect(linkHrefs(host.root)).toEqual([]);
+    }
     expect(linkHrefs(button.root)).toEqual(["theme.css"]);
+  });
+
+  it("does not add links to large option lists", () => {
+    const document = createFakeDocument();
+    const select = createHost(document, "qui-select");
+    const options = Array.from({ length: 1000 }, () => createHost(document, "qui-option"));
+
+    injectShadowStylesheet(document as unknown as Document, { href: "theme.css" });
+
+    expect(linkHrefs(select.root)).toEqual(["theme.css"]);
+    expect(options.every((option) => linkHrefs(option.root).length === 0)).toBe(true);
   });
 
   it("supports additional skip tags", () => {
