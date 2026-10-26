@@ -309,6 +309,11 @@ External `href` mode is Vite/Astro-only because it relies on
 `transformIndexHtml`. Other adapters throw; use `styles: false` and mark the
 document link yourself there.
 
+When `href` is an array, each matching link is marked but shadow roots follow
+document order, not array order. Custom attributes added to a Vite-bundled CSS
+link may not survive bundling; use a public/static file or a stable emitted asset
+name for the marked link.
+
 Load the theme separately, once:
 
 ```ts

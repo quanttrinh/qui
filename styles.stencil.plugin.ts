@@ -38,6 +38,7 @@ const SHARED_PLACEHOLDER = "/* Styles are provided by the shared stylesheet. */\
 const CONFIG_INPUTS = ["panda.config.ts"];
 const STYLE_BUILD_INPUTS = [
   "build/css.ts",
+  "build/layer-order.ts",
   "build/panda-driver.ts",
   "build/theme-css.ts",
   "styles.stencil.plugin.ts",
@@ -99,6 +100,7 @@ function hashesDigest(hashes: Map<string, string>): string {
 /** Theme source plus its generator, used to avoid reloading it on every rebuild. */
 function themeSourceHash(root: string): string {
   const files = [
+    join(root, "build", "layer-order.ts"),
     join(root, "build", "theme-css.ts"),
     ...walk(join(root, "src", "utilities", "theme")).filter((file) => file.endsWith(".ts")),
   ];
@@ -268,10 +270,6 @@ class StyleGenerator {
       this.generateBootstrap("config or theme changed");
       return true;
     }
-    if (changed.some((file) => this.isBuildInput(file))) {
-      return false;
-    }
-
     const nextComponents = findComponents(this.root);
     if (!sameComponents(this.components, nextComponents)) {
       this.components = nextComponents;
@@ -335,10 +333,6 @@ class StyleGenerator {
 
   private isConfigFile(file: string): boolean {
     return CONFIG_INPUTS.some((input) => resolve(this.root, input) === file);
-  }
-
-  private isBuildInput(file: string): boolean {
-    return STYLE_BUILD_INPUTS.some((input) => resolve(this.root, input) === file);
   }
 
   private isThemeFile(file: string): boolean {

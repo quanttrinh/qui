@@ -13,6 +13,7 @@ const ROOT_BLOCK = /:root\{(?<declarations>[^}]*)\}/u;
 const DARK_BLOCK = /\.dark\{(?<declarations>[^}]*)\}/u;
 const ROOT_PRIMARY = /:root\{--md-sys-color-primary:#[0-9a-f]{6};/u;
 const DARK_PRIMARY = /\.dark\{--md-sys-color-primary:#[0-9a-f]{6};/u;
+const PRIMARY_VALUE = /--md-sys-color-primary:(?<value>#[0-9a-f]{6});/u;
 
 describe("generateThemeCss", () => {
   it("emits document-only color custom properties", async () => {
@@ -23,7 +24,7 @@ describe("generateThemeCss", () => {
       expect(css).toContain(`@layer ${layer};`);
     }
     expect(css).not.toContain(":host");
-    expect(css).toContain("@layer tokens{");
+    expect(css).toContain("@layer base{");
     expect(css).toContain(":root{");
     expect(css).toContain(".dark{");
     for (const role of colorRoles) {
@@ -44,6 +45,18 @@ describe("generateThemeCss", () => {
     expect(() => postcss.parse(css)).not.toThrow();
     expect(css).toMatch(ROOT_PRIMARY);
     expect(css).toMatch(DARK_PRIMARY);
+  });
+
+  it("uses different light and dark primary values", async () => {
+    const css = await generateThemeCss(ROOT);
+    const rootValue =
+      ROOT_BLOCK.exec(css)?.groups?.declarations.match(PRIMARY_VALUE)?.groups?.value;
+    const darkValue =
+      DARK_BLOCK.exec(css)?.groups?.declarations.match(PRIMARY_VALUE)?.groups?.value;
+
+    expect(rootValue).toBeDefined();
+    expect(darkValue).toBeDefined();
+    expect(rootValue).not.toBe(darkValue);
   });
 
   it("emits every color role in both schemes", async () => {

@@ -7,6 +7,7 @@ type IdHandler = (id: string) => string | undefined;
 type LoadHandler = (id: string) => string | undefined | Promise<string | undefined>;
 
 const EXTERNAL_ADAPTER_ERROR = /Vite/u;
+const EMPTY_HREF_ERROR = /non-empty href/u;
 
 describe("vite adapter", () => {
   it("keeps v3 hook filters and injects the virtual registration import", () => {
@@ -95,6 +96,11 @@ describe("vite adapter", () => {
       expect(error).toBeInstanceOf(Error);
       expect((error as Error).message).toMatch(EXTERNAL_ADAPTER_ERROR);
     }
+  });
+
+  it("rejects empty external hrefs", () => {
+    expect(() => vite({ styles: { href: "" } })).toThrow(EMPTY_HREF_ERROR);
+    expect(() => vite({ styles: { href: [] } })).toThrow(EMPTY_HREF_ERROR);
   });
 
   it("injects after MDX frontmatter and skips Astro pages", () => {

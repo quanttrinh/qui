@@ -41,6 +41,13 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
   QuiPluginOptions | undefined
 >((options, meta: { framework: string }) => {
   const pluginOptions = options ?? {};
+  if (isExternalStyles(pluginOptions.styles)) {
+    const configured = pluginOptions.styles.href;
+    const values = Array.isArray(configured) ? configured : [configured];
+    if (!values.some((value) => value.length > 0)) {
+      throw new Error("qui external styles require at least one non-empty href.");
+    }
+  }
   if (isExternalStyles(pluginOptions.styles) && meta.framework !== "vite") {
     throw new Error(
       "qui external styles require Vite or an Astro integration; use styles: false and mark the document link yourself for other bundlers.",
