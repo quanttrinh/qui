@@ -87,6 +87,10 @@ import { setQuiStylesHref } from "@quanttrinh/qui/runtime";
 setQuiStylesHref("/assets/qui-components.css");
 ```
 
+That URL must be a real document stylesheet; the setter only tells shadow roots
+which URL to link. If the bundler only injects a `<style>` tag, serve the
+component CSS separately or use a real marked `<link>`.
+
 Register only the components used by the page:
 
 ```ts
