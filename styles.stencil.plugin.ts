@@ -223,7 +223,7 @@ function writeStyleUrlModule(outdir: string, components: ComponentEntry[]): void
 
 class StyleGenerator {
   private readonly outdir: string;
-  private readonly pandaRoot: string;
+  private readonly root: string;
   private readonly driver: PandaDriver;
   private readonly logger: Logger;
   private components: ComponentEntry[];
@@ -232,7 +232,7 @@ class StyleGenerator {
   private themeCache?: { key: string; css: string };
 
   constructor(root: string, driver: PandaDriver, logger: Logger) {
-    this.pandaRoot = root;
+    this.root = root;
     this.outdir = join(root, STYLED_SYSTEM);
     this.driver = driver;
     this.logger = logger;
@@ -241,7 +241,7 @@ class StyleGenerator {
   }
 
   get key(): string {
-    return this.pandaRoot;
+    return this.root;
   }
 
   /**
@@ -250,10 +250,10 @@ class StyleGenerator {
    */
   generateBootstrap(reason: string): void {
     this.logger.info(`[qui] bootstrapping Panda styles (${reason})`);
-    this.components = findComponents(this.pandaRoot);
+    this.components = findComponents(this.root);
 
     this.logger.info("[qui] generating Panda styled-system");
-    panda(this.pandaRoot, ["codegen"], this.logger);
+    panda(this.root, ["codegen"], this.logger);
     writeStyleUrlModule(this.outdir, this.components);
     this.writePlaceholders();
     this.pruneComponentStyles();
@@ -269,7 +269,7 @@ class StyleGenerator {
       return true;
     }
 
-    const nextComponents = findComponents(this.pandaRoot);
+    const nextComponents = findComponents(this.root);
     if (!sameComponents(this.components, nextComponents)) {
       this.components = nextComponents;
       writeStyleUrlModule(this.outdir, this.components);
@@ -298,9 +298,9 @@ class StyleGenerator {
     if (reload) {
       await this.driver.reload();
     }
-    const themeKey = themeSourceHash(this.pandaRoot);
+    const themeKey = themeSourceHash(this.root);
     if (this.themeCache?.key !== themeKey) {
-      this.themeCache = { key: themeKey, css: await generateThemeCss(this.pandaRoot) };
+      this.themeCache = { key: themeKey, css: await generateThemeCss(this.root) };
     }
     const themeCss = this.themeCache.css;
     const sharedCss = await this.driver.generateStyles();
@@ -331,13 +331,11 @@ class StyleGenerator {
   }
 
   private isConfigFile(file: string): boolean {
-    return CONFIG_INPUTS.some((input) => resolve(this.pandaRoot, input) === file);
+    return CONFIG_INPUTS.some((input) => resolve(this.root, input) === file);
   }
 
   private isThemeFile(file: string): boolean {
-    return toPosix(file).startsWith(
-      `${toPosix(join(this.pandaRoot, "src", "utilities", "theme"))}/`,
-    );
+    return toPosix(file).startsWith(`${toPosix(join(this.root, "src", "utilities", "theme"))}/`);
   }
 
   private writeManifest(): void {
@@ -346,11 +344,11 @@ class StyleGenerator {
       join(this.outdir, "style-manifest.json"),
       `${JSON.stringify(
         {
-          hash: hashesDigest(fileHashes(this.pandaRoot)),
+          hash: hashesDigest(fileHashes(this.root)),
           components: this.components.map((component) => ({
             tag: component.tag,
-            file: relativePath(this.pandaRoot, component.file),
-            css: relativePath(this.pandaRoot, component.output),
+            file: relativePath(this.root, component.file),
+            css: relativePath(this.root, component.output),
           })),
         },
         null,
