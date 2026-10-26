@@ -21,7 +21,9 @@ on:
       - '.github/workflows/pages.yml'
 
 concurrency:
-  group: pages
+  # Serialize updates for one PR, but do not let another PR or a main deployment
+  # cancel a queued cleanup. GitHub only keeps one pending run per group.
+  group: pages-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -174,12 +176,24 @@ jobs:
         working-directory: gh-pages
         run: |
           set -e
+          push_with_retry() {
+            for attempt in 1 2 3 4 5; do
+              if git push origin HEAD:gh-pages; then
+                return 0
+              fi
+              echo "gh-pages push rejected; rebasing and retrying (${attempt}/5)" >&2
+              git pull --rebase origin gh-pages
+              sleep "$((attempt * 2))"
+            done
+            return 1
+          }
+
           [ -d "pr-${{ github.event.pull_request.number }}" ] && git rm -rf "pr-${{ github.event.pull_request.number }}"
           mkdir -p "pr-${{ github.event.pull_request.number }}"
           cp -r ../preview-build/* "pr-${{ github.event.pull_request.number }}/"
           git add -- "pr-${{ github.event.pull_request.number }}"
           git diff --staged --quiet || git commit -m "Deploy preview for PR #${{ github.event.pull_request.number }}"
-          git push
+          push_with_retry
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
@@ -248,10 +262,22 @@ jobs:
         working-directory: gh-pages
         run: |
           set -e
+          push_with_retry() {
+            for attempt in 1 2 3 4 5; do
+              if git push origin HEAD:gh-pages; then
+                return 0
+              fi
+              echo "gh-pages push rejected; rebasing and retrying (${attempt}/5)" >&2
+              git pull --rebase origin gh-pages
+              sleep "$((attempt * 2))"
+            done
+            return 1
+          }
+
           if [ -d "pr-${{ github.event.pull_request.number }}" ]; then
             git rm -rf "pr-${{ github.event.pull_request.number }}"
             git commit -m "Remove preview for PR #${{ github.event.pull_request.number }}" || true
-            git push
+            push_with_retry
           fi
 
       - name: Upload Pages artifact
@@ -311,6 +337,17 @@ jobs:
         working-directory: gh-pages
         run: |
           set -e
+          push_with_retry() {
+            for attempt in 1 2 3 4 5; do
+              if git push origin HEAD:gh-pages; then
+                return 0
+              fi
+              echo "gh-pages push rejected; rebasing and retrying (${attempt}/5)" >&2
+              git pull --rebase origin gh-pages
+              sleep "$((attempt * 2))"
+            done
+            return 1
+          }
 
           find . -maxdepth 1 -type f -delete
           find . -maxdepth 1 -type d ! -name .git ! -name 'pr-*' -exec rm -rf {} + 2>/dev/null || true
@@ -319,7 +356,7 @@ jobs:
           git add -u -- . ':!pr-*'
           git add -- . ':!pr-*'
           git diff --staged --quiet || git commit -m "Deploy main"
-          git push
+          push_with_retry
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
