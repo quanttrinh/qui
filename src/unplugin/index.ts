@@ -5,18 +5,21 @@ import { createUnplugin, type TransformResult, type UnpluginInstance } from "unp
 
 import {
   componentsFromVirtualModuleId,
+  createExternalStylesModule,
   createRegistrationModule,
   createStylesModule,
   extractComponents,
   importInjectionOffset,
+  isExternalStyles,
   isTransformableId,
+  markStylesheetLinks,
   mayContainComponents,
   virtualModuleId,
   VIRTUAL_STYLES_ID,
   type QuiPluginOptions,
 } from "./core";
 
-export type { QuiPluginOptions } from "./core";
+export type { QuiPluginOptions, QuiStylesOptions } from "./core";
 
 const PLUGIN_NAME = "unplugin-qui";
 const RESOLVED_VIRTUAL_STYLES_ID = `\0${VIRTUAL_STYLES_ID}`;
@@ -38,6 +41,7 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
   QuiPluginOptions | undefined
 >((options = {}) => {
   const componentCache = new Map<string, { code: string; components: string[] }>();
+  const externalStyles = isExternalStyles(options.styles) ? options.styles : undefined;
 
   function extractComponentsCached(code: string, id: string): string[] {
     const cached = componentCache.get(id);
@@ -64,6 +68,14 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
   return {
     name: PLUGIN_NAME,
     enforce: "pre",
+    vite: {
+      transformIndexHtml: {
+        order: "post",
+        handler(html: string): string {
+          return externalStyles ? markStylesheetLinks(html, externalStyles.href) : html;
+        },
+      },
+    },
     resolveId: {
       filter: { id: VIRTUAL_MODULE_FILTER },
       handler(id: string): string | undefined {
@@ -83,8 +95,11 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
         id: string,
       ): Promise<string | undefined> {
         if (id === RESOLVED_VIRTUAL_STYLES_ID) {
+          if (isExternalStyles(options.styles)) {
+            return createExternalStylesModule(options.styles);
+          }
           this.addWatchFile?.(STYLESHEET_PATH);
-          return createStylesModule(await getStylesheetText());
+          return createStylesModule(await getStylesheetText(), options.styles);
         }
         const components = componentsFromVirtualModuleId(id.slice(1));
         if (components === undefined || components.length === 0) {

@@ -4,6 +4,8 @@ import type { Compiler, NodeDriver } from "@pandacss/compiler";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 
+import { stripEmptyLayerDeclarations } from "./css";
+
 /** Shared Panda compiler and stylesheet generation for the build and transformer. */
 export interface PandaDriver {
   /** Compiler used by `@pandacss/transformer`, once the main driver is ready. */
@@ -12,9 +14,7 @@ export interface PandaDriver {
   ensureMain: () => Promise<void>;
   /** Regenerates the main stylesheet and returns its CSS. */
   generateStyles: () => Promise<string>;
-  /** Regenerates the theme stylesheet and returns its CSS. */
-  generateTheme: () => Promise<string>;
-  /** Reloads either driver after a config change. */
+  /** Reloads the driver after a config change. */
   reload: () => Promise<void>;
 }
 
@@ -33,8 +33,6 @@ export function createPandaDriver(root: string): PandaDriver {
 
   let mainDriver: NodeDriver | undefined;
   let mainPromise: Promise<NodeDriver> | undefined;
-  let themeDriver: NodeDriver | undefined;
-  let themePromise: Promise<NodeDriver> | undefined;
 
   async function ensureMainDriver(): Promise<NodeDriver> {
     mainPromise ??= createNodeDriver({ cwd: root, configPath: "panda.config.ts" }).then(
@@ -46,17 +44,6 @@ export function createPandaDriver(root: string): PandaDriver {
     return mainPromise;
   }
 
-  async function ensureThemeDriver(): Promise<NodeDriver> {
-    themePromise ??= createNodeDriver({
-      cwd: root,
-      configPath: "panda.theme.config.ts",
-    }).then((driver) => {
-      themeDriver = driver;
-      return driver;
-    });
-    return themePromise;
-  }
-
   return {
     getCompiler: () => mainDriver?.compiler,
     async ensureMain(): Promise<void> {
@@ -65,18 +52,11 @@ export function createPandaDriver(root: string): PandaDriver {
     async generateStyles(): Promise<string> {
       const driver = await ensureMainDriver();
       driver.parseFiles();
-      return driver.cssgen({ minify: true }).css;
-    },
-    async generateTheme(): Promise<string> {
-      const driver = await ensureThemeDriver();
-      return driver.cssgen({ minify: true }).css;
+      return stripEmptyLayerDeclarations(driver.cssgen({ minify: true }).css);
     },
     async reload(): Promise<void> {
       if (mainPromise !== undefined) {
         await mainDriver?.reload();
-      }
-      if (themePromise !== undefined) {
-        await themeDriver?.reload();
       }
     },
   };

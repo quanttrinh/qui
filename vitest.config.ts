@@ -8,7 +8,7 @@ export default defineVitestConfig({
       {
         test: {
           name: "unit",
-          include: ["src/**/*.unit.test.{ts,tsx}"],
+          include: ["src/**/*.unit.test.{ts,tsx}", "build/**/*.unit.test.{ts,tsx}"],
           environment: "node",
         },
       },

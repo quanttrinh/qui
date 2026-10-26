@@ -1,11 +1,30 @@
 import { extractComponentsFromJavaScript, extractComponentsFromText } from "./extract";
 
+export interface QuiStylesOptions {
+  /**
+   * URL of the component/app stylesheet used by the document and shadow roots.
+   * This must not point at `theme.css`; the theme is document-only.
+   */
+  href?: string | string[];
+  /**
+   * Import `@quanttrinh/qui/theme.css` from the generated styles module.
+   * Defaults to `true` for inline styles and `false` for an external `href`.
+   */
+  theme?: boolean;
+}
+
 export interface QuiPluginOptions {
   /**
    * Emit the shared CSS and configure the stylesheet URL used by shadow roots.
+   *
+   * - `true` embeds the library component stylesheet in the module.
+   * - `{ href }` uses an existing external component/app stylesheet instead.
+   * - `{ theme: boolean }` controls the document-only theme import.
+   * - `false` leaves all styling to the consumer.
+   *
    * Defaults to `true`.
    */
-  styles?: boolean;
+  styles?: boolean | QuiStylesOptions;
 }
 
 const COMPONENT_TAG_NAME = /^qui-[a-z0-9]+(?:-[a-z0-9]+)*$/u;
@@ -13,6 +32,13 @@ const JAVASCRIPT_FILE = /\.(?:[cm]?[jt]sx?)$/u;
 const TRANSFORMABLE_FILE = /\.(?:[cm]?[jt]sx?|mdx)$/u;
 const ESCAPED_CHARACTER = /\\[ux]/u;
 const MDX_FRONTMATTER = /^---[^\S\r\n]*(?:\r?\n)(?:[\s\S]*?\r?\n)?---[^\S\r\n]*(?:\r?\n|$)/u;
+const LINK_TAG = /<link\b[^>]*>/giu;
+const STYLESHEET_ATTRIBUTE = /\bdata-qui-styles\b/iu;
+const HREF_ATTRIBUTE = /\bhref\s*=\s*(?<quote>["'])(?<value>.*?)\k<quote>/iu;
+const REL_ATTRIBUTE = /\brel\s*=\s*(?<quote>["'])(?<value>.*?)\k<quote>/iu;
+const STYLESHEET_REL = /\bstylesheet\b/iu;
+const SELF_CLOSING_TAG_END = /\/>$/u;
+const TAG_END = />$/u;
 
 export const VIRTUAL_MODULE_ID = "virtual:qui/register";
 export const VIRTUAL_STYLES_ID = "virtual:qui/styles";
@@ -85,16 +111,43 @@ export function importInjectionOffset(code: string): number {
   return match?.[0].length ?? 0;
 }
 
+/** Returns whether the option selects an existing external component sheet. */
+export function isExternalStyles(
+  styles: boolean | QuiStylesOptions | undefined,
+): styles is QuiStylesOptions & { href: string | string[] } {
+  const value: unknown = styles;
+  return typeof value === "object" && value !== null && Reflect.get(value, "href") !== undefined;
+}
+
+function stylesheetHrefs(href: string | string[]): string[] {
+  const values = Array.isArray(href) ? href : [href];
+  return [...new Set(values.filter((value) => value.length > 0))];
+}
+
+function themeImport(styles: boolean | QuiStylesOptions | undefined): string[] {
+  const value: unknown = styles;
+  const theme: unknown =
+    typeof value === "object" && value !== null ? Reflect.get(value, "theme") : undefined;
+  if (theme === false) {
+    return [];
+  }
+  // Keep external sheets authoritative: theme values often live next to the app.
+  // Do not import a second copy when the external sheet already owns them.
+  if (isExternalStyles(styles)) {
+    return theme === true ? ['import "@quanttrinh/qui/theme.css";'] : [];
+  }
+  return ['import "@quanttrinh/qui/theme.css";'];
+}
+
 /**
- * Creates the shared stylesheet module.
+ * Creates the shared stylesheet module for the embedded (blob URL) strategy.
  *
- * The CSS is embedded in the module so the same URL works across bundlers.
- * A document that already provides a marked stylesheet keeps that sheet; only
- * plugin-managed apps get a blob URL for both the document and shadow roots.
+ * Only the component stylesheet is adopted by shadow roots. The theme, when
+ * imported, remains a document-level stylesheet.
  */
-export function createStylesModule(css: string): string {
+export function createStylesModule(css: string, styles: boolean | QuiStylesOptions = true): string {
   return [
-    'import "@quanttrinh/qui/theme.css";',
+    ...themeImport(styles),
     'import { getQuiStylesHref, resetQuiStylesHref, setQuiStylesHref } from "@quanttrinh/qui/runtime";',
     "",
     `const stylesheet = ${JSON.stringify(css)};`,
@@ -114,6 +167,55 @@ export function createStylesModule(css: string): string {
     "}",
     "",
   ].join("\n");
+}
+
+/**
+ * Creates the external stylesheet module.
+ *
+ * The app owns the document `<link>` and the bundler/integration marks it at
+ * build time. This module only configures the same component/app URL for shadow
+ * roots; it never creates or rewrites document markup and never adopts
+ * `theme.css`.
+ */
+export function createExternalStylesModule(styles: QuiStylesOptions): string {
+  const hrefs = stylesheetHrefs(styles.href ?? []);
+  return [
+    ...themeImport(styles),
+    'import { setQuiStylesHref } from "@quanttrinh/qui/runtime";',
+    "",
+    `setQuiStylesHref(${JSON.stringify(hrefs.length === 1 ? hrefs[0] : hrefs)});`,
+    "",
+  ].join("\n");
+}
+
+/**
+ * Adds `data-qui-styles` to stylesheet links that point at a configured
+ * external component/app stylesheet. Vite calls this through
+ * `transformIndexHtml` during dev and build, so the marker is present in the
+ * emitted HTML without client-side rewriting.
+ */
+export function markStylesheetLinks(html: string, href: string | string[]): string {
+  const hrefs = new Set(stylesheetHrefs(href));
+  if (hrefs.size === 0) {
+    return html;
+  }
+
+  return html.replaceAll(LINK_TAG, (tag) => {
+    if (STYLESHEET_ATTRIBUTE.test(tag)) {
+      return tag;
+    }
+    const hrefMatch = HREF_ATTRIBUTE.exec(tag);
+    if (hrefMatch?.groups?.value === undefined || !hrefs.has(hrefMatch.groups.value)) {
+      return tag;
+    }
+    const relMatch = REL_ATTRIBUTE.exec(tag);
+    if (relMatch?.groups?.value === undefined || !STYLESHEET_REL.test(relMatch.groups.value)) {
+      return tag;
+    }
+    return tag.endsWith("/>")
+      ? tag.replace(SELF_CLOSING_TAG_END, " data-qui-styles />")
+      : tag.replace(TAG_END, " data-qui-styles>");
+  });
 }
 
 /**

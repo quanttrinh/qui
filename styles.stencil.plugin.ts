@@ -7,6 +7,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { dirname, join, relative, resolve } from "node:path";
 
 import { type PandaDriver } from "./build/panda-driver";
+import { generateThemeCss } from "./build/theme-css";
 
 interface ComponentEntry {
   file: string;
@@ -34,7 +35,7 @@ interface PluginState {
 const STYLED_SYSTEM = "styled-system";
 const COMPONENTS = "components";
 const SHARED_PLACEHOLDER = "/* Styles are provided by the shared stylesheet. */\n";
-const CONFIG_INPUTS = ["panda.config.ts", "panda.theme.config.ts"];
+const CONFIG_INPUTS = ["panda.config.ts"];
 const KEBAB_SEGMENT = /-([a-z])/gu;
 const COMPONENT_TAG = /tag:\s*"([^"]+)"/u;
 
@@ -274,10 +275,8 @@ class StyleGenerator {
     if (reload) {
       await this.driver.reload();
     }
-    const [themeCss, sharedCss] = await Promise.all([
-      this.driver.generateTheme(),
-      this.driver.generateStyles(),
-    ]);
+    const themeCss = await generateThemeCss();
+    const sharedCss = await this.driver.generateStyles();
     writeIfChanged(join(this.outdir, "theme.css"), themeCss);
     writeIfChanged(join(this.outdir, "styles.css"), sharedCss);
     this.cssPending = false;

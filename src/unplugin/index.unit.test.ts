@@ -61,6 +61,29 @@ describe("vite adapter", () => {
     expect(code).toContain("--font-fallback");
   });
 
+  it("loads an external stylesheet module and marks the document link", async () => {
+    const plugin = vite({ styles: { href: "/assets/app.css" } });
+    const resolveId = plugin.resolveId as unknown as { handler: IdHandler };
+    const load = plugin.load as unknown as { handler: LoadHandler };
+    const transformIndexHtml = plugin.transformIndexHtml as unknown as {
+      handler: (html: string) => string;
+    };
+    const resolved = resolveId.handler("virtual:qui/styles");
+
+    expect(resolved).toBe("\0virtual:qui/styles");
+    if (resolved === undefined) {
+      throw new Error("Expected the virtual styles module to resolve");
+    }
+
+    const code = await load.handler(resolved);
+    expect(code).toContain('setQuiStylesHref("/assets/app.css");');
+    expect(code).not.toContain("URL.createObjectURL");
+    expect(code).not.toContain("@quanttrinh/qui/theme.css");
+
+    const html = transformIndexHtml.handler('<link rel="stylesheet" href="/assets/app.css">');
+    expect(html).toContain("data-qui-styles");
+  });
+
   it("injects after MDX frontmatter and skips Astro pages", () => {
     const plugin = vite();
     const transform = plugin.transform as unknown as { handler: TransformHandler };
