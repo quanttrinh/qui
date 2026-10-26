@@ -23,6 +23,28 @@ Create an `.npmrc` in the project or user config:
 bun add @quanttrinh/qui
 ```
 
+## TypeScript
+
+Importing from the package root loads Stencil's global element declarations.
+Use the generated `HTMLQui*Element` types instead of intersecting `HTMLElement`
+with the component props:
+
+```ts
+import type { Components } from "@quanttrinh/qui";
+
+const button = document.querySelector("qui-button") as HTMLQuiButtonElement;
+button.disabled = true;
+
+const input = document.querySelector("qui-input") as HTMLQuiInputElement;
+input.value = "hello";
+
+// Component prop interfaces are also available by name.
+const props: Components.QuiButton = button;
+```
+
+Component subpath imports such as `@quanttrinh/qui/shared/qui-button` load the
+same declarations.
+
 ## Quick start
 
 Load the theme once and the shared component stylesheet once:
@@ -440,7 +462,7 @@ import { flex } from "@quanttrinh/qui/patterns";
 
 ## Distribution layout
 
-`bun run build:all` produces:
+`bun run build:release` produces:
 
 ```text
 dist/shared/                 custom-elements build
@@ -479,7 +501,7 @@ Published entry points:
 bun install
 bun run dev          # styles + Stencil dev server
 bun run build            # production build + utilities + plugin
-bun run build:all        # build, utilities, plugin, and Panda artifacts
+bun run build:release    # release build with Panda artifacts
 bun run build:utilities  # compile src/utilities -> dist/utilities
 bun run build:unplugin   # compile src/unplugin -> dist/unplugin
 bun run lint
@@ -532,7 +554,7 @@ browser tests.
 - Browser-only work is gated with `Build.isServer` / `Build.isBrowser`.
 - `build/build-utilities.ts` compiles `src/utilities/**/*.ts` into
   `dist/utilities/`, including declarations and rewritten relative imports.
-  `build:all` runs it once after both Stencil builds.
+  `build` runs it after Stencil completes.
 - `build/build-unplugin.ts` compiles `src/unplugin/**/*.ts` into
   `dist/unplugin/` using the same module builder.
 - The generated `www` app is the demo/dev server; it is not the published client

@@ -1,3 +1,6 @@
+// Loads Stencil's global HTML element declarations for package consumers.
+export type { Components } from "./components";
+
 export { QuiButton } from "./components/qui-button/qui-button";
 export type { ButtonSize, ButtonVariant } from "./components/qui-button/qui-button";
 
