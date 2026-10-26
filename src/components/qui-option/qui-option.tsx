@@ -15,7 +15,7 @@ const styles = {
 @Component({
   tag: "qui-option",
   styleUrl: resolveVar(styleUrls.quiOption),
-  scoped: true,
+  shadow: true,
 })
 export class QuiOption {
   @Element() host!: HTMLQuiOptionElement;

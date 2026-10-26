@@ -1,10 +1,11 @@
 import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
 
 import { dataAttr } from "../../helpers/attr";
 import { consumeContextPart } from "../shared/context-part";
+import { ContextPartElement } from "../shared/context-part-element";
 import {
   clearAccordionItem,
   consumeAccordion,
@@ -32,19 +33,17 @@ const styles = {
 @Component({
   tag: "qui-accordion-item",
   styleUrl: resolveVar(styleUrls.quiAccordionItem),
-  scoped: true,
+  shadow: true,
 })
-export class QuiAccordionItem {
+export class QuiAccordionItem extends ContextPartElement<AccordionContext> {
   @Element() host!: HTMLQuiAccordionItemElement;
 
   /** The value that identifies this item. */
   @Prop() value!: string;
   /** Disables this item. */
   @Prop() disabled = false;
-  /** Additional class applied to the item element. */
-  @Prop() innerClass?: string;
 
-  private readonly contextPart = consumeContextPart({
+  protected readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "accordion",
     consume: consumeAccordion,
@@ -55,22 +54,6 @@ export class QuiAccordionItem {
       };
     },
   });
-
-  public connectedCallback(): void {
-    this.contextPart.hostConnected();
-  }
-
-  public componentWillLoad(): void {
-    this.contextPart.hostWillLoad();
-  }
-
-  public componentDidLoad(): void {
-    this.contextPart.hostDidLoad();
-  }
-
-  public disconnectedCallback(): void {
-    this.contextPart.hostDisconnected();
-  }
 
   private isDisabled(accordion: AccordionContext): boolean {
     return this.disabled || accordion.isDisabled();
@@ -108,7 +91,7 @@ export class QuiAccordionItem {
           data-disabled={dataAttr(disabled)}
           data-orientation={accordion?.orientation() ?? "vertical"}
           dir={accordion?.textDirection()}
-          class={cx(styles.item, this.innerClass)}
+          class={styles.item}
           part="item"
         >
           <slot />

@@ -9,14 +9,10 @@ function createEnvironment(values: string[], activationMode: "manual" | "automat
   const triggers = values.map((value) => ({
     id: `tabs:test:trigger-${value}`,
     dataset: { value },
+    disabled: false,
     focus: vi.fn(),
   }));
-  const host = {
-    querySelectorAll: () => triggers,
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-  } as unknown as HTMLElement;
   const controller = new TabsController({
-    getHost: () => host,
     getValue: () => selected,
     getDefaultValue: () => undefined,
     getActivationMode: () => activationMode,
@@ -25,9 +21,16 @@ function createEnvironment(values: string[], activationMode: "manual" | "automat
     onChange: (value) => {
       changes.push(value);
     },
-    requestUpdate: () => {},
+    requestUpdate: () => undefined,
   });
   controller.hostWillLoad();
+  for (const [index, value] of values.entries()) {
+    const trigger = triggers[index];
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    const button = trigger as unknown as HTMLButtonElement;
+    controller.registerTrigger(value, button, button);
+    controller.registerPanel(value, button);
+  }
   return {
     controller,
     changes,
@@ -85,11 +88,11 @@ describe("TabsController", () => {
     const { controller, triggers } = createEnvironment(["one", "two", "three"]);
     controller.focus("one");
     controller.move(1);
-    expect(triggers[1]?.focus).toHaveBeenCalledOnce();
+    expect(triggers[1].focus).toHaveBeenCalledOnce();
     expect(controller.value).toBe("two");
 
     controller.edge("last");
-    expect(triggers[2]?.focus).toHaveBeenCalledOnce();
+    expect(triggers[2].focus).toHaveBeenCalledOnce();
     expect(controller.value).toBe("three");
   });
 
@@ -97,8 +100,82 @@ describe("TabsController", () => {
     const { controller, changes, triggers } = createEnvironment(["one", "two"], "manual");
     controller.focus("one");
     controller.move(1);
-    expect(triggers[1]?.focus).toHaveBeenCalledOnce();
+    expect(triggers[1].focus).toHaveBeenCalledOnce();
     expect(controller.focusedValue).toBe("two");
     expect(changes).toEqual([]);
+  });
+
+  it("skips disabled triggers and preserves registration order", () => {
+    const { controller, triggers } = createEnvironment(["one", "two", "three"]);
+    const [, disabled] = triggers;
+    disabled.disabled = true;
+    controller.focus("one");
+    controller.move(1);
+    expect(triggers[2].focus).toHaveBeenCalledOnce();
+    expect(disabled.focus).not.toHaveBeenCalled();
+  });
+
+  it("focuses the registered internal tab button", () => {
+    const { controller, triggers } = createEnvironment(["one", "two"]);
+    controller.focusTrigger("two");
+    expect(triggers[1].focus).toHaveBeenCalledOnce();
+  });
+
+  it("registers list, trigger, and panel hosts", () => {
+    const { controller, triggers } = createEnvironment(["one"]);
+    const list = {} as HTMLElement;
+    controller.registerList(list);
+    expect(controller.getList()).toBe(list);
+    expect(controller.getTrigger("one")?.trigger).toBe(triggers[0]);
+    expect(controller.getPanel("one")).toBe(triggers[0]);
+  });
+
+  it("replaces a list registration and ignores its stale teardown", () => {
+    const { controller } = createEnvironment(["one"]);
+    const list = {} as HTMLElement;
+    const replacement = {} as HTMLElement;
+    const unregisterList = controller.registerList(list);
+    controller.registerList(replacement);
+
+    unregisterList();
+
+    expect(controller.getList()).toBe(replacement);
+  });
+
+  it("preserves trigger registration order when an entry is replaced", () => {
+    const { controller, triggers } = createEnvironment(["one", "two", "three"]);
+    const replacement = {
+      disabled: false,
+      focus: vi.fn(),
+    };
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    const button = replacement as unknown as HTMLButtonElement;
+    controller.registerTrigger("one", button, button);
+
+    controller.edge("first");
+    expect(replacement.focus).toHaveBeenCalledOnce();
+    expect(triggers[0].focus).not.toHaveBeenCalled();
+
+    controller.edge("last");
+    expect(triggers[2].focus).toHaveBeenCalledOnce();
+  });
+
+  it("ignores stale teardown after a trigger is replaced", () => {
+    const { controller, triggers } = createEnvironment(["one", "two"]);
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    const first = triggers[0] as unknown as HTMLButtonElement;
+    const unregisterFirst = controller.registerTrigger("one", first, first);
+    const replacement = {
+      disabled: false,
+      focus: vi.fn(),
+    };
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    const replacementButton = replacement as unknown as HTMLButtonElement;
+    controller.registerTrigger("one", replacementButton, replacementButton);
+
+    unregisterFirst();
+    unregisterFirst();
+
+    expect(controller.getTrigger("one")?.trigger).toBe(replacementButton);
   });
 });

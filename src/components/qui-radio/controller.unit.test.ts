@@ -15,7 +15,7 @@ function createController(options?: { value?: string; defaultValue?: string }) {
     onChange: (next) => {
       changes.push(next);
     },
-    requestUpdate: () => {},
+    requestUpdate: () => undefined,
   });
   controller.hostWillLoad();
   return {

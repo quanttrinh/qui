@@ -37,7 +37,7 @@ export default defineConfig({
       rules: {
         // Stencil compiles JSX with its own `h` factory, so there is no React
         // runtime to put in scope and .tsx is the correct extension.
-        "react/jsx-filename-extension": "off",
+        "react/jsx-filename-extension": ["error", { extensions: [".tsx"] }],
         "react/react-in-jsx-scope": "off",
         // oxlint-tsgolint resolves Stencil's JSX return type as `error`.
         // `tsc` performs the real JSX/type check.
@@ -45,18 +45,35 @@ export default defineConfig({
       },
     },
     {
-      files: ["src/**/*.unit.test.{ts,tsx}", "src/**/*.browser.test.{ts,tsx}"],
+      files: [
+        "src/**/*.unit.test.{ts,tsx}",
+        "src/**/*.browser.test.{ts,tsx}",
+        "src/**/*.integration.test.ts",
+      ],
       rules: {
         // Test files register suites at module scope and use compact helpers.
         "stencil/ban-side-effects": "off",
         "react/jsx-no-literals": "off",
         "typescript/explicit-function-return-type": "off",
         "typescript/no-unsafe-type-assertion": "off",
-        "typescript/no-unsafe-member-access": "off",
         "eslint/no-empty-function": "off",
         "eslint/init-declarations": "off",
         "unicorn/no-useless-undefined": "off",
+      },
+    },
+    {
+      files: ["src/utilities/ssr.hydration.integration.test.ts"],
+      env: { node: true },
+      rules: {
+        // This test starts a local HTTP server and drives real browsers with Node.
+        "import/no-nodejs-modules": "off",
+        "node/no-sync": "off",
+        "eslint/require-await": "off",
+        "eslint/init-declarations": "off",
         "promise/avoid-new": "off",
+        "typescript/strict-boolean-expressions": "off",
+        "typescript/no-unnecessary-condition": "off",
+        "typescript/no-confusing-void-expression": "off",
       },
     },
     {
@@ -82,6 +99,8 @@ export default defineConfig({
         "import/no-default-export": "off",
         // Creating the unplugin instance at module scope is the unplugin API.
         "stencil/ban-side-effects": "off",
+        // The plugin reads the package stylesheet once at build time.
+        "import/no-nodejs-modules": "off",
       },
     },
     {
@@ -92,14 +111,6 @@ export default defineConfig({
         "jsx-a11y/role-supports-aria-props": "off",
         // The checked property is synchronized from group state after click.
         "react/checked-requires-onchange-or-readonly": "off",
-      },
-    },
-    {
-      files: ["src/components/qui-accordion/qui-accordion-content.tsx"],
-      rules: {
-        // A div keeps the grid-row transition; section would be equivalent but
-        // the content part is intentionally layout-neutral.
-        "jsx-a11y/prefer-tag-over-role": "off",
       },
     },
     {
@@ -134,52 +145,59 @@ export default defineConfig({
   ],
   rules: {
     ...stencil.configs.oxlint,
-    // --- Framework incompatibilities ---------------------------------------
-    // Stencil components are class-based and render custom elements. These
-    // React rules assume a React component model and produce false positives.
+
+    // --- Stencil ------------------------------------------------------------
+    // Panda's `css()` is a pure build-time helper. Only that top-level helper is
+    // allowed by the side-effect rule.
+    "stencil/ban-side-effects": ["error", ["css"]],
+    "stencil/decorators-style": [
+      "error",
+      {
+        prop: "inline",
+        state: "inline",
+        element: "inline",
+        event: "multiline",
+        method: "multiline",
+        watch: "multiline",
+        listen: "multiline",
+      },
+    ],
+
+    // --- React / JSX --------------------------------------------------------
+    // Stencil components are class-based and use their own JSX factory. These
+    // React component-model rules do not apply.
     "react/no-unknown-property": "off",
     "react/prefer-function-component": "off",
-    // `type` is a typed Stencil prop; the rule only accepts literal values.
     "react/button-has-type": "off",
     "react/jsx-props-no-spreading": "off",
+    "react/jsx-max-depth": ["error", { max: 8 }],
 
-    // Slot content is resolved at runtime, so static label inspection cannot
-    // see the accessible name. The labels are native <label> elements with
-    // either wrapping controls or `for`/`id` wiring.
-    "jsx-a11y/label-has-associated-control": "off",
-    "jsx-a11y/control-has-associated-label": "off",
-
-    // Panda's `css()` is a pure build-time helper. The rule accepts a list of
-    // top-level function names to allow, so permit only that helper.
-    "stencil/ban-side-effects": ["error", ["css"]],
-
-    // --- Style rules that conflict with the codebase -----------------------
-    // Object key order is semantic in CSS objects and component style maps.
-    "eslint/sort-keys": "off",
-    // `undefined` is the deliberate "attribute absent" value for Stencil props.
-    "eslint/no-undefined": "off",
-    // Optional chaining and object spread are used pervasively and are well
-    // supported; the restriction rules predate both syntax forms.
+    // --- oxc ---------------------------------------------------------------
+    // These restriction rules predate optional chaining and object spread,
+    // which are used pervasively and are well supported.
     "oxc/no-optional-chaining": "off",
-    // Stencil `@Method()` handlers are async by contract.
     "oxc/no-async-await": "off",
     "oxc/no-rest-spread-properties": "off",
-    // This is a named-export library; Stencil also requires one component class
-    // export per module.
+
+    // --- Import ------------------------------------------------------------
+    // This is a named-export library with intentional package-internal imports.
     "import/exports-last": "off",
     "import/group-exports": "off",
     "import/no-named-export": "off",
     "import/prefer-default-export": "off",
-    // Package-internal relative imports are intentional.
     "import/no-relative-parent-imports": "off",
-    // oxfmt already owns import ordering and grouping.
-    "eslint/sort-imports": "off",
     // Keep type specifiers inline so each module has one import statement.
     "import/consistent-type-specifier-style": ["error", "prefer-inline"],
     "import/no-duplicates": ["error", { preferInline: true }],
-    // Inline type specifiers are the chosen style; this rule requires the
-    // opposite top-level `import type` form.
-    "typescript/no-import-type-side-effects": "off",
+    "import/max-dependencies": ["error", { max: 15 }],
+
+    // --- ESLint ------------------------------------------------------------
+    // Object key order is semantic in CSS objects and component style maps.
+    "eslint/sort-keys": "off",
+    // `undefined` is the deliberate "attribute absent" value for Stencil props.
+    "eslint/no-undefined": "off",
+    // oxfmt already owns import ordering and grouping.
+    "eslint/sort-imports": "off",
     // One declaration per variable is the project style.
     "eslint/one-var": "off",
     // Ternaries are used for concise JSX and prop resolution.
@@ -189,10 +207,6 @@ export default defineConfig({
     // UI code has many intentional numeric values (timings, opacities, sizes).
     "eslint/no-magic-numbers": "off",
     "eslint/id-length": ["error", { min: 2, exceptions: ["h", "M"], properties: "never" }],
-    // DOM objects and events are mutable by design.
-    "typescript/prefer-readonly-parameter-types": "off",
-
-    // --- Configured, not disabled ------------------------------------------
     "eslint/new-cap": [
       "error",
       {
@@ -210,14 +224,20 @@ export default defineConfig({
         ],
       },
     ],
+    "eslint/class-methods-use-this": ["error", { exceptMethods: ["render"] }],
     "eslint/max-lines": ["error", { max: 600, skipBlankLines: true, skipComments: true }],
     "eslint/max-lines-per-function": [
       "error",
       { max: 160, skipBlankLines: true, skipComments: true },
     ],
-    "eslint/class-methods-use-this": ["error", { exceptMethods: ["render"] }],
-    "import/max-dependencies": ["error", { max: 15 }],
     "eslint/max-statements": ["error", 20],
+
+    // --- TypeScript --------------------------------------------------------
+    // Inline type specifiers are the chosen style; this rule requires the
+    // opposite top-level `import type` form.
+    "typescript/no-import-type-side-effects": "off",
+    // DOM objects and events are mutable by design.
+    "typescript/prefer-readonly-parameter-types": "off",
     "typescript/consistent-type-imports": [
       "error",
       { prefer: "type-imports", fixStyle: "inline-type-imports" },
@@ -230,19 +250,6 @@ export default defineConfig({
           constructors: "no-public",
           properties: "no-public",
         },
-      },
-    ],
-    "react/jsx-max-depth": ["error", { max: 8 }],
-    "stencil/decorators-style": [
-      "error",
-      {
-        prop: "inline",
-        state: "inline",
-        element: "inline",
-        event: "multiline",
-        method: "multiline",
-        watch: "multiline",
-        listen: "multiline",
       },
     ],
   },

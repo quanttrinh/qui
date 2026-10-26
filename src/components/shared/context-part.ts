@@ -1,6 +1,7 @@
 import { Build, forceUpdate } from "@stencil/core";
 
-// Keep provider keys in sync with COMPONENT_PRIORITY in src/unplugin/core.ts.
+// Context parts retry when a provider is defined or upgraded later, so component
+// Registration order does not need to be tracked separately.
 /** A provider key shared by a context family. */
 type ContextPartKey = "accordion" | "accordion-item" | "dialog" | "field" | "radio-group" | "tabs";
 

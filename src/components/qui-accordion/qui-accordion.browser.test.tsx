@@ -1,11 +1,34 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-function triggers(root: HTMLElement): HTMLButtonElement[] {
-  return [...root.querySelectorAll<HTMLButtonElement>("[part=trigger]")];
+import { expectLinked } from "../../test-utils/aria";
+import { queryHost, queryPartIn } from "../../test-utils/component";
+import { expectFocusedDeep, pressKey } from "../../test-utils/interactions";
+
+interface AccordionItemParts {
+  triggerHost: HTMLElement;
+  trigger: HTMLButtonElement;
+  contentHost: HTMLElement;
+  content: HTMLDivElement;
 }
 
-function contents(root: HTMLElement): HTMLElement[] {
-  return [...root.querySelectorAll<HTMLElement>("[part=content]")];
+function itemParts(item: Element): AccordionItemParts {
+  const triggerHost = queryHost(item, "qui-accordion-trigger");
+  const contentHost = queryHost(item, "qui-accordion-content");
+  return {
+    triggerHost,
+    trigger: queryPartIn<HTMLButtonElement>(triggerHost, "trigger"),
+    contentHost,
+    content: queryPartIn<HTMLDivElement>(contentHost, "content"),
+  };
+}
+
+function items(root: HTMLElement): AccordionItemParts[] {
+  return [...root.querySelectorAll("qui-accordion-item")].map((item) => itemParts(item));
+}
+
+function expectItemLinked(item: AccordionItemParts): void {
+  expectLinked(item.trigger, item.contentHost, "controls");
+  expectLinked(item.content, item.triggerHost, "labelledby");
 }
 
 describe("qui-accordion", () => {
@@ -23,18 +46,42 @@ describe("qui-accordion", () => {
       </qui-accordion>,
     );
     const spy = spyOnEvent("valuechange");
+    const parts = items(root);
 
-    triggers(root)[1].click();
+    parts[1].trigger.click();
     await waitForChanges();
 
     expect(spy).toHaveReceivedEventDetail({ value: ["two"] });
-    expect(triggers(root)[1]).toHaveAttribute("aria-expanded", "true");
-    expect(contents(root)[1].inert).toBe(false);
+    expect(parts[1].trigger).toHaveAttribute("aria-expanded", "true");
+    expect(parts[1].content.inert).toBe(false);
+    expect(parts[1].content).toHaveAttribute("data-state", "open");
 
-    triggers(root)[0].click();
+    parts[0].trigger.click();
     await waitForChanges();
-    expect(triggers(root)[0]).toHaveAttribute("aria-expanded", "true");
-    expect(triggers(root)[1]).toHaveAttribute("aria-expanded", "false");
+    expect(parts[0].trigger).toHaveAttribute("aria-expanded", "true");
+    expect(parts[1].trigger).toHaveAttribute("aria-expanded", "false");
+    expectItemLinked(parts[0]);
+  });
+
+  it("links triggers and content through element reflection", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-accordion>
+        <qui-accordion-item value="one">
+          <qui-accordion-trigger>One</qui-accordion-trigger>
+          <qui-accordion-content>One content</qui-accordion-content>
+        </qui-accordion-item>
+        <qui-accordion-item value="two">
+          <qui-accordion-trigger>Two</qui-accordion-trigger>
+          <qui-accordion-content>Two content</qui-accordion-content>
+        </qui-accordion-item>
+      </qui-accordion>,
+    );
+
+    await waitForChanges();
+
+    for (const item of items(root)) {
+      expectItemLinked(item);
+    }
   });
 
   it("keeps multiple items open", async () => {
@@ -50,12 +97,13 @@ describe("qui-accordion", () => {
         </qui-accordion-item>
       </qui-accordion>,
     );
+    const parts = items(root);
 
-    triggers(root)[1].click();
+    parts[1].trigger.click();
     await waitForChanges();
 
-    expect(triggers(root)[0]).toHaveAttribute("aria-expanded", "true");
-    expect(triggers(root)[1]).toHaveAttribute("aria-expanded", "true");
+    expect(parts[0].trigger).toHaveAttribute("aria-expanded", "true");
+    expect(parts[1].trigger).toHaveAttribute("aria-expanded", "true");
   });
 
   it("collapses the active item when collapsible", async () => {
@@ -67,12 +115,41 @@ describe("qui-accordion", () => {
         </qui-accordion-item>
       </qui-accordion>,
     );
+    const parts = items(root);
 
-    triggers(root)[0].click();
+    parts[0].trigger.click();
     await waitForChanges();
 
-    expect(triggers(root)[0]).toHaveAttribute("aria-expanded", "false");
-    expect(contents(root)[0].inert).toBe(true);
+    expect(parts[0].trigger).toHaveAttribute("aria-expanded", "false");
+    expect(parts[0].content.inert).toBe(true);
+  });
+
+  it("ignores clicks on a disabled item", async () => {
+    const { root, spyOnEvent, waitForChanges } = await render(
+      <qui-accordion>
+        <qui-accordion-item value="one">
+          <qui-accordion-trigger>One</qui-accordion-trigger>
+          <qui-accordion-content>One content</qui-accordion-content>
+        </qui-accordion-item>
+        <qui-accordion-item value="two" disabled>
+          <qui-accordion-trigger>Two</qui-accordion-trigger>
+          <qui-accordion-content>Two content</qui-accordion-content>
+        </qui-accordion-item>
+      </qui-accordion>,
+    );
+    const spy = spyOnEvent("valuechange");
+    const parts = items(root);
+
+    await waitForChanges();
+
+    expect(parts[1].trigger.disabled).toBe(true);
+    expect(parts[1].content).toHaveAttribute("data-disabled");
+
+    parts[1].trigger.click();
+    await waitForChanges();
+
+    expect(spy).toHaveReceivedEventTimes(0);
+    expect(parts[1].trigger).toHaveAttribute("aria-expanded", "false");
   });
 
   it("moves focus with arrow, Home, and End keyboard navigation", async () => {
@@ -92,25 +169,19 @@ describe("qui-accordion", () => {
         </qui-accordion-item>
       </qui-accordion>,
     );
-    const buttons = triggers(root);
+    const buttons = items(root).map((item) => item.trigger);
 
     buttons[0].focus();
-    buttons[0].dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }),
-    );
+    pressKey(buttons[0], "ArrowDown");
     await waitForChanges();
-    expect(document.activeElement).toBe(buttons[1]);
+    expectFocusedDeep(buttons[1]);
 
-    buttons[1].dispatchEvent(
-      new KeyboardEvent("keydown", { key: "End", bubbles: true, cancelable: true }),
-    );
+    pressKey(buttons[1], "End");
     await waitForChanges();
-    expect(document.activeElement).toBe(buttons[2]);
+    expectFocusedDeep(buttons[2]);
 
-    buttons[2].dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Home", bubbles: true, cancelable: true }),
-    );
+    pressKey(buttons[2], "Home");
     await waitForChanges();
-    expect(document.activeElement).toBe(buttons[0]);
+    expectFocusedDeep(buttons[0]);
   });
 });

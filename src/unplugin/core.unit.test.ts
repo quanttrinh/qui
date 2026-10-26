@@ -3,11 +3,17 @@ import { describe, expect, it } from "vitest";
 import {
   componentsFromVirtualModuleId,
   createRegistrationModule,
+  createStylesModule,
   extractComponents,
+  importInjectionOffset,
   isTransformableId,
-  registrationOrder,
+  normalizeComponents,
   virtualModuleId,
 } from "./core";
+
+const DEFINITION_PATTERN =
+  /defineCustomElement as __qui_\d+\s+\} from "@quanttrinh\/qui\/shared\/(?<tag>qui-[^"]+)"/gu;
+const IMPORT_PATTERN = /from "@quanttrinh\/qui\/shared\/(?<tag>qui-[^"]+)"/gu;
 
 describe("extractComponents", () => {
   it("finds opening component tags, ignores closing tags, and deduplicates", () => {
@@ -93,10 +99,10 @@ function* singleUseComponents(): Generator<string> {
   yield "qui-accordion";
 }
 
-describe("registrationOrder", () => {
-  it("defines parent contexts before the parts that consume them", () => {
+describe("registration order", () => {
+  it("sorts normalized components alphabetically", () => {
     expect(
-      registrationOrder([
+      normalizeComponents([
         "qui-accordion-content",
         "qui-accordion-trigger",
         "qui-accordion-item",
@@ -104,82 +110,32 @@ describe("registrationOrder", () => {
       ]),
     ).toEqual([
       "qui-accordion",
-      "qui-accordion-item",
       "qui-accordion-content",
+      "qui-accordion-item",
       "qui-accordion-trigger",
     ]);
-
-    expect(
-      registrationOrder(["qui-tab-panel", "qui-tab-trigger", "qui-tab-list", "qui-tabs"]),
-    ).toEqual(["qui-tabs", "qui-tab-list", "qui-tab-panel", "qui-tab-trigger"]);
-
-    expect(registrationOrder(["qui-radio", "qui-field", "qui-radio-group"])).toEqual([
-      "qui-field",
-      "qui-radio-group",
-      "qui-radio",
-    ]);
-
-    expect(
-      registrationOrder([
-        "qui-dialog-title",
-        "qui-dialog-content",
-        "qui-dialog",
-        "qui-dialog-trigger",
-      ]),
-    ).toEqual(["qui-dialog", "qui-dialog-content", "qui-dialog-title", "qui-dialog-trigger"]);
   });
 
-  it("keeps unrelated components alphabetical", () => {
-    expect(registrationOrder(["qui-select", "qui-button", "qui-input"])).toEqual([
-      "qui-button",
-      "qui-input",
-      "qui-select",
-    ]);
-  });
-
-  it("emits definitions in dependency order", () => {
+  it("emits definitions in sorted order", () => {
     const code = createRegistrationModule(
       ["qui-accordion-content", "qui-accordion-trigger", "qui-accordion", "qui-accordion-item"],
       { styles: false },
     );
-    const definitions = [
-      ...code.matchAll(
-        /defineCustomElement as __qui_\d+\s+\} from "@quanttrinh\/qui\/shared\/(?<tag>qui-[^"]+)"/gu,
-      ),
-    ].map((match) => match.groups?.tag);
+    const definitions = [...code.matchAll(DEFINITION_PATTERN)].map((match) => match.groups?.tag);
 
     expect(definitions).toEqual([
       "qui-accordion",
-      "qui-accordion-item",
       "qui-accordion-content",
+      "qui-accordion-item",
       "qui-accordion-trigger",
     ]);
   });
 
   it("consumes one-shot component iterables once", () => {
-    const code = createRegistrationModule(singleUseComponents(), { strategy: "split" });
-    const styleImports = [...code.matchAll(/split\/components\/(?<tag>qui-[^"]+)\.css/gu)].map(
-      (match) => match.groups?.tag,
-    );
+    const code = createRegistrationModule(singleUseComponents(), { styles: false });
+    const definitions = [...code.matchAll(IMPORT_PATTERN)].map((match) => match.groups?.tag);
 
-    expect(styleImports).toEqual(["qui-accordion", "qui-accordion-content"]);
-  });
-
-  it("keeps split CSS imports alphabetical", () => {
-    const code = createRegistrationModule(
-      ["qui-accordion-content", "qui-accordion-trigger", "qui-accordion", "qui-accordion-item"],
-      { strategy: "split" },
-    );
-    const styleImports = [...code.matchAll(/split\/components\/(?<tag>qui-[^"]+)\.css/gu)].map(
-      (match) => match.groups?.tag,
-    );
-
-    expect(styleImports).toEqual([
-      "qui-accordion",
-      "qui-accordion-content",
-      "qui-accordion-item",
-      "qui-accordion-trigger",
-    ]);
+    expect(definitions).toEqual(["qui-accordion", "qui-accordion-content"]);
   });
 });
 
@@ -191,30 +147,18 @@ describe("virtual registration module", () => {
   });
 
   it("emits shared registration and shared styles", () => {
-    const code = createRegistrationModule(["qui-button"], { strategy: "shared" });
+    const code = createRegistrationModule(["qui-button"]);
 
     expect(code).toContain('from "@quanttrinh/qui/register"');
     expect(code).toContain('from "@quanttrinh/qui/shared/qui-button"');
-    expect(code).toContain('import "@quanttrinh/qui/theme.css";');
-    expect(code).toContain('import "@quanttrinh/qui/styles.css";');
+    expect(code).toContain('import "virtual:qui/styles";');
     expect(code).toContain("defineComponents(__qui_0);");
-  });
-
-  it("emits split registration, base styles, and per-component styles", () => {
-    const code = createRegistrationModule(["qui-button", "qui-input"], { strategy: "split" });
-
-    expect(code).toContain('from "@quanttrinh/qui/split/qui-button"');
-    expect(code).toContain('from "@quanttrinh/qui/split/qui-input"');
-    expect(code).toContain('import "@quanttrinh/qui/base.css";');
-    expect(code).toContain('import "@quanttrinh/qui/split/components/qui-button.css";');
-    expect(code).toContain('import "@quanttrinh/qui/split/components/qui-input.css";');
-    expect(code).toContain("defineComponents(__qui_0, __qui_1);");
   });
 
   it("can omit styles", () => {
     const code = createRegistrationModule(["qui-button"], { styles: false });
 
-    expect(code).not.toContain(".css");
+    expect(code).not.toContain("virtual:qui/styles");
   });
 
   it("returns an empty module when there are no components", () => {
@@ -222,10 +166,54 @@ describe("virtual registration module", () => {
   });
 });
 
+describe("virtual styles module", () => {
+  it("configures a document and shadow-root URL only when none exists", () => {
+    const code = createStylesModule(":host { display: block; }");
+
+    expect(code).toContain('import "@quanttrinh/qui/theme.css";');
+    expect(code).toContain('from "@quanttrinh/qui/runtime"');
+    expect(code).toContain('":host { display: block; }"');
+    expect(code).toContain("URL.createObjectURL");
+    expect(code).toContain('link.setAttribute("data-qui-styles", "");');
+    expect(code).toContain("getQuiStylesHref() === undefined");
+    expect(code).toContain("setQuiStylesHref(url);");
+    expect(code).toContain("resetQuiStylesHref();");
+  });
+});
+
+describe("importInjectionOffset", () => {
+  it("inserts after MDX frontmatter", () => {
+    const code = "---\ntitle: Example\n---\n<qui-button />";
+    expect(code.slice(importInjectionOffset(code))).toBe("<qui-button />");
+  });
+
+  it("handles empty and CRLF frontmatter", () => {
+    const empty = "---\n---\n<qui-button />";
+    const crlf = "---\r\ntitle: Example\r\n---\r\n<qui-button />";
+
+    expect(empty.slice(importInjectionOffset(empty))).toBe("<qui-button />");
+    expect(crlf.slice(importInjectionOffset(crlf))).toBe("<qui-button />");
+  });
+
+  it("handles frontmatter ending at EOF and trailing fence whitespace", () => {
+    const eof = "---\n---";
+    const crlfEof = "---\r\n---";
+    const trailing = "---\ntitle: Example\n---   \n<qui-button />";
+
+    expect(importInjectionOffset(eof)).toBe(eof.length);
+    expect(importInjectionOffset(crlfEof)).toBe(crlfEof.length);
+    expect(trailing.slice(importInjectionOffset(trailing))).toBe("<qui-button />");
+  });
+
+  it("uses the start when there is no frontmatter", () => {
+    expect(importInjectionOffset("export const value = 1;")).toBe(0);
+  });
+});
+
 describe("isTransformableId", () => {
-  it("accepts JavaScript, TypeScript, JSX, Astro, and MDX", () => {
+  it("accepts JavaScript, TypeScript, JSX, and MDX", () => {
     expect(isTransformableId("/app/src/page.tsx")).toBe(true);
-    expect(isTransformableId("/app/src/page.astro")).toBe(true);
+    expect(isTransformableId("/app/src/page.astro")).toBe(false);
     expect(isTransformableId("/app/src/page.mdx")).toBe(true);
     expect(isTransformableId("/app/src/page.mjs")).toBe(true);
   });

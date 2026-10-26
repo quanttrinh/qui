@@ -1,11 +1,17 @@
-import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
 
 import { dataAttr } from "../../helpers/attr";
+import { isHTMLElement } from "../../helpers/dom";
 import { ExpandMoreIcon } from "../qui-icon/icons";
+import { setAriaControls } from "../shared/aria";
 import { consumeContextPart } from "../shared/context-part";
+import { ContextPartElement } from "../shared/context-part-element";
+import { arrowDelta, edgeKey } from "../shared/keyboard";
+import { RegistrationReconciler } from "../shared/registration-reconciler";
+import { focusRingInset } from "../shared/styles";
 import { consumeAccordionItem, type AccordionItemContext } from "./accordion-context";
 
 const styles = {
@@ -26,12 +32,7 @@ const styles = {
     textAlign: "start",
     cursor: "pointer",
     "&:hover": { backgroundColor: "surfaceContainerHigh" },
-    "&:focus-visible": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "-2px",
-    },
+    "&:focus-visible": focusRingInset,
     "&:disabled": { cursor: "not-allowed" },
   }),
   indicator: css({
@@ -49,46 +50,6 @@ const styles = {
   }),
 };
 
-function arrowDelta(
-  key: string,
-  orientation: "horizontal" | "vertical",
-  rtl: boolean,
-): 1 | -1 | undefined {
-  switch (key) {
-    case "ArrowDown": {
-      return orientation === "vertical" ? 1 : undefined;
-    }
-    case "ArrowUp": {
-      return orientation === "vertical" ? -1 : undefined;
-    }
-    case "ArrowLeft": {
-      if (orientation !== "horizontal") {
-        return undefined;
-      }
-      return rtl ? 1 : -1;
-    }
-    case "ArrowRight": {
-      if (orientation !== "horizontal") {
-        return undefined;
-      }
-      return rtl ? -1 : 1;
-    }
-    default: {
-      return undefined;
-    }
-  }
-}
-
-function edgeKey(key: string): "first" | "last" | undefined {
-  if (key === "Home") {
-    return "first";
-  }
-  if (key === "End") {
-    return "last";
-  }
-  return undefined;
-}
-
 /**
  * The trigger for a `qui-accordion-item`.
  *
@@ -97,15 +58,15 @@ function edgeKey(key: string): "first" | "last" | undefined {
 @Component({
   tag: "qui-accordion-trigger",
   styleUrl: resolveVar(styleUrls.quiAccordionTrigger),
-  scoped: true,
+  shadow: true,
 })
-export class QuiAccordionTrigger {
+export class QuiAccordionTrigger extends ContextPartElement<AccordionItemContext> {
   @Element() host!: HTMLQuiAccordionTriggerElement;
 
-  /** Additional class applied to the trigger button. */
-  @Prop() innerClass?: string;
+  private triggerEl?: HTMLButtonElement;
+  private readonly registration = new RegistrationReconciler();
 
-  private readonly contextPart = consumeContextPart({
+  protected readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "accordion-item",
     consume: consumeAccordionItem,
@@ -115,20 +76,34 @@ export class QuiAccordionTrigger {
     return this.contextPart.context;
   }
 
-  public connectedCallback(): void {
-    this.contextPart.hostConnected();
-  }
-
-  public componentWillLoad(): void {
-    this.contextPart.hostWillLoad();
-  }
-
-  public componentDidLoad(): void {
-    this.contextPart.hostDidLoad();
+  public componentDidRender(): void {
+    this.syncRegistration();
+    this.syncAria();
   }
 
   public disconnectedCallback(): void {
-    this.contextPart.hostDisconnected();
+    this.registration.clear();
+    super.disconnectedCallback();
+  }
+
+  private syncRegistration(): void {
+    const { item, triggerEl } = this;
+    if (item === undefined || triggerEl === undefined) {
+      return;
+    }
+    const { value } = item.item();
+    this.registration.reconcile([item, value, triggerEl], () =>
+      item.registerTrigger(value, this.host, triggerEl),
+    );
+  }
+
+  private syncAria(): void {
+    const { item, triggerEl } = this;
+    if (item === undefined || triggerEl === undefined) {
+      return;
+    }
+    const content = item.getContent(item.item().value);
+    setAriaControls(triggerEl, content === undefined ? [] : [content]);
   }
 
   private disabled(): boolean {
@@ -147,7 +122,11 @@ export class QuiAccordionTrigger {
     }
   };
 
-  private readonly handleBlur = (): void => {
+  private readonly handleBlur = (event: FocusEvent): void => {
+    const next = event.relatedTarget;
+    if (isHTMLElement(next) && next.tagName === "QUI-ACCORDION-TRIGGER") {
+      return;
+    }
     if (!this.disabled()) {
       this.item?.blur();
     }
@@ -183,10 +162,12 @@ export class QuiAccordionTrigger {
     const orientation = item?.orientation() ?? "vertical";
 
     return (
-      <Host class={styles.host}>
+      <Host id={item?.triggerId(value)} class={styles.host}>
         <h3 class={styles.heading}>
           <button
-            id={item?.triggerId(value)}
+            ref={(el) => {
+              this.triggerEl = el;
+            }}
             type="button"
             aria-controls={item?.contentId(value)}
             data-controls={item?.contentId(value)}
@@ -199,7 +180,7 @@ export class QuiAccordionTrigger {
             data-ownedby={item?.rootId()}
             data-orientation={orientation}
             dir={item?.textDirection()}
-            class={cx(styles.trigger, this.innerClass)}
+            class={styles.trigger}
             part="trigger"
             onClick={this.handleClick}
             onFocus={this.handleFocus}

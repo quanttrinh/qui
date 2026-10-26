@@ -1,21 +1,16 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-function queryInput(root: HTMLElement): HTMLInputElement {
-  const input = root.querySelector("input");
-  if (!(input instanceof HTMLInputElement)) {
-    throw new TypeError("Expected a native input");
-  }
-  return input;
-}
+import { queryControl, resolveHost } from "../../test-utils/component";
+import { typeInto } from "../../test-utils/interactions";
 
 describe("qui-input text case", () => {
   it("normalizes typed values to uppercase", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(<qui-input textCase="uppercase" />);
     const spy = spyOnEvent("valuechange");
-    const input = queryInput(root);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
 
-    input.value = "ab-12";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+    typeInto(input, "ab-12");
     await waitForChanges();
 
     expect(input.value).toBe("AB-12");
@@ -27,10 +22,10 @@ describe("qui-input text case", () => {
       <qui-input inputType="email" textCase="lowercase" />,
     );
     const spy = spyOnEvent("valuechange");
-    const input = queryInput(root);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
 
-    input.value = "USER@EXAMPLE.COM";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+    typeInto(input, "USER@EXAMPLE.COM");
     await waitForChanges();
 
     expect(input.value).toBe("user@example.com");
@@ -42,7 +37,8 @@ describe("qui-input text case", () => {
 
   it("restores the caret after a length-changing case mapping", async () => {
     const { root, waitForChanges } = await render(<qui-input textCase="uppercase" />);
-    const input = queryInput(root);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
 
     input.value = "aßb";
     input.setSelectionRange(2, 2);
@@ -57,7 +53,8 @@ describe("qui-input text case", () => {
     const { root, waitForChanges } = await render(
       <qui-input textCase="uppercase" defaultValue="abc" />,
     );
-    const input = queryInput(root);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
 
     await waitForChanges();
     expect(input.value).toBe("ABC");
@@ -67,7 +64,8 @@ describe("qui-input text case", () => {
     const { root, setProps, waitForChanges } = await render(
       <qui-input textCase="lowercase" value="ABC" />,
     );
-    const input = queryInput(root);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
 
     await waitForChanges();
     expect(input.value).toBe("abc");
@@ -82,7 +80,8 @@ describe("qui-input text case", () => {
       <qui-input textCase="uppercase" maskPattern="aa-####" />,
     );
     const spy = spyOnEvent("valuechange");
-    const input = queryInput(root);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
 
     input.value = "ab1234";
     input.setSelectionRange(2, 2);
@@ -98,10 +97,10 @@ describe("qui-input text case", () => {
     const { root, setProps, waitForChanges } = await render(
       <qui-input maskPattern="+1 ### ### ####" textCase="uppercase" />,
     );
-    const input = queryInput(root);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
 
-    input.value = "5551234567";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+    typeInto(input, "5551234567");
     await waitForChanges();
     expect(input.value).toBe("+1 555 123 4567");
 
@@ -114,10 +113,10 @@ describe("qui-input text case", () => {
     const { root, setProps, waitForChanges } = await render(
       <qui-input maskPattern="X-aa-####" textCase="uppercase" />,
     );
-    const input = queryInput(root);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
 
-    input.value = "ab1234";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+    typeInto(input, "ab1234");
     await waitForChanges();
     expect(input.value).toBe("X-AB-1234");
 
@@ -130,7 +129,8 @@ describe("qui-input text case", () => {
     const { root, setProps, waitForChanges } = await render(
       <qui-input textCase="uppercase" value="Hello" />,
     );
-    const input = queryInput(root);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
 
     await waitForChanges();
     expect(input.value).toBe("HELLO");
@@ -144,7 +144,8 @@ describe("qui-input text case", () => {
     const { root, waitForChanges } = await render(
       <qui-input inputType="number" textCase="uppercase" value="1e3" />,
     );
-    const input = queryInput(root);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
 
     await waitForChanges();
     expect(input.value).toBe("1e3");
@@ -153,7 +154,8 @@ describe("qui-input text case", () => {
 
   it("derives the native autocapitalize hint from textCase", async () => {
     const { root, setProps, waitForChanges } = await render(<qui-input />);
-    const input = queryInput(root);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
 
     expect(input.hasAttribute("autocapitalize")).toBe(false);
 

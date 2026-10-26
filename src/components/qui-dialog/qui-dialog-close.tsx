@@ -1,34 +1,15 @@
-import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
 
+import { ensureShadowStylesheet } from "../../utilities/styles";
+import { dialogButtonBase } from "../shared/styles";
 import { consumeDialog } from "./context";
 
 const styles = {
   host: css({ display: "inline-block" }),
-  button: css({
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "10",
-    paddingInline: "4",
-    borderWidth: "0",
-    rounded: "full",
-    backgroundColor: "transparent",
-    color: "primary",
-    font: "inherit",
-    fontSize: "sm",
-    fontWeight: "medium",
-    cursor: "pointer",
-    "&:hover": { backgroundColor: "surfaceContainerHigh" },
-    "&:focus-visible": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "2px",
-    },
-  }),
+  button: css({ ...dialogButtonBase }),
 };
 
 /**
@@ -39,19 +20,22 @@ const styles = {
 @Component({
   tag: "qui-dialog-close",
   styleUrl: resolveVar(styleUrls.quiDialogClose),
-  scoped: true,
+  shadow: true,
 })
 export class QuiDialogClose {
   @Element() host!: HTMLQuiDialogCloseElement;
 
-  /** Additional class applied to the close button. */
-  @Prop() innerClass?: string;
+  public connectedCallback(): void {
+    ensureShadowStylesheet(this.host);
+  }
 
   public render(): VNode {
     return (
       <Host class={styles.host}>
+        {/* The label is provided by the slotted button content. */}
+        {/* oxlint-disable-next-line jsx-a11y/control-has-associated-label */}
         <button
-          class={cx(styles.button, this.innerClass)}
+          class={styles.button}
           part="close"
           type="button"
           onClick={() => {

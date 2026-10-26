@@ -1,10 +1,13 @@
 import { css } from "#styled-system/css";
 
+import { fieldSurface, focusRingFlush } from "../shared/styles";
+
 export const selectStyles = {
-  host: css({ display: "block", position: "relative", width: "full" }),
+  host: css({ display: "block" }),
   root: css({ position: "relative", width: "full" }),
   control: css({ width: "full" }),
   trigger: css({
+    ...fieldSurface,
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -15,19 +18,10 @@ export const selectStyles = {
     paddingInlineEnd: "1.5",
     fontSize: "sm",
     color: "onSurface",
-    backgroundColor: "surface",
-    borderWidth: "1px",
-    borderColor: "outlineVariant",
-    rounded: "lg",
     cursor: "pointer",
     textAlign: "start",
-    transition: "border-color 150ms, outline-color 150ms",
-    "&:hover": { borderColor: "outline" },
     "&:focus-visible": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "0",
+      ...focusRingFlush,
       borderColor: "primary",
     },
     "&[data-placeholder-shown]": { color: "onSurfaceVariant" },

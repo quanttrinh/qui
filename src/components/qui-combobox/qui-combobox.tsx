@@ -6,6 +6,7 @@ import {
   forceUpdate,
   h,
   Host,
+  Method,
   Prop,
   resolveVar,
   Watch,
@@ -14,11 +15,11 @@ import {
 } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { cx } from "#styled-system/css";
 
 import { ariaAttr, dataAttr } from "../../helpers/attr";
-import { isHTMLDivElement, isHTMLInputElement } from "../../helpers/dom";
+import { isHTMLInputElement, isNode } from "../../helpers/dom";
 import { nextId } from "../../helpers/id";
+import { ensureShadowStylesheet } from "../../utilities/styles";
 import { UnfoldMoreIcon } from "../qui-icon/icons";
 import { quiOptionSource } from "../qui-option/option-source";
 import { type PopoverDismissEvent } from "../qui-popover/qui-popover";
@@ -29,6 +30,8 @@ import {
   OptionSourceController,
   SelectionController,
 } from "../shared/controllers";
+import { applyFieldAria } from "../shared/field/aria";
+import { createFieldControl, focusElement } from "../shared/field/control";
 import { OptionControlBase } from "../shared/option/component-base";
 import { labelForValue, type OptionItem } from "../shared/option/option";
 import {
@@ -81,7 +84,7 @@ function displayValueFor(
 @Component({
   tag: "qui-combobox",
   styleUrl: resolveVar(styleUrls.quiCombobox),
-  scoped: true,
+  shadow: true,
   formAssociated: true,
 })
 export class QuiCombobox extends OptionControlBase {
@@ -136,6 +139,7 @@ export class QuiCombobox extends OptionControlBase {
   private inputEl?: HTMLInputElement;
   private readonly generatedId = nextId("qui-combobox");
   private readonly listId = `${this.generatedId}-listbox`;
+  private readonly fieldControl = createFieldControl(() => this.inputEl);
   private readonly form = new FormController({
     getHost: (): HTMLElement => this.host,
     getInternals: (): ElementInternals => this.internals,
@@ -254,6 +258,12 @@ export class QuiCombobox extends OptionControlBase {
     this.addController(this.selection);
     this.addController(this.window);
     this.addController(this.navigation);
+    this.form.setControl(this.fieldControl);
+  }
+
+  public connectedCallback(): void {
+    super.connectedCallback();
+    ensureShadowStylesheet(this.host);
   }
 
   public componentWillLoad(): void {
@@ -272,11 +282,18 @@ export class QuiCombobox extends OptionControlBase {
 
   public componentDidRender(): void {
     super.componentDidRender();
+    applyFieldAria(this.inputEl, this.form.fieldApi);
   }
 
   public disconnectedCallback(): void {
     super.disconnectedCallback();
     this.input.dispose();
+  }
+
+  /** Moves focus to the internal input. */
+  @Method()
+  public async focusControl(options?: FocusOptions): Promise<void> {
+    await focusElement(this.inputEl, options);
   }
 
   @Watch("value")
@@ -370,7 +387,9 @@ export class QuiCombobox extends OptionControlBase {
 
   private readonly handleFocusOut = (event: FocusEvent): void => {
     const next = event.relatedTarget;
-    if (next instanceof Node && this.host.contains(next)) {
+    // Focus moves within the combobox (input → trigger or listbox) are internal.
+    // Check the shadow root: host.contains() cannot see internal elements.
+    if (isNode(next) && (this.host.contains(next) || (this.rootEl?.contains(next) ?? false))) {
       return;
     }
     if (!this.navigation.open) {
@@ -511,11 +530,9 @@ export class QuiCombobox extends OptionControlBase {
       <Host class={styles.host}>
         <div
           ref={(el) => {
-            if (isHTMLDivElement(el)) {
-              this.rootEl = el;
-            }
+            this.rootEl = el;
           }}
-          class={cx(styles.root, this.innerClass)}
+          class={styles.root}
           part="root"
           dir={this.textDirection}
           onFocusout={this.handleFocusOut}
@@ -528,9 +545,7 @@ export class QuiCombobox extends OptionControlBase {
           >
             <input
               ref={(el) => {
-                if (isHTMLInputElement(el)) {
-                  this.inputEl = el;
-                }
+                this.inputEl = el;
               }}
               id={field?.ids.control ?? (this.host.id || this.generatedId)}
               class={styles.input}
@@ -550,8 +565,6 @@ export class QuiCombobox extends OptionControlBase {
               aria-activedescendant={isOpen ? activeDescendant : undefined}
               aria-invalid={ariaAttr(isInvalid)}
               aria-required={ariaAttr(isRequired)}
-              aria-describedby={field?.getInputProps()["aria-describedby"]}
-              aria-errormessage={field?.getInputProps()["aria-errormessage"]}
               onInput={this.handleInput}
               onClick={this.handleInputClick}
               onKeyDown={this.handleKeyDown}
@@ -582,8 +595,8 @@ export class QuiCombobox extends OptionControlBase {
               this.window.setViewport(el);
             },
             onDismiss: this.handleDismiss,
-            onScroll: (event) => {
-              this.window.handleScroll(event);
+            onScroll: () => {
+              this.window.handleScroll();
             },
             renderItem: (entry) =>
               renderOptionRow({

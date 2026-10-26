@@ -1,5 +1,18 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
+import { queryPartIn } from "../../test-utils/component";
+import { queryInside } from "../../test-utils/shadow";
+
+function assignedText(slot: HTMLSlotElement | null): string {
+  if (slot === null) {
+    throw new TypeError("Expected a card slot");
+  }
+  return slot
+    .assignedElements()
+    .map((element) => element.textContent)
+    .join("");
+}
+
 describe("qui-card", () => {
   it("renders its slots and variant", async () => {
     const { root } = await render(
@@ -12,12 +25,16 @@ describe("qui-card", () => {
         </button>
       </qui-card>,
     );
-    const surface = root.querySelector("[data-part=root]");
+    const surface = queryPartIn(root, "root");
+    const titleSlot = queryInside<HTMLSlotElement>(root, 'slot[name="title"]');
+    const descriptionSlot = queryInside<HTMLSlotElement>(root, 'slot[name="description"]');
+    const contentSlot = queryInside<HTMLSlotElement>(root, "slot:not([name])");
+    const actionsSlot = queryInside<HTMLSlotElement>(root, 'slot[name="actions"]');
 
     expect(surface).toHaveAttribute("data-variant", "outlined");
-    expect(root.querySelector("[data-part=title]")?.textContent).toContain("Card title");
-    expect(root.querySelector("[data-part=description]")?.textContent).toContain("Description");
-    expect(root.querySelector("[data-part=content]")?.textContent).toContain("Body");
-    expect(root.querySelector("[data-part=actions]")?.textContent).toContain("Action");
+    expect(assignedText(titleSlot)).toContain("Card title");
+    expect(assignedText(descriptionSlot)).toContain("Description");
+    expect(assignedText(contentSlot)).toContain("Body");
+    expect(assignedText(actionsSlot)).toContain("Action");
   });
 });

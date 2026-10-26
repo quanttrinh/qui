@@ -1,4 +1,5 @@
-import { notifyContextChanged } from "../context-part";
+import { createContextStore } from "../context-store";
+import { type FieldControlHandle } from "./registry";
 
 /** Resolved ids for the parts of a field. */
 export interface FieldIds {
@@ -16,8 +17,6 @@ export interface FieldControlProps {
   required: boolean;
   readOnly?: boolean;
   "aria-invalid"?: "true";
-  "aria-describedby"?: string;
-  "aria-errormessage"?: string;
   "data-scope": "field";
   "data-part": "input";
   "data-invalid"?: "";
@@ -58,50 +57,44 @@ export interface FieldApi {
   getLabelProps: () => FieldLabelProps;
   getHelperTextProps: () => FieldTextProps;
   getErrorTextProps: () => FieldTextProps;
+  /** The mounted label host, used for host-targeted `aria-labelledby`. */
+  getLabelHost: () => HTMLElement | undefined;
+  /** The mounted helper-text hosts, in registration order. */
+  getHelperTextHosts: () => readonly HTMLElement[];
+  /** The mounted error-text hosts, in registration order. */
+  getErrorTextHosts: () => readonly HTMLElement[];
+  /** Register a mounted label part. Returns an unregister function. */
+  registerLabel: (host: HTMLElement) => () => void;
   /** Register a mounted helper-text part. Returns an unregister function. */
-  registerHelperText: () => () => void;
+  registerHelperText: (host: HTMLElement) => () => void;
   /** Register a mounted error-text part. Returns an unregister function. */
-  registerErrorText: () => () => void;
+  registerErrorText: (host: HTMLElement) => () => void;
+  /** Register the control's internal focusable handle. Returns an unregister function. */
+  registerControl: (control: FieldControlHandle) => () => void;
+  /** Focus the registered control, if any. */
+  focusControl: (options?: FocusOptions) => void;
+  /** Click the registered control, if any. */
+  clickControl: () => void;
   /** Subscribe to field state changes. Returns an unsubscribe function. */
   subscribe: (listener: () => void) => () => void;
 }
 
-const fields = new WeakMap<HTMLElement, FieldApi>();
+// oxlint-disable-next-line stencil/ban-side-effects -- Allocating a context map has no side effects.
+const fields = createContextStore<FieldApi>("field");
 
 /** Attach a field API to its host element. */
 function provideField(host: HTMLElement, field: FieldApi): void {
-  fields.set(host, field);
-  notifyContextChanged("field");
+  fields.provide(host, field);
 }
 
 /** Remove the field API from a host element. */
 function clearField(host: HTMLElement): void {
-  fields.delete(host);
-  notifyContextChanged("field");
-}
-
-function parentElement(node: Element): Element | undefined {
-  const parent = node.parentElement;
-  if (parent) {
-    return parent;
-  }
-  const root = node.getRootNode();
-  return root instanceof ShadowRoot ? root.host : undefined;
+  fields.clear(host);
 }
 
 /** Find the closest ancestor field, crossing shadow boundaries. */
 function consumeField(host: HTMLElement): FieldApi | undefined {
-  let node = parentElement(host);
-  while (node !== undefined) {
-    if (node instanceof HTMLElement) {
-      const field = fields.get(node);
-      if (field !== undefined) {
-        return field;
-      }
-    }
-    node = parentElement(node);
-  }
-  return undefined;
+  return fields.consume(host);
 }
 
 export { clearField, consumeField, provideField };

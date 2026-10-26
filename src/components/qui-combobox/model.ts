@@ -1,5 +1,7 @@
 import { type OptionItem } from "../shared/option/option";
 
+const WHITESPACE = /\s+/u;
+
 /** An option rendered by the combobox. */
 export type ComboboxOption = OptionItem;
 
@@ -53,7 +55,7 @@ export class OptionFilter {
       return text.startsWith(query);
     }
     if (mode === "words") {
-      return query.split(/\s+/u).every((word) => text.includes(word));
+      return query.split(WHITESPACE).every((word) => text.includes(word));
     }
     return text.includes(query);
   }

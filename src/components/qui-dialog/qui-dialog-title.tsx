@@ -1,9 +1,10 @@
-import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
 
 import { consumeContextPart } from "../shared/context-part";
+import { ContextPartElement } from "../shared/context-part-element";
 import { consumeDialog, type DialogContext } from "./context";
 
 const styles = {
@@ -24,18 +25,16 @@ const styles = {
 @Component({
   tag: "qui-dialog-title",
   styleUrl: resolveVar(styleUrls.quiDialogTitle),
-  scoped: true,
+  shadow: true,
 })
-export class QuiDialogTitle {
+export class QuiDialogTitle extends ContextPartElement<DialogContext> {
   @Element() host!: HTMLQuiDialogTitleElement;
 
-  /** Additional class applied to the title. */
-  @Prop() innerClass?: string;
-
-  private readonly contextPart = consumeContextPart({
+  protected readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "dialog",
     consume: consumeDialog,
+    setup: (dialog): (() => void) => dialog.registerTitle(this.host),
     subscribe: false,
   });
 
@@ -43,26 +42,10 @@ export class QuiDialogTitle {
     return this.contextPart.context;
   }
 
-  public connectedCallback(): void {
-    this.contextPart.hostConnected();
-  }
-
-  public componentWillLoad(): void {
-    this.contextPart.hostWillLoad();
-  }
-
-  public componentDidLoad(): void {
-    this.contextPart.hostDidLoad();
-  }
-
-  public disconnectedCallback(): void {
-    this.contextPart.hostDisconnected();
-  }
-
   public render(): VNode {
     return (
-      <Host class={styles.host}>
-        <h2 id={this.dialog?.ids.title} class={cx(styles.title, this.innerClass)} part="title">
+      <Host id={this.dialog?.ids.title} class={styles.host}>
+        <h2 class={styles.title} part="title">
           <slot />
         </h2>
       </Host>

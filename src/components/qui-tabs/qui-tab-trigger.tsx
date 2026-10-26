@@ -1,14 +1,19 @@
 import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
 
 import { dataAttr } from "../../helpers/attr";
+import { isHTMLElement } from "../../helpers/dom";
+import { setAriaControls } from "../shared/aria";
 import { consumeContextPart } from "../shared/context-part";
+import { ContextPartElement } from "../shared/context-part-element";
+import { RegistrationReconciler } from "../shared/registration-reconciler";
+import { focusRingInset } from "../shared/styles";
 import { consumeTabs, type TabsContext, type TabsVariant } from "./context";
 
 const styles = {
-  host: css({ display: "flex", flex: "1" }),
+  host: css({ display: "contents" }),
   trigger: css({
     position: "relative",
     isolation: "isolate",
@@ -42,12 +47,7 @@ const styles = {
     "&:hover:not([data-selected])": { color: "onSurface" },
     "&[data-selected]": { color: "primary" },
     "&[data-variant=secondary][data-selected]": { color: "onSurface" },
-    "&:focus-visible": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "-2px",
-    },
+    "&:focus-visible": focusRingInset,
     "&:disabled": { cursor: "not-allowed", opacity: 0.38 },
     "&[data-orientation=vertical]": {
       flex: "none",
@@ -121,19 +121,20 @@ function renderIndicator(variant: TabsVariant, orientation: "horizontal" | "vert
 @Component({
   tag: "qui-tab-trigger",
   styleUrl: resolveVar(styleUrls.quiTabTrigger),
-  scoped: true,
+  shadow: true,
 })
-export class QuiTabTrigger {
+export class QuiTabTrigger extends ContextPartElement<TabsContext> {
   @Element() host!: HTMLQuiTabTriggerElement;
 
   /** The value linking this trigger to its panel. */
   @Prop() value!: string;
   /** Disables the tab. */
   @Prop() disabled = false;
-  /** Additional class applied to the trigger button. */
-  @Prop() innerClass?: string;
 
-  private readonly contextPart = consumeContextPart({
+  private triggerEl?: HTMLButtonElement;
+  private readonly registration = new RegistrationReconciler();
+
+  protected readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "tabs",
     consume: consumeTabs,
@@ -143,20 +144,33 @@ export class QuiTabTrigger {
     return this.contextPart.context;
   }
 
-  public connectedCallback(): void {
-    this.contextPart.hostConnected();
-  }
-
-  public componentWillLoad(): void {
-    this.contextPart.hostWillLoad();
-  }
-
-  public componentDidLoad(): void {
-    this.contextPart.hostDidLoad();
+  public componentDidRender(): void {
+    this.syncRegistration();
+    this.syncAria();
   }
 
   public disconnectedCallback(): void {
-    this.contextPart.hostDisconnected();
+    this.registration.clear();
+    super.disconnectedCallback();
+  }
+
+  private syncRegistration(): void {
+    const { tabs, triggerEl } = this;
+    if (tabs === undefined || triggerEl === undefined) {
+      return;
+    }
+    this.registration.reconcile([tabs, this.value, triggerEl], () =>
+      tabs.registerTrigger(this.value, this.host, triggerEl),
+    );
+  }
+
+  private syncAria(): void {
+    const { tabs, triggerEl } = this;
+    if (tabs === undefined || triggerEl === undefined) {
+      return;
+    }
+    const panel = tabs.getPanel(this.value);
+    setAriaControls(triggerEl, panel === undefined ? [] : [panel]);
   }
 
   private readonly handleClick = (): void => {
@@ -172,7 +186,7 @@ export class QuiTabTrigger {
 
   private readonly handleBlur = (event: FocusEvent): void => {
     const next = event.relatedTarget;
-    if (next instanceof HTMLElement && next.getAttribute("role") === "tab") {
+    if (isHTMLElement(next) && next.tagName === "QUI-TAB-TRIGGER") {
       return;
     }
     this.tabs?.blur();
@@ -186,9 +200,11 @@ export class QuiTabTrigger {
     const focused = this.tabs?.isFocused(this.value) ?? false;
 
     return (
-      <Host class={styles.host}>
+      <Host id={this.tabs?.triggerId(this.value)} class={styles.host}>
         <button
-          id={this.tabs?.triggerId(this.value)}
+          ref={(el) => {
+            this.triggerEl = el;
+          }}
           type="button"
           role="tab"
           disabled={this.disabled}
@@ -206,7 +222,7 @@ export class QuiTabTrigger {
           data-ownedby={this.tabs?.listId()}
           data-variant={variant}
           dir={textDirection}
-          class={cx(styles.trigger, this.innerClass)}
+          class={styles.trigger}
           part="trigger"
           onClick={this.handleClick}
           onFocus={this.handleFocus}

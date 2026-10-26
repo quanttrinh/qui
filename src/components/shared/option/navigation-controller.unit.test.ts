@@ -26,7 +26,7 @@ function createController(options?: { looping?: boolean; initial?: string }) {
     onReveal: (index) => {
       revealed.push(index);
     },
-    requestUpdate: () => {},
+    requestUpdate: () => undefined,
   });
   return {
     controller,

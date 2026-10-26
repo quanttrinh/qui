@@ -1,11 +1,14 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-function queryInput(root: HTMLElement): HTMLInputElement {
-  const input = root.querySelector("input");
-  if (!(input instanceof HTMLInputElement)) {
-    throw new TypeError("Expected a native input");
-  }
-  return input;
+import { queryControl, queryPartIn, resolveHost } from "../../test-utils/component";
+import { waitForShadowStyles } from "../../test-utils/dom-ready";
+import { expectFocusedDeep } from "../../test-utils/interactions";
+
+function queryRequiredIndicator(root: HTMLElement): HTMLElement {
+  return queryPartIn(
+    resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox"),
+    "required-indicator",
+  );
 }
 
 describe("qui-checkbox", () => {
@@ -14,13 +17,14 @@ describe("qui-checkbox", () => {
       <qui-checkbox value="yes">Check me</qui-checkbox>,
     );
     const spy = spyOnEvent("checkedchange");
-    const input = queryInput(root);
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+    const input = queryControl<HTMLInputElement>(host, "input");
 
     input.click();
     await waitForChanges();
 
     expect(spy).toHaveReceivedEventDetail({ checked: true });
-    expect(root.querySelector("[part=root]")).toHaveAttribute("data-state", "checked");
+    expect(queryPartIn(host, "root")).toHaveAttribute("data-state", "checked");
     expect(input.checked).toBe(true);
   });
 
@@ -29,8 +33,11 @@ describe("qui-checkbox", () => {
 
     await waitForChanges();
 
-    const indicator = root.querySelector("[part=required-indicator]");
-    const input = queryInput(root);
+    const indicator = queryRequiredIndicator(root);
+    const input = queryControl<HTMLInputElement>(
+      resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox"),
+      "input",
+    );
 
     expect(indicator).toHaveAttribute("data-required");
     expect(indicator).toHaveTextContent("*");
@@ -47,35 +54,46 @@ describe("qui-checkbox", () => {
 
     await waitForChanges();
 
-    const indicator = root.querySelector("[part=required-indicator]");
+    const indicator = queryRequiredIndicator(root);
 
     expect(indicator).toHaveAttribute("data-required");
-    expect(queryInput(root)).toHaveAttribute("aria-required", "true");
+    expect(
+      queryControl<HTMLInputElement>(
+        resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox"),
+        "input",
+      ),
+    ).toHaveAttribute("aria-required", "true");
   });
 
   it("updates the indicator when required changes", async () => {
     const { root, waitForChanges } = await render(<qui-checkbox required>Check me</qui-checkbox>);
     await waitForChanges();
-    expect(root.querySelector("[part=required-indicator]")).toHaveAttribute("data-required");
+    expect(queryRequiredIndicator(root)).toHaveAttribute("data-required");
 
     (root as HTMLElement & { required: boolean }).required = false;
     await waitForChanges();
 
-    expect(root.querySelector("[part=required-indicator]")).not.toHaveAttribute("data-required");
-    expect(queryInput(root)).not.toHaveAttribute("aria-required");
+    expect(queryRequiredIndicator(root)).not.toHaveAttribute("data-required");
+    expect(
+      queryControl<HTMLInputElement>(
+        resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox"),
+        "input",
+      ),
+    ).not.toHaveAttribute("aria-required");
   });
 
   it("hides the indicator for optional checkboxes", async () => {
     const { root, waitForChanges } = await render(<qui-checkbox>Check me</qui-checkbox>);
 
     await waitForChanges();
+    await waitForShadowStyles(resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox"));
 
-    const indicator = root.querySelector<HTMLElement>("[part=required-indicator]");
+    const indicator = queryRequiredIndicator(root);
 
     expect(indicator).not.toHaveAttribute("data-required");
     expect(indicator).toHaveTextContent("*");
     expect(indicator).toHaveAttribute("aria-hidden", "true");
-    expect(indicator === null ? "" : getComputedStyle(indicator).display).toBe("none");
+    expect(getComputedStyle(indicator).display).toBe("none");
   });
 
   it("renders the indeterminate state and clears it on click", async () => {
@@ -83,15 +101,27 @@ describe("qui-checkbox", () => {
       <qui-checkbox indeterminate>Check me</qui-checkbox>,
     );
     const spy = spyOnEvent("checkedchange");
-    const input = queryInput(root);
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+    const input = queryControl<HTMLInputElement>(host, "input");
 
-    expect(root.querySelector("[part=root]")).toHaveAttribute("data-state", "indeterminate");
+    expect(queryPartIn(host, "root")).toHaveAttribute("data-state", "indeterminate");
     expect(input.indeterminate).toBe(true);
 
     input.click();
     await waitForChanges();
 
     expect(spy).toHaveReceivedEventDetail({ checked: true });
-    expect(root.querySelector("[part=root]")).toHaveAttribute("data-state", "indeterminate");
+    expect(queryPartIn(host, "root")).toHaveAttribute("data-state", "indeterminate");
+  });
+
+  it("focuses the internal native input", async () => {
+    const { root, waitForChanges } = await render(<qui-checkbox>Check me</qui-checkbox>);
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    await host.focusControl();
+    await waitForChanges();
+
+    expectFocusedDeep(input);
   });
 });

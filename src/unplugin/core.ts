@@ -1,43 +1,25 @@
 import { extractComponentsFromJavaScript, extractComponentsFromText } from "./extract";
 
-export type QuiStrategy = "shared" | "split";
-
 export interface QuiPluginOptions {
   /**
-   * Distribution to register. Defaults to `"shared"`.
-   */
-  strategy?: QuiStrategy;
-  /**
-   * Emit the CSS imports that match the selected distribution. Defaults to
-   * `true`.
+   * Emit the shared CSS and configure the stylesheet URL used by shadow roots.
+   * Defaults to `true`.
    */
   styles?: boolean;
 }
 
 const COMPONENT_TAG_NAME = /^qui-[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const JAVASCRIPT_FILE = /\.(?:[cm]?[jt]sx?)$/u;
-const TRANSFORMABLE_FILE = /\.(?:[cm]?[jt]sx?|astro|mdx)$/u;
+const TRANSFORMABLE_FILE = /\.(?:[cm]?[jt]sx?|mdx)$/u;
 const ESCAPED_CHARACTER = /\\[ux]/u;
+const MDX_FRONTMATTER = /^---[^\S\r\n]*(?:\r?\n)(?:[\s\S]*?\r?\n)?---[^\S\r\n]*(?:\r?\n|$)/u;
 
 export const VIRTUAL_MODULE_ID = "virtual:qui/register";
+export const VIRTUAL_STYLES_ID = "virtual:qui/styles";
 
 export function mayContainComponents(code: string): boolean {
   return code.includes("qui-") || ESCAPED_CHARACTER.test(code);
 }
-
-// Keep provider tags in sync with ContextPartKey in src/components/shared/context-part.ts.
-/**
- * Provider tags must be defined before the parts that consume them. Only
- * providers need an entry here; all other tags inherit the default priority.
- */
-const COMPONENT_PRIORITY: Readonly<Record<string, number>> = {
-  "qui-field": 0,
-  "qui-accordion": 0,
-  "qui-tabs": 0,
-  "qui-dialog": 0,
-  "qui-accordion-item": 1,
-  "qui-radio-group": 1,
-};
 
 export function normalizeComponents(components: Iterable<string>): string[] {
   const normalized = new Set<string>();
@@ -50,25 +32,8 @@ export function normalizeComponents(components: Iterable<string>): string[] {
 }
 
 /**
- * Sorts tags so providers are defined before the parts that consume them.
- * Falls back to alphabetical order for unrelated components.
- */
-export function registrationOrder(components: Iterable<string>): string[] {
-  return normalizeComponents(components).sort((left, right) => {
-    const priority = (COMPONENT_PRIORITY[left] ?? 100) - (COMPONENT_PRIORITY[right] ?? 100);
-    if (priority !== 0) {
-      return priority;
-    }
-    if (left === right) {
-      return 0;
-    }
-    return left < right ? -1 : 1;
-  });
-}
-
-/**
  * Finds opening component tags in JavaScript-family source using Oxc's AST,
- * with a lexical fallback for Astro, MDX, and files the parser rejects.
+ * with a lexical fallback for MDX and files the parser rejects.
  */
 export function extractComponents(code: string, id = "component.tsx"): string[] {
   // Every detectable tag either contains this prefix or an escaped character.
@@ -108,49 +73,79 @@ export function isTransformableId(id: string): boolean {
   return TRANSFORMABLE_FILE.test(file);
 }
 
+/**
+ * Returns the offset after leading frontmatter, or zero when there is none.
+ * MDX requires imports to follow frontmatter rather than precede it.
+ */
+export function importInjectionOffset(code: string): number {
+  if (!code.startsWith("---")) {
+    return 0;
+  }
+  const match = MDX_FRONTMATTER.exec(code);
+  return match?.[0].length ?? 0;
+}
+
+/**
+ * Creates the shared stylesheet module.
+ *
+ * The CSS is embedded in the module so the same URL works across bundlers.
+ * A document that already provides a marked stylesheet keeps that sheet; only
+ * plugin-managed apps get a blob URL for both the document and shadow roots.
+ */
+export function createStylesModule(css: string): string {
+  return [
+    'import "@quanttrinh/qui/theme.css";',
+    'import { getQuiStylesHref, resetQuiStylesHref, setQuiStylesHref } from "@quanttrinh/qui/runtime";',
+    "",
+    `const stylesheet = ${JSON.stringify(css)};`,
+    'if (typeof document !== "undefined" && getQuiStylesHref() === undefined) {',
+    '  const url = URL.createObjectURL(new Blob([stylesheet], { type: "text/css" }));',
+    '  const link = document.createElement("link");',
+    '  link.rel = "stylesheet";',
+    "  link.href = url;",
+    '  link.setAttribute("data-qui-styles", "");',
+    "  document.head.append(link);",
+    "  setQuiStylesHref(url);",
+    "  import.meta.hot?.dispose(() => {",
+    "    link.remove();",
+    "    URL.revokeObjectURL(url);",
+    "    resetQuiStylesHref();",
+    "  });",
+    "}",
+    "",
+  ].join("\n");
+}
+
+/**
+ * Creates a static module that defines the discovered components.
+ *
+ * Tags are sorted for deterministic output. Context parts retry when their
+ * provider upgrades, so providers do not need a separate registration order.
+ */
 export function createRegistrationModule(
   components: Iterable<string>,
   options: QuiPluginOptions = {},
 ): string {
-  const strategy: string = options.strategy ?? "shared";
-  if (strategy !== "shared" && strategy !== "split") {
-    throw new Error(`[unplugin-qui] Unknown strategy "${strategy}". Expected "shared" or "split".`);
-  }
-
-  const tags = registrationOrder(components);
+  const tags = normalizeComponents(components);
   if (tags.length === 0) {
     return "";
   }
-  // Keep the previous alphabetical CSS order.
-  // Defining custom elements must not change the split CSS cascade.
-  const styleTags = [...tags].sort();
 
   const bindings: string[] = [];
-  const lines = ['import { defineComponents } from "@quanttrinh/qui/register";'];
-
+  const definitions: string[] = [];
   for (const [index, tag] of tags.entries()) {
     const binding = `__qui_${index}`;
     bindings.push(binding);
-    lines.push(
-      `import { defineCustomElement as ${binding} } from "@quanttrinh/qui/${strategy}/${tag}";`,
+    definitions.push(
+      `import { defineCustomElement as ${binding} } from "@quanttrinh/qui/shared/${tag}";`,
     );
   }
 
-  if (options.styles !== false) {
-    lines.push(
-      'import "@quanttrinh/qui/theme.css";',
-      strategy === "shared"
-        ? 'import "@quanttrinh/qui/styles.css";'
-        : 'import "@quanttrinh/qui/base.css";',
-    );
-    if (strategy === "split") {
-      lines.push(
-        ...styleTags.map((tag) => `import "@quanttrinh/qui/split/components/${tag}.css";`),
-      );
-    }
-  }
-
-  lines.push(`defineComponents(${bindings.join(", ")});`);
-
-  return `${lines.join("\n")}\n`;
+  return [
+    ...(options.styles === false ? [] : [`import "${VIRTUAL_STYLES_ID}";`]),
+    'import { defineComponents } from "@quanttrinh/qui/register";',
+    ...definitions,
+    `defineComponents(${bindings.join(", ")});`,
+    "",
+  ].join("\n");
 }

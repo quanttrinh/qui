@@ -1,7 +1,10 @@
-import { resolveVar, Component, h, Host, Prop, type VNode } from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
+
+import { ensureShadowStylesheet } from "../../utilities/styles";
+import { focusRing } from "../shared/styles";
 
 export type ButtonVariant = "filled" | "tonal" | "elevated" | "outlined" | "text";
 export type ButtonSize = "sm" | "md" | "lg";
@@ -38,12 +41,7 @@ const styles = {
     "&:hover:not(:disabled):not([aria-disabled=true])::before": { opacity: 0.08 },
     "&:active:not(:disabled):not([aria-disabled=true])::before": { opacity: 0.12 },
     "& svg": { boxSize: "1.25em" },
-    _focusVisible: {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "2px",
-    },
+    _focusVisible: focusRing,
     "&:disabled, &[aria-disabled=true]": { opacity: 0.38, cursor: "not-allowed" },
 
     "&[data-size=sm]": { height: "8", paddingInline: "3", gap: "1.5", fontSize: "sm" },
@@ -88,15 +86,19 @@ const styles = {
 @Component({
   tag: "qui-button",
   styleUrl: resolveVar(styleUrls.quiButton),
-  scoped: true,
+  shadow: true,
 })
 export class QuiButton {
+  @Element() host!: HTMLElement;
+
   /** The visual style. */
   @Prop() variant: ButtonVariant = "filled";
   /** The control size. */
   @Prop() size: ButtonSize = "md";
   /** Renders a square button sized for a single icon. */
   @Prop() iconOnly = false;
+  /** Accessible name, primarily for icon-only buttons. */
+  @Prop() label?: string;
   /** Disables the control. */
   @Prop() disabled = false;
   /** When provided, renders an anchor instead of a button. */
@@ -109,11 +111,9 @@ export class QuiButton {
   @Prop() download?: string;
   /** Native button type. */
   @Prop() type: "button" | "submit" | "reset" = "button";
-  /** Additional class applied to the inner control. */
-  @Prop() innerClass?: string;
 
-  private get rootClass(): string {
-    return cx(styles.root, this.innerClass);
+  public connectedCallback(): void {
+    ensureShadowStylesheet(this.host);
   }
 
   private get dataProps(): Record<string, string | undefined> {
@@ -133,12 +133,13 @@ export class QuiButton {
           <a
             {...this.dataProps}
             part="button"
-            class={this.rootClass}
+            class={styles.root}
             href={this.disabled ? undefined : this.href}
             target={this.target}
             rel={this.rel}
             download={this.download}
             tabIndex={this.disabled ? -1 : undefined}
+            aria-label={this.label === undefined || this.label === "" ? undefined : this.label}
             aria-disabled={this.disabled ? "true" : undefined}
             onClick={(event) => {
               if (this.disabled) {
@@ -152,9 +153,10 @@ export class QuiButton {
           <button
             {...this.dataProps}
             part="button"
-            class={this.rootClass}
+            class={styles.root}
             type={this.type}
             disabled={this.disabled}
+            aria-label={this.label === undefined || this.label === "" ? undefined : this.label}
           >
             <slot />
           </button>

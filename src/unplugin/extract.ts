@@ -1,6 +1,7 @@
 import { parseSync, visitorKeys, type Node } from "oxc-parser";
 
 const COMPONENT_TAG = /<\s*(?<tag>qui-[a-z0-9]+(?:-[a-z0-9]+)*)(?=[\s/>]|$)/gu;
+const TYPESCRIPT_FILE = /\.(?:[cm]?ts)$/u;
 const COMPONENT_CALLS = new Set(["h", "jsx", "jsxs", "createElement"]);
 
 function isNode(value: unknown): value is Node {
@@ -80,7 +81,7 @@ function languageFor(filename: string): "js" | "jsx" | "ts" | "tsx" {
   if (filename.endsWith(".tsx")) {
     return "tsx";
   }
-  if (/\.(?:[cm]?ts)$/u.test(filename)) {
+  if (TYPESCRIPT_FILE.test(filename)) {
     return "ts";
   }
   if (filename.endsWith(".jsx")) {

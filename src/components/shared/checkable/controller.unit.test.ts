@@ -20,7 +20,7 @@ function createController(options?: {
     onChange: (checked) => {
       changes.push(checked);
     },
-    requestUpdate: () => {},
+    requestUpdate: () => undefined,
   });
   controller.hostWillLoad();
   return {

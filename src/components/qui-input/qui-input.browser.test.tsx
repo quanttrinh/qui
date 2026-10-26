@@ -1,21 +1,20 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-function queryInput(root: HTMLElement): HTMLInputElement {
-  const input = root.querySelector("input");
-  if (!(input instanceof HTMLInputElement)) {
-    throw new TypeError("Expected a native input");
-  }
-  return input;
+import { queryControl, resolveHost } from "../../test-utils/component";
+import { expectFocusedDeep, typeInto } from "../../test-utils/interactions";
+
+function queryVisibilityTrigger(host: Element): HTMLButtonElement {
+  return queryControl<HTMLButtonElement>(host, "[data-part=visibility-trigger]");
 }
 
 describe("qui-input", () => {
   it("applies a mask and emits both masked and unmasked values", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(<qui-input maskPattern="###-###" />);
     const spy = spyOnEvent("valuechange");
-    const input = queryInput(root);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
 
-    input.value = "123456";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+    typeInto(input, "123456");
     await waitForChanges();
 
     expect(input.value).toBe("123-456");
@@ -26,12 +25,10 @@ describe("qui-input", () => {
     const { root, waitForChanges } = await render(
       <qui-input inputType="number" value={2} min={1} max={3} step={1} />,
     );
-    const input = queryInput(root);
-    const increment = root.querySelector<HTMLButtonElement>("[data-part=increment-trigger]");
-    const decrement = root.querySelector<HTMLButtonElement>("[data-part=decrement-trigger]");
-    if (increment === null || decrement === null) {
-      throw new TypeError("Expected number stepper buttons");
-    }
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+    const increment = queryControl<HTMLButtonElement>(host, "[data-part=increment-trigger]");
+    const decrement = queryControl<HTMLButtonElement>(host, "[data-part=decrement-trigger]");
 
     increment.click();
     await waitForChanges();
@@ -47,11 +44,9 @@ describe("qui-input", () => {
     const { root, waitForChanges } = await render(
       <qui-input inputType="password" value="secret" />,
     );
-    const input = queryInput(root);
-    const trigger = root.querySelector<HTMLButtonElement>("[data-part=visibility-trigger]");
-    if (trigger === null) {
-      throw new TypeError("Expected a visibility trigger");
-    }
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+    const trigger = queryVisibilityTrigger(host);
 
     expect(input.type).toBe("password");
     const svg = trigger.querySelector("svg");
@@ -70,5 +65,16 @@ describe("qui-input", () => {
     await waitForChanges();
     expect(input.type).toBe("password");
     expect(svg?.querySelector("path")?.getAttribute("d")).toBe(hiddenPath);
+  });
+
+  it("focuses the internal native input", async () => {
+    const { root, waitForChanges } = await render(<qui-input />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    await host.focusControl();
+    await waitForChanges();
+
+    expectFocusedDeep(input);
   });
 });

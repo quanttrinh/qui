@@ -1,34 +1,17 @@
 import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
 
 import { consumeContextPart } from "../shared/context-part";
+import { ContextPartElement } from "../shared/context-part-element";
+import { dialogButtonBase } from "../shared/styles";
 import { consumeDialog, type DialogContext } from "./context";
 
 const styles = {
   host: css({ display: "inline-block" }),
   button: css({
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "10",
-    paddingInline: "4",
-    borderWidth: "0",
-    rounded: "full",
-    backgroundColor: "transparent",
-    color: "primary",
-    font: "inherit",
-    fontSize: "sm",
-    fontWeight: "medium",
-    cursor: "pointer",
-    "&:hover": { backgroundColor: "surfaceContainerHigh" },
-    "&:focus-visible": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "2px",
-    },
+    ...dialogButtonBase,
     "&:disabled": { opacity: 0.38, cursor: "not-allowed" },
   }),
 };
@@ -41,17 +24,15 @@ const styles = {
 @Component({
   tag: "qui-dialog-trigger",
   styleUrl: resolveVar(styleUrls.quiDialogTrigger),
-  scoped: true,
+  shadow: true,
 })
-export class QuiDialogTrigger {
+export class QuiDialogTrigger extends ContextPartElement<DialogContext> {
   @Element() host!: HTMLQuiDialogTriggerElement;
 
   /** Disables the trigger. */
   @Prop() disabled = false;
-  /** Additional class applied to the trigger button. */
-  @Prop() innerClass?: string;
 
-  private readonly contextPart = consumeContextPart({
+  protected readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "dialog",
     consume: consumeDialog,
@@ -61,29 +42,15 @@ export class QuiDialogTrigger {
     return this.contextPart.context;
   }
 
-  public connectedCallback(): void {
-    this.contextPart.hostConnected();
-  }
-
-  public componentWillLoad(): void {
-    this.contextPart.hostWillLoad();
-  }
-
-  public componentDidLoad(): void {
-    this.contextPart.hostDidLoad();
-  }
-
-  public disconnectedCallback(): void {
-    this.contextPart.hostDisconnected();
-  }
-
   public render(): VNode {
     const open = this.dialog?.open() ?? false;
 
     return (
       <Host class={styles.host}>
+        {/* The label is provided by the slotted button content. */}
+        {/* oxlint-disable-next-line jsx-a11y/control-has-associated-label */}
         <button
-          class={cx(styles.button, this.innerClass)}
+          class={styles.button}
           part="trigger"
           type="button"
           disabled={this.disabled}

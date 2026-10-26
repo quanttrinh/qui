@@ -1,4 +1,5 @@
-import { notifyContextChanged } from "../shared/context-part";
+import { createContextStore } from "../shared/context-store";
+import { type AccordionTriggerRegistration } from "./controller";
 
 export interface AccordionItem {
   value: string;
@@ -17,6 +18,16 @@ export interface AccordionContext {
   blur: () => void;
   move: (fromValue: string, delta: 1 | -1) => void;
   edge: (edge: "first" | "last") => void;
+  /** Registers a trigger host and its internal button. Returns an unregister function. */
+  registerTrigger: (value: string, host: HTMLElement, trigger: HTMLButtonElement) => () => void;
+  /** Registers a content host. Returns an unregister function. */
+  registerContent: (value: string, host: HTMLElement) => () => void;
+  /** The registered trigger for a value. */
+  getTrigger: (value: string) => AccordionTriggerRegistration | undefined;
+  /** The registered content host for a value. */
+  getContent: (value: string) => HTMLElement | undefined;
+  /** Moves DOM focus to the internal trigger button for a value. */
+  focusTrigger: (value: string) => void;
   rootId: () => string;
   itemId: (value: string) => string;
   triggerId: (value: string) => string;
@@ -30,64 +41,33 @@ export interface AccordionItemContext extends AccordionContext {
   isItemDisabled: () => boolean;
 }
 
-const accordions = new WeakMap<HTMLElement, AccordionContext>();
-const accordionItems = new WeakMap<HTMLElement, AccordionItemContext>();
+// oxlint-disable-next-line stencil/ban-side-effects -- Allocating a context map has no side effects.
+const accordions = createContextStore<AccordionContext>("accordion");
+// oxlint-disable-next-line stencil/ban-side-effects -- Allocating a context map has no side effects.
+const accordionItems = createContextStore<AccordionItemContext>("accordion-item");
 
 function provideAccordion(host: HTMLElement, context: AccordionContext): void {
-  accordions.set(host, context);
-  notifyContextChanged("accordion");
+  accordions.provide(host, context);
 }
 
 function clearAccordion(host: HTMLElement): void {
-  accordions.delete(host);
-  notifyContextChanged("accordion");
-}
-
-function parentElement(node: Element): Element | undefined {
-  const parent = node.parentElement;
-  if (parent) {
-    return parent;
-  }
-  const root = node.getRootNode();
-  return root instanceof ShadowRoot ? root.host : undefined;
+  accordions.clear(host);
 }
 
 function consumeAccordion(host: HTMLElement): AccordionContext | undefined {
-  let node = parentElement(host);
-  while (node !== undefined) {
-    if (node instanceof HTMLElement) {
-      const context = accordions.get(node);
-      if (context !== undefined) {
-        return context;
-      }
-    }
-    node = parentElement(node);
-  }
-  return undefined;
+  return accordions.consume(host);
 }
 
 function provideAccordionItem(host: HTMLElement, context: AccordionItemContext): void {
-  accordionItems.set(host, context);
-  notifyContextChanged("accordion-item");
+  accordionItems.provide(host, context);
 }
 
 function clearAccordionItem(host: HTMLElement): void {
-  accordionItems.delete(host);
-  notifyContextChanged("accordion-item");
+  accordionItems.clear(host);
 }
 
 function consumeAccordionItem(host: HTMLElement): AccordionItemContext | undefined {
-  let node = parentElement(host);
-  while (node !== undefined) {
-    if (node instanceof HTMLElement) {
-      const context = accordionItems.get(node);
-      if (context !== undefined) {
-        return context;
-      }
-    }
-    node = parentElement(node);
-  }
-  return undefined;
+  return accordionItems.consume(host);
 }
 
 export {

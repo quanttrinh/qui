@@ -1,4 +1,5 @@
-import { notifyContextChanged } from "../shared/context-part";
+import { createContextStore } from "../shared/context-store";
+import { type DialogHostRegistration } from "./dialog-aria";
 
 export interface DialogIds {
   title: string;
@@ -10,12 +11,13 @@ export interface DialogControl {
   show: (modal: boolean) => void;
   close: (returnValue?: string) => void;
   isOpen: () => boolean;
+  setModal: (modal: boolean) => void;
   setClosedBy: (value: "any" | "closerequest" | "none") => void;
   setRole: (role: "dialog" | "alertdialog") => void;
   setLabel: (label: string | undefined) => void;
 }
 
-export interface DialogContext {
+export interface DialogContext extends DialogHostRegistration {
   ids: DialogIds;
   open: () => boolean;
   modal: () => boolean;
@@ -29,30 +31,19 @@ export interface DialogContext {
   subscribe: (listener: () => void) => () => void;
 }
 
-const dialogs = new WeakMap<HTMLElement, DialogContext>();
+// oxlint-disable-next-line stencil/ban-side-effects -- Allocating a context map has no side effects.
+const dialogs = createContextStore<DialogContext>("dialog");
 
 function provideDialog(host: HTMLElement, context: DialogContext): void {
-  dialogs.set(host, context);
-  notifyContextChanged("dialog");
+  dialogs.provide(host, context);
 }
 
 function clearDialog(host: HTMLElement): void {
-  dialogs.delete(host);
-  notifyContextChanged("dialog");
+  dialogs.clear(host);
 }
 
 function consumeDialog(host: HTMLElement): DialogContext | undefined {
-  let node: Element | undefined = host.parentElement ?? undefined;
-  while (node !== undefined) {
-    if (node instanceof HTMLElement) {
-      const context = dialogs.get(node);
-      if (context !== undefined) {
-        return context;
-      }
-    }
-    node = node.parentElement ?? undefined;
-  }
-  return undefined;
+  return dialogs.consume(host);
 }
 
 export { clearDialog, consumeDialog, provideDialog };

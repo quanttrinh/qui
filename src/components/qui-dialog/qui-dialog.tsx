@@ -17,6 +17,8 @@ import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
 import { nextId } from "../../helpers/id";
+import { createListenerStore } from "../shared/listener-store";
+import { lockDocumentScroll } from "../shared/scroll-lock";
 import {
   clearDialog,
   provideDialog,
@@ -24,6 +26,7 @@ import {
   type DialogControl,
   type DialogIds,
 } from "./context";
+import { createDialogHostRegistry } from "./dialog-aria";
 
 const styles = {
   host: css({ display: "contents" }),
@@ -39,7 +42,7 @@ const styles = {
 @Component({
   tag: "qui-dialog",
   styleUrl: resolveVar(styleUrls.quiDialog),
-  scoped: true,
+  shadow: true,
 })
 export class QuiDialog {
   @Element() host!: HTMLQuiDialogElement;
@@ -73,8 +76,11 @@ export class QuiDialog {
   private currentReturnValue = "";
 
   private control?: DialogControl;
-  private readonly listeners = new Set<() => void>();
-  private locked = false;
+  private readonly listeners = createListenerStore();
+  private readonly hosts = createDialogHostRegistry(() => {
+    this.notifyParts();
+  });
+  private releaseScrollLock?: () => void;
   private readonly baseId = nextId("qui-dialog");
   private readonly ids: DialogIds = {
     title: `${this.baseId}::title`,
@@ -87,11 +93,14 @@ export class QuiDialog {
 
   public connectedCallback(): void {
     provideDialog(this.host, this.context);
+    this.syncScrollLock();
   }
 
   public disconnectedCallback(): void {
     clearDialog(this.host);
-    this.unlockScroll();
+    this.hosts.clear();
+    this.releaseScrollLock?.();
+    this.releaseScrollLock = undefined;
     this.listeners.clear();
   }
 
@@ -102,6 +111,14 @@ export class QuiDialog {
     } else if (this.open === false) {
       this.requestClose();
     }
+  }
+
+  @Watch("modal")
+  @Watch("preventScroll")
+  private syncModalSettings(): void {
+    this.control?.setModal(this.isModal());
+    this.applyControlSettings();
+    this.syncScrollLock();
   }
 
   @Watch("closeOnInteractOutside")
@@ -146,6 +163,10 @@ export class QuiDialog {
 
   private readonly context: DialogContext = {
     ids: this.ids,
+    registerTitle: this.hosts.registerTitle,
+    registerDescription: this.hosts.registerDescription,
+    titleHost: this.hosts.titleHost,
+    descriptionHost: this.hosts.descriptionHost,
     open: () => this.isOpen,
     modal: () => this.isModal(),
     closeOnEscape: () => this.allowsEscape(),
@@ -174,12 +195,7 @@ export class QuiDialog {
         }
       };
     },
-    subscribe: (listener) => {
-      this.listeners.add(listener);
-      return () => {
-        this.listeners.delete(listener);
-      };
-    },
+    subscribe: this.listeners.subscribe,
   };
 
   private requestOpen(): void {
@@ -205,20 +221,19 @@ export class QuiDialog {
     this.dialogCancel.emit();
   }
 
+  /** Wakes subscribed parts after the title or description registration changes. */
+  private notifyParts(): void {
+    this.listeners.notify();
+  }
+
   private setOpenState(open: boolean, returnValue: string): void {
     const changed = this.isOpen !== open || this.currentReturnValue !== returnValue;
     this.isOpen = open;
     this.currentReturnValue = returnValue;
-    if (open) {
-      this.lockScroll();
-    } else {
-      this.unlockScroll();
-    }
+    this.syncScrollLock();
     if (changed) {
       this.openChange.emit({ open, returnValue });
-      for (const listener of this.listeners) {
-        listener();
-      }
+      this.listeners.notify();
     }
   }
 
@@ -231,20 +246,17 @@ export class QuiDialog {
     this.control.setClosedBy(this.allowsInteractOutside() ? "any" : "closerequest");
   }
 
-  private lockScroll(): void {
-    if (Build.isServer || !this.isModal() || this.preventScroll === false || this.locked) {
+  private syncScrollLock(): void {
+    if (Build.isServer) {
       return;
     }
-    this.locked = true;
-    document.documentElement.dataset.quiScrollLocked = "";
-  }
-
-  private unlockScroll(): void {
-    if (Build.isServer || !this.locked) {
+    const shouldLock = this.isOpen && this.isModal() && this.preventScroll !== false;
+    if (shouldLock) {
+      this.releaseScrollLock ??= lockDocumentScroll(document);
       return;
     }
-    this.locked = false;
-    delete document.documentElement.dataset.quiScrollLocked;
+    this.releaseScrollLock?.();
+    this.releaseScrollLock = undefined;
   }
 
   public render(): VNode {

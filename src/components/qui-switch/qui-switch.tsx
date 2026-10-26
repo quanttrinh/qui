@@ -7,6 +7,7 @@ import {
   forceUpdate,
   h,
   Host,
+  Method,
   Prop,
   Watch,
   type EventEmitter,
@@ -14,16 +15,19 @@ import {
 } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
 
 import { dataAttr } from "../../helpers/attr";
-import { isHTMLInputElement } from "../../helpers/dom";
 import { nextId } from "../../helpers/id";
+import { ensureShadowStylesheet } from "../../utilities/styles";
 import { CheckIcon } from "../qui-icon/icons";
 import { normalizeBoolean, type CheckedState } from "../shared/checkable/checked-state";
 import { CheckableController } from "../shared/checkable/controller";
+import { applyFieldAria } from "../shared/field/aria";
+import { createFieldControl, focusElement } from "../shared/field/control";
 import { FormControlBase } from "../shared/form-control/component-base";
 import { FormController, type FormValidity } from "../shared/form-control/controller";
+import { focusRing } from "../shared/styles";
 
 const styles = {
   host: css({ display: "inline-flex" }),
@@ -52,12 +56,7 @@ const styles = {
       borderColor: "primary",
     },
     "&[data-invalid]": { borderColor: "error" },
-    "&[data-focus-visible]": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "2px",
-    },
+    "&[data-focus-visible]": focusRing,
   }),
   thumb: css({
     position: "absolute",
@@ -114,7 +113,7 @@ const styles = {
 @Component({
   tag: "qui-switch",
   styleUrl: resolveVar(styleUrls.quiSwitch),
-  scoped: true,
+  shadow: true,
   formAssociated: true,
 })
 export class QuiSwitch extends FormControlBase {
@@ -122,7 +121,7 @@ export class QuiSwitch extends FormControlBase {
   @AttachInternals() internals!: ElementInternals;
 
   /** The controlled checked state. Leave unset for an uncontrolled switch. */
-  @Prop() checked?: boolean;
+  @Prop({ mutable: true }) checked?: boolean;
   /** The initial checked state for an uncontrolled switch. */
   @Prop() defaultChecked?: boolean;
   /** Disables the control. */
@@ -139,15 +138,17 @@ export class QuiSwitch extends FormControlBase {
   @Prop() value?: string;
   /** Plain-text label fallback when no slot content is supplied. */
   @Prop() label?: string;
-  /** Additional class applied to the root label. */
-  @Prop() innerClass?: string;
 
   /** Emitted whenever the checked state changes. */
   @Event({ eventName: "checkedchange", bubbles: true, composed: true })
   checkedChange!: EventEmitter<{ checked: boolean }>;
 
   private inputEl?: HTMLInputElement;
+  private labelEl?: HTMLElement;
   private readonly generatedId = nextId("qui-switch");
+  private readonly fieldControl = createFieldControl(() => this.inputEl, {
+    activateOnLabel: true,
+  });
   private readonly checkable = new CheckableController({
     getChecked: (): boolean | undefined => normalizeBoolean(this.checked),
     getDefaultChecked: (): boolean | undefined => normalizeBoolean(this.defaultChecked),
@@ -195,6 +196,7 @@ export class QuiSwitch extends FormControlBase {
     super();
     this.addController(this.checkable);
     this.addController(this.form);
+    this.form.setControl(this.fieldControl);
   }
 
   protected get formController(): FormController {
@@ -204,22 +206,20 @@ export class QuiSwitch extends FormControlBase {
   public connectedCallback(): void {
     super.connectedCallback();
     this.checkable.setInput(this.inputEl);
-  }
-
-  public componentWillLoad(): void {
-    super.componentWillLoad();
-  }
-
-  public componentDidLoad(): void {
-    super.componentDidLoad();
+    ensureShadowStylesheet(this.host);
   }
 
   public componentDidRender(): void {
     super.componentDidRender();
+    applyFieldAria(this.inputEl, this.form.fieldApi, {
+      labelledBy: this.labelEl === undefined ? [] : [this.labelEl],
+    });
   }
 
-  public disconnectedCallback(): void {
-    super.disconnectedCallback();
+  /** Moves focus to the internal native input. */
+  @Method()
+  public async focusControl(options?: FocusOptions): Promise<void> {
+    await focusElement(this.inputEl, options);
   }
 
   @Watch("checked")
@@ -317,16 +317,14 @@ export class QuiSwitch extends FormControlBase {
           {...stateAttrs}
           id={this.rootId}
           htmlFor={this.inputId}
-          class={cx(styles.root, this.innerClass)}
+          class={styles.root}
           part="root"
         >
           <input
             {...this.inputProps}
             ref={(el) => {
-              if (isHTMLInputElement(el)) {
-                this.inputEl = el;
-                this.checkable.setInput(el);
-              }
+              this.inputEl = el;
+              this.checkable.setInput(el);
             }}
             type="checkbox"
             value={this.value ?? "on"}
@@ -356,6 +354,9 @@ export class QuiSwitch extends FormControlBase {
             </span>
           </span>
           <span
+            ref={(el) => {
+              this.labelEl = el;
+            }}
             data-scope="switch"
             data-part="label"
             {...stateAttrs}

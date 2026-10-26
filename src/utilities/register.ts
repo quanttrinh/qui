@@ -1,8 +1,8 @@
 /**
  * Registers only the component definitions passed in.
  *
- * Import component modules from `@quanttrinh/qui/shared/*` or
- * `@quanttrinh/qui/split/*` and pass their `defineCustomElement` exports:
+ * Import component modules from `@quanttrinh/qui/shared/*` and pass their
+ * `defineCustomElement` exports:
  *
  * ```ts
  * import { defineComponents } from "@quanttrinh/qui/register";

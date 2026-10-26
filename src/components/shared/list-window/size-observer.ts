@@ -12,9 +12,6 @@ interface ListSizeObserverOptions {
 }
 
 function measureElement(element: Element): number {
-  if (!(element instanceof HTMLElement)) {
-    return 0;
-  }
   return element.getBoundingClientRect().height;
 }
 

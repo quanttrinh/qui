@@ -1,12 +1,7 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-function queryInput(root: HTMLElement): HTMLInputElement {
-  const input = root.querySelector("input");
-  if (!(input instanceof HTMLInputElement)) {
-    throw new TypeError("Expected a native input");
-  }
-  return input;
-}
+import { queryControl, queryPartIn, resolveHost } from "../../test-utils/component";
+import { expectFocusedDeep } from "../../test-utils/interactions";
 
 describe("qui-switch", () => {
   it("toggles and emits a boolean", async () => {
@@ -14,13 +9,14 @@ describe("qui-switch", () => {
       <qui-switch value="on">Enable</qui-switch>,
     );
     const spy = spyOnEvent("checkedchange");
-    const input = queryInput(root);
+    const host = resolveHost<HTMLQuiSwitchElement>(root, "qui-switch");
+    const input = queryControl<HTMLInputElement>(host, "input");
 
     input.click();
     await waitForChanges();
 
     expect(spy).toHaveReceivedEventDetail({ checked: true });
-    expect(root.querySelector("[part=root]")).toHaveAttribute("data-state", "checked");
+    expect(queryPartIn(host, "root")).toHaveAttribute("data-state", "checked");
     expect(input.checked).toBe(true);
   });
 
@@ -29,17 +25,29 @@ describe("qui-switch", () => {
       <qui-switch readOnly>Enable</qui-switch>,
     );
     const spy = spyOnEvent("checkedchange");
-    const input = queryInput(root);
+    const host = resolveHost<HTMLQuiSwitchElement>(root, "qui-switch");
+    const input = queryControl<HTMLInputElement>(host, "input");
 
     input.click();
     await waitForChanges();
 
     expect(spy).toHaveReceivedEventTimes(0);
-    expect(root.querySelector("[part=root]")).toHaveAttribute("data-state", "unchecked");
+    expect(queryPartIn(host, "root")).toHaveAttribute("data-state", "unchecked");
 
     await setProps({ readOnly: false });
     input.click();
     await waitForChanges();
     expect(spy).toHaveReceivedEventTimes(1);
+  });
+
+  it("focuses the internal native input", async () => {
+    const { root, waitForChanges } = await render(<qui-switch>Enable</qui-switch>);
+    const host = resolveHost<HTMLQuiSwitchElement>(root, "qui-switch");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    await host.focusControl();
+    await waitForChanges();
+
+    expectFocusedDeep(input);
   });
 });
