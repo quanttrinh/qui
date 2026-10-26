@@ -1,5 +1,8 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
+import { queryPartIn, resolveHost } from "../../test-utils/component";
+import { settle } from "../../test-utils/dom-ready";
+
 describe("qui-popover", () => {
   it("shows next to its sibling anchor and dismisses on Escape", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(
@@ -8,20 +11,13 @@ describe("qui-popover", () => {
         <qui-popover>Popover content</qui-popover>
       </div>,
     );
-    const popover = root.querySelector<HTMLQuiPopoverElement>("qui-popover");
-    const panel = root.querySelector<HTMLElement>("[part=content]");
-    if (popover === null || panel === null) {
-      throw new TypeError("Expected a popover");
-    }
+    const popover = resolveHost<HTMLQuiPopoverElement>(root, "qui-popover");
+    const panel = queryPartIn(popover, "content");
     const spy = spyOnEvent("dismiss");
 
     popover.open = true;
     await waitForChanges();
-    await new Promise<void>((resolve) => {
-      setTimeout(() => {
-        resolve();
-      }, 30);
-    });
+    await settle(30);
 
     expect(panel.matches(":popover-open")).toBe(true);
     expect(panel.style.top).not.toBe("");
@@ -46,10 +42,7 @@ describe("qui-popover", () => {
         <qui-popover>Popover content</qui-popover>
       </div>,
     );
-    const popover = root.querySelector<HTMLQuiPopoverElement>("qui-popover");
-    if (popover === null) {
-      throw new TypeError("Expected a popover");
-    }
+    const popover = resolveHost<HTMLQuiPopoverElement>(root, "qui-popover");
     const spy = spyOnEvent("dismiss");
 
     popover.open = true;

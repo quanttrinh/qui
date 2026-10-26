@@ -85,9 +85,9 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-browsers-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
 
-      - name: Install Playwright Chromium
+      - name: Install Playwright browsers
         if: steps.filter.outputs.code == 'true'
-        run: bun x playwright install --with-deps chromium
+        run: bun x playwright install --with-deps chromium firefox webkit
 
       - name: Test
         if: steps.filter.outputs.code == 'true'

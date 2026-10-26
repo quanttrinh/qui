@@ -1,6 +1,7 @@
 import { css } from "#styled-system/css";
 
 export const fieldStyles = {
+  host: css({ display: "block" }),
   root: css({
     display: "flex",
     flexDirection: "column",

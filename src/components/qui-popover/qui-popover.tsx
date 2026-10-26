@@ -16,7 +16,8 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { isHTMLDivElement } from "../../helpers/dom";
+import { isHTMLElement } from "../../helpers/dom";
+import { ensureShadowStylesheet } from "../../utilities/styles";
 
 /** Emitted when the popover asks its owner to close it. */
 export interface PopoverDismissEvent {
@@ -136,7 +137,7 @@ function placePopover(
 @Component({
   tag: "qui-popover",
   styleUrl: resolveVar(styleUrls.quiPopover),
-  scoped: true,
+  shadow: true,
 })
 export class QuiPopover {
   @Element() host!: HTMLElement;
@@ -175,6 +176,10 @@ export class QuiPopover {
   private visible = false;
   private frame?: number;
   private sizeObserver?: ResizeObserver;
+
+  public connectedCallback(): void {
+    ensureShadowStylesheet(this.host);
+  }
 
   public componentDidRender(): void {
     this.sync();
@@ -265,7 +270,7 @@ export class QuiPopover {
       return this.anchor;
     }
     const sibling = this.host.previousElementSibling;
-    return sibling instanceof HTMLElement ? sibling : undefined;
+    return isHTMLElement(sibling) ? sibling : undefined;
   }
 
   private show(panel: HTMLDivElement): void {
@@ -349,7 +354,11 @@ export class QuiPopover {
   };
 
   private readonly handlePointerDown = (event: PointerEvent): void => {
-    if (this.closeOnOutsideClick === false || event.composedPath().includes(this.host)) {
+    if (this.closeOnOutsideClick === false) {
+      return;
+    }
+    const path = event.composedPath();
+    if (path.includes(this.host) || path.includes(this.resolveAnchor() ?? this.host)) {
       return;
     }
     this.dismiss.emit({ reason: "outside" });
@@ -367,9 +376,7 @@ export class QuiPopover {
       <Host>
         <div
           ref={(el) => {
-            if (isHTMLDivElement(el)) {
-              this.panelEl = el;
-            }
+            this.panelEl = el;
           }}
           popover="manual"
           hidden={!this.open}

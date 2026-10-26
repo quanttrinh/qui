@@ -5,6 +5,9 @@ import { ModuleKind, ScriptTarget, transpileDeclaration, transpileModule } from 
 
 const SOURCE_EXTENSIONS = [".ts", ".tsx"] as const;
 const RUNTIME_IMPORT = /\bfrom\s+(["'])(\.[^"']+)\1/g;
+const TYPESCRIPT_EXTENSION = /\.tsx?$/u;
+const RESOLVED_MODULE = /\.(?:[cm]?js|jsx|ts|tsx|json|css)$/u;
+const JAVASCRIPT_EXTENSION = /\.js$/u;
 
 export interface ModuleBuildOptions {
   /** Absolute repository root. */
@@ -34,7 +37,7 @@ function isSourceFile(file: string): boolean {
 
 function outputPath(sourceFile: string, options: ModuleBuildOptions): string {
   const relativePath = relative(join(options.root, options.source), sourceFile);
-  return join(options.root, options.output, relativePath.replace(/\.tsx?$/u, ".js"));
+  return join(options.root, options.output, relativePath.replace(TYPESCRIPT_EXTENSION, ".js"));
 }
 
 /**
@@ -43,7 +46,7 @@ function outputPath(sourceFile: string, options: ModuleBuildOptions): string {
  */
 function rewriteRelativeImports(code: string, sourceFile: string): string {
   return code.replaceAll(RUNTIME_IMPORT, (match, quote: string, specifier: string) => {
-    if (/\.(?:[cm]?js|jsx|ts|tsx|json|css)$/u.test(specifier)) {
+    if (RESOLVED_MODULE.test(specifier)) {
       return match;
     }
     const base = resolve(dirname(sourceFile), specifier);
@@ -92,7 +95,7 @@ export function buildModules(options: ModuleBuildOptions): number {
     );
     const file = outputPath(sourceFile, options);
     writeIfChanged(file, js);
-    writeIfChanged(file.replace(/\.js$/u, ".d.ts"), declaration);
+    writeIfChanged(file.replace(JAVASCRIPT_EXTENSION, ".d.ts"), declaration);
   }
 
   return sourceFiles.length;

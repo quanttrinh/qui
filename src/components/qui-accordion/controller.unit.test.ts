@@ -8,36 +8,32 @@ function createEnvironment(options?: {
   defaultValue?: string[];
 }) {
   const changes: string[][] = [];
-  let disabled = false;
   const triggers = ["one", "two", "three"].map((value) => ({
     id: `accordion:test:trigger-${value}`,
+    disabled: false,
     focus: vi.fn(),
   }));
-  const host = {
-    querySelectorAll: () => triggers,
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-  } as unknown as HTMLElement;
   const controller = new AccordionController({
-    getHost: () => host,
     getValue: () => undefined,
     getDefaultValue: () => options?.defaultValue,
     getMultiple: () => options?.multiple ?? false,
     getCollapsible: () => options?.collapsible ?? false,
-    getTriggerId: (value) => `accordion:test:trigger-${value}`,
     onChange: (value) => {
       changes.push(value);
     },
-    requestUpdate: () => {},
+    requestUpdate: () => undefined,
   });
   controller.hostWillLoad();
+  for (const [index, value] of ["one", "two", "three"].entries()) {
+    const trigger = triggers[index];
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    const button = trigger as unknown as HTMLButtonElement;
+    controller.registerTrigger(value, button, button);
+  }
   return {
     controller,
     changes,
     triggers,
-    disable: () => {
-      disabled = true;
-    },
-    isDisabled: () => disabled,
   };
 }
 
@@ -77,12 +73,79 @@ describe("AccordionController", () => {
     controller.focus("one");
     expect(controller.focusedValue).toBe("one");
     controller.move("one", 1);
-    expect(triggers[1]?.focus).toHaveBeenCalledOnce();
+    expect(triggers[1].focus).toHaveBeenCalledOnce();
     controller.move("two", -1);
-    expect(triggers[0]?.focus).toHaveBeenCalledOnce();
+    expect(triggers[0].focus).toHaveBeenCalledOnce();
     controller.edge("last");
-    expect(triggers[2]?.focus).toHaveBeenCalledOnce();
+    expect(triggers[2].focus).toHaveBeenCalledOnce();
     controller.blur();
     expect(controller.focusedValue).toBeUndefined();
+  });
+
+  it("skips disabled triggers during navigation", () => {
+    const { controller, triggers } = createEnvironment();
+    const [, disabled] = triggers;
+    disabled.disabled = true;
+    controller.focus("one");
+    controller.move("one", 1);
+    expect(triggers[2].focus).toHaveBeenCalledOnce();
+    expect(disabled.focus).not.toHaveBeenCalled();
+  });
+
+  it("focuses the registered internal trigger button", () => {
+    const { controller, triggers } = createEnvironment();
+    controller.focusTrigger("two");
+    expect(triggers[1].focus).toHaveBeenCalledOnce();
+  });
+
+  it("preserves registration order when a trigger is replaced", () => {
+    const { controller, triggers } = createEnvironment();
+    const replacement = {
+      disabled: false,
+      focus: vi.fn(),
+    };
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    const button = replacement as unknown as HTMLButtonElement;
+    controller.registerTrigger("one", button, button);
+
+    controller.edge("first");
+    expect(replacement.focus).toHaveBeenCalledOnce();
+    expect(triggers[0].focus).not.toHaveBeenCalled();
+
+    controller.edge("last");
+    expect(triggers[2].focus).toHaveBeenCalledOnce();
+  });
+
+  it("ignores stale teardown after a trigger is replaced", () => {
+    const { controller, triggers } = createEnvironment();
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    const first = triggers[0] as unknown as HTMLButtonElement;
+    const unregisterFirst = controller.registerTrigger("one", first, first);
+    const replacement = {
+      disabled: false,
+      focus: vi.fn(),
+    };
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    const replacementButton = replacement as unknown as HTMLButtonElement;
+    controller.registerTrigger("one", replacementButton, replacementButton);
+
+    unregisterFirst();
+    unregisterFirst();
+
+    expect(controller.getTrigger("one")?.trigger).toBe(replacementButton);
+  });
+
+  it("tracks content hosts by value", () => {
+    const { controller } = createEnvironment();
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    const first = { id: "first" } as HTMLElement;
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    const second = { id: "second" } as HTMLElement;
+    const unregisterFirst = controller.registerContent("one", first);
+    controller.registerContent("two", second);
+
+    unregisterFirst();
+    expect(controller.getContent("one")).toBeUndefined();
+    expect(controller.getContent("two")).toBe(second);
   });
 });

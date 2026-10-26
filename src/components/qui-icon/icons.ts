@@ -2,8 +2,8 @@ import { h, type VNode } from "@stencil/core";
 
 /**
  * Material Symbols Rounded uses a 960-unit em box spanning y=-960 to y=0, with
- * the baseline at y=0. Keeping every inline icon on this canvas matches the
- * icon font used by `qui-icon`.
+ * the baseline at y=0. Keeping every inline icon on this canvas preserves the
+ * same geometry as the original Material Symbols paths.
  */
 const SYMBOLS_VIEW_BOX = "0 -960 960 960";
 

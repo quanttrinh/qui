@@ -2,6 +2,7 @@ import { Build } from "@stencil/core";
 
 import { onContextProvided } from "../context-part";
 import { consumeField, type FieldApi } from "../field/context";
+import { type FieldControlHandle } from "../field/registry";
 import { type ReactiveController } from "../reactive-control/controller";
 import { type FormControl } from "./component-base";
 
@@ -99,6 +100,8 @@ function formSignature({
 export class FormController implements FormControl, ReactiveController {
   private readonly options: FormControllerOptions;
   private field?: FieldApi;
+  private control?: FieldControlHandle;
+  private unregisterControl?: () => void;
   private unsubscribe?: () => void;
   private stopListening?: () => void;
   private formDisabled = false;
@@ -126,6 +129,15 @@ export class FormController implements FormControl, ReactiveController {
 
   public get isInvalid(): boolean {
     return this.field?.invalid() ?? this.options.getInvalid();
+  }
+
+  /**
+   * Registers the internal focusable control with the current field, or clears
+   * it when passed `undefined`. Label clicks use the registered handle.
+   */
+  public setControl(control: FieldControlHandle | undefined): void {
+    this.control = control;
+    this.registerControl();
   }
 
   public setDisabled(disabled: boolean): void {
@@ -199,6 +211,8 @@ export class FormController implements FormControl, ReactiveController {
   public hostDisconnected(): void {
     this.stopListening?.();
     this.stopListening = undefined;
+    this.unregisterControl?.();
+    this.unregisterControl = undefined;
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     this.field = undefined;
@@ -222,6 +236,7 @@ export class FormController implements FormControl, ReactiveController {
     this.unsubscribe = undefined;
     this.field = field;
     this.signature = "";
+    this.registerControl();
     if (field !== undefined) {
       this.unsubscribe = field.subscribe(() => {
         this.signature = "";
@@ -232,6 +247,14 @@ export class FormController implements FormControl, ReactiveController {
     }
     this.sync();
     return true;
+  }
+
+  private registerControl(): void {
+    this.unregisterControl?.();
+    this.unregisterControl = undefined;
+    if (this.field !== undefined && this.control !== undefined) {
+      this.unregisterControl = this.field.registerControl(this.control);
+    }
   }
 
   private signatureFor(): string {

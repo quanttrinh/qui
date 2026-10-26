@@ -57,9 +57,11 @@ export const colorRoles = [
 
 export type ColorRole = (typeof colorRoles)[number];
 
+const UPPERCASE = /[A-Z]/gu;
+
 /** `onPrimaryContainer` -> `on-primary-container`. */
 function toKebabCase(value: string): string {
-  return value.replaceAll(/[A-Z]/gu, (character) => `-${character.toLowerCase()}`);
+  return value.replaceAll(UPPERCASE, (character) => `-${character.toLowerCase()}`);
 }
 
 /** MD3 role -> CSS custom property name, computed once. */

@@ -1,32 +1,42 @@
 import { MagicString } from "magic-string";
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import { createUnplugin, type TransformResult, type UnpluginInstance } from "unplugin";
 
 import {
   componentsFromVirtualModuleId,
   createRegistrationModule,
+  createStylesModule,
   extractComponents,
+  importInjectionOffset,
   isTransformableId,
   mayContainComponents,
   virtualModuleId,
-  VIRTUAL_MODULE_ID,
+  VIRTUAL_STYLES_ID,
   type QuiPluginOptions,
 } from "./core";
 
-export type { QuiPluginOptions, QuiStrategy } from "./core";
+export type { QuiPluginOptions } from "./core";
 
 const PLUGIN_NAME = "unplugin-qui";
-const RESOLVED_VIRTUAL_MODULE_ID = `\0${VIRTUAL_MODULE_ID}`;
-const VIRTUAL_MODULE_FILTER = /^virtual:qui\/register(?:[?#]|$)/u;
-const RESOLVED_VIRTUAL_MODULE_FILTER = /^\0virtual:qui\/register(?:[?#]|$)/u;
-const TRANSFORMABLE_ID = /\.(?:[cm]?[jt]sx?|astro|mdx)(?:[?#]|$)/u;
+const RESOLVED_VIRTUAL_STYLES_ID = `\0${VIRTUAL_STYLES_ID}`;
+const VIRTUAL_MODULE_FILTER = /^virtual:qui\/(?:register|styles)(?:[?#]|$)/u;
+const RESOLVED_VIRTUAL_MODULE_FILTER = /^\0virtual:qui\/(?:register|styles)(?:[?#]|$)/u;
+const STYLESHEET_PATH = fileURLToPath(new URL("../../styled-system/styles.css", import.meta.url));
+const TRANSFORMABLE_ID = /\.(?:[cm]?[jt]sx?|mdx)(?:[?#]|$)/u;
 const COMPONENT_SOURCE = /qui-|\\[ux]/u;
 const IGNORED_ID = /(?:^|[\\/])node_modules[\\/]|^(?:virtual:|\0)/u;
 const COMPONENT_CACHE_LIMIT = 128;
 
+/** Reads the shared stylesheet when the virtual styles module is loaded. */
+async function getStylesheetText(): Promise<string> {
+  const text = await readFile(STYLESHEET_PATH, "utf8");
+  return text;
+}
+
 const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUnplugin<
   QuiPluginOptions | undefined
 >((options = {}) => {
-  const strategy = options.strategy ?? "shared";
   const componentCache = new Map<string, { code: string; components: string[] }>();
 
   function extractComponentsCached(code: string, id: string): string[] {
@@ -57,6 +67,9 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
     resolveId: {
       filter: { id: VIRTUAL_MODULE_FILTER },
       handler(id: string): string | undefined {
+        if (id === VIRTUAL_STYLES_ID) {
+          return RESOLVED_VIRTUAL_STYLES_ID;
+        }
         if (componentsFromVirtualModuleId(id) === undefined) {
           return undefined;
         }
@@ -65,15 +78,19 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
     },
     load: {
       filter: { id: RESOLVED_VIRTUAL_MODULE_FILTER },
-      handler(id: string): string | undefined {
-        if (!id.startsWith(RESOLVED_VIRTUAL_MODULE_ID)) {
-          return undefined;
+      async handler(
+        this: { addWatchFile?: (id: string) => void },
+        id: string,
+      ): Promise<string | undefined> {
+        if (id === RESOLVED_VIRTUAL_STYLES_ID) {
+          this.addWatchFile?.(STYLESHEET_PATH);
+          return createStylesModule(await getStylesheetText());
         }
         const components = componentsFromVirtualModuleId(id.slice(1));
         if (components === undefined || components.length === 0) {
           return undefined;
         }
-        return createRegistrationModule(components, { ...options, strategy });
+        return createRegistrationModule(components, options);
       },
     },
     transform: {
@@ -89,7 +106,15 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
 
         const specifier = virtualModuleId(components);
         const source = new MagicString(code);
-        source.prepend(`import ${JSON.stringify(specifier)};\n`);
+        const importStatement = `import ${JSON.stringify(specifier)};\n`;
+        const offset = importInjectionOffset(code);
+        if (offset === 0) {
+          source.prepend(importStatement);
+        } else {
+          // A frontmatter block may end at EOF without a trailing newline.
+          const separator = code.slice(0, offset).endsWith("\n") ? "" : "\n";
+          source.appendLeft(offset, `${separator}${importStatement}`);
+        }
         return {
           code: source.toString(),
           map: source.generateMap({ hires: "boundary", includeContent: false, source: id }),

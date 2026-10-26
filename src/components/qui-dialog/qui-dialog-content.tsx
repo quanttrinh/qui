@@ -1,21 +1,12 @@
-import {
-  Build,
-  resolveVar,
-  Component,
-  Element,
-  h,
-  Host,
-  Prop,
-  State,
-  type VNode,
-} from "@stencil/core";
+import { Build, resolveVar, Component, Element, h, Host, State, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
 
-import { isHTMLDialogElement } from "../../helpers/dom";
 import { consumeContextPart } from "../shared/context-part";
+import { ContextPartElement } from "../shared/context-part-element";
 import { consumeDialog, type DialogContext, type DialogControl } from "./context";
+import { applyDialogAria } from "./dialog-aria";
 
 const styles = {
   host: css({ display: "contents" }),
@@ -63,22 +54,21 @@ const styles = {
 @Component({
   tag: "qui-dialog-content",
   styleUrl: resolveVar(styleUrls.quiDialogContent),
-  scoped: true,
+  shadow: true,
 })
-export class QuiDialogContent {
+export class QuiDialogContent extends ContextPartElement<DialogContext> {
   @Element() host!: HTMLQuiDialogContentElement;
-
-  /** Additional class applied to the content surface. */
-  @Prop() innerClass?: string;
 
   @State() private dialogRole: "dialog" | "alertdialog" = "dialog";
   @State() private dialogLabel?: string;
 
-  private readonly contextPart = consumeContextPart({
+  protected readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "dialog",
     consume: consumeDialog,
-    subscribe: false,
+    update: (): void => {
+      this.applyDialogAttributes();
+    },
     setup: () => {
       this.registerControl();
       return (): void => {
@@ -91,6 +81,7 @@ export class QuiDialogContent {
 
   private unregister?: () => void;
   private dialogEl?: HTMLDialogElement;
+  private modalState?: boolean;
   private pointerHandler?: (event: PointerEvent) => void;
   private keyHandler?: (event: KeyboardEvent) => void;
 
@@ -98,16 +89,8 @@ export class QuiDialogContent {
     return this.contextPart.context;
   }
 
-  public connectedCallback(): void {
-    this.contextPart.hostConnected();
-  }
-
-  public componentWillLoad(): void {
-    this.contextPart.hostWillLoad();
-  }
-
   public componentDidLoad(): void {
-    this.contextPart.hostDidLoad();
+    super.componentDidLoad();
     // The native <dialog> ref does not exist during componentWillLoad.
     // The first registration therefore waits until after the initial render.
     this.registerControl();
@@ -116,10 +99,6 @@ export class QuiDialogContent {
 
   public componentDidRender(): void {
     this.applyDialogAttributes();
-  }
-
-  public disconnectedCallback(): void {
-    this.contextPart.hostDisconnected();
   }
 
   private registerControl(): void {
@@ -140,6 +119,9 @@ export class QuiDialogContent {
         this.dialogEl?.close(returnValue ?? "");
       },
       isOpen: () => this.dialogEl?.open ?? false,
+      setModal: (modal) => {
+        this.setModal(modal);
+      },
       setClosedBy: (value) => {
         if (this.dialogEl !== undefined && "closedBy" in this.dialogEl) {
           Object.assign(this.dialogEl, { closedBy: value });
@@ -159,12 +141,31 @@ export class QuiDialogContent {
     if (dialog === undefined || dialog.open) {
       return;
     }
+    this.modalState = modal;
     if (modal) {
       dialog.showModal();
     } else {
       dialog.show();
     }
     this.dialogContext?.notifyOpen(true, "");
+  }
+
+  private setModal(modal: boolean): void {
+    const dialog = this.dialogEl;
+    if (dialog === undefined || !dialog.open || this.modalState === modal) {
+      this.modalState = modal;
+      return;
+    }
+    this.modalState = modal;
+    // Changing modality requires reopening the native dialog.
+    dialog.close();
+    if (modal) {
+      dialog.showModal();
+    } else {
+      dialog.show();
+    }
+    this.detachDocumentListeners();
+    this.attachDocumentListeners();
   }
 
   private closeDialog(returnValue = ""): void {
@@ -182,17 +183,7 @@ export class QuiDialogContent {
       });
     }
 
-    const { ids } = this.dialogContext;
-    if (dialog.querySelector("[part=title]")) {
-      dialog.setAttribute("aria-labelledby", ids.title);
-    } else {
-      dialog.removeAttribute("aria-labelledby");
-    }
-    if (dialog.querySelector("[part=description]")) {
-      dialog.setAttribute("aria-describedby", ids.description);
-    } else {
-      dialog.removeAttribute("aria-describedby");
-    }
+    applyDialogAria(dialog, this.dialogContext);
   }
 
   private attachDocumentListeners(): void {
@@ -212,8 +203,7 @@ export class QuiDialogContent {
         if (dialog === undefined || !dialog.open || !context.closeOnInteractOutside()) {
           return;
         }
-        const { target } = event;
-        if (target instanceof Node && !dialog.contains(target)) {
+        if (!event.composedPath().includes(dialog)) {
           this.closeDialog("");
         }
       };
@@ -248,9 +238,7 @@ export class QuiDialogContent {
       <Host class={styles.host}>
         <dialog
           ref={(el) => {
-            if (isHTMLDialogElement(el)) {
-              this.dialogEl = el;
-            }
+            this.dialogEl = el;
           }}
           class={styles.dialog}
           part="dialog"
@@ -259,6 +247,10 @@ export class QuiDialogContent {
             this.dialogLabel === undefined || this.dialogLabel === "" ? undefined : this.dialogLabel
           }
           onClose={() => {
+            // Reopening can queue a close event after the dialog is already open again.
+            if (this.dialogEl?.open === true) {
+              return;
+            }
             const returnValue = this.dialogEl?.returnValue ?? "";
             this.dialogContext?.notifyOpen(false, returnValue);
           }}
@@ -270,7 +262,7 @@ export class QuiDialogContent {
             }
           }}
         >
-          <div class={cx(styles.surface, this.innerClass)} part="content">
+          <div class={styles.surface} part="content">
             <slot />
           </div>
         </dialog>

@@ -1,12 +1,14 @@
-import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
 
 import { dataAttr } from "../../helpers/attr";
-import { isHTMLDivElement } from "../../helpers/dom";
 import { consumeContextPart } from "../shared/context-part";
-import { consumeTabs, type TabsContext, type TabsOrientation } from "./context";
+import { ContextPartElement } from "../shared/context-part-element";
+import { arrowDelta, edgeKey } from "../shared/keyboard";
+import { RegistrationReconciler } from "../shared/registration-reconciler";
+import { consumeTabs, type TabsContext } from "./context";
 
 const styles = {
   host: css({ display: "block" }),
@@ -24,42 +26,6 @@ const styles = {
   }),
 };
 
-function arrowDelta(key: string, orientation: TabsOrientation, rtl: boolean): 1 | -1 | undefined {
-  switch (key) {
-    case "ArrowDown": {
-      return orientation === "vertical" ? 1 : undefined;
-    }
-    case "ArrowUp": {
-      return orientation === "vertical" ? -1 : undefined;
-    }
-    case "ArrowLeft": {
-      if (orientation !== "horizontal") {
-        return undefined;
-      }
-      return rtl ? 1 : -1;
-    }
-    case "ArrowRight": {
-      if (orientation !== "horizontal") {
-        return undefined;
-      }
-      return rtl ? -1 : 1;
-    }
-    default: {
-      return undefined;
-    }
-  }
-}
-
-function edgeKey(key: string): "first" | "last" | undefined {
-  if (key === "Home") {
-    return "first";
-  }
-  if (key === "End") {
-    return "last";
-  }
-  return undefined;
-}
-
 /**
  * The list container for `qui-tab-trigger` elements.
  *
@@ -68,39 +34,38 @@ function edgeKey(key: string): "first" | "last" | undefined {
 @Component({
   tag: "qui-tab-list",
   styleUrl: resolveVar(styleUrls.quiTabList),
-  scoped: true,
+  shadow: true,
 })
-export class QuiTabList {
+export class QuiTabList extends ContextPartElement<TabsContext> {
   @Element() host!: HTMLQuiTabListElement;
 
-  /** Additional class applied to the tab list. */
-  @Prop() innerClass?: string;
-
-  private readonly contextPart = consumeContextPart({
+  protected readonly contextPart = consumeContextPart({
     host: (): HTMLElement => this.host,
     key: "tabs",
     consume: consumeTabs,
   });
   private listEl?: HTMLDivElement;
+  private readonly registration = new RegistrationReconciler();
 
   private get tabs(): TabsContext | undefined {
     return this.contextPart.context;
   }
 
-  public connectedCallback(): void {
-    this.contextPart.hostConnected();
-  }
-
-  public componentWillLoad(): void {
-    this.contextPart.hostWillLoad();
-  }
-
-  public componentDidLoad(): void {
-    this.contextPart.hostDidLoad();
+  public componentDidRender(): void {
+    this.syncRegistration();
   }
 
   public disconnectedCallback(): void {
-    this.contextPart.hostDisconnected();
+    this.registration.clear();
+    super.disconnectedCallback();
+  }
+
+  private syncRegistration(): void {
+    const { tabs } = this;
+    if (tabs === undefined) {
+      return;
+    }
+    this.registration.reconcile([tabs], () => tabs.registerList(this.host));
   }
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
@@ -108,8 +73,9 @@ export class QuiTabList {
     if (tabs === undefined || listEl === undefined || event.defaultPrevented || event.isComposing) {
       return;
     }
-    const { target } = event;
-    if (!(target instanceof Node) || !listEl.contains(target)) {
+    // Tab triggers are slotted into the list rather than owned by it, so the
+    // Composed path is the reliable way to check that the key event belongs here.
+    if (!event.composedPath().includes(listEl)) {
       return;
     }
     const orientation = tabs.orientation();
@@ -136,9 +102,7 @@ export class QuiTabList {
       <Host class={styles.host}>
         <div
           ref={(el) => {
-            if (isHTMLDivElement(el)) {
-              this.listEl = el;
-            }
+            this.listEl = el;
           }}
           id={this.tabs?.listId()}
           role="tablist"
@@ -149,7 +113,7 @@ export class QuiTabList {
           data-focus={dataAttr(hasFocus)}
           data-variant={variant}
           dir={textDirection}
-          class={cx(styles.list, this.innerClass)}
+          class={styles.list}
           part="list"
           onKeyDown={this.handleKeyDown}
         >

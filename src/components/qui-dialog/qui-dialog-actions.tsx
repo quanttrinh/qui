@@ -1,7 +1,9 @@
-import { resolveVar, Component, h, Host, Prop, type VNode } from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
+
+import { ensureShadowStylesheet } from "../../utilities/styles";
 
 const styles = {
   host: css({ display: "block" }),
@@ -22,16 +24,19 @@ const styles = {
 @Component({
   tag: "qui-dialog-actions",
   styleUrl: resolveVar(styleUrls.quiDialogActions),
-  scoped: true,
+  shadow: true,
 })
 export class QuiDialogActions {
-  /** Additional class applied to the action row. */
-  @Prop() innerClass?: string;
+  @Element() host!: HTMLElement;
+
+  public connectedCallback(): void {
+    ensureShadowStylesheet(this.host);
+  }
 
   public render(): VNode {
     return (
       <Host class={styles.host}>
-        <div class={cx(styles.actions, this.innerClass)} part="actions">
+        <div class={styles.actions} part="actions">
           <slot />
         </div>
       </Host>

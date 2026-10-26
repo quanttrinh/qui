@@ -1,7 +1,9 @@
-import { resolveVar, Component, h, Host, Prop, type VNode } from "@stencil/core";
+import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
-import { css, cx } from "#styled-system/css";
+import { css } from "#styled-system/css";
+
+import { ensureShadowStylesheet } from "../../utilities/styles";
 
 export type CardVariant = "elevated" | "filled" | "outlined";
 
@@ -62,13 +64,17 @@ const styles = {
 @Component({
   tag: "qui-card",
   styleUrl: resolveVar(styleUrls.quiCard),
-  scoped: true,
+  shadow: true,
 })
 export class QuiCard {
+  @Element() host!: HTMLElement;
+
   /** The visual style. */
   @Prop() variant: CardVariant = "elevated";
-  /** Additional class applied to the surface. */
-  @Prop() innerClass?: string;
+
+  public connectedCallback(): void {
+    ensureShadowStylesheet(this.host);
+  }
 
   public render(): VNode {
     return (
@@ -76,8 +82,9 @@ export class QuiCard {
         <div
           data-scope="card"
           data-part="root"
+          part="root"
           data-variant={this.variant}
-          class={cx(styles.root, this.innerClass)}
+          class={styles.root}
         >
           <div data-scope="card" data-part="title" class={styles.title}>
             <slot name="title" />

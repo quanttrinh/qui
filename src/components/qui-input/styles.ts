@@ -1,26 +1,18 @@
 import { css } from "#styled-system/css";
 
+import { fieldSurface, focusRingFlush, focusRingInset } from "../shared/styles";
+
 export const styles = {
   host: css({ display: "block" }),
   root: css({ width: "full" }),
   control: css({
+    ...fieldSurface,
     display: "flex",
     alignItems: "center",
     width: "full",
     height: "10",
-    backgroundColor: "surface",
-    borderWidth: "1px",
-    borderStyle: "solid",
-    borderColor: "outlineVariant",
-    rounded: "lg",
-    overflow: "hidden",
-    transition: "border-color 150ms, outline-color 150ms",
-    "&:hover": { borderColor: "outline" },
     "&:focus-within": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "0",
+      ...focusRingFlush,
       borderColor: "primary",
     },
     "&[data-invalid]": { borderColor: "error" },
@@ -82,12 +74,7 @@ export const styles = {
     borderWidth: "0",
     "& svg": { width: "10px", height: "10px" },
     "&:hover": { color: "onSurface", backgroundColor: "surfaceContainerHighest" },
-    "&:focus-visible": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "-2px",
-    },
+    "&:focus-visible": focusRingInset,
     "&:disabled": { opacity: 0.38, cursor: "not-allowed" },
   }),
   trigger: css({
@@ -104,12 +91,7 @@ export const styles = {
     borderWidth: "0",
     "& svg": { width: "20px", height: "20px" },
     "&:hover": { color: "onSurface" },
-    "&:focus-visible": {
-      outlineWidth: "2px",
-      outlineStyle: "solid",
-      outlineColor: "primary",
-      outlineOffset: "-2px",
-    },
+    "&:focus-visible": focusRingInset,
     "&:disabled": { opacity: 0.38, cursor: "not-allowed" },
   }),
 };
