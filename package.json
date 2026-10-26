@@ -42,9 +42,9 @@
       "default": "./dist/unplugin/index.js"
     },
     "./hydrate": {
-      "types": "./dist/hydrate/shared/index.d.ts",
-      "import": "./dist/hydrate/shared/index.mjs",
-      "require": "./dist/hydrate/shared/index.js"
+      "types": "./dist/hydrate/index.d.ts",
+      "import": "./dist/hydrate/index.mjs",
+      "require": "./dist/hydrate/index.js"
     },
     "./ssr": {
       "types": "./dist/utilities/ssr.d.ts",

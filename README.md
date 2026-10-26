@@ -520,7 +520,7 @@ import { flex } from "@quanttrinh/qui/patterns";
 
 ```text
 dist/shared/                 custom-elements build
-dist/hydrate/shared/         SSR/SSG hydrate module
+dist/hydrate/                SSR/SSG hydrate module
 dist/utilities/              compiled utility modules
 dist/unplugin/               bundler plugin
 dist/types/                  TypeScript declarations
