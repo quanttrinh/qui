@@ -301,8 +301,11 @@ describe("qui-dialog", () => {
 
     titleHost.remove();
     await waitForChanges();
-
     expectAriaElements(dialog, { ariaLabelledByElements: [] });
+
+    root.append(titleHost);
+    await waitForChanges();
+    expectAriaElements(dialog, { ariaLabelledByElements: [titleHost] });
   });
 
   it("closes on an outside pointer press and stays open for inside presses", async () => {
