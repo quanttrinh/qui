@@ -11,4 +11,6 @@ Improve cross-shadow-root accessibility wiring.
 - Wire dialog titles/descriptions and tab/accordion trigger/content
   relationships across shadow boundaries.
 - Clear stale ARIA relationships when a related part is removed.
-- Support both ARIA element reflection and IDREF fallback paths.
+- Keep textarea counter descriptions in sync when the counter is toggled.
+- Use ARIA element reflection for cross-shadow-root relationships; IDREF
+  fallback remains for same-tree relationships.

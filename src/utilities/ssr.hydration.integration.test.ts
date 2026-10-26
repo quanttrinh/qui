@@ -36,6 +36,7 @@ let server: http.Server;
 let origin: string;
 let buttonHtml: string;
 let fieldHtml: string;
+let iconHtml: string;
 
 function buildPage(hydrate: boolean, content = buttonHtml): string {
   return `<!doctype html><html><head>
@@ -86,6 +87,10 @@ function handleRequest(request: http.IncomingMessage, response: http.ServerRespo
   }
   if (request.url === "/field") {
     serveHtml(response, true, fieldHtml);
+    return;
+  }
+  if (request.url === "/icon") {
+    serveHtml(response, true, iconHtml);
     return;
   }
   if (serveStatic(response, request.url)) {
@@ -166,7 +171,7 @@ async function accessibilityTree(page: Page): Promise<AxNode[]> {
 
 beforeAll(async () => {
   const { renderToString } = await loadHydrate();
-  const [buttonResult, fieldResult] = await Promise.all([
+  const [buttonResult, fieldResult, iconResult] = await Promise.all([
     renderToString(
       '<qui-button variant="filled">Save</qui-button>',
       withShadowStylesheet({ href: "/styles.css" }, { fullDocument: false }),
@@ -175,11 +180,17 @@ beforeAll(async () => {
       fieldMarkup,
       withShadowStylesheet({ href: "/styles.css" }, { fullDocument: false }),
     ),
+    renderToString(
+      '<qui-icon label="Add" path="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5z"></qui-icon>',
+      withShadowStylesheet({ href: "/styles.css" }, { fullDocument: false }),
+    ),
   ]);
   buttonHtml = buttonResult.html;
   fieldHtml = fieldResult.html;
+  iconHtml = iconResult.html;
   expect(buttonResult.diagnostics).toEqual([]);
   expect(fieldResult.diagnostics).toEqual([]);
+  expect(iconResult.diagnostics).toEqual([]);
   await startServer();
 }, 15_000);
 
@@ -268,6 +279,25 @@ describe("Chromium accessibility tree", () => {
       );
 
       expect(button).toBeDefined();
+    } finally {
+      await page.close();
+    }
+  }, 15_000);
+
+  it("exposes a labelled icon in the accessibility tree", async () => {
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${origin}/icon`, { waitUntil: "load" });
+      await page.waitForFunction(() => customElements.get("qui-icon") !== undefined);
+      await waitForShadowStylesheet(page, "qui-icon");
+
+      const nodes = await accessibilityTree(page);
+      const icon = nodes.find(
+        (node) =>
+          node.ignored !== true && node.role?.value === "image" && node.name?.value === "Add",
+      );
+
+      expect(icon).toBeDefined();
     } finally {
       await page.close();
     }

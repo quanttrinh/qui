@@ -11,5 +11,6 @@ Add the `@quanttrinh/qui/runtime` stylesheet helpers.
 - `ensureShadowStylesheet()` adds or reconciles the managed stylesheet link in a
   component shadow root.
 
-These helpers support dynamically created components and SSR hydration without
-duplicating CSS in JavaScript.
+Calling `setQuiStylesHref([])` explicitly removes managed links and disables the
+document-link fallback. These helpers support dynamically created components and
+SSR hydration without duplicating CSS in JavaScript.

@@ -59,10 +59,7 @@ function discoverDocumentHrefs(document: Document): string[] | undefined {
 function resolveHrefs(document: Document): string[] | undefined {
   const configured = configuredHref();
   if (configured !== undefined) {
-    const hrefs = uniqueHrefs(configured);
-    if (hrefs.length > 0) {
-      return hrefs;
-    }
+    return uniqueHrefs(configured);
   }
 
   return discoverDocumentHrefs(document);

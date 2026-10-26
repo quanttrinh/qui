@@ -118,6 +118,25 @@ describe("qui-textarea", () => {
     expect(Reflect.get(textarea, "ariaDescribedByElements")).toEqual([helperHost, counter]);
   });
 
+  it("clears counter ARIA when the counter is removed", async () => {
+    const { root, setProps, waitForChanges } = await render(
+      <qui-textarea value="abc" maxLength={10} showCount />,
+    );
+    await waitForChanges();
+    const textarea = queryPartIn<HTMLTextAreaElement>(root, "textarea");
+    const counter = queryCounter(root);
+
+    expect(Reflect.get(textarea, "ariaDescribedByElements")).toEqual([counter]);
+
+    await setProps({ showCount: false });
+    await waitForChanges();
+    expect(Reflect.get(textarea, "ariaDescribedByElements")).toEqual([]);
+
+    await setProps({ showCount: true });
+    await waitForChanges();
+    expect(Reflect.get(textarea, "ariaDescribedByElements")).toEqual([queryCounter(root)]);
+  });
+
   it("omits the counter by default", async () => {
     const { root } = await render(<qui-textarea />);
 

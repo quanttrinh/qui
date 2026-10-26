@@ -439,7 +439,7 @@ export class QuiTextarea extends FormControlBase {
             {this.showCount ? (
               <span
                 ref={(el) => {
-                  this.counterEl = el;
+                  this.counterEl = el ?? undefined;
                 }}
                 id={this.counterId}
                 data-part="counter"

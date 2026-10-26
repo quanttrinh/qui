@@ -247,6 +247,10 @@ export class QuiDialogContent extends ContextPartElement<DialogContext> {
             this.dialogLabel === undefined || this.dialogLabel === "" ? undefined : this.dialogLabel
           }
           onClose={() => {
+            // Reopening can queue a close event after the dialog is already open again.
+            if (this.dialogEl?.open === true) {
+              return;
+            }
             const returnValue = this.dialogEl?.returnValue ?? "";
             this.dialogContext?.notifyOpen(false, returnValue);
           }}

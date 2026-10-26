@@ -65,9 +65,11 @@ describe("vite adapter", () => {
     const plugin = vite();
     const transform = plugin.transform as unknown as { handler: TransformHandler };
     const mdx = transform.handler("---\ntitle: Example\n---\n<qui-button />", "/app/page.mdx");
+    const emptyMdx = transform.handler("---\n---\n<qui-button />", "/app/page.mdx");
     const astro = transform.handler("---\n---\n<qui-button />", "/app/page.astro");
 
     expect(mdx?.code.startsWith("---\ntitle: Example\n---\nimport ")).toBe(true);
+    expect(emptyMdx?.code.startsWith("---\n---\nimport ")).toBe(true);
     expect(astro).toBeUndefined();
   });
 

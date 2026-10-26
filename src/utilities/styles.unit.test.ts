@@ -151,6 +151,7 @@ describe("setQuiStylesHref", () => {
   it("removes managed links when cleared", () => {
     const document = createFakeDocument();
     useDocument(document);
+    createDocumentLink(document, "discovered.css");
     const { host, root } = createHost(document);
 
     styles.setQuiStylesHref("old.css");
@@ -158,6 +159,7 @@ describe("setQuiStylesHref", () => {
     expect(linkHrefs(root)).toEqual(["old.css"]);
 
     styles.setQuiStylesHref([]);
+    styles.ensureShadowStylesheet(host as unknown as HTMLElement);
 
     expect(linkHrefs(root)).toEqual([]);
     expect(styles.getQuiStylesHref()).toEqual([]);

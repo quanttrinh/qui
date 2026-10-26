@@ -32,6 +32,21 @@ import "@quanttrinh/qui/theme.css";
 import "@quanttrinh/qui/styles.css";
 ```
 
+Shadow roots need a discoverable stylesheet URL. Mark the generated document
+link with `data-qui-styles`:
+
+```html
+<link rel="stylesheet" href="/assets/qui.css" data-qui-styles />
+```
+
+If the bundler injects CSS as a `<style>` tag, configure the URL instead:
+
+```ts
+import { setQuiStylesHref } from "@quanttrinh/qui/runtime";
+
+setQuiStylesHref("/assets/qui.css");
+```
+
 Register only the components used by the page:
 
 ```ts

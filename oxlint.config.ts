@@ -45,7 +45,11 @@ export default defineConfig({
       },
     },
     {
-      files: ["src/**/*.unit.test.{ts,tsx}", "src/**/*.browser.test.{ts,tsx}"],
+      files: [
+        "src/**/*.unit.test.{ts,tsx}",
+        "src/**/*.browser.test.{ts,tsx}",
+        "src/**/*.integration.test.ts",
+      ],
       rules: {
         // Test files register suites at module scope and use compact helpers.
         "stencil/ban-side-effects": "off",

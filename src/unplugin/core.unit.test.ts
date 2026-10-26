@@ -215,6 +215,14 @@ describe("importInjectionOffset", () => {
     expect(code.slice(importInjectionOffset(code))).toBe("<qui-button />");
   });
 
+  it("handles empty and CRLF frontmatter", () => {
+    const empty = "---\n---\n<qui-button />";
+    const crlf = "---\r\ntitle: Example\r\n---\r\n<qui-button />";
+
+    expect(empty.slice(importInjectionOffset(empty))).toBe("<qui-button />");
+    expect(crlf.slice(importInjectionOffset(crlf))).toBe("<qui-button />");
+  });
+
   it("uses the start when there is no frontmatter", () => {
     expect(importInjectionOffset("export const value = 1;")).toBe(0);
   });
