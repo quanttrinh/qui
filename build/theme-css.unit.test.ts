@@ -1,10 +1,11 @@
+import { fileURLToPath } from "node:url";
 import postcss from "postcss";
 import { describe, expect, it } from "vitest";
 
 import { colorRoles, cssVariableNames } from "../src/utilities/theme/color-roles";
 import { generateThemeCss } from "./theme-css";
 
-const ROOT = process.cwd();
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const LAYER_ORDER_DECLARATION = /@layer[^{;]*;/u;
 const PROPERTY_RULE = /@property/gu;
 const ROOT_BLOCK = /:root\{(?<declarations>[^}]*)\}/u;

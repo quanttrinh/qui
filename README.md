@@ -317,7 +317,7 @@ Qui.vite({ styles: { href: "/assets/qui-app.css", theme: true } });
 ```
 
 `href` can be a string or an ordered array. Use `styles: false` when the app
-needs full control over styles and registration:
+needs full control over styles; component registration is still automatic:
 
 ```ts
 Qui.vite({ styles: false });

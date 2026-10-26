@@ -64,9 +64,19 @@ function reorderLayerBlocks(root: Root): void {
   const anchor =
     root.nodes.slice(firstLayer).find((node) => node.type !== "atrule" || !isLayerBlock(node)) ??
     null;
-  const sorted = [...blocks].sort(
-    (left, right) => layerRank(left) - layerRank(right) || left.params.localeCompare(right.params),
-  );
+  const sorted = [...blocks].sort((left, right) => {
+    const rank = layerRank(left) - layerRank(right);
+    if (rank !== 0) {
+      return rank;
+    }
+
+    const [leftName = ""] = left.params.split(".");
+    const [rightName = ""] = right.params.split(".");
+    if (leftName !== rightName) {
+      return 0;
+    }
+    return left.params.split(".").length - right.params.split(".").length;
+  });
   for (const block of blocks) {
     block.remove();
   }

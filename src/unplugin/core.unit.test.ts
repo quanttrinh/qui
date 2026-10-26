@@ -203,8 +203,9 @@ describe("virtual styles module", () => {
     expect(code).not.toContain("createElement");
     expect(code).toContain('from "@quanttrinh/qui/runtime"');
     expect(code).toContain('const configuredHref = "/assets/app.css";');
-    expect(code).toContain("getQuiStylesHref() === undefined");
+    expect(code).toContain("getQuiStylesHref() !== undefined");
     expect(code).toContain("setQuiStylesHref(configuredHref);");
+    expect(code).toContain("DOMContentLoaded");
     expect(code).toContain("resetQuiStylesHref();");
   });
 

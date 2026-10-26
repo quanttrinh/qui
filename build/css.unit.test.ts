@@ -15,9 +15,9 @@ const SHARED_CSS = [
 const SHUFFLED_CSS = [
   "@layer reset, base, tokens, recipes, utilities;",
   "@layer utilities{.p_1{padding:1px}}",
-  "@layer recipes{@layer base, slots, variants, compound_variants;}",
-  "@layer tokens{:root{--color:red}}",
   "@layer recipes.slots{@layer base, variants, compound_variants;}",
+  "@layer tokens{:root{--color:red}}",
+  "@layer recipes{@layer base, slots, variants, compound_variants;}",
   "@layer base{b{color:blue}}",
   "@layer reset{a{color:red}}",
 ].join("");
@@ -59,12 +59,13 @@ describe("stripRootLayerOrder", () => {
     expectCanonicalOrder(stripRootLayerOrder(SHUFFLED_CSS));
   });
 
-  it("sorts unknown layers after the known set", () => {
+  it("sorts unknown layers after the known set without reordering them", () => {
     const css = stripRootLayerOrder(
-      "@layer reset, base, tokens, recipes, utilities;@layer custom{x{color:red}}@layer utilities{.p_1{padding:1px}}@layer reset{a{color:red}}",
+      "@layer reset, base, tokens, recipes, utilities;@layer customB{x{color:red}}@layer customA{y{color:blue}}@layer utilities{.p_1{padding:1px}}@layer reset{a{color:red}}",
     );
 
-    expect(css.indexOf("@layer utilities{")).toBeLessThan(css.indexOf("@layer custom{"));
+    expect(css.indexOf("@layer utilities{")).toBeLessThan(css.indexOf("@layer customB{"));
+    expect(css.indexOf("@layer customB{")).toBeLessThan(css.indexOf("@layer customA{"));
   });
 
   it("leaves unrelated and non-empty layers alone", () => {
