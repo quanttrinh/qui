@@ -134,7 +134,9 @@ export class QuiCheckbox extends FormControlBase {
   private labelEl?: HTMLElement;
   private readonly defaultMarker = "*";
   private readonly generatedId = nextId("qui-checkbox");
-  private readonly fieldControl = createFieldControl(() => this.inputEl);
+  private readonly fieldControl = createFieldControl(() => this.inputEl, {
+    activateOnLabel: true,
+  });
   private readonly checkable = new CheckableController({
     getChecked: (): CheckedState | undefined => normalizeChecked(this.checked),
     getDefaultChecked: (): CheckedState | undefined => normalizeChecked(this.defaultChecked),

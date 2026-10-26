@@ -18,4 +18,5 @@ const { html } = await renderToString(
 ```
 
 `injectShadowStylesheet()` is also exported for callers that already own the
-hydration document.
+hydration document. Data-only roots such as `qui-option` and `qui-dialog` are
+skipped by default; `skipTags` customizes the list.

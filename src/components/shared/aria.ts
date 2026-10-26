@@ -62,22 +62,4 @@ function setAriaControls(element: HTMLElement, targets: Element[]): void {
   setAriaElementList(element, targets, "ariaControlsElements");
 }
 
-/** Sets `aria-activedescendant` with element reflection and an IDREF fallback. */
-function setAriaActiveDescendant(element: HTMLElement, target: Element | undefined): void {
-  if ("ariaActiveDescendantElement" in element) {
-    element.removeAttribute("aria-activedescendant");
-    // Null is the spec value for clearing a nullable element relationship.
-    // oxlint-disable-next-line unicorn/no-null
-    Reflect.set(element, "ariaActiveDescendantElement", target ?? null);
-    return;
-  }
-  setAriaIdrefs(element, "aria-activedescendant", target === undefined ? [] : [target]);
-}
-
-export {
-  setAriaActiveDescendant,
-  setAriaControls,
-  setAriaDescribedBy,
-  setAriaErrorMessage,
-  setAriaLabelledBy,
-};
+export { setAriaControls, setAriaDescribedBy, setAriaErrorMessage, setAriaLabelledBy };

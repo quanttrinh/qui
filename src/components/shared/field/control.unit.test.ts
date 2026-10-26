@@ -20,7 +20,7 @@ function fakeElement(isConnected = true): HTMLElement & FakeElement {
 describe("createFieldControl", () => {
   it("focuses and clicks the current element", () => {
     const element = fakeElement();
-    const control = createFieldControl(() => element);
+    const control = createFieldControl(() => element, { activateOnLabel: true });
 
     control.focus({ preventScroll: true });
     control.click?.();
@@ -33,7 +33,7 @@ describe("createFieldControl", () => {
     const first = fakeElement();
     const second = fakeElement();
     let current: HTMLElement | undefined = first;
-    const control = createFieldControl(() => current);
+    const control = createFieldControl(() => current, { activateOnLabel: true });
 
     control.focus();
     current = second;
@@ -44,6 +44,13 @@ describe("createFieldControl", () => {
     expect(second.focus).toHaveBeenCalledWith({ preventScroll: true });
     expect(second.click).toHaveBeenCalledOnce();
     expect(first.click).not.toHaveBeenCalled();
+  });
+
+  it("does not activate by default", () => {
+    const element = fakeElement();
+    const control = createFieldControl(() => element);
+
+    expect(control.click).toBeUndefined();
   });
 
   it("does nothing when the element is missing", () => {

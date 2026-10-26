@@ -12,6 +12,7 @@ interface StylesModule {
   ensureShadowStylesheet: (host: HTMLElement) => void;
   getQuiStylesHref: () => string | string[] | undefined;
   setQuiStylesHref: (href: string | string[]) => void;
+  resetQuiStylesHref: () => void;
 }
 
 let styles: StylesModule;
@@ -94,6 +95,20 @@ describe("ensureShadowStylesheet", () => {
     expect(styles.getQuiStylesHref()).toEqual(["first.css", "second.css"]);
   });
 
+  it("does not add links to data-only roots", () => {
+    const document = createFakeDocument();
+    useDocument(document);
+    const option = createHost(document, "qui-option");
+    const dialog = createHost(document, "qui-dialog");
+    styles.setQuiStylesHref("/assets/qui.css");
+
+    styles.ensureShadowStylesheet(option.host as unknown as HTMLElement);
+    styles.ensureShadowStylesheet(dialog.host as unknown as HTMLElement);
+
+    expect(linkHrefs(option.root)).toEqual([]);
+    expect(linkHrefs(dialog.root)).toEqual([]);
+  });
+
   it("does not duplicate links when called repeatedly", () => {
     const document = createFakeDocument();
     useDocument(document);
@@ -146,6 +161,19 @@ describe("setQuiStylesHref", () => {
     styles.setQuiStylesHref("replacement.css");
 
     expect(linkHrefs(root)).toEqual(["replacement.css"]);
+  });
+
+  it("clears configuration and managed links on reset", () => {
+    const document = createFakeDocument();
+    useDocument(document);
+    const { host, root } = createHost(document);
+    styles.setQuiStylesHref("old.css");
+    styles.ensureShadowStylesheet(host as unknown as HTMLElement);
+
+    styles.resetQuiStylesHref();
+
+    expect(linkHrefs(root)).toEqual([]);
+    expect(styles.getQuiStylesHref()).toBeUndefined();
   });
 
   it("removes managed links when cleared", () => {

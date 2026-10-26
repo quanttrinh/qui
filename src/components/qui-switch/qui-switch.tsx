@@ -146,7 +146,9 @@ export class QuiSwitch extends FormControlBase {
   private inputEl?: HTMLInputElement;
   private labelEl?: HTMLElement;
   private readonly generatedId = nextId("qui-switch");
-  private readonly fieldControl = createFieldControl(() => this.inputEl);
+  private readonly fieldControl = createFieldControl(() => this.inputEl, {
+    activateOnLabel: true,
+  });
   private readonly checkable = new CheckableController({
     getChecked: (): boolean | undefined => normalizeBoolean(this.checked),
     getDefaultChecked: (): boolean | undefined => normalizeBoolean(this.defaultChecked),

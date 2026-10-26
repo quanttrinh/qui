@@ -206,6 +206,7 @@ describe("virtual styles module", () => {
     expect(code).toContain('link.setAttribute("data-qui-styles", "");');
     expect(code).toContain("getQuiStylesHref() === undefined");
     expect(code).toContain("setQuiStylesHref(url);");
+    expect(code).toContain("resetQuiStylesHref();");
   });
 });
 

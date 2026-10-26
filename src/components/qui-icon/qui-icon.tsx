@@ -20,8 +20,8 @@ const styles = {
   }),
   svg: css({
     display: "block",
-    width: "1em",
-    height: "1em",
+    width: "100%",
+    height: "100%",
   }),
 };
 

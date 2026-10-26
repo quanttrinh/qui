@@ -91,6 +91,50 @@ describe("qui-field", () => {
     expect(input.checked).toBe(true);
   });
 
+  it("activates a switch when the label is clicked", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-field id="updates">
+        <qui-field-label>Updates</qui-field-label>
+        <qui-switch />
+      </qui-field>,
+    );
+
+    await waitForChanges();
+
+    const label = queryPartIn<HTMLLabelElement>(queryHost(root, "qui-field-label"), "label");
+    const input = queryPartIn<HTMLInputElement>(queryHost(root, "qui-switch"), "input");
+
+    expect(input.checked).toBe(false);
+    label.click();
+    await waitForChanges();
+    expect(input.checked).toBe(true);
+  });
+
+  it("does not open select or combobox from a label click", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-field id="choice">
+        <qui-field-label>Choice</qui-field-label>
+        <qui-select>
+          <qui-option value="a">A</qui-option>
+        </qui-select>
+        <qui-combobox openOnClick>
+          <qui-option value="b">B</qui-option>
+        </qui-combobox>
+      </qui-field>,
+    );
+
+    await waitForChanges();
+    const label = queryPartIn<HTMLLabelElement>(queryHost(root, "qui-field-label"), "label");
+    const selectTrigger = queryPartIn<HTMLButtonElement>(queryHost(root, "qui-select"), "trigger");
+    const comboTrigger = queryPartIn<HTMLButtonElement>(queryHost(root, "qui-combobox"), "trigger");
+
+    label.click();
+    await waitForChanges();
+
+    expect(selectTrigger).toHaveAttribute("aria-expanded", "false");
+    expect(comboTrigger).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("focuses the internal control when the label is clicked", async () => {
     const { root, waitForChanges } = await render(
       <qui-field id="email">

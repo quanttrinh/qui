@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { createReflectionElement, fakeTarget } from "../../test-utils/fake-aria";
 import {
-  setAriaActiveDescendant,
   setAriaControls,
   setAriaDescribedBy,
   setAriaErrorMessage,
@@ -70,44 +69,4 @@ describe("ARIA host-targeting helpers", () => {
       expect(fallback.hasAttribute(attribute)).toBe(false);
     });
   }
-
-  it("assigns ariaActiveDescendantElement when reflection is supported", () => {
-    const element = createReflectionElement(true);
-    element.setAttribute("aria-activedescendant", "stale");
-    const option = fakeTarget("option-1");
-
-    setAriaActiveDescendant(element, option);
-
-    expect(element.ariaActiveDescendantElement).toBe(option);
-    expect(element.hasAttribute("aria-activedescendant")).toBe(false);
-  });
-
-  it("falls back to aria-activedescendant IDREFs", () => {
-    const element = createReflectionElement(false);
-
-    setAriaActiveDescendant(element, fakeTarget("option-1"));
-
-    expect(element.getAttribute("aria-activedescendant")).toBe("option-1");
-    expect(element.ariaActiveDescendantElement).toBeUndefined();
-  });
-
-  it("clears ariaActiveDescendantElement when the target is undefined", () => {
-    const element = createReflectionElement(true);
-    element.ariaActiveDescendantElement = fakeTarget("option-1");
-    element.setAttribute("aria-activedescendant", "stale");
-
-    setAriaActiveDescendant(element, undefined);
-
-    expect(element.ariaActiveDescendantElement).toBeNull();
-    expect(element.hasAttribute("aria-activedescendant")).toBe(false);
-  });
-
-  it("clears the aria-activedescendant fallback when the target is undefined", () => {
-    const element = createReflectionElement(false);
-    element.setAttribute("aria-activedescendant", "stale");
-
-    setAriaActiveDescendant(element, undefined);
-
-    expect(element.hasAttribute("aria-activedescendant")).toBe(false);
-  });
 });

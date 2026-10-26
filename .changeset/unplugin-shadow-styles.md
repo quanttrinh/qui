@@ -10,4 +10,5 @@ document and shadow roots instead of requiring a manual
 `link[data-qui-styles]`.
 
 Use `styles: false` to keep full control of the combined app stylesheet or when
-a strict CSP blocks `blob:` stylesheets.
+a strict CSP blocks `blob:` stylesheets. HMR disposal removes the generated link
+and clears the runtime URL before the next module instance loads.

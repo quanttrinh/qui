@@ -91,9 +91,6 @@ export class QuiRadioGroup extends FormControlBase {
     focus: (options): void => {
       this.controller.focusInput(options);
     },
-    click: (): void => {
-      this.controller.focusInput();
-    },
   };
   private readonly controller = new RadioGroupController({
     getValue: (): string | undefined => this.value,

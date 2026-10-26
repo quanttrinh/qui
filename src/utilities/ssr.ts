@@ -2,6 +2,8 @@ export interface ShadowStylesheetOptions {
   href: string | string[];
   tagPrefix?: string;
   attribute?: string;
+  /** Host tags whose shadow roots do not need a stylesheet link. */
+  skipTags?: string[];
 }
 
 /**
@@ -20,10 +22,12 @@ interface InjectionContext {
   hrefs: string[];
   tagPrefix: string;
   attribute: string;
+  skipTags: Set<string>;
 }
 
 const DEFAULT_TAG_PREFIX = "qui-";
 const DEFAULT_ATTRIBUTE = "data-qui-styles";
+const DEFAULT_SKIP_TAGS = ["qui-option", "qui-dialog"];
 
 function injectStylesheetLinks(context: InjectionContext, root: StylesheetRoot): void {
   const { attribute, document, hrefs } = context;
@@ -57,7 +61,8 @@ function visitRoot(context: InjectionContext, root: StylesheetRoot): void {
   for (const element of root.querySelectorAll("*")) {
     const { shadowRoot } = element;
     if (shadowRoot) {
-      if (element.tagName.toLowerCase().startsWith(context.tagPrefix)) {
+      const tagName = element.tagName.toLowerCase();
+      if (tagName.startsWith(context.tagPrefix) && !context.skipTags.has(tagName)) {
         injectStylesheetLinks(context, shadowRoot);
       }
       visitRoot(context, shadowRoot);
@@ -79,6 +84,7 @@ export function injectShadowStylesheet(document: Document, options: ShadowStyles
         hrefs,
         tagPrefix: (options.tagPrefix ?? DEFAULT_TAG_PREFIX).toLowerCase(),
         attribute: options.attribute ?? DEFAULT_ATTRIBUTE,
+        skipTags: new Set((options.skipTags ?? DEFAULT_SKIP_TAGS).map((tag) => tag.toLowerCase())),
       },
       document,
     );

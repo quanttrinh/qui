@@ -290,11 +290,17 @@ const { html, diagnostics } = await renderToString(
 
 This renders real Declarative Shadow DOM and puts one external
 `<link rel="stylesheet" href="/assets/qui.css" data-qui-styles>` into every
-`qui-*` shadow root. The same stylesheet is loaded in the document for host and
-app styling; the browser fetches the URL once.
+styled `qui-*` shadow root. Data-only roots such as `qui-option` and
+`qui-dialog` are skipped by default; use `skipTags` to customize that list. The
+same stylesheet is loaded in the document for host and app styling; the browser
+fetches the URL once.
 
 `markup` should contain the complete component composition. Render nested parts
 together so field, tabs, dialog and option context works during SSR.
+
+Cross-shadow-root ARIA relationships activate after hydration. DSD provides the
+structure and styles before JavaScript loads, but element-reflection wiring is
+established by the client component lifecycle.
 
 After hydration, register the same components on the client with
 `defineComponents()`. Dynamically created components use the stylesheet URL from

@@ -6,14 +6,26 @@ import { type FieldControlHandle } from "./registry";
  * The element is looked up on every call so the handle stays valid across
  * renders and upgrades.
  */
-export function createFieldControl(getElement: () => HTMLElement | undefined): FieldControlHandle {
+export interface FieldControlOptions {
+  /** Click the control as well as focusing it when a label is activated. */
+  activateOnLabel?: boolean;
+}
+
+export function createFieldControl(
+  getElement: () => HTMLElement | undefined,
+  options: FieldControlOptions = {},
+): FieldControlHandle {
   return {
-    focus: (options): void => {
-      getElement()?.focus(options);
+    focus: (focusOptions): void => {
+      getElement()?.focus(focusOptions);
     },
-    click: (): void => {
-      getElement()?.click();
-    },
+    ...(options.activateOnLabel === true
+      ? {
+          click: (): void => {
+            getElement()?.click();
+          },
+        }
+      : {}),
   };
 }
 

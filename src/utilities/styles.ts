@@ -1,5 +1,6 @@
 const DEFAULT_ATTRIBUTE = "data-qui-styles";
 const QUI_TAG_PREFIX = "qui-";
+const SKIPPED_TAGS = new Set(["qui-option", "qui-dialog"]);
 // oxlint-disable-next-line stencil/ban-side-effects -- Symbol.for is a pure global registry lookup.
 const GLOBAL_HREF_KEY = Symbol.for("@quanttrinh/qui/styles-href");
 
@@ -135,8 +136,9 @@ function collectShadowRoots(root: ParentNode): ShadowRoot[] {
   for (const element of root.querySelectorAll("*")) {
     const { shadowRoot } = element;
     if (shadowRoot) {
-      const isQuiHost = element.tagName.toLowerCase().startsWith(QUI_TAG_PREFIX);
-      if (isQuiHost || hasManagedLink(shadowRoot)) {
+      const tagName = element.tagName.toLowerCase();
+      const isQuiHost = tagName.startsWith(QUI_TAG_PREFIX);
+      if ((isQuiHost && !SKIPPED_TAGS.has(tagName)) || hasManagedLink(shadowRoot)) {
         roots.push(shadowRoot);
       }
 
@@ -160,6 +162,9 @@ function collectShadowRoots(root: ParentNode): ShadowRoot[] {
  * helper is a no-op.
  */
 export function ensureShadowStylesheet(host: HTMLElement): void {
+  if (SKIPPED_TAGS.has(host.tagName.toLowerCase())) {
+    return;
+  }
   const root = host.shadowRoot;
   if (!root) {
     return;
@@ -202,6 +207,18 @@ export function setQuiStylesHref(href: string | string[]): void {
   const hrefs = uniqueHrefs(value);
   for (const root of collectShadowRoots(document)) {
     reconcileStylesheetLinks(root, document, hrefs);
+  }
+}
+
+/** Clears the configured href and managed shadow-root links. */
+export function resetQuiStylesHref(): void {
+  Reflect.deleteProperty(globalThis, GLOBAL_HREF_KEY);
+  const document = getDocument();
+  if (!document) {
+    return;
+  }
+  for (const root of collectShadowRoots(document)) {
+    reconcileStylesheetLinks(root, document, []);
   }
 }
 

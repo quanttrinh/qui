@@ -95,6 +95,7 @@ export class QuiDialog {
   public connectedCallback(): void {
     provideDialog(this.host, this.context);
     ensureShadowStylesheet(this.host);
+    this.syncScrollLock();
   }
 
   public disconnectedCallback(): void {

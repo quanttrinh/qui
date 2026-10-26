@@ -63,7 +63,7 @@ export function registrationOrder(components: Iterable<string>): string[] {
 
 /**
  * Finds opening component tags in JavaScript-family source using Oxc's AST,
- * with a lexical fallback for Astro, MDX, and files the parser rejects.
+ * with a lexical fallback for MDX and files the parser rejects.
  */
 export function extractComponents(code: string, id = "component.tsx"): string[] {
   // Every detectable tag either contains this prefix or an escaped character.
@@ -125,7 +125,7 @@ export function importInjectionOffset(code: string): number {
 export function createStylesModule(css: string): string {
   return [
     'import "@quanttrinh/qui/theme.css";',
-    'import { getQuiStylesHref, setQuiStylesHref } from "@quanttrinh/qui/runtime";',
+    'import { getQuiStylesHref, resetQuiStylesHref, setQuiStylesHref } from "@quanttrinh/qui/runtime";',
     "",
     `const stylesheet = ${JSON.stringify(css)};`,
     'if (typeof document !== "undefined" && getQuiStylesHref() === undefined) {',
@@ -136,7 +136,11 @@ export function createStylesModule(css: string): string {
     '  link.setAttribute("data-qui-styles", "");',
     "  document.head.append(link);",
     "  setQuiStylesHref(url);",
-    "  import.meta.hot?.dispose(() => URL.revokeObjectURL(url));",
+    "  import.meta.hot?.dispose(() => {",
+    "    link.remove();",
+    "    URL.revokeObjectURL(url);",
+    "    resetQuiStylesHref();",
+    "  });",
     "}",
     "",
   ].join("\n");

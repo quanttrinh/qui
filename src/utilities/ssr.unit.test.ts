@@ -27,6 +27,31 @@ describe("injectShadowStylesheet", () => {
     expect(linkHrefs(other.root)).toEqual([]);
   });
 
+  it("skips data-only host roots by default", () => {
+    const document = createFakeDocument();
+    const option = createHost(document, "qui-option");
+    const dialog = createHost(document, "qui-dialog");
+    const button = createHost(document, "qui-button");
+
+    injectShadowStylesheet(document as unknown as Document, { href: "theme.css" });
+
+    expect(linkHrefs(option.root)).toEqual([]);
+    expect(linkHrefs(dialog.root)).toEqual([]);
+    expect(linkHrefs(button.root)).toEqual(["theme.css"]);
+  });
+
+  it("supports additional skip tags", () => {
+    const document = createFakeDocument();
+    const card = createHost(document, "qui-card");
+
+    injectShadowStylesheet(document as unknown as Document, {
+      href: "theme.css",
+      skipTags: ["qui-card"],
+    });
+
+    expect(linkHrefs(card.root)).toEqual([]);
+  });
+
   it("does not duplicate an existing marked link", () => {
     const document = createFakeDocument();
     const { root } = createHost(document, "qui-card");

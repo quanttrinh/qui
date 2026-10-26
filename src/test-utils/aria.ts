@@ -56,14 +56,14 @@ export function expectAriaElements(element: Element, expected: AriaExpectations)
  * `ariaLabelledByElements`.
  */
 export function expectLinked(
-  trigger: Element,
+  element: Element,
   target: Element,
   direction: AriaLinkDirection,
 ): void {
   if (direction === "controls") {
-    expectAriaElements(trigger, { ariaControlsElements: [target] });
+    expectAriaElements(element, { ariaControlsElements: [target] });
     return;
   }
 
-  expectAriaElements(trigger, { ariaLabelledByElements: [target] });
+  expectAriaElements(element, { ariaLabelledByElements: [target] });
 }
