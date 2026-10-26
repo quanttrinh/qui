@@ -189,6 +189,12 @@ describe("virtual styles module", () => {
     expect(code).toContain("URL.createObjectURL");
   });
 
+  it("does not import theme when styles are disabled", () => {
+    const code = createStylesModule(":host { display: block; }", false);
+
+    expect(code).not.toContain("@quanttrinh/qui/theme.css");
+  });
+
   it("uses an external component stylesheet without creating markup", () => {
     const code = createExternalStylesModule({ href: "/assets/app.css" });
 

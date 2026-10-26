@@ -96,6 +96,21 @@ function hashesDigest(hashes: Map<string, string>): string {
   return digest.digest("hex");
 }
 
+/** Theme source plus its generator, used to avoid reloading it on every rebuild. */
+function themeSourceHash(root: string): string {
+  const files = [
+    join(root, "build", "theme-css.ts"),
+    ...walk(join(root, "src", "utilities", "theme")).filter((file) => file.endsWith(".ts")),
+  ];
+  return hashesDigest(
+    new Map(
+      files
+        .sort()
+        .map((file) => [file, createHash("sha1").update(readFileSync(file)).digest("hex")]),
+    ),
+  );
+}
+
 function manifestHash(root: string): string | undefined {
   try {
     const value: unknown = JSON.parse(
@@ -214,6 +229,7 @@ class StyleGenerator {
   private components: ComponentEntry[];
   private cssPending = false;
   private cssPromise?: Promise<void>;
+  private themeCache?: { key: string; css: string };
 
   constructor(root: string, driver: PandaDriver, logger: Logger) {
     this.pandaRoot = root;
@@ -282,7 +298,11 @@ class StyleGenerator {
     if (reload) {
       await this.driver.reload();
     }
-    const themeCss = await generateThemeCss();
+    const themeKey = themeSourceHash(this.pandaRoot);
+    if (this.themeCache?.key !== themeKey) {
+      this.themeCache = { key: themeKey, css: await generateThemeCss() };
+    }
+    const themeCss = this.themeCache.css;
     const sharedCss = await this.driver.generateStyles();
     writeIfChanged(join(this.outdir, "theme.css"), themeCss);
     writeIfChanged(join(this.outdir, "styles.css"), sharedCss);
@@ -375,7 +395,7 @@ export function stylesPlugin({ root, driver, logger }: StylesPluginOptions) {
   return {
     name: "qui-styles",
     async buildStart(this: StylePluginContext): Promise<void> {
-      for (const input of CONFIG_INPUTS) {
+      for (const input of [...CONFIG_INPUTS, ...STYLE_BUILD_INPUTS]) {
         this.addWatchFile(join(root, input));
       }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { stripEmptyLayerDeclarations } from "./css";
+import { stripRootLayerOrder } from "./css";
 
 const SHARED_CSS = [
   "@layer reset, base, tokens, recipes, utilities;",
@@ -42,9 +42,9 @@ function expectCanonicalOrder(css: string): void {
   }
 }
 
-describe("stripEmptyLayerDeclarations", () => {
+describe("stripRootLayerOrder", () => {
   it("removes only the root layer order declaration", () => {
-    const css = stripEmptyLayerDeclarations(SHARED_CSS);
+    const css = stripRootLayerOrder(SHARED_CSS);
 
     expect(css).not.toContain("@layer reset, base, tokens, recipes, utilities;");
     expect(css).toContain("@layer recipes{@layer base, slots, variants, compound_variants;}");
@@ -52,15 +52,15 @@ describe("stripEmptyLayerDeclarations", () => {
   });
 
   it("keeps top-level layer blocks in canonical order", () => {
-    expectCanonicalOrder(stripEmptyLayerDeclarations(SHARED_CSS));
+    expectCanonicalOrder(stripRootLayerOrder(SHARED_CSS));
   });
 
   it("reorders shuffled layer blocks into canonical order", () => {
-    expectCanonicalOrder(stripEmptyLayerDeclarations(SHUFFLED_CSS));
+    expectCanonicalOrder(stripRootLayerOrder(SHUFFLED_CSS));
   });
 
   it("sorts unknown layers after the known set", () => {
-    const css = stripEmptyLayerDeclarations(
+    const css = stripRootLayerOrder(
       "@layer reset, base, tokens, recipes, utilities;@layer custom{x{color:red}}@layer utilities{.p_1{padding:1px}}@layer reset{a{color:red}}",
     );
 
@@ -68,9 +68,7 @@ describe("stripEmptyLayerDeclarations", () => {
   });
 
   it("leaves unrelated and non-empty layers alone", () => {
-    const css = stripEmptyLayerDeclarations(
-      "@layer reset, utilities;@layer utilities{.p_1{padding:1px}}",
-    );
+    const css = stripRootLayerOrder("@layer reset, utilities;@layer utilities{.p_1{padding:1px}}");
 
     expect(css).toContain("@layer reset, utilities;");
     expect(css).toContain("@layer utilities{.p_1{padding:1px}}");

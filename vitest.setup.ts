@@ -5,7 +5,7 @@ import componentCss from "./styled-system/styles.css?inline";
 import themeCss from "./styled-system/theme.css?inline";
 
 const documentStyles = document.createElement("style");
-documentStyles.textContent = `${themeCss}\n${componentCss}`;
+documentStyles.textContent = `@layer reset, base, tokens, recipes, utilities;\n${themeCss}\n${componentCss}`;
 document.head.append(documentStyles);
 
 // Shadow components link their stylesheet from the document; in tests the

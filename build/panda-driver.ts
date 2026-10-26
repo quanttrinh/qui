@@ -4,7 +4,7 @@ import type { Compiler, NodeDriver } from "@pandacss/compiler";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 
-import { stripEmptyLayerDeclarations } from "./css";
+import { stripRootLayerOrder } from "./css";
 
 /** Shared Panda compiler and stylesheet generation for the build and transformer. */
 export interface PandaDriver {
@@ -52,7 +52,7 @@ export function createPandaDriver(root: string): PandaDriver {
     async generateStyles(): Promise<string> {
       const driver = await ensureMainDriver();
       driver.parseFiles();
-      return stripEmptyLayerDeclarations(driver.cssgen({ minify: true }).css);
+      return stripRootLayerOrder(driver.cssgen({ minify: true }).css);
     },
     async reload(): Promise<void> {
       if (mainPromise !== undefined) {

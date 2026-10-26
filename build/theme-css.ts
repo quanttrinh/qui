@@ -1,8 +1,22 @@
 /// <reference types="node" />
 import { createJiti } from "jiti";
-import { join } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 type ThemeModule = typeof import("../src/utilities/theme/color");
+
+/** Walk up from a working directory so jiti resolves from the package root. */
+function findProjectRoot(start: string): string {
+  let current = start;
+  while (!existsSync(join(current, "package.json"))) {
+    const parent = dirname(current);
+    if (parent === current) {
+      return start;
+    }
+    current = parent;
+  }
+  return current;
+}
 
 /**
  * Loads the runtime theme module through jiti so the build can use the same
@@ -13,8 +27,8 @@ type ThemeModule = typeof import("../src/utilities/theme/color");
  * `moduleCache` stays disabled so watch rebuilds see theme changes.
  */
 async function loadThemeModule(): Promise<ThemeModule> {
-  const base =
-    typeof __filename === "string" ? __filename : join(process.cwd(), "build/theme-css.ts");
+  const root = findProjectRoot(process.cwd());
+  const base = typeof __filename === "string" ? __filename : join(root, "build", "theme-css.ts");
   const jiti = createJiti(base, { interopDefault: true, moduleCache: false });
   return (await jiti.import("../src/utilities/theme/color.ts")) as ThemeModule;
 }

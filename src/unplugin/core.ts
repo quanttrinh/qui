@@ -127,6 +127,9 @@ function stylesheetHrefs(href: string | string[]): string[] {
 }
 
 function themeImport(styles: boolean | QuiStylesOptions | undefined): string[] {
+  if (styles === false) {
+    return [];
+  }
   const value: unknown = styles;
   const theme: unknown =
     typeof value === "object" && value !== null ? Reflect.get(value, "theme") : undefined;
@@ -187,12 +190,12 @@ export function createExternalStylesModule(styles: QuiStylesOptions): string {
     'import { getQuiStylesHref, resetQuiStylesHref, setQuiStylesHref } from "@quanttrinh/qui/runtime";',
     "",
     `const configuredHref = ${JSON.stringify(hrefs.length === 1 ? hrefs[0] : hrefs)};`,
-    'if (typeof document !== "undefined" && getQuiStylesHref() === undefined) {',
+    'if (typeof document !== "undefined" && configuredHref.length > 0 && getQuiStylesHref() === undefined) {',
     "  setQuiStylesHref(configuredHref);",
+    "  import.meta.hot?.dispose(() => {",
+    "    resetQuiStylesHref();",
+    "  });",
     "}",
-    "import.meta.hot?.dispose(() => {",
-    "  resetQuiStylesHref();",
-    "});",
     "",
   ].join("\n");
 }

@@ -7,7 +7,8 @@ const documentObservers = new WeakMap<Document, MutationObserver>();
 
 /**
  * Local copy of the DOM helper so the published runtime stays a self-contained
- * module. The compiled utility entry point does not ship `src/helpers`.
+ * module. The compiled utility entry point does not ship `src/helpers`; do not
+ * replace this with `import { isElement } from "../helpers/dom"`.
  */
 function isElement(value: unknown): value is Element {
   return value instanceof Element;

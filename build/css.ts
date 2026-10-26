@@ -4,7 +4,7 @@ import postcss, { type AtRule, type Root } from "postcss";
 const LAYER_ORDER = ["reset", "base", "tokens", "recipes", "utilities"] as const;
 
 function isLayerBlock(node: AtRule): boolean {
-  return node.type === "atrule" && node.name === "layer" && node.nodes !== undefined;
+  return node.name === "layer" && node.nodes !== undefined;
 }
 
 function layerRank(node: AtRule): number {
@@ -17,7 +17,7 @@ function layerRank(node: AtRule): number {
 }
 
 function isFullLayerOrder(node: AtRule): boolean {
-  if (node.type !== "atrule" || node.name !== "layer" || node.nodes !== undefined) {
+  if (node.name !== "layer" || node.nodes !== undefined) {
     return false;
   }
   const names = node.params.split(",").map((name) => name.trim());
@@ -34,7 +34,7 @@ function isFullLayerOrder(node: AtRule): boolean {
  * declarations such as `@layer recipes{@layer base, slots;}` do not match that
  * condition, so removing them would only risk changing recipe precedence.
  */
-export function stripEmptyLayerDeclarations(css: string): string {
+export function stripRootLayerOrder(css: string): string {
   const root = postcss.parse(css);
 
   for (const node of [...root.nodes]) {
@@ -64,7 +64,9 @@ function reorderLayerBlocks(root: Root): void {
   const anchor =
     root.nodes.slice(firstLayer).find((node) => node.type !== "atrule" || !isLayerBlock(node)) ??
     null;
-  const sorted = [...blocks].sort((left, right) => layerRank(left) - layerRank(right));
+  const sorted = [...blocks].sort(
+    (left, right) => layerRank(left) - layerRank(right) || left.params.localeCompare(right.params),
+  );
   for (const block of blocks) {
     block.remove();
   }
