@@ -122,8 +122,8 @@
     "fmt:check": "oxfmt --config oxfmt.config.ts --check",
     "version": "changeset version",
     "release": "changeset publish",
-    "build:all": "bun run build && bun run build:lib",
-    "prepublishOnly": "bun run build:all",
+    "build:release": "bun run build && bun run build:lib",
+    "prepublishOnly": "bun run build:release",
     "build:lib": "panda lib --files './**/*.{js,mjs}'"
   },
   "dependencies": {
