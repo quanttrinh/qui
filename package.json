@@ -54,7 +54,10 @@
       "types": "./dist/utilities/styles.d.ts",
       "default": "./dist/utilities/styles.js"
     },
-    "./shared/*": "./dist/shared/*.js",
+    "./shared/*": {
+      "types": "./dist/shared/*.d.ts",
+      "default": "./dist/shared/*.js"
+    },
     "./theme.css": "./styled-system/theme.css",
     "./styles.css": "./styled-system/styles.css",
     "./package.json": "./package.json",
@@ -119,7 +122,7 @@
     "fmt:check": "oxfmt --config oxfmt.config.ts --check",
     "version": "changeset version",
     "release": "changeset publish",
-    "build:all": "stencil build && bun run build:utilities && bun run build:unplugin && bun run build:lib",
+    "build:all": "bun run build && bun run build:lib",
     "prepublishOnly": "bun run build:all",
     "build:lib": "panda lib --files './**/*.{js,mjs}'"
   },
