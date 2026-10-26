@@ -10,6 +10,7 @@ on:
       - 'package.json'
       - 'bun.lock'
       - '.github/workflows/pages.yml'
+      - '.github/workflows/deploy-pages.yml'
   push:
     branches: [main]
     paths:
@@ -19,11 +20,12 @@ on:
       - 'package.json'
       - 'bun.lock'
       - '.github/workflows/pages.yml'
+      - '.github/workflows/deploy-pages.yml'
 
 concurrency:
   # Serialize updates for one PR, but do not let another PR or a main deployment
   # cancel a queued cleanup. GitHub only keeps one pending run per group.
-  group: pages-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -102,16 +104,11 @@ jobs:
     needs: pr-build
     if: github.event_name == 'pull_request' && github.event.action != 'closed'
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     permissions:
       contents: write
       actions: write
       pull-requests: write
       issues: write
-      pages: write
-      id-token: write
 
     steps:
       - name: Notify deploying
@@ -167,6 +164,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: gh-pages
+          fetch-depth: 0
           path: gh-pages
 
       - name: Setup git
@@ -175,16 +173,38 @@ jobs:
       - name: Deploy to gh-pages
         working-directory: gh-pages
         run: |
-          set -e
+          set -euo pipefail
           push_with_retry() {
-            for attempt in 1 2 3 4 5; do
-              if git push origin HEAD:gh-pages; then
+            local max_attempts=6
+            local attempt output status
+            for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+              if output=$(git push --porcelain origin HEAD:gh-pages 2>&1); then
                 return 0
+              else
+                status=$?
               fi
-              echo "gh-pages push rejected; rebasing and retrying (${attempt}/5)" >&2
-              git pull --rebase origin gh-pages
-              sleep "$((attempt * 2))"
+
+              printf '%s\n' "$output" >&2
+              if ! grep -Eq 'non-fast-forward|fetch first|remote contains work' <<< "$output"; then
+                echo "::error::gh-pages push failed (status ${status}); not retrying" >&2
+                return 1
+              fi
+
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                break
+              fi
+
+              echo "gh-pages push was rejected; rebasing and retrying (${attempt}/${max_attempts})" >&2
+              if ! git pull --rebase origin gh-pages; then
+                git rebase --abort 2>/dev/null || true
+                echo "::error::Failed to rebase gh-pages; aborting retry" >&2
+                return 1
+              fi
+
+              sleep "$((attempt * 2 + RANDOM % 3))"
             done
+
+            echo "::error::Unable to push gh-pages after ${max_attempts} attempts" >&2
             return 1
           }
 
@@ -194,15 +214,6 @@ jobs:
           git add -- "pr-${{ github.event.pull_request.number }}"
           git diff --staged --quiet || git commit -m "Deploy preview for PR #${{ github.event.pull_request.number }}"
           push_with_retry
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        with:
-          path: gh-pages
-
-      - name: Deploy to Pages
-        id: deploy
-        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
 
       - name: Update preview URL
         env:
@@ -235,11 +246,6 @@ jobs:
     permissions:
       contents: write
       actions: write
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
 
     steps:
       - name: Checkout
@@ -256,21 +262,44 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: gh-pages
+          fetch-depth: 0
           path: gh-pages
 
       - name: Remove preview
         working-directory: gh-pages
         run: |
-          set -e
+          set -euo pipefail
           push_with_retry() {
-            for attempt in 1 2 3 4 5; do
-              if git push origin HEAD:gh-pages; then
+            local max_attempts=6
+            local attempt output status
+            for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+              if output=$(git push --porcelain origin HEAD:gh-pages 2>&1); then
                 return 0
+              else
+                status=$?
               fi
-              echo "gh-pages push rejected; rebasing and retrying (${attempt}/5)" >&2
-              git pull --rebase origin gh-pages
-              sleep "$((attempt * 2))"
+
+              printf '%s\n' "$output" >&2
+              if ! grep -Eq 'non-fast-forward|fetch first|remote contains work' <<< "$output"; then
+                echo "::error::gh-pages push failed (status ${status}); not retrying" >&2
+                return 1
+              fi
+
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                break
+              fi
+
+              echo "gh-pages push was rejected; rebasing and retrying (${attempt}/${max_attempts})" >&2
+              if ! git pull --rebase origin gh-pages; then
+                git rebase --abort 2>/dev/null || true
+                echo "::error::Failed to rebase gh-pages; aborting retry" >&2
+                return 1
+              fi
+
+              sleep "$((attempt * 2 + RANDOM % 3))"
             done
+
+            echo "::error::Unable to push gh-pages after ${max_attempts} attempts" >&2
             return 1
           }
 
@@ -280,26 +309,12 @@ jobs:
             push_with_retry
           fi
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        with:
-          path: gh-pages
-
-      - name: Deploy to Pages
-        id: deploy
-        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
-
   main:
     if: github.event_name == 'push'
     runs-on: ubuntu-slim
     permissions:
       contents: write
       actions: write
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
 
     steps:
       - name: Checkout
@@ -328,6 +343,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: gh-pages
+          fetch-depth: 0
           path: gh-pages
 
       - name: Setup git
@@ -336,16 +352,38 @@ jobs:
       - name: Deploy to gh-pages
         working-directory: gh-pages
         run: |
-          set -e
+          set -euo pipefail
           push_with_retry() {
-            for attempt in 1 2 3 4 5; do
-              if git push origin HEAD:gh-pages; then
+            local max_attempts=6
+            local attempt output status
+            for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+              if output=$(git push --porcelain origin HEAD:gh-pages 2>&1); then
                 return 0
+              else
+                status=$?
               fi
-              echo "gh-pages push rejected; rebasing and retrying (${attempt}/5)" >&2
-              git pull --rebase origin gh-pages
-              sleep "$((attempt * 2))"
+
+              printf '%s\n' "$output" >&2
+              if ! grep -Eq 'non-fast-forward|fetch first|remote contains work' <<< "$output"; then
+                echo "::error::gh-pages push failed (status ${status}); not retrying" >&2
+                return 1
+              fi
+
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                break
+              fi
+
+              echo "gh-pages push was rejected; rebasing and retrying (${attempt}/${max_attempts})" >&2
+              if ! git pull --rebase origin gh-pages; then
+                git rebase --abort 2>/dev/null || true
+                echo "::error::Failed to rebase gh-pages; aborting retry" >&2
+                return 1
+              fi
+
+              sleep "$((attempt * 2 + RANDOM % 3))"
             done
+
+            echo "::error::Unable to push gh-pages after ${max_attempts} attempts" >&2
             return 1
           }
 
@@ -358,11 +396,29 @@ jobs:
           git diff --staged --quiet || git commit -m "Deploy main"
           push_with_retry
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        with:
-          path: gh-pages
+  pr-deploy-pages:
+    needs: pr-deploy
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/deploy-pages.yml
 
-      - name: Deploy to Pages
-        id: deploy
-        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+  pr-cleanup-pages:
+    needs: pr-cleanup
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/deploy-pages.yml
+
+  main-pages:
+    needs: main
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/deploy-pages.yml
