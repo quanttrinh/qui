@@ -94,6 +94,7 @@ export default defineConfig({
     },
     {
       files: ["packages/unplugin/src/index.ts"],
+      env: { node: true },
       rules: {
         // `unplugin` plugins use a default export so consumers can call
         // `Qui.vite(...)` / `Qui.webpack(...)`.

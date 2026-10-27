@@ -1,6 +1,7 @@
 import { MagicString } from "magic-string";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
+import path from "node:path";
 import { createUnplugin, type TransformResult, type UnpluginInstance } from "unplugin";
 
 import {
@@ -46,9 +47,15 @@ function resolveStylesheetPath(): string {
   try {
     return requireFromPlugin.resolve("@quanttrinh/qui/styles.css");
   } catch {
-    throw new Error(
-      "@quanttrinh/qui-unplugin requires @quanttrinh/qui to be installed alongside it.",
-    );
+    try {
+      return createRequire(path.join(process.cwd(), "package.json")).resolve(
+        "@quanttrinh/qui/styles.css",
+      );
+    } catch {
+      throw new Error(
+        "@quanttrinh/qui-unplugin requires @quanttrinh/qui to be installed alongside it.",
+      );
+    }
   }
 }
 
