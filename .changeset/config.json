@@ -6,8 +6,5 @@
     "linked": [],
     "access": "public",
     "baseBranch": "main",
-    "changedFilePatterns": [
-        "packages/**/*.{ts,tsx,js,jsx,json,md}",
-        "tooling/**/*.{ts,tsx,js,jsx,json,md}"
-    ]
+    "changedFilePatterns": ["**/*.{ts,tsx,js,jsx,json,md}"]
 }

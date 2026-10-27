@@ -313,15 +313,47 @@ exactly:
 ```
 
 `href` should be a stable public URL. Vite applies its configured `base` when
-matching and marking the document link. If Vite emits a content-hashed asset URL,
-mark the generated link yourself. External mode has no runtime fallback: marked
-document links are the source of truth, so shadow roots always use their final
-URLs. The marked link must exist when components connect; add it in the initial
-document head.
+matching and marking the document link. A content-hashed URL works when it is
+known at configuration time. When it is not, use a resolver; Vite calls it with
+the build bundle, where the emitted CSS asset can be selected:
 
-External `href` mode is Vite-only because it relies on
-`transformIndexHtml`. Other adapters throw; use `styles: false` and mark the
-document link yourself there.
+```ts
+Qui.vite({
+    styles: {
+        href: ({ command, bundle }) => {
+            if (command === "serve") {
+                return "/assets/qui-app.css";
+            }
+            const asset = Object.keys(bundle ?? {}).find(
+                (file) => file.startsWith("assets/qui-app-") && file.endsWith(".css"),
+            );
+            return asset === undefined ? undefined : `/${asset}`;
+        },
+    },
+});
+```
+
+The resolver receives `command`, `mode`, `base`, `isSsrBuild`, the HTML
+`path`/`filename`, and the build `bundle` or dev `server`. It may be async and
+may return a string, string array, or `undefined`. Resolve the dev URL explicitly
+because there is no `bundle` while serving. Keep resolver and static hrefs
+base-relative: Vite applies `base` unconditionally to root-relative URLs, so an
+`href` that already includes the base would be prefixed twice. External mode has
+no runtime fallback: marked document links are the source of truth, so shadow
+roots always use their final URLs. The marked link must exist when components
+connect; add it in the initial document head.
+
+For SSR pages, rendered HTML does not pass through Vite's HTML transform. Resolve
+the final URL(s) with `resolveStylesheetHrefs` first, render them into the
+document, then mark them with `markStylesheetLinks` from
+`@quanttrinh/qui-unplugin`. `resolveStylesheetHrefs` applies the Vite base, so
+pass the same resolved URL(s) to `withShadowStylesheet()`. `markExternalStylesheetLinks`
+is a convenience for static `href` values or resolver-based contexts where
+calling the resolver twice is acceptable.
+
+External `href` mode is Vite-only for automatic document marking because it
+relies on `transformIndexHtml`. Other adapters throw; use `styles: false` and
+mark the document link yourself there.
 
 When `href` is an array, each matching link is marked but shadow roots follow
 document order, not array order. Custom attributes added to a Vite-bundled CSS

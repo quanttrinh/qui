@@ -1,4 +1,4 @@
-import { SHADOW_STYLES_MARKER } from "./styles";
+import { SHADOW_STYLES_MARKER, STYLESHEET_ATTRIBUTE, STYLESHEET_SELECTOR } from "./styles";
 
 export interface ShadowStylesheetOptions {
   /**
@@ -24,15 +24,11 @@ interface InjectionContext {
   hrefs: string[];
 }
 
-const DEFAULT_ATTRIBUTE = "data-qui-styles";
-
 function injectStylesheetLinks(context: InjectionContext, root: StylesheetRoot): void {
   const { document, hrefs } = context;
   const existing = new Set<string>();
-  for (const link of root.querySelectorAll("link")) {
-    if (link.hasAttribute(DEFAULT_ATTRIBUTE)) {
-      existing.add(link.getAttribute("href") ?? "");
-    }
+  for (const link of root.querySelectorAll<HTMLLinkElement>(STYLESHEET_SELECTOR)) {
+    existing.add(link.getAttribute("href") ?? "");
   }
 
   const reference = root.firstChild;
@@ -41,7 +37,7 @@ function injectStylesheetLinks(context: InjectionContext, root: StylesheetRoot):
       const link = document.createElement("link");
       link.setAttribute("rel", "stylesheet");
       link.setAttribute("href", href);
-      link.setAttribute(DEFAULT_ATTRIBUTE, "");
+      link.setAttribute(STYLESHEET_ATTRIBUTE, "");
       if (reference) {
         // Stencil's mock document does not implement Element.before().
         // oxlint-disable-next-line unicorn/prefer-modern-dom-apis
