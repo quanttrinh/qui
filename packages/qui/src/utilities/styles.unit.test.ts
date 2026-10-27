@@ -3,13 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createFakeDocument,
   createHost,
+  FakeNode,
   type FakeDocument,
-  type FakeNode,
   linkHrefs,
 } from "../test-utils/fake-dom";
 
 interface StylesModule {
   SHADOW_STYLES_MARKER: string;
+  STYLESHEET_ATTRIBUTE: string;
   ensureShadowStylesheet: (host: HTMLElement) => void;
   getQuiStylesHref: () => string | string[] | undefined;
   setQuiStylesHref: (href: string | string[]) => void;
@@ -18,7 +19,7 @@ interface StylesModule {
 
 let styles: StylesModule;
 
-const MARKER_ATTRIBUTE = "data-qui-styles";
+let MARKER_ATTRIBUTE = "";
 
 function createDocumentLink(document: FakeDocument, href: string): FakeNode {
   const link = document.createElement("link");
@@ -37,12 +38,46 @@ function useDocument(document: FakeDocument): void {
   });
 }
 
+class FakeMutationObserver {
+  static instances: FakeMutationObserver[] = [];
+  readonly observe = vi.fn();
+  readonly disconnect = vi.fn();
+  private readonly callback: (records: MutationRecord[]) => void;
+
+  // oxlint-disable-next-line promise/prefer-await-to-callbacks -- MutationObserver is callback-based.
+  constructor(callback: (records: MutationRecord[]) => void) {
+    this.callback = callback;
+    FakeMutationObserver.instances.push(this);
+  }
+
+  public trigger(records: MutationRecord[]): void {
+    this.callback(records);
+  }
+}
+
+function attributeRecord(target: FakeNode, attributeName: string): MutationRecord {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- The mutation callback reads only these fields.
+  return { type: "attributes", target, attributeName } as unknown as MutationRecord;
+}
+
+function childListRecord(added: FakeNode[], removed: FakeNode[]): MutationRecord {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- The mutation callback reads only these fields.
+  return {
+    type: "childList",
+    addedNodes: added,
+    removedNodes: removed,
+  } as unknown as MutationRecord;
+}
+
 beforeEach(async () => {
   vi.resetModules();
   styles = await import("./styles");
+  MARKER_ATTRIBUTE = styles.STYLESHEET_ATTRIBUTE;
+  FakeMutationObserver.instances = [];
 });
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   Reflect.deleteProperty(globalThis, "document");
   Reflect.deleteProperty(globalThis, Symbol.for("@quanttrinh/qui/styles-href"));
 });
@@ -167,7 +202,9 @@ describe("ensureShadowStylesheet", () => {
     expect(linkHrefs(root)).toEqual(["discovered.css"]);
     expect(styles.getQuiStylesHref()).toBe("discovered.css");
   });
+});
 
+describe("document discovery", () => {
   it("caches document link discovery between components", () => {
     const document = createFakeDocument();
     useDocument(document);
@@ -182,6 +219,129 @@ describe("ensureShadowStylesheet", () => {
     expect(linkHrefs(first.root)).toEqual(["discovered.css"]);
     expect(linkHrefs(second.root)).toEqual(["discovered.css"]);
     expect(querySelectorAll).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores unmarked link mutations when invalidating discovery", () => {
+    const document = createFakeDocument();
+    useDocument(document);
+    const marked = createDocumentLink(document, "first.css");
+    const unmarked = document.createElement("link");
+    unmarked.setAttribute("href", "unmanaged.css");
+    vi.stubGlobal("MutationObserver", FakeMutationObserver);
+    vi.stubGlobal("Element", FakeNode);
+
+    expect(styles.getQuiStylesHref()).toBe("first.css");
+    const observer = FakeMutationObserver.instances.at(-1);
+    if (!observer) {
+      throw new Error("Expected the discovery observer to be installed");
+    }
+
+    marked.setAttribute("href", "second.css");
+    observer.trigger([attributeRecord(unmarked, "href")]);
+    expect(styles.getQuiStylesHref()).toBe("first.css");
+
+    observer.trigger([attributeRecord(marked, "href")]);
+    expect(styles.getQuiStylesHref()).toBe("second.css");
+  });
+
+  it("invalidates discovery when a marked link is added", () => {
+    const document = createFakeDocument();
+    useDocument(document);
+    createDocumentLink(document, "first.css");
+    vi.stubGlobal("MutationObserver", FakeMutationObserver);
+    vi.stubGlobal("Element", FakeNode);
+
+    expect(styles.getQuiStylesHref()).toBe("first.css");
+    const observer = FakeMutationObserver.instances.at(-1);
+    if (!observer) {
+      throw new Error("Expected the discovery observer to be installed");
+    }
+
+    const unmarked = document.createElement("link");
+    observer.trigger([childListRecord([unmarked], [])]);
+    expect(styles.getQuiStylesHref()).toBe("first.css");
+
+    const added = createDocumentLink(document, "second.css");
+    observer.trigger([childListRecord([added], [])]);
+    expect(styles.getQuiStylesHref()).toEqual(["first.css", "second.css"]);
+  });
+
+  it("invalidates discovery when the marker is removed", () => {
+    const document = createFakeDocument();
+    useDocument(document);
+    const marked = createDocumentLink(document, "first.css");
+    vi.stubGlobal("MutationObserver", FakeMutationObserver);
+    vi.stubGlobal("Element", FakeNode);
+
+    expect(styles.getQuiStylesHref()).toBe("first.css");
+    const observer = FakeMutationObserver.instances.at(-1);
+    if (!observer) {
+      throw new Error("Expected the discovery observer to be installed");
+    }
+
+    marked.removeAttribute(MARKER_ATTRIBUTE);
+    observer.trigger([attributeRecord(marked, MARKER_ATTRIBUTE)]);
+    expect(styles.getQuiStylesHref()).toBeUndefined();
+  });
+
+  it("invalidates discovery when the marker is added", () => {
+    const document = createFakeDocument();
+    useDocument(document);
+    const link = document.createElement("link");
+    link.setAttribute("href", "added.css");
+    document.append(link);
+    vi.stubGlobal("MutationObserver", FakeMutationObserver);
+    vi.stubGlobal("Element", FakeNode);
+
+    expect(styles.getQuiStylesHref()).toBeUndefined();
+    const observer = FakeMutationObserver.instances.at(-1);
+    if (!observer) {
+      throw new Error("Expected the discovery observer to be installed");
+    }
+
+    link.setAttribute(MARKER_ATTRIBUTE, "");
+    observer.trigger([attributeRecord(link, MARKER_ATTRIBUTE)]);
+    expect(styles.getQuiStylesHref()).toBe("added.css");
+  });
+
+  it("conservatively invalidates discovery when an unmarked link is removed", () => {
+    const document = createFakeDocument();
+    useDocument(document);
+    const marked = createDocumentLink(document, "first.css");
+    const unmarked = document.createElement("link");
+    document.append(unmarked);
+    vi.stubGlobal("MutationObserver", FakeMutationObserver);
+    vi.stubGlobal("Element", FakeNode);
+
+    expect(styles.getQuiStylesHref()).toBe("first.css");
+    const observer = FakeMutationObserver.instances.at(-1);
+    if (!observer) {
+      throw new Error("Expected the discovery observer to be installed");
+    }
+
+    marked.setAttribute("href", "second.css");
+    unmarked.remove();
+    observer.trigger([childListRecord([], [unmarked])]);
+    expect(styles.getQuiStylesHref()).toBe("second.css");
+  });
+
+  it("invalidates discovery when a marked link is removed", () => {
+    const document = createFakeDocument();
+    useDocument(document);
+    createDocumentLink(document, "first.css");
+    const removed = createDocumentLink(document, "second.css");
+    vi.stubGlobal("MutationObserver", FakeMutationObserver);
+    vi.stubGlobal("Element", FakeNode);
+
+    expect(styles.getQuiStylesHref()).toEqual(["first.css", "second.css"]);
+    const observer = FakeMutationObserver.instances.at(-1);
+    if (!observer) {
+      throw new Error("Expected the discovery observer to be installed");
+    }
+
+    removed.remove();
+    observer.trigger([childListRecord([], [removed])]);
+    expect(styles.getQuiStylesHref()).toBe("first.css");
   });
 });
 

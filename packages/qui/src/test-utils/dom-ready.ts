@@ -4,10 +4,11 @@
  * These utilities are intentionally not exported from a package entry point.
  */
 
+import { STYLESHEET_SELECTOR } from "../utilities/styles";
 import { shadowOf } from "./shadow";
 
 /** Selector Stencil uses for the stylesheet it injects into a shadow root. */
-export const SHADOW_STYLES_SELECTOR = "link[data-qui-styles]";
+export const SHADOW_STYLES_SELECTOR = STYLESHEET_SELECTOR;
 
 /* oxlint-disable promise/avoid-new -- These helpers wrap browser events and timers in promises. */
 

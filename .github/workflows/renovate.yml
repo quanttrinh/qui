@@ -89,13 +89,13 @@ jobs:
               print(f"::error::{file_path}: invalid JSON: {e}", flush=True)
               sys.exit(1)
 
-          for section in ("dependencies", "devDependencies", "resolutions", "peerDependencies"):
+          for section in ("dependencies", "devDependencies", "optionalDependencies", "resolutions", "peerDependencies"):
               if set(base_manifest.get(section, {})) != set(head_manifest.get(section, {})):
                   print(f"::error::{file_path}: dependency names changed in {section}: only versions may change", flush=True)
                   sys.exit(1)
 
-          base_rest = {k: v for k, v in base_manifest.items() if k not in ("dependencies", "devDependencies", "resolutions", "peerDependencies")}
-          head_rest = {k: v for k, v in head_manifest.items() if k not in ("dependencies", "devDependencies", "resolutions", "peerDependencies")}
+          base_rest = {k: v for k, v in base_manifest.items() if k not in ("dependencies", "devDependencies", "optionalDependencies", "resolutions", "peerDependencies")}
+          head_rest = {k: v for k, v in head_manifest.items() if k not in ("dependencies", "devDependencies", "optionalDependencies", "resolutions", "peerDependencies")}
           if base_rest != head_rest:
               print(f"::error::{file_path}: changes outside dependency sections", flush=True)
               sys.exit(1)

@@ -18,6 +18,7 @@
     "test:browser": "bun run --cwd packages/qui test:browser",
     "test:smoke": "bun run --cwd packages/qui test:smoke",
     "test:watch": "bun run --cwd packages/qui test:watch",
+    "test:watch:unplugin": "bun run --cwd packages/unplugin test:watch",
     "lint": "oxlint --config oxlint.config.ts packages/qui/src packages/unplugin/src",
     "lint:fix": "oxlint --config oxlint.config.ts --fix packages/qui/src packages/unplugin/src",
     "fmt": "oxfmt --config oxfmt.config.ts",

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   componentsFromVirtualModuleId,
@@ -11,8 +11,11 @@ import {
   isTransformableId,
   markStylesheetLinks,
   normalizeComponents,
+  resolveStylesheetHrefCandidates,
+  resolveStylesheetHrefs,
   virtualModuleId,
   type QuiStylesOptions,
+  type QuiStylesResolverContext,
 } from "./core";
 
 describe("extractComponents", () => {
@@ -232,7 +235,95 @@ describe("virtual styles module", () => {
   it("validates external href values", () => {
     expect(isExternalStyles({ href: "/app.css" })).toBe(true);
     expect(isExternalStyles({ href: ["/app.css"] })).toBe(true);
+    expect(isExternalStyles({ href: () => "/app.css" })).toBe(true);
     expect(isExternalStyles({ href: [1] } as unknown as QuiStylesOptions)).toBe(false);
+  });
+});
+
+describe("resolveStylesheetHrefs", () => {
+  const context: QuiStylesResolverContext = {
+    command: "build",
+    mode: "production",
+    base: "/",
+    isSsrBuild: false,
+  };
+
+  it("returns concrete href values", async () => {
+    await expect(resolveStylesheetHrefs("/app.css", context)).resolves.toEqual(["/app.css"]);
+    await expect(resolveStylesheetHrefs(["/a.css", "/b.css"], context)).resolves.toEqual([
+      "/a.css",
+      "/b.css",
+    ]);
+  });
+
+  it("returns no hrefs for an undefined value", async () => {
+    await expect(resolveStylesheetHrefs(undefined, context)).resolves.toEqual([]);
+  });
+
+  it("applies the base the way Vite does", async () => {
+    const baseContext = { ...context, base: "/app/" };
+
+    await expect(resolveStylesheetHrefs("/assets/app.css", baseContext)).resolves.toEqual([
+      "/app/assets/app.css",
+    ]);
+    await expect(resolveStylesheetHrefs("/app/assets/app.css", baseContext)).resolves.toEqual([
+      "/app/app/assets/app.css",
+    ]);
+    await expect(
+      resolveStylesheetHrefs(["/assets/a.css", "/app/assets/a.css"], baseContext),
+    ).resolves.toEqual(["/app/assets/a.css", "/app/app/assets/a.css"]);
+  });
+
+  it("leaves absolute and protocol-relative URLs unchanged", async () => {
+    const baseContext = { ...context, base: "/app/" };
+
+    await expect(
+      resolveStylesheetHrefs(["https://cdn.example/app.css", "//cdn.example/app.css"], baseContext),
+    ).resolves.toEqual(["https://cdn.example/app.css", "//cdn.example/app.css"]);
+  });
+
+  it("returns raw and base-applied candidates for HTML marking", async () => {
+    const baseContext = { ...context, base: "/app/" };
+
+    await expect(
+      resolveStylesheetHrefCandidates("/app/assets/app.css", baseContext),
+    ).resolves.toEqual(["/app/assets/app.css", "/app/app/assets/app.css"]);
+  });
+
+  it("calls a resolver with the bundler context and waits for its result", async () => {
+    const resolver = vi.fn(({ bundle, isSsrBuild }: QuiStylesResolverContext) => {
+      if (bundle === undefined) {
+        throw new Error("Expected a bundle");
+      }
+      expect(isSsrBuild).toBe(false);
+      return Object.keys(bundle)
+        .filter((file) => file.endsWith(".css"))
+        .map((file) => `/${file}`);
+    });
+
+    await expect(
+      resolveStylesheetHrefs(resolver, {
+        ...context,
+        bundle: {
+          "assets/app-abc123.css": { type: "asset", fileName: "assets/app-abc123.css" },
+          "assets/app-abc123.js": { type: "chunk", fileName: "assets/app-abc123.js" },
+        },
+      }),
+    ).resolves.toEqual(["/assets/app-abc123.css"]);
+    expect(resolver).toHaveBeenCalledOnce();
+  });
+
+  it("returns no hrefs when a resolver declines", async () => {
+    await expect(resolveStylesheetHrefs(() => undefined, context)).resolves.toEqual([]);
+  });
+
+  it("drops empty and duplicate values", async () => {
+    await expect(resolveStylesheetHrefs(["", "/app.css", "/app.css"], context)).resolves.toEqual([
+      "/app.css",
+    ]);
+    await expect(resolveStylesheetHrefs(() => ["/app.css", ""], context)).resolves.toEqual([
+      "/app.css",
+    ]);
   });
 });
 

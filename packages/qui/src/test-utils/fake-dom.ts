@@ -64,16 +64,18 @@ export class FakeNode {
 
   public querySelectorAll(selector: string): FakeNode[] {
     const matches: FakeNode[] = [];
-    const attribute =
-      selector.startsWith("[") && selector.endsWith("]") ? selector.slice(1, -1) : undefined;
+    const bracket = selector.indexOf("[");
+    const hasAttribute = bracket !== -1 && selector.endsWith("]");
+    const tag = hasAttribute ? selector.slice(0, bracket) || undefined : undefined;
+    const attribute = hasAttribute ? selector.slice(bracket + 1, -1) : undefined;
+    const tagSelector = hasAttribute ? tag : selector;
+    const wildcard = selector === "*" || (hasAttribute && tag === undefined);
 
     const visit = (nodes: FakeNode[]): void => {
       for (const node of nodes) {
-        if (
-          selector === "*" ||
-          node.tagName.toLowerCase() === selector ||
-          (attribute !== undefined && node.hasAttribute(attribute))
-        ) {
+        const matchesTag = wildcard || node.tagName.toLowerCase() === tagSelector;
+        const matchesAttribute = attribute === undefined || node.hasAttribute(attribute);
+        if (matchesTag && matchesAttribute) {
           matches.push(node);
         }
         visit(node.children);
@@ -84,8 +86,17 @@ export class FakeNode {
     return matches;
   }
 
+  public querySelector(selector: string): FakeNode | null {
+    // oxlint-disable-next-line unicorn/no-null -- Match the DOM querySelector contract.
+    return this.querySelectorAll(selector)[0] ?? null;
+  }
+
   public setAttribute(name: string, value: string): void {
     this.attributes.set(name, value);
+  }
+
+  public removeAttribute(name: string): void {
+    this.attributes.delete(name);
   }
 
   public getAttribute(name: string): string | undefined {

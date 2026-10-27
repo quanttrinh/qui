@@ -1,28 +1,52 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resolveStylesheetPath } from "./resolve-styles";
 
-const fail = (): string => {
+const { pluginResolve, cwdResolve } = vi.hoisted(() => ({
+  pluginResolve: vi.fn(),
+  cwdResolve: vi.fn(),
+}));
+
+vi.mock("node:module", () => {
+  let calls = 0;
+  return {
+    createRequire: vi.fn(() => {
+      calls += 1;
+      return { resolve: calls === 1 ? pluginResolve : cwdResolve };
+    }),
+  };
+});
+
+const fail = (): never => {
   throw new Error("missing");
 };
 
 describe("resolveStylesheetPath", () => {
+  beforeEach(() => {
+    pluginResolve.mockReset();
+    cwdResolve.mockReset();
+  });
+
   it("uses the plugin resolver first", () => {
-    expect(
-      resolveStylesheetPath(
-        () => "/plugin/styles.css",
-        () => "/cwd/styles.css",
-      ),
-    ).toBe("/plugin/styles.css");
+    pluginResolve.mockReturnValue("/plugin/styles.css");
+
+    expect(resolveStylesheetPath()).toBe("/plugin/styles.css");
+    expect(cwdResolve).not.toHaveBeenCalled();
   });
 
   it("falls back to the workspace resolver", () => {
-    expect(resolveStylesheetPath(fail, () => "/cwd/styles.css")).toBe("/cwd/styles.css");
+    pluginResolve.mockImplementation(fail);
+    cwdResolve.mockReturnValue("/cwd/styles.css");
+
+    expect(resolveStylesheetPath()).toBe("/cwd/styles.css");
   });
 
   it("throws a helpful error with the last cause when both resolvers fail", () => {
+    pluginResolve.mockImplementation(fail);
+    cwdResolve.mockImplementation(fail);
+
     try {
-      resolveStylesheetPath(fail, fail);
+      resolveStylesheetPath();
       expect.unreachable("Expected resolution to fail");
     } catch (error) {
       expect(error).toBeInstanceOf(Error);

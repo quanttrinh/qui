@@ -10,34 +10,65 @@ import {
   extractComponents,
   importInjectionOffset,
   isExternalStyles,
+  isStylesHrefValue,
   isTransformableId,
   markStylesheetLinks,
   mayContainComponents,
+  resolveStylesheetHrefCandidates,
   virtualModuleId,
   VIRTUAL_STYLES_ID,
   type QuiPluginOptions,
+  type QuiStylesBundleAsset,
+  type QuiStylesResolverContext,
 } from "./core";
 import { resolveStylesheetPath } from "./resolve-styles";
 
-export type { QuiPluginOptions, QuiStylesOptions } from "./core";
+export type {
+  QuiPluginOptions,
+  QuiStylesBundleAsset,
+  QuiStylesHref,
+  QuiStylesHrefResolver,
+  QuiStylesHrefValue,
+  QuiStylesOptions,
+  QuiStylesResolverContext,
+} from "./core";
+export { markStylesheetLinks, resolveStylesheetHrefs } from "./core";
 
 const PLUGIN_NAME = "unplugin-qui";
 const RESOLVED_VIRTUAL_STYLES_ID = `\0${VIRTUAL_STYLES_ID}`;
 const COMPONENT_SOURCE = ["qui-", String.raw`\u`, String.raw`\x`] as const;
 const COMPONENT_CACHE_LIMIT = 128;
 
-function withViteBase(href: string | string[], base: string): string[] {
-  const values = Array.isArray(href) ? href : [href];
-  if (base === "" || base === "/" || base.startsWith("./")) {
-    return values;
-  }
-  const normalizedBase = base.endsWith("/") ? base : `${base}/`;
-  return values.flatMap((value) => {
-    if (!value.startsWith("/") || value.startsWith("//")) {
-      return [value];
+function isBundle(value: unknown): value is Readonly<Record<string, QuiStylesBundleAsset>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function validateStylesHref(styles: QuiPluginOptions["styles"]): void {
+  const value: unknown = styles;
+  if (typeof value === "object" && value !== null && "href" in value) {
+    const href: unknown = Reflect.get(value, "href");
+    if (href !== undefined && !isStylesHrefValue(href)) {
+      throw new Error(
+        "qui external styles href must be a string, string array, or resolver function.",
+      );
     }
-    return [value, `${normalizedBase}${value.slice(1)}`];
-  });
+  }
+  if (!isExternalStyles(styles) || typeof styles.href === "function") {
+    return;
+  }
+  const values = Array.isArray(styles.href) ? styles.href : [styles.href];
+  if (!values.some((entry) => entry.length > 0)) {
+    throw new Error("qui external styles require at least one non-empty href.");
+  }
+}
+
+function validateStylesOptions(styles: QuiPluginOptions["styles"], framework: string): void {
+  validateStylesHref(styles);
+  if (isExternalStyles(styles) && framework !== "vite") {
+    throw new Error(
+      "qui external styles require Vite; use styles: false and mark the document link yourself for other bundlers.",
+    );
+  }
 }
 
 /** Reads the shared stylesheet when the virtual styles module is loaded. */
@@ -46,35 +77,38 @@ async function getStylesheetText(): Promise<string> {
   return text;
 }
 
+/**
+ * Resolves external styles and marks matching document stylesheet links.
+ *
+ * Vite calls this from `transformIndexHtml`. SSR/SSG pipelines that render HTML
+ * outside Vite's HTML transform can call it directly with the build manifest
+ * (or a resolver) so the emitted, possibly hashed, link is marked before the
+ * response is sent.
+ */
+export async function markExternalStylesheetLinks(
+  html: string,
+  styles: QuiPluginOptions["styles"],
+  context: QuiStylesResolverContext,
+): Promise<string> {
+  validateStylesHref(styles);
+  if (!isExternalStyles(styles)) {
+    return html;
+  }
+  const hrefs = await resolveStylesheetHrefCandidates(styles.href, context);
+  return markStylesheetLinks(html, hrefs);
+}
+
 const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUnplugin<
   QuiPluginOptions | undefined
 >((options, meta: { framework: string }) => {
   const pluginOptions = options ?? {};
-  const stylesValue: unknown = pluginOptions.styles;
-  if (
-    typeof stylesValue === "object" &&
-    stylesValue !== null &&
-    "href" in stylesValue &&
-    Reflect.get(stylesValue, "href") !== undefined &&
-    !isExternalStyles(pluginOptions.styles)
-  ) {
-    throw new Error("qui external styles href must be a string or string array.");
-  }
-  if (isExternalStyles(pluginOptions.styles)) {
-    const configured = pluginOptions.styles.href;
-    const values = Array.isArray(configured) ? configured : [configured];
-    if (!values.some((value) => value.length > 0)) {
-      throw new Error("qui external styles require at least one non-empty href.");
-    }
-  }
-  if (isExternalStyles(pluginOptions.styles) && meta.framework !== "vite") {
-    throw new Error(
-      "qui external styles require Vite; use styles: false and mark the document link yourself for other bundlers.",
-    );
-  }
+  validateStylesOptions(pluginOptions.styles, meta.framework);
   const componentCache = new Map<string, { code: string; components: string[] }>();
   const externalStyles = isExternalStyles(pluginOptions.styles) ? pluginOptions.styles : undefined;
   let viteBase = "/";
+  let viteCommand: "serve" | "build" = "build";
+  let viteMode = "production";
+  let viteIsSsrBuild = false;
 
   function extractComponentsCached(code: string, id: string): string[] {
     const cached = componentCache.get(id);
@@ -102,15 +136,42 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
     name: PLUGIN_NAME,
     enforce: "pre",
     vite: {
-      configResolved(config: { base: string }): void {
+      configResolved(config: {
+        base: string;
+        command?: "serve" | "build";
+        mode?: string;
+        isSsrBuild?: boolean;
+        build?: { ssr?: boolean | string };
+      }): void {
         viteBase = config.base;
+        viteCommand = config.command ?? "build";
+        viteMode = config.mode ?? "production";
+        viteIsSsrBuild = Boolean(config.isSsrBuild ?? config.build?.ssr);
       },
       transformIndexHtml: {
         order: "post",
-        handler(html: string): string {
-          return externalStyles
-            ? markStylesheetLinks(html, withViteBase(externalStyles.href, viteBase))
-            : html;
+        handler(
+          html: string,
+          context: {
+            path?: string;
+            filename?: string;
+            bundle?: unknown;
+            server?: unknown;
+          } = {},
+        ): string | Promise<string> {
+          if (!externalStyles) {
+            return html;
+          }
+          return markExternalStylesheetLinks(html, externalStyles, {
+            command: viteCommand,
+            mode: viteMode,
+            base: viteBase,
+            isSsrBuild: viteIsSsrBuild,
+            path: context.path,
+            filename: context.filename,
+            bundle: isBundle(context.bundle) ? context.bundle : undefined,
+            server: context.server,
+          });
         },
       },
     },
