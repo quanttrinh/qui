@@ -5,6 +5,7 @@ on:
     types: [opened, synchronize, reopened, closed]
     paths:
       - 'packages/**'
+      - 'tooling/**'
       - '*.ts'
       - 'package.json'
       - 'bun.lock'
@@ -14,6 +15,7 @@ on:
     branches: [main]
     paths:
       - 'packages/**'
+      - 'tooling/**'
       - '*.ts'
       - 'package.json'
       - 'bun.lock'
@@ -73,7 +75,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build demo
-        run: bun run build
+        run: bun run --cwd packages/qui build
 
       - name: Validate demo output
         run: |
@@ -310,7 +312,7 @@ jobs:
           BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build demo
-        run: bun run build
+        run: bun run --cwd packages/qui build
 
       - name: Checkout gh-pages
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

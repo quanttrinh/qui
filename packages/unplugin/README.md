@@ -33,4 +33,4 @@ External `href` mode is Vite-only. Other adapters can use the plugin with
 `styles: false` and mark the document stylesheet themselves.
 
 See the main package README for component, theme, SSR, and styling guidance:
-https://github.com/quanttrinh/qui#readme
+https://github.com/quanttrinh/qui/tree/main/packages/qui#readme

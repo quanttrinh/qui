@@ -52,6 +52,7 @@ jobs:
           filters: |
             code:
               - 'packages/**'
+              - 'tooling/**'
               - '*.ts'
               - 'package.json'
               - 'bun.lock'
@@ -75,6 +76,10 @@ jobs:
       - name: Install dependencies
         if: steps.filter.outputs.code == 'true'
         run: bun install --frozen-lockfile
+
+      - name: Build
+        if: steps.filter.outputs.code == 'true'
+        run: bun run build
 
       - name: Restore Playwright browsers
         id: playwright-cache

@@ -44,6 +44,10 @@ function withViteBase(href: string | string[], base: string): string[] {
 
 /** Resolves the main package's shared stylesheet through its public export. */
 function resolveStylesheetPath(): string {
+  const override = process.env.QUI_STYLESHEET_PATH;
+  if (override !== undefined && override.length > 0) {
+    return override;
+  }
   try {
     return requireFromPlugin.resolve("@quanttrinh/qui/styles.css");
   } catch {

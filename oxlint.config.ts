@@ -63,6 +63,14 @@ export default defineConfig({
       },
     },
     {
+      files: ["packages/unplugin/src/*.unit.test.ts"],
+      env: { node: true },
+      rules: {
+        "import/no-nodejs-modules": "off",
+        "node/no-process-env": "off",
+      },
+    },
+    {
       files: ["packages/qui/src/utilities/ssr.hydration.integration.test.ts"],
       env: { node: true },
       rules: {
@@ -96,6 +104,7 @@ export default defineConfig({
       files: ["packages/unplugin/src/index.ts"],
       env: { node: true },
       rules: {
+        "node/no-process-env": "off",
         // `unplugin` plugins use a default export so consumers can call
         // `Qui.vite(...)` / `Qui.webpack(...)`.
         "import/no-default-export": "off",

@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { rollup, vite } from "./index";
@@ -9,6 +10,7 @@ type LoadHandler = (id: string) => string | undefined | Promise<string | undefin
 const EXTERNAL_ADAPTER_ERROR = /Vite/u;
 const EMPTY_HREF_ERROR = /non-empty href/u;
 const MALFORMED_HREF_ERROR = /string or string array/u;
+const STYLESHEET_FIXTURE = fileURLToPath(new URL("fixtures/styles.css", import.meta.url));
 
 describe("vite adapter", () => {
   it("injects the virtual registration import", () => {
@@ -55,11 +57,16 @@ describe("vite adapter", () => {
       throw new Error("Expected the virtual styles module to resolve");
     }
 
-    const code = await load.handler(resolved);
-    expect(code).toContain('from "@quanttrinh/qui/runtime"');
-    expect(code).toContain("URL.createObjectURL");
-    expect(code).toContain("getQuiStylesHref() === undefined");
-    expect(code).toContain("--font-fallback");
+    process.env.QUI_STYLESHEET_PATH = STYLESHEET_FIXTURE;
+    try {
+      const code = await load.handler(resolved);
+      expect(code).toContain('from "@quanttrinh/qui/runtime"');
+      expect(code).toContain("URL.createObjectURL");
+      expect(code).toContain("getQuiStylesHref() === undefined");
+      expect(code).toContain("--font-fallback");
+    } finally {
+      delete process.env.QUI_STYLESHEET_PATH;
+    }
   });
 
   it("loads an external stylesheet module and marks the document link", async () => {
