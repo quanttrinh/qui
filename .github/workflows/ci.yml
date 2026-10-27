@@ -51,13 +51,11 @@ jobs:
         with:
           filters: |
             code:
-              - 'src/**'
               - 'packages/**'
               - '*.ts'
               - 'package.json'
               - 'bun.lock'
               - 'scripts/**'
-              - 'build/**'
               - '.github/actions/setup-bun/**'
               - '.github/actions/setup-opencode/**'
               - '.devcontainer/Containerfile'

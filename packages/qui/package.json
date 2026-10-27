@@ -1,0 +1,155 @@
+{
+  "name": "@quanttrinh/qui",
+  "version": "0.3.1",
+  "description": "Material Design 3 web components built with Stencil",
+  "homepage": "https://quanttrinh.github.io/qui/",
+  "bugs": {
+    "url": "https://github.com/quanttrinh/qui/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/quanttrinh/qui.git",
+    "directory": "packages/qui"
+  },
+  "files": [
+    "dist",
+    "styled-system",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "main": "./dist/shared/index.js",
+  "module": "./dist/shared/index.js",
+  "types": "./dist/types/index.d.ts",
+  "imports": {
+    "#styled-system/css": "./styled-system/css/index.js",
+    "#qui-style-url": "./styled-system/style-urls/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/shared/index.js"
+    },
+    "./register": {
+      "types": "./dist/utilities/register.d.ts",
+      "default": "./dist/utilities/register.js"
+    },
+    "./hydrate": {
+      "types": "./dist/hydrate/index.d.ts",
+      "import": "./dist/hydrate/index.mjs",
+      "require": "./dist/hydrate/index.js"
+    },
+    "./ssr": {
+      "types": "./dist/utilities/ssr.d.ts",
+      "default": "./dist/utilities/ssr.js"
+    },
+    "./runtime": {
+      "types": "./dist/utilities/styles.d.ts",
+      "default": "./dist/utilities/styles.js"
+    },
+    "./shared/*": {
+      "types": "./dist/shared/*.d.ts",
+      "default": "./dist/shared/*.js"
+    },
+    "./theme.css": "./styled-system/theme.css",
+    "./styles.css": "./styled-system/styles.css",
+    "./package.json": "./package.json",
+    "./panda/*": "./dist/panda/*",
+    "./css": {
+      "types": "./styled-system/css/index.d.ts",
+      "default": "./styled-system/css/index.js"
+    },
+    "./css/*": {
+      "types": "./styled-system/css/*.d.ts",
+      "default": "./styled-system/css/*.js"
+    },
+    "./patterns": {
+      "types": "./styled-system/patterns/index.d.ts",
+      "default": "./styled-system/patterns/index.js"
+    },
+    "./patterns/*": {
+      "types": "./styled-system/patterns/*.d.ts",
+      "default": "./styled-system/patterns/*.js"
+    },
+    "./jsx": {
+      "types": "./styled-system/jsx/index.d.ts",
+      "default": "./styled-system/jsx/index.js"
+    },
+    "./jsx/*": {
+      "types": "./styled-system/jsx/*.d.ts",
+      "default": "./styled-system/jsx/*.js"
+    },
+    "./tokens": {
+      "types": "./styled-system/tokens/index.d.ts",
+      "default": "./styled-system/tokens/index.js"
+    },
+    "./helpers": {
+      "types": "./styled-system/helpers.d.ts",
+      "default": "./styled-system/helpers.js"
+    },
+    "./types": {
+      "types": "./styled-system/types/index.d.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
+  },
+  "scripts": {
+    "dev": "bun run build:utilities && stencil build --dev --watch --serve",
+    "build": "stencil build && bun run build:utilities && bun run build:types",
+    "build:utilities": "bun build/build-utilities.ts",
+    "build:types": "bun build/finalize-types.ts",
+    "codegen": "panda codegen",
+    "test": "NODE_ENV=test stencil-test",
+    "test:unit": "NODE_ENV=test stencil-test --project unit",
+    "test:integration": "NODE_ENV=test stencil-test --project integration",
+    "test:browser": "NODE_ENV=test stencil-test --project browser",
+    "test:smoke": "NODE_ENV=test stencil-test --project smoke",
+    "test:watch": "NODE_ENV=test stencil-test --watch",
+    "build:release": "bun run build && bun run build:lib",
+    "prepublishOnly": "bun run build:release",
+    "build:lib": "panda lib --files './**/*.{js,mjs}'"
+  },
+  "dependencies": {
+    "@material/material-color-utilities": "^0.4.0",
+    "@stencil/core": "^4.45.2"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^3.0.3",
+    "@pandacss/compiler": "2.4.0",
+    "@pandacss/dev": "^2.4.0",
+    "@pandacss/preset-base": "^2.4.0",
+    "@pandacss/preset-panda": "^2.4.0",
+    "@pandacss/transformer": "2.4.0",
+    "@stencil/eslint-plugin": "^1.4.0",
+    "@stencil/vitest": "^1.16.1",
+    "@types/node": "^26.6.5",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "@vitest/browser-playwright": "^5.0.5",
+    "husky": "^9.1.7",
+    "jiti": "^2.7.0",
+    "oxfmt": "^0.74.0",
+    "oxlint": "^1.89.0",
+    "oxlint-tsgolint": "^7.0.2005",
+    "playwright": "^1.64.1",
+    "postcss": "^8.5.30",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "vitest": "^5.0.5"
+  },
+  "peerDependencies": {
+    "@pandacss/dev": "^2.4.0"
+  },
+  "peerDependenciesMeta": {
+    "@pandacss/dev": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
+}

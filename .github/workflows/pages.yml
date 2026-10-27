@@ -4,9 +4,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
     paths:
-      - 'src/**'
+      - 'packages/**'
       - '*.ts'
-      - 'build/**'
       - 'package.json'
       - 'bun.lock'
       - '.github/workflows/pages.yml'
@@ -14,9 +13,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'src/**'
+      - 'packages/**'
       - '*.ts'
-      - 'build/**'
       - 'package.json'
       - 'bun.lock'
       - '.github/workflows/pages.yml'
@@ -80,23 +78,23 @@ jobs:
       - name: Validate demo output
         run: |
           set -euo pipefail
-          [ -d www ] && [ ! -L www ] || {
+          [ -d packages/qui/www ] && [ ! -L packages/qui/www ] || {
             echo "::error::Build output www is missing or is a symlink" >&2
             exit 1
           }
-          if find www -mindepth 1 ! -type d ! -type f -print -quit | grep -q .; then
+          if find packages/qui/www -mindepth 1 ! -type d ! -type f -print -quit | grep -q .; then
             echo "::error::Build output contains symlinks or special files" >&2
-            find www -mindepth 1 ! -type d ! -type f -print >&2
+            find packages/qui/www -mindepth 1 ! -type d ! -type f -print >&2
             exit 1
           fi
-          find www -name .git -prune -exec rm -rf {} +
-          find www -name .gitmodules -delete
+          find packages/qui/www -name .git -prune -exec rm -rf {} +
+          find packages/qui/www -name .gitmodules -delete
 
       - name: Upload demo
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: demo-build
-          path: www
+          path: packages/qui/www
           if-no-files-found: error
           retention-days: 1
 
@@ -365,7 +363,7 @@ jobs:
           find . -maxdepth 1 -type f -delete
           find . -maxdepth 1 -type d ! -name .git ! -name 'pr-*' -exec rm -rf {} + 2>/dev/null || true
 
-          cp -r ../www/* .
+          cp -r ../packages/qui/www/* .
           git add -u -- . ':!pr-*'
           git add -- . ':!pr-*'
           git diff --staged --quiet || git commit -m "Deploy main"

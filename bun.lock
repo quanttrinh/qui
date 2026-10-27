@@ -3,6 +3,18 @@
   "configVersion": 1,
   "workspaces": {
     "": {
+      "devDependencies": {
+        "@changesets/cli": "^3.0.3",
+        "@stencil/eslint-plugin": "^1.4.0",
+        "husky": "^9.1.7",
+        "oxfmt": "^0.74.0",
+        "oxlint": "^1.89.0",
+        "oxlint-tsgolint": "^7.0.2005",
+      },
+    },
+    "packages/qui": {
+      "name": "@quanttrinh/qui",
+      "version": "0.3.1",
       "dependencies": {
         "@material/material-color-utilities": "^0.4.0",
         "@stencil/core": "^4.45.2",
@@ -47,12 +59,12 @@
         "pathe": "^2.0.3",
         "unplugin": "^3.4.0",
       },
-      "peerDependencies": {
-        "@quanttrinh/qui": ">=0.3.1 <1.0.0",
+      "devDependencies": {
+        "vitest": "^5.0.5",
       },
-      "optionalPeers": [
-        "@quanttrinh/qui",
-      ],
+      "peerDependencies": {
+        "@quanttrinh/qui": "workspace:^",
+      },
     },
   },
   "packages": {
@@ -367,6 +379,8 @@
     "@pnpm/deps.graph-sequencer": ["@pnpm/deps.graph-sequencer@1100.0.1", "", {}, "sha512-pOr5+q1fLYKwFN3LAJuGZEnfXDcQ73zqgDHMtGy+K+uIoUqyY+6MeDCWFwfu+4EFuq76I5EPFofoNAI+Bmmq4A=="],
 
     "@polka/url": ["@polka/url@1.0.0-next.29", "", {}, "sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww=="],
+
+    "@quanttrinh/qui": ["@quanttrinh/qui@workspace:packages/qui"],
 
     "@quanttrinh/qui-unplugin": ["@quanttrinh/qui-unplugin@workspace:packages/unplugin"],
 
