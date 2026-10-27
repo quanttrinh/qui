@@ -1,3 +1,4 @@
+import matter from "gray-matter";
 import { parse, type DefaultTreeAdapterTypes } from "parse5";
 import { extname, normalize } from "pathe";
 
@@ -43,7 +44,6 @@ const JAVASCRIPT_EXTENSIONS = new Set([
   ".tsx",
 ]);
 const TRANSFORMABLE_EXTENSIONS = new Set([...JAVASCRIPT_EXTENSIONS, ".mdx"]);
-const MDX_FRONTMATTER = /^---[^\S\r\n]*(?:\r?\n)(?:[\s\S]*?\r?\n)?---[^\S\r\n]*(?:\r?\n|$)/u;
 const STYLESHEET_ATTRIBUTE = "data-qui-styles";
 const REL_TOKEN_SPLIT = /\s+/u;
 
@@ -114,12 +114,31 @@ export function isTransformableId(id: string): boolean {
  * Returns the offset after leading frontmatter, or zero when there is none.
  * MDX requires imports to follow frontmatter rather than precede it.
  */
+function skipClosingFenceWhitespace(code: string, offset: number): number {
+  let cursor = offset;
+  while (code[cursor] === " " || code[cursor] === "\t") {
+    cursor += 1;
+  }
+  if (code.startsWith("\r\n", cursor)) {
+    return cursor + 2;
+  }
+  if (code[cursor] === "\n") {
+    return cursor + 1;
+  }
+  return cursor === code.length ? cursor : offset;
+}
+
 export function importInjectionOffset(code: string): number {
   if (!code.startsWith("---")) {
     return 0;
   }
-  const match = MDX_FRONTMATTER.exec(code);
-  return match?.[0].length ?? 0;
+  try {
+    const { content } = matter(code);
+    return skipClosingFenceWhitespace(code, code.length - content.length);
+  } catch {
+    // Invalid frontmatter fails the MDX build; do not inject before it.
+    return 0;
+  }
 }
 
 /** Returns whether the option selects an existing external component sheet. */
