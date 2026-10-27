@@ -23,12 +23,8 @@ export type { QuiPluginOptions, QuiStylesOptions } from "./core";
 
 const PLUGIN_NAME = "unplugin-qui";
 const RESOLVED_VIRTUAL_STYLES_ID = `\0${VIRTUAL_STYLES_ID}`;
-const VIRTUAL_MODULE_FILTER = /^virtual:qui\/(?:register|styles)(?:[?#]|$)/u;
-const RESOLVED_VIRTUAL_MODULE_FILTER = /^\0virtual:qui\/(?:register|styles)(?:[?#]|$)/u;
 const STYLESHEET_PATH = fileURLToPath(new URL("../../styled-system/styles.css", import.meta.url));
-const TRANSFORMABLE_ID = /\.(?:[cm]?[jt]sx?|mdx)(?:[?#]|$)/u;
-const COMPONENT_SOURCE = /qui-|\\[ux]/u;
-const IGNORED_ID = /(?:^|[\\/])node_modules[\\/]|^(?:virtual:|\0)/u;
+const COMPONENT_SOURCE = ["qui-", String.raw`\u`, String.raw`\x`] as const;
 const COMPONENT_CACHE_LIMIT = 128;
 
 function withViteBase(href: string | string[], base: string): string[] {
@@ -120,7 +116,6 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
       },
     },
     resolveId: {
-      filter: { id: VIRTUAL_MODULE_FILTER },
       handler(id: string): string | undefined {
         if (id === VIRTUAL_STYLES_ID) {
           return RESOLVED_VIRTUAL_STYLES_ID;
@@ -132,7 +127,6 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
       },
     },
     load: {
-      filter: { id: RESOLVED_VIRTUAL_MODULE_FILTER },
       async handler(
         this: { addWatchFile?: (id: string) => void },
         id: string,
@@ -152,7 +146,7 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
       },
     },
     transform: {
-      filter: { id: { include: TRANSFORMABLE_ID, exclude: IGNORED_ID }, code: COMPONENT_SOURCE },
+      filter: { code: { include: [...COMPONENT_SOURCE] } },
       handler(code: string, id: string): TransformResult {
         if (!isTransformableId(id)) {
           return undefined;

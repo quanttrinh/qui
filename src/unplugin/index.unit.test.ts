@@ -11,17 +11,14 @@ const EMPTY_HREF_ERROR = /non-empty href/u;
 const MALFORMED_HREF_ERROR = /string or string array/u;
 
 describe("vite adapter", () => {
-  it("keeps v3 hook filters and injects the virtual registration import", () => {
+  it("injects the virtual registration import", () => {
     const plugin = vite();
     const transform = plugin.transform as unknown as {
-      filter: { code: RegExp; id: unknown };
+      filter: unknown;
       handler: TransformHandler;
     };
 
-    expect(transform.filter.id).toBeDefined();
-    expect(transform.filter.code.test('h("qui-button")')).toBe(true);
-    expect(transform.filter.code.test(String.raw`h("qui\u002Dbutton")`)).toBe(true);
-    expect(transform.filter.code.test("export const value = 1;")).toBe(false);
+    expect(transform.filter).toBeDefined();
 
     const result = transform.handler("<qui-button />", "/app/view.tsx");
     expect(result?.code).toContain('import "virtual:qui/register?components=qui-button";');

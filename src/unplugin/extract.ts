@@ -1,7 +1,9 @@
 import { parseSync, visitorKeys, type Node } from "oxc-parser";
+import { parseFragment, type DefaultTreeAdapterTypes } from "parse5";
+import { extname } from "pathe";
 
-const COMPONENT_TAG = /<\s*(?<tag>qui-[a-z0-9]+(?:-[a-z0-9]+)*)(?=[\s/>]|$)/gu;
-const TYPESCRIPT_FILE = /\.(?:[cm]?ts)$/u;
+const TYPESCRIPT_EXTENSIONS = new Set([".cts", ".mts", ".ts"]);
+const INCOMPLETE_COMPONENT_TAG = /<(?<tag>qui-[a-z0-9]+(?:-[a-z0-9]+)*)(?=[\s/>]|$)/gu;
 const COMPONENT_CALLS = new Set(["h", "jsx", "jsxs", "createElement"]);
 
 function isNode(value: unknown): value is Node {
@@ -78,13 +80,14 @@ function collect(node: Node, components: Set<string>): void {
 }
 
 function languageFor(filename: string): "js" | "jsx" | "ts" | "tsx" {
-  if (filename.endsWith(".tsx")) {
+  const extension = extname(filename);
+  if (extension === ".tsx") {
     return "tsx";
   }
-  if (TYPESCRIPT_FILE.test(filename)) {
+  if (TYPESCRIPT_EXTENSIONS.has(extension)) {
     return "ts";
   }
-  if (filename.endsWith(".jsx")) {
+  if (extension === ".jsx") {
     return "jsx";
   }
   return "js";
@@ -109,11 +112,31 @@ export function extractComponentsFromJavaScript(
   return [...components].sort();
 }
 
+function collectMarkupComponents(
+  node: DefaultTreeAdapterTypes.Node,
+  components: Set<string>,
+): void {
+  if ("tagName" in node && node.tagName.startsWith("qui-")) {
+    components.add(node.tagName);
+  }
+  if ("childNodes" in node) {
+    for (const child of node.childNodes) {
+      collectMarkupComponents(child, components);
+    }
+  }
+  if ("content" in node) {
+    collectMarkupComponents(node.content, components);
+  }
+}
+
 export function extractComponentsFromText(code: string): string[] {
   const components = new Set<string>();
-  for (const match of code.matchAll(COMPONENT_TAG)) {
-    const tag = match.groups?.tag ?? "";
-    if (tag !== "") {
+  collectMarkupComponents(parseFragment(code), components);
+  // Parse5 drops an unterminated tag at EOF. Keep a lexical fallback for
+  // Malformed MDX/JSX while the parser recovers on the next edit.
+  for (const match of code.matchAll(INCOMPLETE_COMPONENT_TAG)) {
+    const tag = match.groups?.tag;
+    if (tag !== undefined) {
       components.add(tag);
     }
   }

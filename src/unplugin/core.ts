@@ -1,4 +1,5 @@
 import { parse, type DefaultTreeAdapterTypes } from "parse5";
+import { extname, normalize } from "pathe";
 
 import { extractComponentsFromJavaScript, extractComponentsFromText } from "./extract";
 
@@ -31,18 +32,30 @@ export interface QuiPluginOptions {
 }
 
 const COMPONENT_TAG_NAME = /^qui-[a-z0-9]+(?:-[a-z0-9]+)*$/u;
-const JAVASCRIPT_FILE = /\.(?:[cm]?[jt]sx?)$/u;
-const TRANSFORMABLE_FILE = /\.(?:[cm]?[jt]sx?|mdx)$/u;
-const ESCAPED_CHARACTER = /\\[ux]/u;
+const JAVASCRIPT_EXTENSIONS = new Set([
+  ".cjs",
+  ".cts",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".mts",
+  ".ts",
+  ".tsx",
+]);
+const TRANSFORMABLE_EXTENSIONS = new Set([...JAVASCRIPT_EXTENSIONS, ".mdx"]);
 const MDX_FRONTMATTER = /^---[^\S\r\n]*(?:\r?\n)(?:[\s\S]*?\r?\n)?---[^\S\r\n]*(?:\r?\n|$)/u;
 const STYLESHEET_ATTRIBUTE = "data-qui-styles";
 const REL_TOKEN_SPLIT = /\s+/u;
+
+function fileFromId(id: string): string {
+  return normalize(id.split("?")[0] ?? id);
+}
 
 export const VIRTUAL_MODULE_ID = "virtual:qui/register";
 export const VIRTUAL_STYLES_ID = "virtual:qui/styles";
 
 export function mayContainComponents(code: string): boolean {
-  return code.includes("qui-") || ESCAPED_CHARACTER.test(code);
+  return code.includes("qui-") || code.includes(String.raw`\u`) || code.includes(String.raw`\x`);
 }
 
 export function normalizeComponents(components: Iterable<string>): string[] {
@@ -65,8 +78,8 @@ export function extractComponents(code: string, id = "component.tsx"): string[] 
   if (!mayContainComponents(code)) {
     return [];
   }
-  const file = (id.split("?")[0] ?? id).replaceAll("\\", "/");
-  const components = JAVASCRIPT_FILE.test(file)
+  const file = fileFromId(id);
+  const components = JAVASCRIPT_EXTENSIONS.has(extname(file))
     ? (extractComponentsFromJavaScript(code, file) ?? extractComponentsFromText(code))
     : extractComponentsFromText(code);
   return normalizeComponents(components);
@@ -90,11 +103,11 @@ export function isTransformableId(id: string): boolean {
   if (id.startsWith("\0") || id.startsWith("virtual:")) {
     return false;
   }
-  const file = (id.split("?")[0] ?? id).replaceAll("\\", "/");
+  const file = fileFromId(id);
   if (file.startsWith("node_modules/") || file.includes("/node_modules/")) {
     return false;
   }
-  return TRANSFORMABLE_FILE.test(file);
+  return TRANSFORMABLE_EXTENSIONS.has(extname(file));
 }
 
 /**
