@@ -267,20 +267,28 @@ component subpaths when bundle size matters.
 
 ## Auto-registration plugin
 
-`@quanttrinh/qui/unplugin` scans JSX/TSX and MDX source for used `qui-*` tags.
+`@quanttrinh/qui-unplugin` scans JSX/TSX and MDX source for used `qui-*` tags.
 For client modules it injects one static registration module per set of
 components. It also configures the component stylesheet used by shadow roots.
+It is published separately so component-only consumers do not install the
+bundler/parser dependencies.
 
 By default the virtual styles module imports the document-only `theme.css` and
 embeds `styles.css` in a shared blob URL. Do not also add the Quick start CSS
 imports in that mode, or the shared CSS is emitted twice. Astro pages need the
 explicit registration script described below.
 
+Install it as a development dependency:
+
+```sh
+bun add -d @quanttrinh/qui-unplugin
+```
+
 The plugin uses unplugin v3, which is ESM-only and requires Node.js `20.19+`
 within Node 20, or `22.12+`. Node 21 is not supported.
 
 ```ts
-import Qui from "@quanttrinh/qui/unplugin";
+import Qui from "@quanttrinh/qui-unplugin";
 // vite.config.ts
 import { defineConfig } from "vite";
 
@@ -560,7 +568,6 @@ import { flex } from "@quanttrinh/qui/patterns";
 dist/shared/                 custom-elements build
 dist/hydrate/                SSR/SSG hydrate module
 dist/utilities/              compiled utility modules
-dist/unplugin/               bundler plugin
 dist/types/                  TypeScript declarations
 dist/panda/                  Panda design-system manifest
 styled-system/               generated Panda CSS and types
@@ -573,7 +580,7 @@ Published entry points:
 | `@quanttrinh/qui`            | Components                            |
 | `@quanttrinh/qui/shared/*`   | Individual component                  |
 | `@quanttrinh/qui/register`   | Static component registration helper  |
-| `@quanttrinh/qui/unplugin`   | Auto-registration bundler plugin      |
+| `@quanttrinh/qui-unplugin`   | Auto-registration bundler plugin      |
 | `@quanttrinh/qui/hydrate`    | SSR/SSG renderer                      |
 | `@quanttrinh/qui/ssr`        | Shadow stylesheet SSR helper          |
 | `@quanttrinh/qui/runtime`    | Client stylesheet configuration       |
@@ -592,10 +599,10 @@ Published entry points:
 ```sh
 bun install
 bun run dev          # styles + Stencil dev server
-bun run build            # production build + utilities + plugin
+bun run build            # production build + utilities
 bun run build:release    # release build with Panda artifacts
 bun run build:utilities  # compile src/utilities -> dist/utilities
-bun run build:unplugin   # compile src/unplugin -> dist/unplugin
+bun run --cwd packages/unplugin build  # compile the plugin package
 bun run lint
 bun run fmt
 bun run fmt:check
@@ -605,8 +612,8 @@ Stencil generates `src/components.d.ts` during a build. On a fresh checkout, run
 `bun run build` once before type-checking.
 
 `dev` compiles utilities once before starting the Stencil watch. Re-run
-`bun run build:utilities` after editing `src/utilities/**`, and
-`bun run build:unplugin` after editing `src/unplugin/**`.
+`bun run build:utilities` after editing `src/utilities/**`. The plugin package
+has its own build under `packages/unplugin`.
 
 Type-check with the native TypeScript compiler:
 
@@ -647,7 +654,7 @@ browser tests.
 - `build/build-utilities.ts` compiles `src/utilities/**/*.ts` into
   `dist/utilities/`, including declarations and rewritten relative imports.
   `build` runs it after Stencil completes.
-- `build/build-unplugin.ts` compiles `src/unplugin/**/*.ts` into
-  `dist/unplugin/` using the same module builder.
+- `packages/unplugin/build/build.ts` compiles the separate plugin package into
+  `packages/unplugin/dist/` using the same module builder.
 - The generated `www` app is the demo/dev server; it is not the published client
   entry point.

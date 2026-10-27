@@ -1,0 +1,56 @@
+{
+  "name": "@quanttrinh/qui-unplugin",
+  "version": "0.0.0",
+  "description": "Bundler plugin for auto-registering @quanttrinh/qui components",
+  "homepage": "https://quanttrinh.github.io/qui/",
+  "bugs": {
+    "url": "https://github.com/quanttrinh/qui/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/quanttrinh/qui.git",
+    "directory": "packages/unplugin"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
+  },
+  "scripts": {
+    "build": "bun build/build.ts",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "magic-string": "^1.4.3",
+    "oxc-parser": "^0.155.0",
+    "parse5": "^8.0.1",
+    "pathe": "^2.0.3",
+    "unplugin": "^3.4.0"
+  },
+  "peerDependencies": {
+    "@quanttrinh/qui": ">=0.3.1 <1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@quanttrinh/qui": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
+}
