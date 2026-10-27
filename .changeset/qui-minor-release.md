@@ -13,3 +13,5 @@ Split the bundler plugin into `@quanttrinh/qui-unplugin`, add external component
 - Move `@quanttrinh/qui` into `packages/qui` and make the repository root a private workspace.
 - Flatten the hydrate build output to `dist/hydrate/`.
 - Make the published runtime self-contained by inlining the DOM element check.
+
+This repository treats a minor release of a `0.x` package as the breaking-change signal.

@@ -34,7 +34,8 @@
     "build": "bun build/build.ts",
     "prepublishOnly": "bun run build",
     "test": "vitest run",
-    "test:unit": "vitest run"
+    "test:unit": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",

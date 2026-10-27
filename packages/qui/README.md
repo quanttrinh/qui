@@ -612,10 +612,10 @@ Stencil generates `src/components.d.ts` during a build. On a fresh checkout, run
 `dev` compiles utilities once before starting the Stencil watch. Re-run
 `bun run build:utilities` after editing `src/utilities/**`.
 
-Type-check with the native TypeScript compiler:
+Type-check from the repository root with the native TypeScript compiler:
 
 ```sh
-node ./node_modules/@typescript/native/bin/tsc --noEmit
+node ./node_modules/@typescript/native/bin/tsc --noEmit -p packages/qui/tsconfig.json
 ```
 
 ### Testing

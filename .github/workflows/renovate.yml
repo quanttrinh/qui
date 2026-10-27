@@ -5,6 +5,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - package.json
+      - packages/*/package.json
       - bun.lock
       - .github/**
       - scripts/tools/*.env
@@ -35,6 +36,7 @@ jobs:
           filters: |
             allowed:
               - package.json
+              - packages/*/package.json
               - bun.lock
               - .github/workflows/*.yml
               - .github/workflows/*.yaml
@@ -43,6 +45,7 @@ jobs:
             invalid:
               - '**'
               - '!package.json'
+              - '!packages/*/package.json'
               - '!bun.lock'
               - '!.github/workflows/*.yml'
               - '!.github/workflows/*.yaml'
@@ -72,7 +75,7 @@ jobs:
 
           for f in $(echo "$FILES" | jq -r '.[]'); do
             case "$f" in
-              package.json)
+              package.json | packages/*/package.json)
                 BASE_JSON="$(git show "$BASE:$f" 2>/dev/null || echo '')"
                 [ -n "$BASE_JSON" ] || { echo "::error::$f does not exist in base"; exit 1; }
                 python3 - "$f" "$BASE_JSON" << 'PYEOF'
@@ -160,51 +163,75 @@ jobs:
 
       - name: Generate changeset fragment
         id: changeset
-        if: steps.validate.outputs.valid == 'true' && contains(steps.filter.outputs.allowed_files, 'package.json')
+        if: steps.validate.outputs.valid == 'true'
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           BUMP: ${{ steps.bump.outputs.type }}
           HEAD_REF: ${{ github.head_ref }}
+          FILES: ${{ steps.filter.outputs.allowed_files }}
         run: |
           set -euo pipefail
-          python3 - "$BASE" > /tmp/dep-summary.txt << 'PYEOF'
-          import json, subprocess, sys
-          base = json.loads(subprocess.check_output(["git", "show", f"{sys.argv[1]}:package.json"]))
-          with open("package.json") as fh:
-              head = json.load(fh)
-          changed = []
-          seen = set()
-          for section in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies"):
-              for name, new in head.get(section, {}).items():
-                  old = base.get(section, {}).get(name)
-                  if old != new:
-                      line = f"- `{name}`: `{old}` -> `{new}`"
-                      if line not in seen:
-                          seen.add(line)
-                          changed.append(line)
-          print("\n".join(changed) if changed else "- dependency versions updated")
-          PYEOF
-
-          PACKAGE_NAME=$(jq -r .name package.json)
           BRANCH_SAFE=$(echo "$HEAD_REF" | tr '/' '-')
           FRAGMENT_PATH=".changeset/${BRANCH_SAFE}.md"
+          python3 - "$BASE" "$FILES" "$BUMP" "$FRAGMENT_PATH" << 'PYEOF'
+          import json, subprocess, sys
 
-          {
-            echo '---'
-            echo "\"${PACKAGE_NAME}\": ${BUMP}"
-            echo '---'
-            echo
-            echo 'Dependency updates:'
-            echo
-            cat /tmp/dep-summary.txt
-          } > "$FRAGMENT_PATH"
+          base_sha, files_json, bump, fragment_path = sys.argv[1:5]
+          files = json.loads(files_json)
+          manifests = [
+              path for path in files
+              if path == "package.json"
+              or (path.startswith("packages/") and path.endswith("/package.json"))
+          ]
+
+          releases = []
+          summary = []
+          for path in manifests:
+              try:
+                  base = json.loads(subprocess.check_output(["git", "show", f"{base_sha}:{path}"]))
+              except subprocess.CalledProcessError:
+                  base = {}
+              with open(path) as fh:
+                  head = json.load(fh)
+              name = head.get("name")
+              if not isinstance(name, str) or head.get("private") is True:
+                  continue
+              changed = []
+              for section in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies"):
+                  for dep, new in head.get(section, {}).items():
+                      old = base.get(section, {}).get(dep)
+                      if old != new:
+                          changed.append(f"- `{path}`: `{dep}`: `{old}` -> `{new}`")
+              if changed:
+                  releases.append(name)
+                  summary.extend(changed)
+
+          releases = sorted(set(releases))
+          if not releases:
+              print("No publishable package dependency changes.")
+              sys.exit(0)
+
+          with open(fragment_path, "w") as fh:
+              fh.write("---\n")
+              for name in releases:
+                  fh.write(f'"{name}": {bump}\n')
+              fh.write("---\n\nDependency updates:\n\n")
+              fh.write("\n".join(summary))
+              fh.write("\n")
+          print(f"Created {fragment_path} for {', '.join(releases)}")
+          PYEOF
+          if [ -f "$FRAGMENT_PATH" ]; then
+            echo "created=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "created=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Setup git
-        if: steps.validate.outputs.valid == 'true' && contains(steps.filter.outputs.allowed_files, 'package.json')
+        if: steps.validate.outputs.valid == 'true' && steps.changeset.outputs.created == 'true'
         uses: ./.github/actions/setup-git-bot
 
       - name: Commit and push if changed
-        if: steps.validate.outputs.valid == 'true' && contains(steps.filter.outputs.allowed_files, 'package.json')
+        if: steps.validate.outputs.valid == 'true' && steps.changeset.outputs.created == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_REF: ${{ github.head_ref }}
