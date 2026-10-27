@@ -113,7 +113,8 @@
     "test:watch": "NODE_ENV=test stencil-test --watch",
     "build:release": "bun run build && bun run build:lib",
     "prepublishOnly": "bun run build:release",
-    "build:lib": "panda lib --files './**/*.{js,mjs}'"
+    "build:lib": "panda lib --files './**/*.{js,mjs}'",
+    "typecheck": "tsc --noEmit -p tsconfig.build.json"
   },
   "dependencies": {
     "@material/material-color-utilities": "^0.4.0",

@@ -20,9 +20,16 @@ describe("resolveStylesheetPath", () => {
     expect(resolveStylesheetPath(fail, () => "/cwd/styles.css")).toBe("/cwd/styles.css");
   });
 
-  it("throws a helpful error when both resolvers fail", () => {
-    expect(() => resolveStylesheetPath(fail, fail)).toThrow(
-      "@quanttrinh/qui-unplugin requires @quanttrinh/qui to be installed alongside it.",
-    );
+  it("throws a helpful error with the last cause when both resolvers fail", () => {
+    try {
+      resolveStylesheetPath(fail, fail);
+      expect.unreachable("Expected resolution to fail");
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe(
+        "@quanttrinh/qui-unplugin requires @quanttrinh/qui to be installed alongside it.",
+      );
+      expect((error as Error).cause).toBeInstanceOf(Error);
+    }
   });
 });

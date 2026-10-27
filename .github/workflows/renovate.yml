@@ -178,7 +178,10 @@ jobs:
           import json, subprocess, sys
 
           base_sha, files_json, bump, fragment_path = sys.argv[1:5]
-          files = json.loads(files_json)
+          try:
+              files = json.loads(files_json) if files_json else []
+          except json.JSONDecodeError:
+              files = []
           manifests = [
               path for path in files
               if path == "package.json"
@@ -199,18 +202,19 @@ jobs:
                   continue
               changed = []
               releases_changed = False
-              for section in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies"):
+              for section in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies", "resolutions"):
                   for dep, new in head.get(section, {}).items():
                       old = base.get(section, {}).get(dep)
                       if old != new:
                           changed.append(f"- `{path}`: `{dep}`: `{old}` -> `{new}`")
-                          if section in ("dependencies", "optionalDependencies", "peerDependencies"):
+                          if section in ("dependencies", "optionalDependencies", "peerDependencies", "resolutions"):
                               releases_changed = True
               if releases_changed:
                   releases.append(name)
               summary.extend(changed)
 
           releases = sorted(set(releases))
+          summary = list(dict.fromkeys(summary))
           if not releases:
               print("No publishable package dependency changes.")
               sys.exit(0)

@@ -25,9 +25,10 @@ export function resolveStylesheetPath(
   } catch {
     try {
       return fromCwd();
-    } catch {
+    } catch (error) {
       throw new Error(
         "@quanttrinh/qui-unplugin requires @quanttrinh/qui to be installed alongside it.",
+        { cause: error },
       );
     }
   }

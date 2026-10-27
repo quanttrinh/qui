@@ -612,10 +612,10 @@ Stencil generates `src/components.d.ts` during a build. On a fresh checkout, run
 `dev` compiles utilities once before starting the Stencil watch. Re-run
 `bun run build:utilities` after editing `src/utilities/**`.
 
-Type-check from the repository root with the native TypeScript compiler:
+Type-check the package:
 
 ```sh
-node ./node_modules/@typescript/native/bin/tsc --noEmit -p packages/qui/tsconfig.json
+bun run typecheck
 ```
 
 ### Testing
@@ -639,7 +639,7 @@ bun run test:watch
 The package test scripts set `NODE_ENV=test`, which makes Stencil build the
 test lazy loader into `.stencil-test` instead of the `www` demo output. Direct
 `stencil-test` invocations need that environment variable set as well.
-`vitest-setup.ts` loads that loader and the generated theme/shared styles for
+`vitest.setup.ts` loads that loader and the generated theme/shared styles for
 browser tests.
 
 ## Implementation notes
