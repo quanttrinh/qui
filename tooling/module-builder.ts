@@ -10,13 +10,13 @@ const RESOLVED_MODULE = /\.(?:[cm]?js|jsx|ts|tsx|json|css)$/u;
 const JAVASCRIPT_EXTENSION = /\.js$/u;
 
 export interface ModuleBuildOptions {
-  /** Absolute repository root. */
+  /** Absolute package root. */
   root: string;
-  /** Source directory relative to the repository root. */
+  /** Source directory relative to the package root. */
   source: string;
-  /** Output directory relative to the repository root. */
+  /** Output directory relative to the package root. */
   output: string;
-  /** Stale files to remove relative to the repository root. */
+  /** Stale files to remove relative to the package root. */
   clean?: string[];
 }
 

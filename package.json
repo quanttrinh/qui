@@ -1,164 +1,39 @@
 {
-  "name": "@quanttrinh/qui",
-  "version": "0.3.1",
-  "description": "Material Design 3 web components built with Stencil",
-  "homepage": "https://quanttrinh.github.io/qui/",
-  "bugs": {
-    "url": "https://github.com/quanttrinh/qui/issues"
-  },
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/quanttrinh/qui.git"
-  },
+  "name": "@quanttrinh/qui-workspace",
+  "version": "0.0.0",
+  "private": true,
   "workspaces": [
-    ".",
     "packages/*"
   ],
-  "files": [
-    "dist",
-    "styled-system",
-    "README.md",
-    "LICENSE"
-  ],
   "type": "module",
-  "sideEffects": [
-    "**/*.css"
-  ],
-  "main": "./dist/shared/index.js",
-  "module": "./dist/shared/index.js",
-  "types": "./dist/types/index.d.ts",
-  "imports": {
-    "#styled-system/css": "./styled-system/css/index.js",
-    "#qui-style-url": "./styled-system/style-urls/index.js"
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/types/index.d.ts",
-      "default": "./dist/shared/index.js"
-    },
-    "./register": {
-      "types": "./dist/utilities/register.d.ts",
-      "default": "./dist/utilities/register.js"
-    },
-    "./hydrate": {
-      "types": "./dist/hydrate/index.d.ts",
-      "import": "./dist/hydrate/index.mjs",
-      "require": "./dist/hydrate/index.js"
-    },
-    "./ssr": {
-      "types": "./dist/utilities/ssr.d.ts",
-      "default": "./dist/utilities/ssr.js"
-    },
-    "./runtime": {
-      "types": "./dist/utilities/styles.d.ts",
-      "default": "./dist/utilities/styles.js"
-    },
-    "./shared/*": {
-      "types": "./dist/shared/*.d.ts",
-      "default": "./dist/shared/*.js"
-    },
-    "./theme.css": "./styled-system/theme.css",
-    "./styles.css": "./styled-system/styles.css",
-    "./package.json": "./package.json",
-    "./panda/*": "./dist/panda/*",
-    "./css": {
-      "types": "./styled-system/css/index.d.ts",
-      "default": "./styled-system/css/index.js"
-    },
-    "./css/*": {
-      "types": "./styled-system/css/*.d.ts",
-      "default": "./styled-system/css/*.js"
-    },
-    "./patterns": {
-      "types": "./styled-system/patterns/index.d.ts",
-      "default": "./styled-system/patterns/index.js"
-    },
-    "./patterns/*": {
-      "types": "./styled-system/patterns/*.d.ts",
-      "default": "./styled-system/patterns/*.js"
-    },
-    "./jsx": {
-      "types": "./styled-system/jsx/index.d.ts",
-      "default": "./styled-system/jsx/index.js"
-    },
-    "./jsx/*": {
-      "types": "./styled-system/jsx/*.d.ts",
-      "default": "./styled-system/jsx/*.js"
-    },
-    "./tokens": {
-      "types": "./styled-system/tokens/index.d.ts",
-      "default": "./styled-system/tokens/index.js"
-    },
-    "./helpers": {
-      "types": "./styled-system/helpers.d.ts",
-      "default": "./styled-system/helpers.js"
-    },
-    "./types": {
-      "types": "./styled-system/types/index.d.ts"
-    }
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://npm.pkg.github.com"
-  },
   "scripts": {
     "prepare": "bun -e \"try{require('husky')()}catch{}\"",
-    "dev": "bun run build:utilities && stencil build --dev --watch --serve",
-    "build": "bun run clean:unplugin && stencil build && bun run build:utilities && bun run build:types",
-    "build:utilities": "bun build/build-utilities.ts",
-    "build:types": "bun build/finalize-types.ts",
-    "codegen": "panda codegen",
-    "lint": "oxlint --config oxlint.config.ts src packages/unplugin/src",
-    "test": "NODE_ENV=test stencil-test",
-    "test:unit": "NODE_ENV=test stencil-test --project unit",
-    "test:integration": "NODE_ENV=test stencil-test --project integration",
-    "test:browser": "NODE_ENV=test stencil-test --project browser",
-    "test:smoke": "NODE_ENV=test stencil-test --project smoke",
-    "test:watch": "NODE_ENV=test stencil-test --watch",
-    "lint:fix": "oxlint --config oxlint.config.ts --fix src packages/unplugin/src",
+    "dev": "bun run --cwd packages/qui dev",
+    "build": "bun run --cwd packages/qui build && bun run --cwd packages/unplugin build",
+    "build:release": "bun run --cwd packages/qui build:release && bun run --cwd packages/unplugin build",
+    "build:lib": "bun run --cwd packages/qui build:lib",
+    "test": "bun run --cwd packages/qui test && bun run --cwd packages/unplugin test",
+    "test:unit": "bun run --cwd packages/qui test:unit && bun run --cwd packages/unplugin test:unit",
+    "test:integration": "bun run --cwd packages/qui test:integration",
+    "test:browser": "bun run --cwd packages/qui test:browser",
+    "test:smoke": "bun run --cwd packages/qui test:smoke",
+    "test:watch": "bun run --cwd packages/qui test:watch",
+    "lint": "oxlint --config oxlint.config.ts packages/qui/src packages/unplugin/src",
+    "lint:fix": "oxlint --config oxlint.config.ts --fix packages/qui/src packages/unplugin/src",
     "fmt": "oxfmt --config oxfmt.config.ts",
     "fmt:check": "oxfmt --config oxfmt.config.ts --check",
     "version": "changeset version",
-    "release": "changeset publish",
-    "build:release": "bun run build && bun run build:lib",
-    "prepublishOnly": "bun run build:release",
-    "build:lib": "panda lib --files './**/*.{js,mjs}'",
-    "clean:unplugin": "rm -rf dist/unplugin dist/types/unplugin"
-  },
-  "dependencies": {
-    "@material/material-color-utilities": "^0.4.0",
-    "@stencil/core": "^4.45.2"
+    "release": "changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
-    "@pandacss/compiler": "2.4.0",
-    "@pandacss/dev": "^2.4.0",
-    "@pandacss/preset-base": "^2.4.0",
-    "@pandacss/preset-panda": "^2.4.0",
-    "@pandacss/transformer": "2.4.0",
     "@stencil/eslint-plugin": "^1.4.0",
-    "@stencil/vitest": "^1.16.1",
     "@types/node": "^26.6.5",
-    "@typescript/native": "npm:typescript@^7.0.2",
-    "@vitest/browser-playwright": "^5.0.5",
     "husky": "^9.1.7",
-    "jiti": "^2.7.0",
     "oxfmt": "^0.74.0",
     "oxlint": "^1.89.0",
     "oxlint-tsgolint": "^7.0.2005",
-    "playwright": "^1.64.1",
-    "postcss": "^8.5.30",
-    "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "vitest": "^5.0.5"
-  },
-  "peerDependencies": {
-    "@pandacss/dev": "^2.4.0"
-  },
-  "peerDependenciesMeta": {
-    "@pandacss/dev": {
-      "optional": true
-    }
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

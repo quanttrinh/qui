@@ -2,7 +2,7 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { buildModules } from "../../../build/lib/compile";
+import { buildModules } from "../../../tooling/module-builder";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 

@@ -32,7 +32,11 @@
   },
   "scripts": {
     "build": "bun build/build.ts",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",
@@ -42,13 +46,13 @@
     "pathe": "^2.0.3",
     "unplugin": "^3.4.0"
   },
-  "peerDependencies": {
-    "@quanttrinh/qui": ">=0.3.1 <1.0.0"
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "vitest": "^5.0.5"
   },
-  "peerDependenciesMeta": {
-    "@quanttrinh/qui": {
-      "optional": true
-    }
+  "peerDependencies": {
+    "@quanttrinh/qui": ">=0.3.1 <0.5.0"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

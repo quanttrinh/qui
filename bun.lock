@@ -3,27 +3,35 @@
   "configVersion": 1,
   "workspaces": {
     "": {
+      "devDependencies": {
+        "@changesets/cli": "^3.0.3",
+        "@stencil/eslint-plugin": "^1.4.0",
+        "@types/node": "^26.6.5",
+        "husky": "^9.1.7",
+        "oxfmt": "^0.74.0",
+        "oxlint": "^1.89.0",
+        "oxlint-tsgolint": "^7.0.2005",
+        "typescript": "npm:@typescript/typescript6@^6.0.2",
+      },
+    },
+    "packages/qui": {
+      "name": "@quanttrinh/qui",
+      "version": "0.3.1",
       "dependencies": {
         "@material/material-color-utilities": "^0.4.0",
         "@stencil/core": "^4.45.2",
       },
       "devDependencies": {
-        "@changesets/cli": "^3.0.3",
         "@pandacss/compiler": "2.4.0",
         "@pandacss/dev": "^2.4.0",
         "@pandacss/preset-base": "^2.4.0",
         "@pandacss/preset-panda": "^2.4.0",
         "@pandacss/transformer": "2.4.0",
-        "@stencil/eslint-plugin": "^1.4.0",
         "@stencil/vitest": "^1.16.1",
         "@types/node": "^26.6.5",
         "@typescript/native": "npm:typescript@^7.0.2",
         "@vitest/browser-playwright": "^5.0.5",
-        "husky": "^9.1.7",
         "jiti": "^2.7.0",
-        "oxfmt": "^0.74.0",
-        "oxlint": "^1.89.0",
-        "oxlint-tsgolint": "^7.0.2005",
         "playwright": "^1.64.1",
         "postcss": "^8.5.30",
         "typescript": "npm:@typescript/typescript6@^6.0.2",
@@ -47,12 +55,14 @@
         "pathe": "^2.0.3",
         "unplugin": "^3.4.0",
       },
-      "peerDependencies": {
-        "@quanttrinh/qui": ">=0.3.1 <1.0.0",
+      "devDependencies": {
+        "@types/node": "^26.6.5",
+        "typescript": "npm:@typescript/typescript6@^6.0.2",
+        "vitest": "^5.0.5",
       },
-      "optionalPeers": [
-        "@quanttrinh/qui",
-      ],
+      "peerDependencies": {
+        "@quanttrinh/qui": ">=0.3.1 <0.5.0",
+      },
     },
   },
   "packages": {
@@ -367,6 +377,8 @@
     "@pnpm/deps.graph-sequencer": ["@pnpm/deps.graph-sequencer@1100.0.1", "", {}, "sha512-pOr5+q1fLYKwFN3LAJuGZEnfXDcQ73zqgDHMtGy+K+uIoUqyY+6MeDCWFwfu+4EFuq76I5EPFofoNAI+Bmmq4A=="],
 
     "@polka/url": ["@polka/url@1.0.0-next.29", "", {}, "sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww=="],
+
+    "@quanttrinh/qui": ["@quanttrinh/qui@workspace:packages/qui"],
 
     "@quanttrinh/qui-unplugin": ["@quanttrinh/qui-unplugin@workspace:packages/unplugin"],
 

@@ -144,12 +144,10 @@ function changedFiles(previous: Map<string, string>, next: Map<string, string>):
 }
 
 function panda(root: string, args: string[], logger: Logger): void {
-  const binary = join(
-    root,
-    "node_modules",
-    ".bin",
-    process.platform === "win32" ? "panda.cmd" : "panda",
-  );
+  const executable = process.platform === "win32" ? "panda.cmd" : "panda";
+  const packageBinary = join(root, "node_modules", ".bin", executable);
+  const workspaceBinary = join(root, "..", "..", "node_modules", ".bin", executable);
+  const binary = existsSync(packageBinary) ? packageBinary : workspaceBinary;
   try {
     execFileSync(binary, args, { cwd: root, stdio: "pipe" });
   } catch (error) {
