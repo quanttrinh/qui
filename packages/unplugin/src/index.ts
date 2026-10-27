@@ -42,7 +42,10 @@ function withViteBase(href: string | string[], base: string): string[] {
   });
 }
 
-/** Resolves the main package's shared stylesheet through its public export. */
+/**
+ * Resolves the main package's shared stylesheet through its public export.
+ * `QUI_STYLESHEET_PATH` is a test/build override used by the unit fixture.
+ */
 function resolveStylesheetPath(): string {
   const override = process.env.QUI_STYLESHEET_PATH;
   if (override !== undefined && override.length > 0) {

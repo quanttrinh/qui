@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { rollup, vite } from "./index";
 
@@ -57,7 +57,7 @@ describe("vite adapter", () => {
       throw new Error("Expected the virtual styles module to resolve");
     }
 
-    process.env.QUI_STYLESHEET_PATH = STYLESHEET_FIXTURE;
+    vi.stubEnv("QUI_STYLESHEET_PATH", STYLESHEET_FIXTURE);
     try {
       const code = await load.handler(resolved);
       expect(code).toContain('from "@quanttrinh/qui/runtime"');
@@ -65,7 +65,7 @@ describe("vite adapter", () => {
       expect(code).toContain("getQuiStylesHref() === undefined");
       expect(code).toContain("--font-fallback");
     } finally {
-      delete process.env.QUI_STYLESHEET_PATH;
+      vi.unstubAllEnvs();
     }
   });
 
