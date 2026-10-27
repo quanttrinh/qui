@@ -4,13 +4,67 @@ import { extname, normalize } from "pathe";
 
 import { extractComponentsFromJavaScript, extractComponentsFromText } from "./extract";
 
+/** A concrete stylesheet URL or an ordered list of URLs. */
+export type QuiStylesHref = string | string[];
+
+/** Minimal shape of a bundler asset needed to discover hashed CSS output. */
+export interface QuiStylesBundleAsset {
+  type: string;
+  fileName: string;
+  name?: string;
+  names?: string[];
+  originalFileNames?: string[];
+}
+
+/**
+ * Context passed to a stylesheet resolver.
+ *
+ * `bundle` is available for production builds, where it lets a resolver select
+ * the emitted (possibly content-hashed) CSS asset. `server` is available while
+ * serving, for resolvers that need the Vite dev server.
+ */
+export interface QuiStylesResolverContext {
+  command: "serve" | "build";
+  mode: string;
+  base: string;
+  isSsrBuild: boolean;
+  /** Path of the HTML document being processed, when known. */
+  path?: string;
+  /** Absolute filename of the HTML document being processed, when known. */
+  filename?: string;
+  bundle?: Readonly<Record<string, QuiStylesBundleAsset>>;
+  server?: unknown;
+}
+
+/**
+ * Resolves the external stylesheet URL.
+ *
+ * Use a resolver when the final URL is not known when the plugin is configured,
+ * for example when Vite adds a content hash to the emitted asset.
+ */
+export type QuiStylesHrefResolver = (
+  context: QuiStylesResolverContext,
+) => QuiStylesHref | undefined | Promise<QuiStylesHref | undefined>;
+
+export type QuiStylesHrefValue = QuiStylesHref | QuiStylesHrefResolver;
+
+/** Returns whether a value is a supported configured stylesheet href. */
+export function isStylesHrefValue(value: unknown): value is QuiStylesHrefValue {
+  return (
+    typeof value === "string" ||
+    typeof value === "function" ||
+    (Array.isArray(value) && value.every((entry: unknown) => typeof entry === "string"))
+  );
+}
+
 export interface QuiStylesOptions {
   /**
-   * Stable public URL of the component/app stylesheet. Vite marks a matching
-   * document `<link>` during the build. This must not point at `theme.css`; the
-   * theme is document-only.
+   * Public URL of the component/app stylesheet, or a resolver that returns it.
+   * Vite marks a matching document `<link>` during the build, including a
+   * hashed URL returned by the resolver. This must not point at `theme.css`;
+   * the theme is document-only.
    */
-  href?: string | string[];
+  href?: QuiStylesHrefValue;
   /**
    * Import `@quanttrinh/qui/theme.css` from the generated styles module.
    * Defaults to `true` for inline styles and `false` for an external `href`.
@@ -44,6 +98,7 @@ const JAVASCRIPT_EXTENSIONS = new Set([
   ".tsx",
 ]);
 const TRANSFORMABLE_EXTENSIONS = new Set([...JAVASCRIPT_EXTENSIONS, ".mdx"]);
+// Keep in sync with STYLESHEET_ATTRIBUTE exported by @quanttrinh/qui/runtime.
 const STYLESHEET_ATTRIBUTE = "data-qui-styles";
 const REL_TOKEN_SPLIT = /\s+/u;
 
@@ -144,21 +199,86 @@ export function importInjectionOffset(code: string): number {
 /** Returns whether the option selects an existing external component sheet. */
 export function isExternalStyles(
   styles: boolean | QuiStylesOptions | undefined,
-): styles is QuiStylesOptions & { href: string | string[] } {
+): styles is QuiStylesOptions & { href: QuiStylesHrefValue } {
   const value: unknown = styles;
   if (typeof value !== "object" || value === null) {
     return false;
   }
   const href: unknown = Reflect.get(value, "href");
-  return (
-    typeof href === "string" ||
-    (Array.isArray(href) && href.every((entry: unknown) => typeof entry === "string"))
-  );
+  return isStylesHrefValue(href);
 }
 
-function stylesheetHrefs(href: string | string[]): string[] {
+function uniqueHrefs(values: Iterable<string>): string[] {
+  const hrefs: string[] = [];
+  for (const value of values) {
+    if (value.length > 0 && !hrefs.includes(value)) {
+      hrefs.push(value);
+    }
+  }
+  return hrefs;
+}
+
+function stylesheetHrefs(href: QuiStylesHref): string[] {
   const values = Array.isArray(href) ? href : [href];
-  return [...new Set(values.filter((value) => value.length > 0))];
+  return uniqueHrefs(values);
+}
+
+/**
+ * Applies Vite's public base the way Vite does: unconditionally to
+ * root-relative URLs, leaving absolute and protocol-relative URLs alone.
+ */
+function withBase(hrefs: string[], base: string): string[] {
+  if (base === "" || base === "/" || base.startsWith("./")) {
+    return hrefs;
+  }
+  const normalizedBase = base.endsWith("/") ? base : `${base}/`;
+  return hrefs.map((href) => {
+    if (!href.startsWith("/") || href.startsWith("//")) {
+      return href;
+    }
+    return `${normalizedBase}${href.slice(1)}`;
+  });
+}
+
+async function resolveRawStylesheetHrefs(
+  href: QuiStylesHrefValue | undefined,
+  context: QuiStylesResolverContext,
+): Promise<string[]> {
+  if (href === undefined) {
+    return [];
+  }
+  const resolved = typeof href === "function" ? await href(context) : href;
+  if (resolved === undefined) {
+    return [];
+  }
+  return stylesheetHrefs(resolved);
+}
+
+/**
+ * Resolves configured stylesheet URLs, calling a resolver with the current
+ * bundler context when one is configured. The returned URLs include the Vite
+ * base, so callers can use them directly in SSR documents and shadow roots.
+ * Empty and duplicate values are removed after base application.
+ */
+export async function resolveStylesheetHrefs(
+  href: QuiStylesHrefValue | undefined,
+  context: QuiStylesResolverContext,
+): Promise<string[]> {
+  const hrefs = await resolveRawStylesheetHrefs(href, context);
+  return uniqueHrefs(withBase(hrefs, context.base));
+}
+
+/**
+ * Returns both the raw and base-applied URLs. HTML marking uses these
+ * candidates because Vite may already have prefixed a configured URL that
+ * includes the base segment.
+ */
+export async function resolveStylesheetHrefCandidates(
+  href: QuiStylesHrefValue | undefined,
+  context: QuiStylesResolverContext,
+): Promise<string[]> {
+  const hrefs = await resolveRawStylesheetHrefs(href, context);
+  return uniqueHrefs([...hrefs, ...withBase(hrefs, context.base)]);
 }
 
 function themeImport(styles: boolean | QuiStylesOptions | undefined): string[] {
@@ -196,7 +316,7 @@ export function createStylesModule(css: string, styles: boolean | QuiStylesOptio
     '  const link = document.createElement("link");',
     '  link.rel = "stylesheet";',
     "  link.href = url;",
-    '  link.setAttribute("data-qui-styles", "");',
+    `  link.setAttribute(${JSON.stringify(STYLESHEET_ATTRIBUTE)}, "");`,
     "  document.head.append(link);",
     "  setQuiStylesHref(url);",
     "  import.meta.hot?.dispose(() => {",
@@ -291,7 +411,7 @@ export function markStylesheetLinks(html: string, href: string | string[]): stri
 
   let result = html;
   for (const offset of offsets.sort((left, right) => right - left)) {
-    result = `${result.slice(0, offset)} data-qui-styles${result.slice(offset)}`;
+    result = `${result.slice(0, offset)} ${STYLESHEET_ATTRIBUTE}${result.slice(offset)}`;
   }
   return result;
 }

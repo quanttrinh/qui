@@ -1,9 +1,19 @@
-const DEFAULT_ATTRIBUTE = "data-qui-styles";
+/** Attribute that marks a document or shadow-root stylesheet managed by qui. */
+export const STYLESHEET_ATTRIBUTE = "data-qui-styles";
+/** Selector for stylesheet links managed by qui. */
+export const STYLESHEET_SELECTOR = `link[${STYLESHEET_ATTRIBUTE}]`;
 /** Set by components that call `ensureShadowStylesheet`. */
 export const SHADOW_STYLES_MARKER = "data-qui-shadow-styles";
 
 const discoveredHrefs = new WeakMap<Document, string[] | undefined>();
 const documentObservers = new WeakMap<Document, MutationObserver>();
+
+/**
+ * Normalized form of the globally configured href. The setter replaces this
+ * entry, so every component connection can reuse the same list instead of
+ * re-normalizing and reallocating it.
+ */
+const configuredHrefCache: { entry?: { value: string | string[]; hrefs: string[] } } = {};
 
 /**
  * Local copy of the DOM helper so the published runtime stays a self-contained
@@ -45,6 +55,21 @@ function uniqueHrefs(href: string | string[]): string[] {
   return hrefs;
 }
 
+/** Returns the cached normalized configured hrefs, if a value is configured. */
+function configuredHrefs(): string[] | undefined {
+  const configured = configuredHref();
+  if (configured === undefined) {
+    return undefined;
+  }
+  if (configuredHrefCache.entry?.value === configured) {
+    return configuredHrefCache.entry.hrefs;
+  }
+
+  const hrefs = uniqueHrefs(configured);
+  configuredHrefCache.entry = { value: configured, hrefs };
+  return hrefs;
+}
+
 function getDocument(host?: HTMLElement): Document | undefined {
   if (host?.ownerDocument) {
     return host.ownerDocument;
@@ -54,16 +79,45 @@ function getDocument(host?: HTMLElement): Document | undefined {
   return typeof document === "undefined" ? undefined : document;
 }
 
-function containsLink(node: Node): boolean {
-  return isElement(node) && (node.tagName === "LINK" || node.querySelector("link") !== null);
+function isLinkElement(node: Node): node is HTMLLinkElement {
+  return isElement(node) && node.tagName === "LINK";
 }
 
+function containsMarkedLink(node: Node): boolean {
+  if (!isElement(node)) {
+    return false;
+  }
+  return isLinkElement(node)
+    ? node.hasAttribute(STYLESHEET_ATTRIBUTE)
+    : node.querySelector(STYLESHEET_SELECTOR) !== null;
+}
+
+function containsLink(node: Node): boolean {
+  if (!isElement(node)) {
+    return false;
+  }
+  return isLinkElement(node) || node.querySelector("link") !== null;
+}
+
+/**
+ * Ignores mutations to unmarked links. Adding or removing the marker itself
+ * always invalidates; an `href` change only matters when the link is marked.
+ * Removals are conservative because a detached node may have been unmarked
+ * before the observer callback runs.
+ */
 function hasLinkMutation(records: MutationRecord[]): boolean {
   return records.some((record) => {
     if (record.type === "attributes") {
-      return isElement(record.target) && record.target.tagName === "LINK";
+      return (
+        isLinkElement(record.target) &&
+        (record.attributeName === STYLESHEET_ATTRIBUTE ||
+          record.target.hasAttribute(STYLESHEET_ATTRIBUTE))
+      );
     }
-    return [...record.addedNodes, ...record.removedNodes].some((node) => containsLink(node));
+    if ([...record.removedNodes].some((node) => containsLink(node))) {
+      return true;
+    }
+    return [...record.addedNodes].some((node) => containsMarkedLink(node));
   });
 }
 
@@ -79,12 +133,10 @@ function discoverDocumentHrefs(document: Document): string[] | undefined {
   }
 
   const hrefs: string[] = [];
-  for (const link of document.querySelectorAll("link")) {
-    if (link.hasAttribute(DEFAULT_ATTRIBUTE)) {
-      const href = link.getAttribute("href");
-      if (typeof href === "string" && href.length > 0 && !hrefs.includes(href)) {
-        hrefs.push(href);
-      }
+  for (const link of document.querySelectorAll<HTMLLinkElement>(STYLESHEET_SELECTOR)) {
+    const href = link.getAttribute("href");
+    if (typeof href === "string" && href.length > 0 && !hrefs.includes(href)) {
+      hrefs.push(href);
     }
   }
 
@@ -101,7 +153,7 @@ function discoverDocumentHrefs(document: Document): string[] | undefined {
       subtree: true,
       childList: true,
       attributes: true,
-      attributeFilter: ["href", DEFAULT_ATTRIBUTE],
+      attributeFilter: ["href", STYLESHEET_ATTRIBUTE],
     });
     documentObservers.set(document, observer);
   }
@@ -110,42 +162,31 @@ function discoverDocumentHrefs(document: Document): string[] | undefined {
 }
 
 function resolveHrefs(document: Document): string[] | undefined {
-  const configured = configuredHref();
+  const configured = configuredHrefs();
   if (configured !== undefined) {
-    return uniqueHrefs(configured);
+    return configured;
   }
 
   return discoverDocumentHrefs(document);
 }
 
 function hasManagedLink(root: ShadowRoot): boolean {
-  for (const link of root.querySelectorAll("link")) {
-    if (link.hasAttribute(DEFAULT_ATTRIBUTE)) {
-      return true;
-    }
-  }
-
-  return false;
+  return Boolean(root.querySelector(STYLESHEET_SELECTOR));
 }
 
 function createStylesheetLink(document: Document, href: string): HTMLLinkElement {
   const link = document.createElement("link");
   link.setAttribute("rel", "stylesheet");
   link.setAttribute("href", href);
-  link.setAttribute(DEFAULT_ATTRIBUTE, "");
+  link.setAttribute(STYLESHEET_ATTRIBUTE, "");
   return link;
 }
 
 /** Reconciles marked document links so their hrefs match the configured list. */
 function reconcileDocumentStylesheetLinks(document: Document, hrefs: string[]): void {
-  const links: HTMLLinkElement[] = [];
-  for (const link of document.querySelectorAll("link")) {
-    if (link.hasAttribute(DEFAULT_ATTRIBUTE)) {
-      links.push(link);
-    }
-  }
+  const links = document.querySelectorAll<HTMLLinkElement>(STYLESHEET_SELECTOR);
 
-  for (const [index, link] of links.entries()) {
+  for (const [index, link] of [...links].entries()) {
     if (index < hrefs.length) {
       const href = hrefs[index];
       if (link.getAttribute("href") !== href) {
@@ -166,10 +207,8 @@ function reconcileDocumentStylesheetLinks(document: Document, hrefs: string[]): 
 function reconcileStylesheetLinks(root: ShadowRoot, document: Document, hrefs: string[]): void {
   const managed: HTMLLinkElement[] = [];
 
-  for (const link of root.querySelectorAll("link")) {
-    if (link.hasAttribute(DEFAULT_ATTRIBUTE)) {
-      managed.push(link);
-    }
+  for (const link of root.querySelectorAll<HTMLLinkElement>(STYLESHEET_SELECTOR)) {
+    managed.push(link);
   }
 
   for (const [index, href] of hrefs.entries()) {
@@ -270,7 +309,9 @@ export function ensureShadowStylesheet(host: HTMLElement): void {
  * only stores the value.
  */
 export function setQuiStylesHref(href: string | string[]): void {
-  const value = Array.isArray(href) ? uniqueHrefs(href) : href;
+  const hrefs = uniqueHrefs(href);
+  const value: string | string[] = Array.isArray(href) ? hrefs : href;
+  configuredHrefCache.entry = { value, hrefs };
   Reflect.set(globalThis, GLOBAL_HREF_KEY, value);
 
   const document = getDocument();
@@ -278,7 +319,6 @@ export function setQuiStylesHref(href: string | string[]): void {
     return;
   }
 
-  const hrefs = uniqueHrefs(value);
   invalidateDocumentLinkCache(document);
   reconcileDocumentStylesheetLinks(document, hrefs);
   for (const root of collectShadowRoots(document)) {
@@ -288,6 +328,7 @@ export function setQuiStylesHref(href: string | string[]): void {
 
 /** Clears the configured href and managed shadow-root links. */
 export function resetQuiStylesHref(): void {
+  delete configuredHrefCache.entry;
   Reflect.deleteProperty(globalThis, GLOBAL_HREF_KEY);
   const document = getDocument();
   if (!document) {

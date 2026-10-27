@@ -3,8 +3,6 @@ import path from "node:path";
 
 const requireFromPlugin = createRequire(import.meta.url);
 
-type Resolver = () => string;
-
 function resolveFromCwd(): string {
   return createRequire(path.join(process.cwd(), "package.json")).resolve(
     "@quanttrinh/qui/styles.css",
@@ -12,19 +10,15 @@ function resolveFromCwd(): string {
 }
 
 /**
- * Resolves the main package's shared stylesheet through its public export.
- * The two resolver callbacks exist so packaging branches can be tested without
- * a built workspace package or a test-only environment override.
+ * Resolves the main package's shared stylesheet through its public export,
+ * falling back to the consuming workspace's resolution.
  */
-export function resolveStylesheetPath(
-  fromPlugin: Resolver = () => requireFromPlugin.resolve("@quanttrinh/qui/styles.css"),
-  fromCwd: Resolver = resolveFromCwd,
-): string {
+export function resolveStylesheetPath(): string {
   try {
-    return fromPlugin();
+    return requireFromPlugin.resolve("@quanttrinh/qui/styles.css");
   } catch {
     try {
-      return fromCwd();
+      return resolveFromCwd();
     } catch (error) {
       throw new Error(
         "@quanttrinh/qui-unplugin requires @quanttrinh/qui to be installed alongside it.",
