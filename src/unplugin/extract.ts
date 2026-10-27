@@ -3,7 +3,6 @@ import { parseFragment, type DefaultTreeAdapterTypes } from "parse5";
 import { extname } from "pathe";
 
 const TYPESCRIPT_EXTENSIONS = new Set([".cts", ".mts", ".ts"]);
-const INCOMPLETE_COMPONENT_TAG = /<(?<tag>qui-[a-z0-9]+(?:-[a-z0-9]+)*)(?=[\s/>]|$)/gu;
 const COMPONENT_CALLS = new Set(["h", "jsx", "jsxs", "createElement"]);
 
 function isNode(value: unknown): value is Node {
@@ -132,13 +131,5 @@ function collectMarkupComponents(
 export function extractComponentsFromText(code: string): string[] {
   const components = new Set<string>();
   collectMarkupComponents(parseFragment(code), components);
-  // Parse5 drops an unterminated tag at EOF. Keep a lexical fallback for
-  // Malformed MDX/JSX while the parser recovers on the next edit.
-  for (const match of code.matchAll(INCOMPLETE_COMPONENT_TAG)) {
-    const tag = match.groups?.tag;
-    if (tag !== undefined) {
-      components.add(tag);
-    }
-  }
   return [...components].sort();
 }

@@ -62,10 +62,8 @@ describe("extractComponents", () => {
     expect(extractComponents(mdx, "/app/page.mdx")).toEqual(["qui-button"]);
   });
 
-  it("falls back to lexical extraction when parsing fails", () => {
-    expect(extractComponents("export const x = <qui-button", "/app/broken.tsx")).toEqual([
-      "qui-button",
-    ]);
+  it("ignores unterminated tags in malformed source", () => {
+    expect(extractComponents("export const x = <qui-button", "/app/broken.tsx")).toEqual([]);
   });
 
   it("skips source that cannot contain a component tag", () => {
