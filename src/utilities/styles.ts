@@ -1,11 +1,18 @@
-import { isElement } from "../helpers/dom";
-
 const DEFAULT_ATTRIBUTE = "data-qui-styles";
 /** Set by components that call `ensureShadowStylesheet`. */
 export const SHADOW_STYLES_MARKER = "data-qui-shadow-styles";
 
 const discoveredHrefs = new WeakMap<Document, string[] | undefined>();
 const documentObservers = new WeakMap<Document, MutationObserver>();
+
+/**
+ * Local copy of the DOM helper so the published runtime stays a self-contained
+ * module. The compiled utility entry point does not ship `src/helpers`; do not
+ * replace this with `import { isElement } from "../helpers/dom"`.
+ */
+function isElement(value: unknown): value is Element {
+  return value instanceof Element;
+}
 // oxlint-disable-next-line stencil/ban-side-effects -- Symbol.for is a pure global registry lookup.
 const GLOBAL_HREF_KEY = Symbol.for("@quanttrinh/qui/styles-href");
 
@@ -249,7 +256,12 @@ export function ensureShadowStylesheet(host: HTMLElement): void {
 }
 
 /**
- * Configures the stylesheet href(s) used by `ensureShadowStylesheet`.
+ * Configures the component/app stylesheet href(s) used by
+ * `ensureShadowStylesheet`.
+ *
+ * Pass `styles.css` or the app's combined component stylesheet. Never pass
+ * `theme.css`: the theme is document-only and its custom properties inherit
+ * into shadow roots.
  *
  * When a document is available, marked document links, existing styled
  * `qui-*` shadow roots, and roots that already contain a managed link are

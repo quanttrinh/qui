@@ -2,18 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import {
   componentsFromVirtualModuleId,
+  createExternalStylesModule,
   createRegistrationModule,
   createStylesModule,
   extractComponents,
   importInjectionOffset,
+  isExternalStyles,
   isTransformableId,
+  markStylesheetLinks,
   normalizeComponents,
   virtualModuleId,
+  type QuiStylesOptions,
 } from "./core";
-
-const DEFINITION_PATTERN =
-  /defineCustomElement as __qui_\d+\s+\} from "@quanttrinh\/qui\/shared\/(?<tag>qui-[^"]+)"/gu;
-const IMPORT_PATTERN = /from "@quanttrinh\/qui\/shared\/(?<tag>qui-[^"]+)"/gu;
 
 describe("extractComponents", () => {
   it("finds opening component tags, ignores closing tags, and deduplicates", () => {
@@ -62,10 +62,8 @@ describe("extractComponents", () => {
     expect(extractComponents(mdx, "/app/page.mdx")).toEqual(["qui-button"]);
   });
 
-  it("falls back to lexical extraction when parsing fails", () => {
-    expect(extractComponents("export const x = <qui-button", "/app/broken.tsx")).toEqual([
-      "qui-button",
-    ]);
+  it("ignores unterminated tags in malformed source", () => {
+    expect(extractComponents("export const x = <qui-button", "/app/broken.tsx")).toEqual([]);
   });
 
   it("skips source that cannot contain a component tag", () => {
@@ -100,6 +98,10 @@ function* singleUseComponents(): Generator<string> {
 }
 
 describe("registration order", () => {
+  const DEFINITION_PATTERN =
+    /defineCustomElement as __qui_\d+\s+\} from "@quanttrinh\/qui\/shared\/(?<tag>qui-[^"]+)"/gu;
+  const IMPORT_PATTERN = /from "@quanttrinh\/qui\/shared\/(?<tag>qui-[^"]+)"/gu;
+
   it("sorts normalized components alphabetically", () => {
     expect(
       normalizeComponents([
@@ -178,6 +180,180 @@ describe("virtual styles module", () => {
     expect(code).toContain("getQuiStylesHref() === undefined");
     expect(code).toContain("setQuiStylesHref(url);");
     expect(code).toContain("resetQuiStylesHref();");
+  });
+
+  it("can keep the theme out of the inline module", () => {
+    const code = createStylesModule(":host { display: block; }", { theme: false });
+
+    expect(code).not.toContain("@quanttrinh/qui/theme.css");
+    expect(code).toContain("URL.createObjectURL");
+  });
+
+  it("does not import theme when styles are disabled", () => {
+    const code = createStylesModule(":host { display: block; }", false);
+
+    expect(code).not.toContain("@quanttrinh/qui/theme.css");
+  });
+
+  it("uses an external component stylesheet without runtime fallback", () => {
+    const code = createExternalStylesModule({ href: "/assets/app.css" });
+
+    expect(code).not.toContain("@quanttrinh/qui/theme.css");
+    expect(code).not.toContain("@quanttrinh/qui/runtime");
+    expect(code).not.toContain("URL.createObjectURL");
+    expect(code).not.toContain("createElement");
+    expect(code).not.toContain("setQuiStylesHref");
+    expect(code).not.toContain("getQuiStylesHref");
+    expect(code).not.toContain("resetQuiStylesHref");
+  });
+
+  it("imports the theme for external styles when requested", () => {
+    const code = createExternalStylesModule({
+      href: ["/assets/app.css", "/assets/overrides.css"],
+      theme: true,
+    });
+
+    expect(code).toContain('import "@quanttrinh/qui/theme.css";');
+  });
+
+  it("keeps the theme out of external styles unless requested", () => {
+    const code = createExternalStylesModule({
+      href: "/assets/app.css",
+      theme: false,
+    });
+
+    expect(code).not.toContain("@quanttrinh/qui/theme.css");
+  });
+
+  it("emits an empty module for an empty external stylesheet list", () => {
+    expect(createExternalStylesModule({ href: [] })).toBe("");
+  });
+
+  it("validates external href values", () => {
+    expect(isExternalStyles({ href: "/app.css" })).toBe(true);
+    expect(isExternalStyles({ href: ["/app.css"] })).toBe(true);
+    expect(isExternalStyles({ href: [1] } as unknown as QuiStylesOptions)).toBe(false);
+  });
+});
+
+describe("markStylesheetLinks", () => {
+  const MARKER = /data-qui-styles/gu;
+  const html = [
+    "<html><head>",
+    '<link rel="stylesheet" href="/assets/theme.css">',
+    '<link rel="stylesheet" href="/assets/app.css">',
+    '<link rel="stylesheet" href="/assets/other.css">',
+    "</head></html>",
+  ].join("");
+
+  it("marks only matching stylesheet links", () => {
+    const marked = markStylesheetLinks(html, "/assets/app.css");
+
+    expect(marked).toContain('<link rel="stylesheet" href="/assets/app.css" data-qui-styles>');
+    expect(marked).toContain('<link rel="stylesheet" href="/assets/theme.css">');
+    expect(marked).toContain('<link rel="stylesheet" href="/assets/other.css">');
+  });
+
+  it("marks an ordered list of hrefs", () => {
+    const marked = markStylesheetLinks(html, ["/assets/app.css", "/assets/other.css"]);
+
+    expect(marked.match(MARKER)).toHaveLength(2);
+    expect(marked).toContain('href="/assets/app.css" data-qui-styles>');
+    expect(marked).toContain('href="/assets/other.css" data-qui-styles>');
+  });
+
+  it("preserves existing markers and self-closing tags", () => {
+    const marked = markStylesheetLinks(
+      '<link rel="stylesheet" href="/a.css" data-qui-styles /><link rel="stylesheet" href="/a.css" />',
+      "/a.css",
+    );
+
+    expect(marked.match(MARKER)).toHaveLength(2);
+    expect(marked).toContain('href="/a.css" data-qui-styles />');
+  });
+
+  it("does not mark non-stylesheet links or attribute lookalikes", () => {
+    const marked = markStylesheetLinks(
+      ['<link rel="preload" href="/app.css">', '<link rel="stylesheet" data-href="/app.css">'].join(
+        "",
+      ),
+      "/app.css",
+    );
+
+    expect(marked).not.toMatch(MARKER);
+  });
+
+  it("does not treat a longer marker attribute as an existing marker", () => {
+    const marked = markStylesheetLinks(
+      '<link rel="stylesheet" href="/app.css" data-qui-styles-extra>',
+      "/app.css",
+    );
+
+    expect(marked).toContain("data-qui-styles-extra data-qui-styles");
+  });
+
+  it("does not guess hashed or alternate stylesheet URLs", () => {
+    const marked = markStylesheetLinks(
+      [
+        '<link rel="stylesheet" href="/assets/app-a1b2c3.css">',
+        '<link rel="alternate stylesheet" href="/app.css">',
+      ].join(""),
+      "/assets/app.css",
+    );
+
+    expect(marked).not.toMatch(MARKER);
+    expect(marked).not.toContain('href="/app.css" data-qui-styles');
+  });
+
+  it("supports unquoted attribute values", () => {
+    const marked = markStylesheetLinks("<link rel=stylesheet href=/app.css>", "/app.css");
+
+    expect(marked).toBe("<link rel=stylesheet href=/app.css data-qui-styles>");
+  });
+
+  it("handles quoted greater-than signs and multiline attributes", () => {
+    const source = [
+      "<link",
+      '  rel="stylesheet"',
+      '  href="/app.css"',
+      '  data-note="a > b"',
+      ">",
+    ].join("\n");
+
+    const marked = markStylesheetLinks(source, "/app.css");
+
+    expect(marked).toContain('data-note="a > b"');
+    expect(marked).toContain("data-qui-styles>");
+    expect(marked).not.toContain('data-note="a "');
+  });
+
+  it("does nothing for an empty href list", () => {
+    expect(markStylesheetLinks(html, [])).toBe(html);
+  });
+
+  it("deduplicates hrefs and ignores empty entries", () => {
+    const marked = markStylesheetLinks(
+      '<link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/app.css">',
+      ["/app.css", "/app.css", ""],
+    );
+
+    expect(marked.match(MARKER)).toHaveLength(2);
+  });
+
+  it("does not rewrite link-like text inside scripts, styles, or comments", () => {
+    const source = [
+      '<script>const t = \'<link rel="stylesheet" href="/app.css">\';</script>',
+      '<style>/* <link rel="stylesheet" href="/app.css"> */</style>',
+      '<!-- <link rel="stylesheet" href="/app.css"> -->',
+      '<template><link rel="stylesheet" href="/app.css"></template>',
+      '<textarea><link rel="stylesheet" href="/app.css"></textarea>',
+      '<link rel="stylesheet" href="/app.css">',
+    ].join("");
+
+    const marked = markStylesheetLinks(source, "/app.css");
+
+    expect(marked.match(MARKER)).toHaveLength(1);
+    expect(marked.endsWith('<link rel="stylesheet" href="/app.css" data-qui-styles>')).toBe(true);
   });
 });
 

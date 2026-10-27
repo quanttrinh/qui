@@ -11,6 +11,10 @@
     "type": "git",
     "url": "git+https://github.com/quanttrinh/qui.git"
   },
+  "workspaces": [
+    ".",
+    "packages/*"
+  ],
   "files": [
     "dist",
     "styled-system",
@@ -37,14 +41,10 @@
       "types": "./dist/utilities/register.d.ts",
       "default": "./dist/utilities/register.js"
     },
-    "./unplugin": {
-      "types": "./dist/unplugin/index.d.ts",
-      "default": "./dist/unplugin/index.js"
-    },
     "./hydrate": {
-      "types": "./dist/hydrate/shared/index.d.ts",
-      "import": "./dist/hydrate/shared/index.mjs",
-      "require": "./dist/hydrate/shared/index.js"
+      "types": "./dist/hydrate/index.d.ts",
+      "import": "./dist/hydrate/index.mjs",
+      "require": "./dist/hydrate/index.js"
     },
     "./ssr": {
       "types": "./dist/utilities/ssr.d.ts",
@@ -105,33 +105,30 @@
   "scripts": {
     "prepare": "bun -e \"try{require('husky')()}catch{}\"",
     "dev": "bun run build:utilities && stencil build --dev --watch --serve",
-    "build": "stencil build && bun run build:utilities && bun run build:unplugin && bun run build:types",
+    "build": "bun run clean:unplugin && stencil build && bun run build:utilities && bun run build:types",
     "build:utilities": "bun build/build-utilities.ts",
-    "build:unplugin": "bun build/build-unplugin.ts",
     "build:types": "bun build/finalize-types.ts",
     "codegen": "panda codegen",
-    "lint": "oxlint --config oxlint.config.ts src",
+    "lint": "oxlint --config oxlint.config.ts src packages/unplugin/src",
     "test": "NODE_ENV=test stencil-test",
     "test:unit": "NODE_ENV=test stencil-test --project unit",
     "test:integration": "NODE_ENV=test stencil-test --project integration",
     "test:browser": "NODE_ENV=test stencil-test --project browser",
     "test:smoke": "NODE_ENV=test stencil-test --project smoke",
     "test:watch": "NODE_ENV=test stencil-test --watch",
-    "lint:fix": "oxlint --config oxlint.config.ts --fix src",
+    "lint:fix": "oxlint --config oxlint.config.ts --fix src packages/unplugin/src",
     "fmt": "oxfmt --config oxfmt.config.ts",
     "fmt:check": "oxfmt --config oxfmt.config.ts --check",
     "version": "changeset version",
     "release": "changeset publish",
     "build:release": "bun run build && bun run build:lib",
     "prepublishOnly": "bun run build:release",
-    "build:lib": "panda lib --files './**/*.{js,mjs}'"
+    "build:lib": "panda lib --files './**/*.{js,mjs}'",
+    "clean:unplugin": "rm -rf dist/unplugin dist/types/unplugin"
   },
   "dependencies": {
     "@material/material-color-utilities": "^0.4.0",
-    "@stencil/core": "^4.45.2",
-    "magic-string": "^1.4.3",
-    "oxc-parser": "^0.155.0",
-    "unplugin": "^3.4.0"
+    "@stencil/core": "^4.45.2"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
@@ -146,10 +143,12 @@
     "@typescript/native": "npm:typescript@^7.0.2",
     "@vitest/browser-playwright": "^5.0.5",
     "husky": "^9.1.7",
+    "jiti": "^2.7.0",
     "oxfmt": "^0.74.0",
     "oxlint": "^1.89.0",
     "oxlint-tsgolint": "^7.0.2005",
     "playwright": "^1.64.1",
+    "postcss": "^8.5.30",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vitest": "^5.0.5"
   },

@@ -47,27 +47,49 @@ same declarations.
 
 ## Quick start
 
-Load the theme once and the shared component stylesheet once:
+`theme.css` establishes the canonical Panda layer order. If app CSS loads
+before the library theme, keep the same order in that entry file:
+
+```css
+@layer reset, base, tokens, recipes, utilities;
+```
+
+Load the theme once in the document:
 
 ```ts
 import "@quanttrinh/qui/theme.css";
+```
+
+Shadow roots need a component/app stylesheet URL. Load
+`@quanttrinh/qui/styles.css` (or the app's combined component stylesheet) once
+in an asset you can mark separately, then mark _only that link_:
+
+```ts
 import "@quanttrinh/qui/styles.css";
 ```
 
-Shadow roots need a discoverable stylesheet URL. Mark the generated document
-link with `data-qui-styles`:
-
 ```html
-<link rel="stylesheet" href="/assets/qui.css" data-qui-styles />
+<link rel="stylesheet" href="/assets/qui-components.css" data-qui-styles />
 ```
 
-If the bundler injects CSS as a `<style>` tag, configure the URL instead:
+Use the URL your bundler emits for that CSS. If it is hashed, mark the emitted
+link with `data-qui-styles` or copy/serve the sheet at a stable path.
+
+Do not put `theme.css` in that marked file and do not mark a bundle that
+contains it. The theme's custom properties inherit into shadow roots; adopting
+a second copy can override brand values. If the bundler injects CSS as a
+`<style>` tag or combines theme and component CSS, configure the component
+sheet URL explicitly or use the unplugin external mode below:
 
 ```ts
 import { setQuiStylesHref } from "@quanttrinh/qui/runtime";
 
-setQuiStylesHref("/assets/qui.css");
+setQuiStylesHref("/assets/qui-components.css");
 ```
+
+That URL must be a real document stylesheet; the setter only tells shadow roots
+which URL to link. If the bundler only injects a `<style>` tag, serve the
+component CSS separately or use a real marked `<link>`.
 
 Register only the components used by the page:
 
@@ -245,20 +267,28 @@ component subpaths when bundle size matters.
 
 ## Auto-registration plugin
 
-`@quanttrinh/qui/unplugin` scans JSX/TSX and MDX source for used `qui-*` tags.
+`@quanttrinh/qui-unplugin` scans JSX/TSX and MDX source for used `qui-*` tags.
 For client modules it injects one static registration module per set of
-components. It also configures the shared stylesheet used by shadow roots, so
-plugin-managed styling works without a separate `data-qui-styles` link. With
-the default `styles` option the virtual styles module imports `theme.css` and
-embeds `styles.css`; do not also add the Quick start CSS imports, or the shared
-CSS is emitted twice. Astro pages need the explicit registration script
-described below.
+components. It also configures the component stylesheet used by shadow roots.
+It is published separately so component-only consumers do not install the
+bundler/parser dependencies.
+
+By default the virtual styles module imports the document-only `theme.css` and
+embeds `styles.css` in a shared blob URL. Do not also add the Quick start CSS
+imports in that mode, or the shared CSS is emitted twice. Astro pages need the
+explicit registration script described below.
+
+Install it as a development dependency:
+
+```sh
+bun add -d @quanttrinh/qui-unplugin
+```
 
 The plugin uses unplugin v3, which is ESM-only and requires Node.js `20.19+`
 within Node 20, or `22.12+`. Node 21 is not supported.
 
 ```ts
-import Qui from "@quanttrinh/qui/unplugin";
+import Qui from "@quanttrinh/qui-unplugin";
 // vite.config.ts
 import { defineConfig } from "vite";
 
@@ -267,7 +297,53 @@ export default defineConfig({
 });
 ```
 
-Set `styles: false` when the app loads the CSS itself:
+For an app-generated component stylesheet, point the plugin at its URL instead
+of embedding a blob:
+
+```ts
+Qui.vite({ styles: { href: "/assets/qui-app.css" } });
+```
+
+In external mode the plugin does not create document markup at runtime. Vite
+adds `data-qui-styles` when the document link matches the configured href
+exactly:
+
+```html
+<link rel="stylesheet" href="/assets/qui-app.css" data-qui-styles />
+```
+
+`href` should be a stable public URL. Vite applies its configured `base` when
+matching and marking the document link. If Vite emits a content-hashed asset URL,
+mark the generated link yourself. External mode has no runtime fallback: marked
+document links are the source of truth, so shadow roots always use their final
+URLs. The marked link must exist when components connect; add it in the initial
+document head.
+
+External `href` mode is Vite-only because it relies on
+`transformIndexHtml`. Other adapters throw; use `styles: false` and mark the
+document link yourself there.
+
+When `href` is an array, each matching link is marked but shadow roots follow
+document order, not array order. Custom attributes added to a Vite-bundled CSS
+link may not survive bundling; use a public/static file or a stable emitted asset
+name for the marked link.
+
+Load the theme separately, once:
+
+```ts
+import "@quanttrinh/qui/theme.css";
+```
+
+The external option never imports the theme by default because app stylesheets
+often already carry their own brand values. Add `theme: true` only when the
+plugin should also import the library theme:
+
+```ts
+Qui.vite({ styles: { href: "/assets/qui-app.css", theme: true } });
+```
+
+`href` can be a string or an ordered array. Use `styles: false` when the app
+needs full control over styles; component registration is still automatic:
 
 ```ts
 Qui.vite({ styles: false });
@@ -283,11 +359,11 @@ import { defineCustomElement as __qui_0 } from "@quanttrinh/qui/shared/qui-butto
 defineComponents(__qui_0);
 ```
 
-The virtual styles module keeps an existing marked stylesheet link when one is
-present. Otherwise it creates one shared blob URL for the document and shadow
-roots. Use `styles: false` when the app provides its own combined PandaCSS
-stylesheet and marked document link, or when a strict CSP blocks `blob:`
-stylesheets.
+The inline virtual styles module keeps an existing marked stylesheet link when
+one is present. Otherwise it creates one shared blob URL for the document and
+shadow roots. Use external `href` mode when a strict CSP blocks `blob:`
+stylesheets. Only the component/app stylesheet is adopted by shadow roots; never
+include `theme.css` in that stylesheet.
 
 Registering the same component more than once is safe; Stencil checks
 `customElements.get()` before defining it.
@@ -315,12 +391,12 @@ import { withShadowStylesheet } from "@quanttrinh/qui/ssr";
 
 const { html, diagnostics } = await renderToString(
     markup,
-    withShadowStylesheet({ href: "/assets/qui.css" }, { fullDocument: false }),
+    withShadowStylesheet({ href: "/assets/qui-components.css" }, { fullDocument: false }),
 );
 ```
 
 This renders real Declarative Shadow DOM and puts one external
-`<link rel="stylesheet" href="/assets/qui.css" data-qui-styles>` into every
+`<link rel="stylesheet" href="/assets/qui-components.css" data-qui-styles>` into every
 styled `qui-*` shadow root. Data-only and host-only roots such as `qui-option`,
 `qui-dialog`, and the field helper/error/required parts receive no link because
 those components do not request shadow styles. The same stylesheet is loaded in
@@ -346,7 +422,7 @@ After hydration, register the same components on the client with
 ```ts
 import { setQuiStylesHref } from "@quanttrinh/qui/runtime";
 
-setQuiStylesHref("/assets/qui.css");
+setQuiStylesHref("/assets/qui-components.css");
 ```
 
 ### Streaming
@@ -403,8 +479,14 @@ do not strip comments from the rendered markup.
 bun run build
 ```
 
-- `theme.css` — CSS custom properties and light/dark values
-- `styles.css` — reset, tokens, recipes and component utilities
+- `theme.css` — CSS custom properties and light/dark values; document only
+- `styles.css` — reset, tokens, recipes and component utilities; safe to adopt
+  in shadow roots
+
+Load `theme.css` once in the document. It provides the custom-property values
+that inherit into shadow roots. Never put `theme.css` in the marked component
+stylesheet or adopt it into a shadow root: its document selectors are not
+component styles, and a shadow-root copy would override consumer brand values.
 
 Host elements use the document stylesheet for layout only, primarily `display`.
 Visual styling lives on the internal root, which the same stylesheet styles
@@ -441,17 +523,35 @@ export default defineConfig({
 ```
 
 This shares tokens, recipes and extracted component styles with the app's own
-Panda CSS. Generate one stylesheet and mark its document link:
+Panda CSS. Generate one component/app stylesheet and mark its document link:
 
 ```html
 <link rel="stylesheet" href="/assets/qui-app.css" data-qui-styles />
 ```
 
-That combined stylesheet is used for the document and every shadow root. To opt
-out of sharing app styles with components, load `@quanttrinh/qui/styles.css`
-instead and keep the app stylesheet document-only.
+That combined component/app stylesheet is loaded in the document and used by
+every shadow root. To opt out of sharing app styles with components, load
+`@quanttrinh/qui/styles.css` instead and keep the app stylesheet document-only.
 
-Load `theme.css` globally at runtime. Do not adopt it into shadow roots.
+Load `theme.css` globally, once, from the client entry or document. It is
+document-only and should not be part of the marked component/app stylesheet.
+
+```ts
+// src/main.ts (client entry)
+import "@quanttrinh/qui/theme.css";
+```
+
+```ts
+// vite.config.ts
+export default defineConfig({
+    plugins: [Qui.vite({ styles: { href: "/assets/qui-app.css" } })],
+});
+```
+
+The generated library CSS removes the root layer order declaration that triggers
+Panda's PostCSS integration, while preserving nested recipe layer declarations.
+Keep the app's own `@layer reset, base, tokens, recipes, utilities;` entry file
+once; do not point the shadow-root href at it.
 
 Low-level generated exports are also available:
 
@@ -466,9 +566,8 @@ import { flex } from "@quanttrinh/qui/patterns";
 
 ```text
 dist/shared/                 custom-elements build
-dist/hydrate/shared/         SSR/SSG hydrate module
+dist/hydrate/                SSR/SSG hydrate module
 dist/utilities/              compiled utility modules
-dist/unplugin/               bundler plugin
 dist/types/                  TypeScript declarations
 dist/panda/                  Panda design-system manifest
 styled-system/               generated Panda CSS and types
@@ -481,7 +580,7 @@ Published entry points:
 | `@quanttrinh/qui`            | Components                            |
 | `@quanttrinh/qui/shared/*`   | Individual component                  |
 | `@quanttrinh/qui/register`   | Static component registration helper  |
-| `@quanttrinh/qui/unplugin`   | Auto-registration bundler plugin      |
+| `@quanttrinh/qui-unplugin`   | Auto-registration bundler plugin      |
 | `@quanttrinh/qui/hydrate`    | SSR/SSG renderer                      |
 | `@quanttrinh/qui/ssr`        | Shadow stylesheet SSR helper          |
 | `@quanttrinh/qui/runtime`    | Client stylesheet configuration       |
@@ -500,10 +599,10 @@ Published entry points:
 ```sh
 bun install
 bun run dev          # styles + Stencil dev server
-bun run build            # production build + utilities + plugin
+bun run build            # production build + utilities
 bun run build:release    # release build with Panda artifacts
 bun run build:utilities  # compile src/utilities -> dist/utilities
-bun run build:unplugin   # compile src/unplugin -> dist/unplugin
+bun run --cwd packages/unplugin build  # compile the plugin package
 bun run lint
 bun run fmt
 bun run fmt:check
@@ -513,8 +612,8 @@ Stencil generates `src/components.d.ts` during a build. On a fresh checkout, run
 `bun run build` once before type-checking.
 
 `dev` compiles utilities once before starting the Stencil watch. Re-run
-`bun run build:utilities` after editing `src/utilities/**`, and
-`bun run build:unplugin` after editing `src/unplugin/**`.
+`bun run build:utilities` after editing `src/utilities/**`. The plugin package
+has its own build under `packages/unplugin`.
 
 Type-check with the native TypeScript compiler:
 
@@ -555,7 +654,7 @@ browser tests.
 - `build/build-utilities.ts` compiles `src/utilities/**/*.ts` into
   `dist/utilities/`, including declarations and rewritten relative imports.
   `build` runs it after Stencil completes.
-- `build/build-unplugin.ts` compiles `src/unplugin/**/*.ts` into
-  `dist/unplugin/` using the same module builder.
+- `packages/unplugin/build/build.ts` compiles the separate plugin package into
+  `packages/unplugin/dist/` using the same module builder.
 - The generated `www` app is the demo/dev server; it is not the published client
   entry point.
