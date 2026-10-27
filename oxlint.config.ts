@@ -101,6 +101,14 @@ export default defineConfig({
       },
     },
     {
+      files: ["packages/unplugin/src/resolve-styles.ts"],
+      env: { node: true },
+      rules: {
+        "import/no-nodejs-modules": "off",
+        "stencil/ban-side-effects": "off",
+      },
+    },
+    {
       files: ["packages/unplugin/src/index.ts"],
       env: { node: true },
       rules: {

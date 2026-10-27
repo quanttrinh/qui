@@ -173,6 +173,7 @@ jobs:
           set -euo pipefail
           BRANCH_SAFE=$(echo "$HEAD_REF" | tr '/' '-')
           FRAGMENT_PATH=".changeset/${BRANCH_SAFE}.md"
+          rm -f "$FRAGMENT_PATH"
           python3 - "$BASE" "$FILES" "$BUMP" "$FRAGMENT_PATH" << 'PYEOF'
           import json, subprocess, sys
 
@@ -197,14 +198,17 @@ jobs:
               if not isinstance(name, str) or head.get("private") is True:
                   continue
               changed = []
+              releases_changed = False
               for section in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies"):
                   for dep, new in head.get(section, {}).items():
                       old = base.get(section, {}).get(dep)
                       if old != new:
                           changed.append(f"- `{path}`: `{dep}`: `{old}` -> `{new}`")
-              if changed:
+                          if section in ("dependencies", "optionalDependencies", "peerDependencies"):
+                              releases_changed = True
+              if releases_changed:
                   releases.append(name)
-                  summary.extend(changed)
+              summary.extend(changed)
 
           releases = sorted(set(releases))
           if not releases:
