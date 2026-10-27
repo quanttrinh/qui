@@ -16,7 +16,7 @@ export interface HydrateModule {
 
 /** Loads the built Stencil hydrate bundle. */
 export async function loadHydrate(): Promise<HydrateModule> {
-  const hydratePath = new URL("../../dist/hydrate/shared/index.mjs", import.meta.url).href;
+  const hydratePath = new URL("../../dist/hydrate/index.mjs", import.meta.url).href;
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- The built bundle is untyped.
   return (await import(hydratePath)) as HydrateModule;
 }

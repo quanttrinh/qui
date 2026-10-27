@@ -72,7 +72,7 @@ export const config: Config = {
     },
     {
       type: "dist-hydrate-script",
-      dir: join(packageRoot, "dist", "hydrate", "shared"),
+      dir: join(packageRoot, "dist", "hydrate"),
     },
   ],
   rollupPlugins: {

@@ -1,6 +1,10 @@
 import { SHADOW_STYLES_MARKER } from "./styles";
 
 export interface ShadowStylesheetOptions {
+  /**
+   * Component/app stylesheet URL used in each styled shadow root. This must not
+   * point at `theme.css`, which is document-only.
+   */
   href: string | string[];
 }
 

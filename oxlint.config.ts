@@ -49,6 +49,7 @@ export default defineConfig({
         "src/**/*.unit.test.{ts,tsx}",
         "src/**/*.browser.test.{ts,tsx}",
         "src/**/*.integration.test.ts",
+        "packages/**/*.unit.test.ts",
       ],
       rules: {
         // Test files register suites at module scope and use compact helpers.
@@ -77,14 +78,14 @@ export default defineConfig({
       },
     },
     {
-      files: ["src/unplugin/{core,extract}.ts"],
+      files: ["packages/unplugin/src/{core,extract}.ts"],
       rules: {
         // Sorting a fresh array is safe; `toSorted` needs an ES2023 lib.
         "unicorn/no-array-sort": "off",
       },
     },
     {
-      files: ["src/unplugin/extract.ts"],
+      files: ["packages/unplugin/src/extract.ts"],
       rules: {
         // Parsing runs once per module during a bundler transform; the sync
         // Oxc API avoids thread overhead and is the intended plugin path.
@@ -92,7 +93,8 @@ export default defineConfig({
       },
     },
     {
-      files: ["src/unplugin/index.ts"],
+      files: ["packages/unplugin/src/index.ts"],
+      env: { node: true },
       rules: {
         // `unplugin` plugins use a default export so consumers can call
         // `Qui.vite(...)` / `Qui.webpack(...)`.

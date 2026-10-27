@@ -1,43 +1,99 @@
 import { MagicString } from "magic-string";
 import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+import path from "node:path";
 import { createUnplugin, type TransformResult, type UnpluginInstance } from "unplugin";
 
 import {
   componentsFromVirtualModuleId,
+  createExternalStylesModule,
   createRegistrationModule,
   createStylesModule,
   extractComponents,
   importInjectionOffset,
+  isExternalStyles,
   isTransformableId,
+  markStylesheetLinks,
   mayContainComponents,
   virtualModuleId,
   VIRTUAL_STYLES_ID,
   type QuiPluginOptions,
 } from "./core";
 
-export type { QuiPluginOptions } from "./core";
+export type { QuiPluginOptions, QuiStylesOptions } from "./core";
 
 const PLUGIN_NAME = "unplugin-qui";
 const RESOLVED_VIRTUAL_STYLES_ID = `\0${VIRTUAL_STYLES_ID}`;
-const VIRTUAL_MODULE_FILTER = /^virtual:qui\/(?:register|styles)(?:[?#]|$)/u;
-const RESOLVED_VIRTUAL_MODULE_FILTER = /^\0virtual:qui\/(?:register|styles)(?:[?#]|$)/u;
-const STYLESHEET_PATH = fileURLToPath(new URL("../../styled-system/styles.css", import.meta.url));
-const TRANSFORMABLE_ID = /\.(?:[cm]?[jt]sx?|mdx)(?:[?#]|$)/u;
-const COMPONENT_SOURCE = /qui-|\\[ux]/u;
-const IGNORED_ID = /(?:^|[\\/])node_modules[\\/]|^(?:virtual:|\0)/u;
+const requireFromPlugin = createRequire(import.meta.url);
+const COMPONENT_SOURCE = ["qui-", String.raw`\u`, String.raw`\x`] as const;
 const COMPONENT_CACHE_LIMIT = 128;
+
+function withViteBase(href: string | string[], base: string): string[] {
+  const values = Array.isArray(href) ? href : [href];
+  if (base === "" || base === "/" || base.startsWith("./")) {
+    return values;
+  }
+  const normalizedBase = base.endsWith("/") ? base : `${base}/`;
+  return values.flatMap((value) => {
+    if (!value.startsWith("/") || value.startsWith("//")) {
+      return [value];
+    }
+    return [value, `${normalizedBase}${value.slice(1)}`];
+  });
+}
+
+/** Resolves the main package's shared stylesheet through its public export. */
+function resolveStylesheetPath(): string {
+  try {
+    return requireFromPlugin.resolve("@quanttrinh/qui/styles.css");
+  } catch {
+    try {
+      return createRequire(path.join(process.cwd(), "package.json")).resolve(
+        "@quanttrinh/qui/styles.css",
+      );
+    } catch {
+      throw new Error(
+        "@quanttrinh/qui-unplugin requires @quanttrinh/qui to be installed alongside it.",
+      );
+    }
+  }
+}
 
 /** Reads the shared stylesheet when the virtual styles module is loaded. */
 async function getStylesheetText(): Promise<string> {
-  const text = await readFile(STYLESHEET_PATH, "utf8");
+  const text = await readFile(resolveStylesheetPath(), "utf8");
   return text;
 }
 
 const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUnplugin<
   QuiPluginOptions | undefined
->((options = {}) => {
+>((options, meta: { framework: string }) => {
+  const pluginOptions = options ?? {};
+  const stylesValue: unknown = pluginOptions.styles;
+  if (
+    typeof stylesValue === "object" &&
+    stylesValue !== null &&
+    "href" in stylesValue &&
+    Reflect.get(stylesValue, "href") !== undefined &&
+    !isExternalStyles(pluginOptions.styles)
+  ) {
+    throw new Error("qui external styles href must be a string or string array.");
+  }
+  if (isExternalStyles(pluginOptions.styles)) {
+    const configured = pluginOptions.styles.href;
+    const values = Array.isArray(configured) ? configured : [configured];
+    if (!values.some((value) => value.length > 0)) {
+      throw new Error("qui external styles require at least one non-empty href.");
+    }
+  }
+  if (isExternalStyles(pluginOptions.styles) && meta.framework !== "vite") {
+    throw new Error(
+      "qui external styles require Vite; use styles: false and mark the document link yourself for other bundlers.",
+    );
+  }
   const componentCache = new Map<string, { code: string; components: string[] }>();
+  const externalStyles = isExternalStyles(pluginOptions.styles) ? pluginOptions.styles : undefined;
+  let viteBase = "/";
 
   function extractComponentsCached(code: string, id: string): string[] {
     const cached = componentCache.get(id);
@@ -64,8 +120,20 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
   return {
     name: PLUGIN_NAME,
     enforce: "pre",
+    vite: {
+      configResolved(config: { base: string }): void {
+        viteBase = config.base;
+      },
+      transformIndexHtml: {
+        order: "post",
+        handler(html: string): string {
+          return externalStyles
+            ? markStylesheetLinks(html, withViteBase(externalStyles.href, viteBase))
+            : html;
+        },
+      },
+    },
     resolveId: {
-      filter: { id: VIRTUAL_MODULE_FILTER },
       handler(id: string): string | undefined {
         if (id === VIRTUAL_STYLES_ID) {
           return RESOLVED_VIRTUAL_STYLES_ID;
@@ -77,24 +145,26 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
       },
     },
     load: {
-      filter: { id: RESOLVED_VIRTUAL_MODULE_FILTER },
       async handler(
         this: { addWatchFile?: (id: string) => void },
         id: string,
       ): Promise<string | undefined> {
         if (id === RESOLVED_VIRTUAL_STYLES_ID) {
-          this.addWatchFile?.(STYLESHEET_PATH);
-          return createStylesModule(await getStylesheetText());
+          if (isExternalStyles(pluginOptions.styles)) {
+            return createExternalStylesModule(pluginOptions.styles);
+          }
+          this.addWatchFile?.(resolveStylesheetPath());
+          return createStylesModule(await getStylesheetText(), pluginOptions.styles);
         }
         const components = componentsFromVirtualModuleId(id.slice(1));
         if (components === undefined || components.length === 0) {
           return undefined;
         }
-        return createRegistrationModule(components, options);
+        return createRegistrationModule(components, pluginOptions);
       },
     },
     transform: {
-      filter: { id: { include: TRANSFORMABLE_ID, exclude: IGNORED_ID }, code: COMPONENT_SOURCE },
+      filter: { code: { include: [...COMPONENT_SOURCE] } },
       handler(code: string, id: string): TransformResult {
         if (!isTransformableId(id)) {
           return undefined;

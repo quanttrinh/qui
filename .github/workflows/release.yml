@@ -5,7 +5,9 @@ on:
     branches: [main]
     paths:
       - "src/**"
+      - "packages/**"
       - "package.json"
+      - "bun.lock"
       - ".changeset/**"
   workflow_dispatch:
 

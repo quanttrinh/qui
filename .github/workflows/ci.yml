@@ -52,6 +52,7 @@ jobs:
           filters: |
             code:
               - 'src/**'
+              - 'packages/**'
               - '*.ts'
               - 'package.json'
               - 'bun.lock'

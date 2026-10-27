@@ -7,6 +7,7 @@
     "access": "public",
     "baseBranch": "main",
     "changedFilePatterns": [
-        "src/**/*.{ts,tsx,js,jsx,json,md}"
+        "src/**/*.{ts,tsx,js,jsx,json,md}",
+        "packages/**/*.{ts,tsx,js,jsx,json,md}"
     ]
 }
