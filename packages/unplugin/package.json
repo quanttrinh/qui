@@ -48,7 +48,7 @@
     "vitest": "^5.0.5"
   },
   "peerDependencies": {
-    "@quanttrinh/qui": "workspace:^"
+    "@quanttrinh/qui": ">=0.3.1 <2.0.0"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

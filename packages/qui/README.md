@@ -596,24 +596,21 @@ Published entry points:
 
 ## Development
 
+Run workspace-wide commands from the repository root. Inside this package:
+
 ```sh
-bun install
-bun run dev          # styles + Stencil dev server
+bun run dev              # styles + Stencil dev server
 bun run build            # production build + utilities
 bun run build:release    # release build with Panda artifacts
 bun run build:utilities  # compile src/utilities -> dist/utilities
-bun run --cwd packages/unplugin build  # compile the plugin package
-bun run lint
-bun run fmt
-bun run fmt:check
+bun run test:unit
 ```
 
 Stencil generates `src/components.d.ts` during a build. On a fresh checkout, run
 `bun run build` once before type-checking.
 
 `dev` compiles utilities once before starting the Stencil watch. Re-run
-`bun run build:utilities` after editing `src/utilities/**`. The plugin package
-has its own build under `packages/unplugin`.
+`bun run build:utilities` after editing `src/utilities/**`.
 
 Type-check with the native TypeScript compiler:
 

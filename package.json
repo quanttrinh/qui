@@ -28,10 +28,12 @@
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
     "@stencil/eslint-plugin": "^1.4.0",
+    "@types/node": "^26.6.5",
     "husky": "^9.1.7",
     "oxfmt": "^0.74.0",
     "oxlint": "^1.89.0",
-    "oxlint-tsgolint": "^7.0.2005"
+    "oxlint-tsgolint": "^7.0.2005",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
