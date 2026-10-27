@@ -1,7 +1,5 @@
 import { MagicString } from "magic-string";
 import { readFile } from "node:fs/promises";
-import { createRequire } from "node:module";
-import path from "node:path";
 import { createUnplugin, type TransformResult, type UnpluginInstance } from "unplugin";
 
 import {
@@ -19,12 +17,12 @@ import {
   VIRTUAL_STYLES_ID,
   type QuiPluginOptions,
 } from "./core";
+import { resolveStylesheetPath } from "./resolve-styles";
 
 export type { QuiPluginOptions, QuiStylesOptions } from "./core";
 
 const PLUGIN_NAME = "unplugin-qui";
 const RESOLVED_VIRTUAL_STYLES_ID = `\0${VIRTUAL_STYLES_ID}`;
-const requireFromPlugin = createRequire(import.meta.url);
 const COMPONENT_SOURCE = ["qui-", String.raw`\u`, String.raw`\x`] as const;
 const COMPONENT_CACHE_LIMIT = 128;
 
@@ -40,23 +38,6 @@ function withViteBase(href: string | string[], base: string): string[] {
     }
     return [value, `${normalizedBase}${value.slice(1)}`];
   });
-}
-
-/** Resolves the main package's shared stylesheet through its public export. */
-function resolveStylesheetPath(): string {
-  try {
-    return requireFromPlugin.resolve("@quanttrinh/qui/styles.css");
-  } catch {
-    try {
-      return createRequire(path.join(process.cwd(), "package.json")).resolve(
-        "@quanttrinh/qui/styles.css",
-      );
-    } catch {
-      throw new Error(
-        "@quanttrinh/qui-unplugin requires @quanttrinh/qui to be installed alongside it.",
-      );
-    }
-  }
 }
 
 /** Reads the shared stylesheet when the virtual styles module is loaded. */

@@ -46,9 +46,9 @@ export default defineConfig({
     },
     {
       files: [
-        "src/**/*.unit.test.{ts,tsx}",
-        "src/**/*.browser.test.{ts,tsx}",
-        "src/**/*.integration.test.ts",
+        "packages/qui/src/**/*.unit.test.{ts,tsx}",
+        "packages/qui/src/**/*.browser.test.{ts,tsx}",
+        "packages/qui/src/**/*.integration.test.ts",
         "packages/**/*.unit.test.ts",
       ],
       rules: {
@@ -63,7 +63,15 @@ export default defineConfig({
       },
     },
     {
-      files: ["src/utilities/ssr.hydration.integration.test.ts"],
+      files: ["packages/unplugin/src/*.unit.test.ts"],
+      env: { node: true },
+      rules: {
+        "import/no-nodejs-modules": "off",
+        "node/no-process-env": "off",
+      },
+    },
+    {
+      files: ["packages/qui/src/utilities/ssr.hydration.integration.test.ts"],
       env: { node: true },
       rules: {
         // This test starts a local HTTP server and drives real browsers with Node.
@@ -93,9 +101,18 @@ export default defineConfig({
       },
     },
     {
+      files: ["packages/unplugin/src/resolve-styles.ts"],
+      env: { node: true },
+      rules: {
+        "import/no-nodejs-modules": "off",
+        "stencil/ban-side-effects": "off",
+      },
+    },
+    {
       files: ["packages/unplugin/src/index.ts"],
       env: { node: true },
       rules: {
+        "node/no-process-env": "off",
         // `unplugin` plugins use a default export so consumers can call
         // `Qui.vite(...)` / `Qui.webpack(...)`.
         "import/no-default-export": "off",
@@ -106,7 +123,7 @@ export default defineConfig({
       },
     },
     {
-      files: ["src/components/qui-radio/*.tsx"],
+      files: ["packages/qui/src/components/qui-radio/*.tsx"],
       rules: {
         // The native radio input is the accessible control; `aria-invalid` is
         // valid on it even though the lint rule only maps it to input roles.
@@ -116,7 +133,7 @@ export default defineConfig({
       },
     },
     {
-      files: ["src/components/qui-tabs/*.tsx"],
+      files: ["packages/qui/src/components/qui-tabs/*.tsx"],
       rules: {
         // A tablist is a composite widget: focus is owned by its tab triggers,
         // not by the list container itself.
@@ -125,9 +142,9 @@ export default defineConfig({
     },
     {
       files: [
-        "src/components/qui-combobox/*.tsx",
-        "src/components/qui-select/qui-select.tsx",
-        "src/components/shared/option/option-list.tsx",
+        "packages/qui/src/components/qui-combobox/*.tsx",
+        "packages/qui/src/components/qui-select/qui-select.tsx",
+        "packages/qui/src/components/shared/option/option-list.tsx",
       ],
       rules: {
         // The ARIA combobox pattern keeps focus in the input and points at the

@@ -1,6 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { rollup, vite } from "./index";
+
+vi.mock("node:module", () => ({
+  createRequire: () => ({ resolve: () => "/virtual/qui/styles.css" }),
+}));
+
+vi.mock("node:fs/promises", () => ({
+  readFile: vi.fn().mockResolvedValue(":host{display:block;--font-fallback:test;}"),
+}));
 
 type TransformHandler = (code: string, id: string) => { code: string; map: unknown } | undefined;
 type IdHandler = (id: string) => string | undefined;

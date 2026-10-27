@@ -3,7 +3,7 @@ dist/
 styled-system/
 www/
 .stencil/
-src/components.d.ts
+**/src/components.d.ts
 .head/
 test-results/
 .opencode/
