@@ -43,6 +43,7 @@ const STYLE_BUILD_INPUTS = [
   "build/layer-order.ts",
   "build/panda-driver.ts",
   "build/theme-css.ts",
+  "build/undefined-content.ts",
   "styles.stencil.plugin.ts",
 ];
 const KEBAB_SEGMENT = /-([a-z])/gu;

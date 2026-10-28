@@ -2,6 +2,7 @@ import type { Preset } from "@pandacss/types";
 
 import { defineConfig } from "@pandacss/dev";
 
+import { UNDEFINED_CONTENT_SELECTOR } from "./build/undefined-content";
 import { colorRoles, cssVariableNames } from "./src/utilities/theme/color-roles";
 
 const colorTokens = Object.fromEntries(
@@ -18,6 +19,15 @@ export const quiPreset: Preset = {
     },
   },
   globalCss: {
+    // Keep content that components hide until their first render from showing
+    // before the custom elements are registered. Stencil adds its own runtime
+    // CSS that keeps component tags hidden until they gain `.hydrated`; this
+    // covers the gap before that runtime boots. SSR hosts already carry
+    // `.hydrated`, so server-rendered content stays visible until the client
+    // takes over.
+    [UNDEFINED_CONTENT_SELECTOR]: {
+      display: "none !important",
+    },
     body: {
       backgroundColor: "surface",
       color: "onSurface",

@@ -5,6 +5,7 @@ import path from "node:path";
 import { chromium, firefox, webkit, type Browser, type BrowserType, type Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { UNDEFINED_CONTENT_TAGS } from "../../build/undefined-content";
 import { loadHydrate } from "../test-utils/hydrate";
 import { withShadowStylesheet } from "./ssr";
 
@@ -33,12 +34,38 @@ const fieldMarkup = `<qui-field id="email" required>
   <qui-field-helper-text>We never share it.</qui-field-helper-text>
 </qui-field>`;
 
+const compositeMarkup = `
+  <qui-popover>Popover</qui-popover>
+  <qui-select><qui-option value="a">Apple</qui-option></qui-select>
+  <qui-combobox></qui-combobox>
+  <qui-dialog>
+    <qui-dialog-trigger>Open</qui-dialog-trigger>
+    <qui-dialog-content>Body</qui-dialog-content>
+  </qui-dialog>
+  <qui-tabs>
+    <qui-tab-list><qui-tab-trigger value="a">A</qui-tab-trigger></qui-tab-list>
+    <qui-tab-panel value="a">Panel</qui-tab-panel>
+  </qui-tabs>
+  <qui-accordion>
+    <qui-accordion-item value="a">
+      <qui-accordion-trigger>A</qui-accordion-trigger>
+      <qui-accordion-content>Body</qui-accordion-content>
+    </qui-accordion-item>
+  </qui-accordion>
+`;
+
+const undefinedCompositeMarkup = `${compositeMarkup}
+  <qui-button>Visible</qui-button>
+  <style>qui-select { display: block; }</style>
+`;
+
 let server: http.Server;
 let origin: string;
 let buttonHtml: string;
 let fieldHtml: string;
 let iconHtml: string;
 let iconButtonHtml: string;
+let compositeHtml: string;
 
 function buildPage(hydrate: boolean, content = buttonHtml): string {
   return `<!doctype html><html><head>
@@ -78,6 +105,22 @@ function serveStatic(response: http.ServerResponse, url: string | undefined): bo
   return false;
 }
 
+function serveNamedPage(response: http.ServerResponse, url: string | undefined): boolean {
+  if (url === "/icon-button") {
+    serveHtml(response, true, iconButtonHtml);
+    return true;
+  }
+  if (url === "/composite") {
+    serveHtml(response, false, compositeHtml);
+    return true;
+  }
+  if (url === "/composite-undefined") {
+    serveHtml(response, false, undefinedCompositeMarkup);
+    return true;
+  }
+  return false;
+}
+
 function handleRequest(request: http.IncomingMessage, response: http.ServerResponse): void {
   if (request.url === "/") {
     serveHtml(response, false);
@@ -95,8 +138,7 @@ function handleRequest(request: http.IncomingMessage, response: http.ServerRespo
     serveHtml(response, true, iconHtml);
     return;
   }
-  if (request.url === "/icon-button") {
-    serveHtml(response, true, iconButtonHtml);
+  if (serveNamedPage(response, request.url)) {
     return;
   }
   if (serveStatic(response, request.url)) {
@@ -158,6 +200,22 @@ async function waitForFieldAria(page: Page): Promise<void> {
   });
 }
 
+async function hostDisplays(page: Page, tags: readonly string[]): Promise<Record<string, string>> {
+  return page.evaluate(
+    (names) =>
+      Object.fromEntries(
+        names.map((tag) => {
+          const element = document.querySelector(tag);
+          if (element === null) {
+            throw new TypeError(`Missing ${tag}`);
+          }
+          return [tag, getComputedStyle(element).display];
+        }),
+      ),
+    tags,
+  );
+}
+
 interface AxNode {
   ignored?: boolean;
   role?: { value?: string };
@@ -179,32 +237,39 @@ async function accessibilityTree(page: Page): Promise<AxNode[]> {
 
 beforeAll(async () => {
   const { renderToString } = await loadHydrate();
-  const [buttonResult, fieldResult, iconResult, iconButtonResult] = await Promise.all([
-    renderToString(
-      '<qui-button variant="filled">Save</qui-button>',
-      withShadowStylesheet({ href: "/styles.css" }, { fullDocument: false }),
-    ),
-    renderToString(
-      fieldMarkup,
-      withShadowStylesheet({ href: "/styles.css" }, { fullDocument: false }),
-    ),
-    renderToString(
-      '<qui-icon label="Add" path="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5z"></qui-icon>',
-      withShadowStylesheet({ href: "/styles.css" }, { fullDocument: false }),
-    ),
-    renderToString(
-      '<qui-button icon-only label="Add"><qui-icon path="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5z"></qui-icon></qui-button>',
-      withShadowStylesheet({ href: "/styles.css" }, { fullDocument: false }),
-    ),
-  ]);
+  const [buttonResult, fieldResult, iconResult, iconButtonResult, compositeResult] =
+    await Promise.all([
+      renderToString(
+        '<qui-button variant="filled">Save</qui-button>',
+        withShadowStylesheet({ href: "/styles.css" }, { fullDocument: false }),
+      ),
+      renderToString(
+        fieldMarkup,
+        withShadowStylesheet({ href: "/styles.css" }, { fullDocument: false }),
+      ),
+      renderToString(
+        '<qui-icon label="Add" path="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5z"></qui-icon>',
+        withShadowStylesheet({ href: "/styles.css" }, { fullDocument: false }),
+      ),
+      renderToString(
+        '<qui-button icon-only label="Add"><qui-icon path="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5z"></qui-icon></qui-button>',
+        withShadowStylesheet({ href: "/styles.css" }, { fullDocument: false }),
+      ),
+      renderToString(
+        compositeMarkup,
+        withShadowStylesheet({ href: "/styles.css" }, { fullDocument: false }),
+      ),
+    ]);
   buttonHtml = buttonResult.html;
   fieldHtml = fieldResult.html;
   iconHtml = iconResult.html;
   iconButtonHtml = iconButtonResult.html;
+  compositeHtml = compositeResult.html;
   expect(buttonResult.diagnostics).toEqual([]);
   expect(fieldResult.diagnostics).toEqual([]);
   expect(iconResult.diagnostics).toEqual([]);
   expect(iconButtonResult.diagnostics).toEqual([]);
+  expect(compositeResult.diagnostics).toEqual([]);
   // SSR emits the IDREF fallback; cross-root reflection is wired on hydration.
   expect(fieldHtml).toContain('aria-labelledby="email::label"');
   expect(fieldHtml).toContain('aria-describedby="email::helper-text"');
@@ -237,6 +302,53 @@ describe.each(engines)("shadow DOM hydration in $name", ({ type }) => {
       const metrics = await buttonMetrics(page);
       expect(metrics.height).toBe("40px");
       expect(metrics.background).not.toBe("rgba(0, 0, 0, 0)");
+    } finally {
+      await page.close();
+    }
+  }, 15_000);
+
+  it("keeps SSR composite hosts visible before the client bundle runs", async () => {
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${origin}/composite`, { waitUntil: "load" });
+      const state = await page.evaluate(
+        (tags) => ({
+          defined: tags.every((tag) => customElements.get(tag) !== undefined),
+          displays: Object.fromEntries(
+            tags.map((tag) => {
+              const element = document.querySelector(tag);
+              if (element === null) {
+                throw new TypeError(`Missing ${tag}`);
+              }
+              return [tag, getComputedStyle(element).display];
+            }),
+          ),
+        }),
+        UNDEFINED_CONTENT_TAGS,
+      );
+
+      expect(state.defined).toBe(false);
+      expect(Object.values(state.displays)).not.toContain("none");
+    } finally {
+      await page.close();
+    }
+  }, 15_000);
+
+  it("hides only undefined targeted hosts, even against host display styles", async () => {
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${origin}/composite-undefined`, { waitUntil: "load" });
+      const displays = await hostDisplays(page, [...UNDEFINED_CONTENT_TAGS, "qui-button"]);
+      const allUndefined = await page.evaluate(
+        (tags) => tags.every((tag) => customElements.get(tag) === undefined),
+        UNDEFINED_CONTENT_TAGS,
+      );
+
+      expect(allUndefined).toBe(true);
+      for (const tag of UNDEFINED_CONTENT_TAGS) {
+        expect(displays[tag]).toBe("none");
+      }
+      expect(displays["qui-button"]).not.toBe("none");
     } finally {
       await page.close();
     }

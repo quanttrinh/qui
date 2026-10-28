@@ -539,6 +539,13 @@ qui-card::part(root) {
 }
 ```
 
+The generated stylesheet briefly hides popover, select, combobox, dialog body,
+tab panel, and accordion body content until their custom elements are defined.
+This prevents server-rendered or static markup from flashing hidden content
+before Stencil takes over. Server-rendered hosts that already carry Stencil's
+`hydrated` class stay visible. If client JavaScript never runs, those
+client-only content areas remain hidden.
+
 ### Use with Panda
 
 Point an app's Panda config at the package design system:
