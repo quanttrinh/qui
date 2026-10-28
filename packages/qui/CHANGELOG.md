@@ -1,5 +1,29 @@
 # @quanttrinh/qui
 
+## 0.5.0
+
+### Minor Changes
+
+- 77e024e: Resolve and mark content-hashed component stylesheets, including SSR output.
+  
+  - Allow `styles.href` to be an async resolver that receives the Vite command, mode, base, HTML path, and build bundle, so content-hashed CSS assets can be marked without hard-coding the hash. The resolver context correctly distinguishes client and SSR builds.
+  - Export `resolveStylesheetHrefs` and `markExternalStylesheetLinks` for SSR/SSG pipelines that render HTML outside Vite's `transformIndexHtml`. Resolved URLs include the Vite base, and the public helper validates malformed styles.
+  - Cache the normalized configured stylesheet href list, query only `link[data-qui-styles]`, and ignore unrelated link mutations when invalidating discovered stylesheet URLs.
+  - Export the `data-qui-styles` attribute and link selector from the runtime so SSR and test helpers share one definition instead of duplicating constants.
+  - Widen the plugin peer range to `>=0.4.0 <0.6.0` so both packages remain installable after the minor release.
+
+### Patch Changes
+
+- 751162e: Hide composite component content in the global stylesheet until the custom
+  elements are registered, preventing a flash of undefined light-DOM content
+  before Stencil injects its hydrated styles.
+  
+  The rule only targets content that has no usable pre-upgrade state, uses
+  `:not(:defined)` so it stops applying after registration, and excludes
+  server-rendered hosts carrying Stencil's `hydrated` class. It is `!important`
+  while undefined so consumer host `display` styles cannot re-expose the content.
+  If the client bundle never loads, the affected content remains hidden.
+
 ## 0.4.0
 
 ### Minor Changes
