@@ -130,6 +130,25 @@ or per-tag network waterfall.
   properties; measured virtualized rows in a native popover
 - `<qui-popover>` — native popover positioned with JavaScript
 
+### Select data attributes
+
+`qui-select` and `qui-combobox` accept JSON attributes for their complex props,
+which makes them usable from static HTML and SSR markup:
+
+```html
+<qui-select
+    default-value='["b"]'
+    items='[
+      {"value":"a","label":"Apple"},
+      {"value":"b","label":"Banana"}
+    ]'
+>
+</qui-select>
+```
+
+`value`, `default-value`, and `items` are parsed as JSON array attributes. A
+single non-JSON value is accepted as a one-item array for convenience.
+
 ### Icons
 
 `qui-icon` renders inline SVG from a path and viewBox, so no icon font is

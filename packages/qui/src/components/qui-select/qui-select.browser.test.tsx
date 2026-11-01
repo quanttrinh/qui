@@ -59,6 +59,24 @@ describe("qui-select", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("deserializes JSON items and default-value attributes", async () => {
+    const { root, waitForChanges } = await render(
+      `<qui-select
+        default-value='["b"]'
+        items='[{"value":"a","label":"Apple"},{"value":"b","label":"Banana"}]'
+      ></qui-select>`,
+    );
+    await waitForChanges();
+
+    const select = resolveHost<HTMLQuiSelectElement>(root, "qui-select");
+    expect(select.defaultValue).toEqual(["b"]);
+    expect(select.items).toEqual([
+      { value: "a", label: "Apple", disabled: false },
+      { value: "b", label: "Banana", disabled: false },
+    ]);
+    expect(queryPartIn(root, "trigger").textContent).toContain("Banana");
+  });
+
   it("focuses the internal trigger button", async () => {
     const { root, waitForChanges } = await render(<qui-select items={accounts} />);
     const trigger = queryPartIn<HTMLButtonElement>(root, "trigger");
