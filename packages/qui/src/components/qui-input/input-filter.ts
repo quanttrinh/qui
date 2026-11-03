@@ -1,5 +1,5 @@
 /** Options shared by the numeric and decimal input filters. */
-export interface InputFilterOptions {
+export interface NumericOrDecimalFilterOptions {
   readonly allowNegative: boolean;
   readonly mode: "numeric" | "decimal";
 }
@@ -25,10 +25,10 @@ function normalizeLeadingZeros(value: string): string {
 }
 
 /** Appends a character if it is valid in the current filter mode. */
-export function appendAcceptedCharacter(
+export function appendAcceptedNumericOrDecimalCharacter(
   result: string,
   char: string,
-  options: InputFilterOptions,
+  options: NumericOrDecimalFilterOptions,
 ): string | undefined {
   if (char >= "0" && char <= "9") {
     return result + char;
@@ -47,10 +47,13 @@ export function appendAcceptedCharacter(
 }
 
 /** Filters and normalizes a raw value for numeric or decimal input modes. */
-export function filterNumericOrDecimalInput(raw: string, options: InputFilterOptions): string {
+export function filterNumericOrDecimalInput(
+  raw: string,
+  options: NumericOrDecimalFilterOptions,
+): string {
   let result = "";
   for (const char of raw) {
-    const next = appendAcceptedCharacter(result, char, options);
+    const next = appendAcceptedNumericOrDecimalCharacter(result, char, options);
     if (next !== undefined) {
       result = next;
     }

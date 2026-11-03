@@ -30,7 +30,10 @@ import { applyFieldAria } from "../shared/field/aria";
 import { createFieldControl, focusElement } from "../shared/field/control";
 import { FormControlBase } from "../shared/form-control/component-base";
 import { FormController, type FormValidity } from "../shared/form-control/controller";
-import { appendAcceptedCharacter, filterNumericOrDecimalInput } from "./input-filter";
+import {
+  appendAcceptedNumericOrDecimalCharacter,
+  filterNumericOrDecimalInput,
+} from "./input-filter";
 import { styles } from "./styles";
 
 /** The input types `qui-input` can render. */
@@ -477,7 +480,7 @@ export class QuiInput extends FormControlBase {
     const options = { allowNegative: this.allowNegative, mode };
     let result = el.value.slice(0, el.selectionStart ?? el.value.length);
     for (const char of data) {
-      const next = appendAcceptedCharacter(result, char, options);
+      const next = appendAcceptedNumericOrDecimalCharacter(result, char, options);
       if (next === undefined) {
         event.preventDefault();
         return;
