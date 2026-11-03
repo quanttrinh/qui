@@ -35,15 +35,15 @@ describe("qui-input numeric", () => {
     expect(spy).toHaveReceivedEventDetail({ value: "34", unmaskedValue: "34" });
   });
 
-  it("does not sanitize email inputs in numeric mode", async () => {
+  it("sanitizes any input type when the hint is set", async () => {
     const { root } = await render(
       <qui-input inputType="email" inputModeHint="numeric" value="a1b2" />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
-    expect(input.value).toBe("a1b2");
-    expect(host.value).toBe("a1b2");
+    expect(input.value).toBe("12");
+    expect(host.value).toBe("12");
   });
 
   it("re-sanitizes when the input mode changes", async () => {

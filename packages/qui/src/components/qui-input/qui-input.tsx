@@ -396,9 +396,6 @@ export class QuiInput extends FormControlBase {
     if (mode !== "numeric" && mode !== "decimal") {
       return raw;
     }
-    if (!this.isNumber && !this.supportsSelection) {
-      return raw;
-    }
     return mode === "numeric" ? this.filterNumeric(raw) : this.filterDecimalCharacters(raw);
   }
 
