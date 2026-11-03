@@ -310,9 +310,9 @@ minus rules; it does not parse or normalize separators, so pasted grouped values
 keep their exact formatting. Masks do not preserve a leading sign or decimal
 separator, so use decimal mode without a mask. When filtering changes a
 controlled `value`, the component updates `value` and emits `valuechange` with
-the normalized value. Filtering applies whenever `input-mode-hint` is `numeric`
-or `decimal`, regardless of input type. `email` cannot restore the caret, so
-mid-value filtering may move it to the end.
+the normalized value. Filtering applies to `text`, `tel`, `number`, `search`,
+and `password` inputs when `input-mode-hint` is `numeric` or `decimal`. `email`
+and `url` inputs are left unfiltered.
 
 ```html
 <qui-input input-mode-hint="numeric"></qui-input> <qui-input input-mode-hint="decimal"></qui-input>
