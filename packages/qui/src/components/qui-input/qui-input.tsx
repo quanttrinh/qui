@@ -528,6 +528,9 @@ export class QuiInput extends FormControlBase {
               maxLength={this.maxLength}
               minLength={this.minLength}
               pattern={this.inputPattern}
+              min={this.isNumber ? this.min : undefined}
+              max={this.isNumber ? this.max : undefined}
+              step={this.isNumber ? this.step : undefined}
               class={styles.input}
               part="input"
               onInput={this.handleInput}
