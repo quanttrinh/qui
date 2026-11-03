@@ -156,7 +156,7 @@
   "peerDependencies": {
     "@pandacss/dev": "^2.4.0",
     "@types/react": ">=19",
-    "preact": ">=10",
+    "preact": ">=10.28.0",
     "solid-js": ">=1"
   },
   "peerDependenciesMeta": {
