@@ -49,6 +49,8 @@ jobs:
         with:
           publish-script: bun run release
           version-script: bun run version
+          commit-message: "chore: version packages"
+          pr-title: "chore: version packages"
           create-github-releases: false
           push-git-tags: false
           github-token: ${{ secrets.GITHUB_TOKEN }}
