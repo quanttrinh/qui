@@ -38,19 +38,25 @@ const FRAMEWORK_WRITERS: readonly FrameworkWriter[] = [
 const RUNTIME_STUB = "// Runtime stub for the type-only framework entry point.\nexport {};\n";
 
 /**
- * Preact only lowercases handler names for built-in DOM events. For custom
- * elements it calls `addEventListener` with the exact remainder after the `on`
- * prefix, so a `checkedchange` event must be exposed as `oncheckedchange`, not
- * `onCheckedchange`. The upstream Preact generator capitalizes the event name;
- * rewrite the generated handler keys back to the real event names.
+ * Normalize the upstream Preact declarations for current Preact versions.
+ *
+ * 1. Preact only lowercases handler names for built-in DOM events in v10. For
+ *    custom elements it calls `addEventListener` with the exact remainder after
+ *    the `on` prefix, so `checkedchange` must be exposed as `oncheckedchange`,
+ *    not `onCheckedchange`. The upstream generator capitalizes event names.
+ * 2. Preact 11 removed `HTMLAttributes` from the `JSX` namespace. It remains a
+ *    top-level export in both v10 and v11, so use that instead of
+ *    `JSX.HTMLAttributes`.
  */
-function normalizePreactEventNames(
+function normalizePreactDeclarations(
   content: string,
   components: readonly {
     readonly events?: readonly { readonly name: string }[];
   }[],
 ): string {
-  let normalized = content;
+  let normalized = content
+    .replace("import type { JSX } from 'preact';", "import type { HTMLAttributes } from 'preact';")
+    .replaceAll("JSX.HTMLAttributes<", "HTMLAttributes<");
 
   for (const component of components) {
     for (const event of component.events ?? []) {
@@ -111,7 +117,7 @@ export function frameworkTypesOutputTarget(
           });
           const content =
             name === "preact"
-              ? normalizePreactEventNames(generated, buildCtx.components)
+              ? normalizePreactDeclarations(generated, buildCtx.components)
               : generated;
 
           if (content.length === 0) {
