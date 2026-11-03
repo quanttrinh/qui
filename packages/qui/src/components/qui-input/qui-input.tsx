@@ -54,6 +54,9 @@ export type InputAutocapitalize = "none" | "off" | "sentences" | "on" | "words" 
 /** The native `enterkeyhint` hints supported by the inner input. */
 export type InputEnterKeyHint = "enter" | "done" | "go" | "next" | "previous" | "search" | "send";
 
+/** The Safari-specific `autocorrect` hints supported by the inner input. */
+export type InputAutocorrect = "on" | "off";
+
 const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password", "url"]);
 
 /** The values handed to `valuechange` after every edit. */
@@ -115,8 +118,8 @@ export class QuiInput extends FormControlBase {
   @Prop() enterKeyAction: InputEnterKeyHint | "" = "";
   /** Native `spellcheck` hint for text and search inputs. */
   @Prop() spellcheckHint?: boolean;
-  /** Native `autocorrect` hint for text, search, and email inputs. `true` maps to `on`, `false` to `off`. */
-  @Prop() autocorrectHint?: boolean;
+  /** Native `autocorrect` hint for text, search, and email inputs. */
+  @Prop() autocorrectHint?: InputAutocorrect;
   /** Input mode hint. */
   @Prop() inputModeHint?: InputMode;
   /** Maximum number of characters. */
@@ -286,11 +289,8 @@ export class QuiInput extends FormControlBase {
     return Number.isFinite(value) ? value : undefined;
   }
 
-  private get resolvedAutocorrect(): "on" | "off" | undefined {
-    if (!this.supportsAutocorrect || this.autocorrectHint === undefined) {
-      return undefined;
-    }
-    return this.autocorrectHint ? "on" : "off";
+  private get resolvedAutocorrect(): InputAutocorrect | undefined {
+    return this.supportsAutocorrect ? this.autocorrectHint : undefined;
   }
 
   private get resolvedType(): string {
