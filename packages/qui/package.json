@@ -116,7 +116,7 @@
     "build": "stencil build && bun run build:utilities && bun run build:types",
     "build:utilities": "bun build/build-utilities.ts",
     "build:types": "bun build/finalize-types.ts",
-    "test:framework-types": "tsc -p test/fixtures/framework-types/react/tsconfig.json && tsc -p test/fixtures/framework-types/solid/tsconfig.json && tsc -p test/fixtures/framework-types/preact/tsconfig.json",
+    "test:framework-types": "bun build/require-built-types.ts && tsc -p test/fixtures/framework-types/react/tsconfig.json && tsc -p test/fixtures/framework-types/solid/tsconfig.json && tsc -p test/fixtures/framework-types/preact/tsconfig.json",
     "codegen": "panda codegen",
     "test": "NODE_ENV=test stencil-test",
     "test:unit": "NODE_ENV=test stencil-test --project unit",

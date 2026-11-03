@@ -68,6 +68,9 @@ ship an empty runtime module, so a side-effect import resolves safely in
 bundlers. `@types/react`, `solid-js`, and `preact` are optional peer
 dependencies; consumers only need the framework they use.
 
+Stencil custom event names must stay lowercase so the generated React handler
+props match the dispatched event names.
+
 The React declarations target React 19+, which supports custom elements
 natively.
 

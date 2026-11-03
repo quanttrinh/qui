@@ -17,29 +17,43 @@ const components = [
     properties: [
       {
         name: "variant",
-        complexType: { original: "ButtonVariant", references: {} },
+        complexType: {
+          original: "ButtonVariant",
+          references: { ButtonVariant: { location: "local" } },
+        },
         docs: { text: "The visual style." },
       },
     ],
     events: [
       {
-        name: "press",
-        complexType: { original: "void", references: {} },
-        docs: { text: "Emitted on press." },
+        name: "checkedchange",
+        complexType: {
+          original: "{ checked: CheckedState }",
+          references: { CheckedState: { location: "local" } },
+        },
+        docs: { text: "Emitted when the checked state changes." },
       },
     ],
   },
 ];
 
-async function generate(packageName: string): Promise<{
+interface GenerateOptions {
+  readonly components?: unknown;
+  readonly manifest?: string;
+  readonly packageJsonPath?: null;
+}
+
+async function generate(options: GenerateOptions = {}): Promise<{
   root: string;
   writes: Map<string, string>;
 }> {
   const root = await mkdtemp(join(tmpdir(), "qui-framework-types-"));
   roots.push(root);
 
-  const packageJsonPath = join(root, "package.json");
-  await writeFile(packageJsonPath, JSON.stringify({ name: packageName }));
+  const packageJsonPath = options.packageJsonPath === null ? undefined : join(root, "package.json");
+  if (packageJsonPath !== undefined) {
+    await writeFile(packageJsonPath, options.manifest ?? JSON.stringify({ name: "@acme/qui" }));
+  }
 
   const writes = new Map<string, string>();
   const target = frameworkTypesOutputTarget({ rootDir: root });
@@ -58,25 +72,26 @@ async function generate(packageName: string): Promise<{
         },
       },
     },
-    { components },
+    { components: options.components ?? components },
   );
 
   return { root, writes };
 }
 
 describe("frameworkTypesOutputTarget", () => {
-  it("reads the package name from package.json", async () => {
-    const { root, writes } = await generate("@acme/qui");
+  it("reads the package name and imports referenced types from it", async () => {
+    const { root, writes } = await generate();
     const react = writes.get(join(root, "dist", "types", "react.d.ts")) ?? "";
+    const importLine = react.split("\n").find((line) => line.includes("from '@acme/qui';")) ?? "";
 
-    expect(react).toContain("from '@acme/qui';");
     expect(react).toContain("import '@acme/qui/types/react';");
-    expect(react).toContain("ButtonVariant");
-    expect(react).toContain("QuiButtonCustomEvent");
+    expect(importLine).toContain("ButtonVariant");
+    expect(importLine).toContain("CheckedState");
+    expect(importLine).toContain("QuiButtonCustomEvent");
   });
 
   it("writes declarations and runtime stubs for every framework", async () => {
-    const { root, writes } = await generate("@acme/qui");
+    const { root, writes } = await generate();
 
     for (const framework of ["react", "solid", "preact"]) {
       expect(writes.get(join(root, "dist", "types", `${framework}.d.ts`))).toBeTruthy();
@@ -84,7 +99,29 @@ describe("frameworkTypesOutputTarget", () => {
     }
   });
 
+  it("uses Preact custom element event names exactly", async () => {
+    const { root, writes } = await generate();
+    const preact = writes.get(join(root, "dist", "types", "preact.d.ts")) ?? "";
+
+    expect(preact).toContain("'oncheckedchange'");
+    expect(preact).not.toContain("'onCheckedchange'");
+  });
+
+  it("fails when packageJsonFilePath is missing", async () => {
+    await expect(generate({ packageJsonPath: null })).rejects.toThrow(
+      "did not provide a package.json path",
+    );
+  });
+
   it("fails when the package manifest has no name", async () => {
-    await expect(generate("")).rejects.toThrow("missing a package name");
+    await expect(generate({ manifest: "{}" })).rejects.toThrow("missing a package name");
+  });
+
+  it("fails when the package manifest is malformed", async () => {
+    await expect(generate({ manifest: "{" })).rejects.toThrow();
+  });
+
+  it("fails when no components produce declarations", async () => {
+    await expect(generate({ components: [] })).rejects.toThrow(/no .* declarations were generated/);
   });
 });

@@ -38,6 +38,31 @@ const FRAMEWORK_WRITERS: readonly FrameworkWriter[] = [
 const RUNTIME_STUB = "// Runtime stub for the type-only framework entry point.\nexport {};\n";
 
 /**
+ * Preact only lowercases handler names for built-in DOM events. For custom
+ * elements it calls `addEventListener` with the exact remainder after the `on`
+ * prefix, so a `checkedchange` event must be exposed as `oncheckedchange`, not
+ * `onCheckedchange`. The upstream Preact generator capitalizes the event name;
+ * rewrite the generated handler keys back to the real event names.
+ */
+function normalizePreactEventNames(
+  content: string,
+  components: readonly {
+    readonly events?: readonly { readonly name: string }[];
+  }[],
+): string {
+  let normalized = content;
+
+  for (const component of components) {
+    for (const event of component.events ?? []) {
+      const generated = `on${event.name.charAt(0).toUpperCase()}${event.name.slice(1)}`;
+      normalized = normalized.replaceAll(`'${generated}'`, `'on${event.name}'`);
+    }
+  }
+
+  return normalized;
+}
+
+/**
  * Generate React, Solid, and Preact declarations under the `/types/*` entry
  * points.
  *
@@ -78,12 +103,16 @@ export function frameworkTypesOutputTarget(
       await Promise.all(
         FRAMEWORK_WRITERS.map(async ({ name, create }) => {
           const declarationPath = join(options.rootDir, "dist", "types", `${name}.d.ts`);
-          const content = create({
+          const generated = create({
             components: buildCtx.components,
             stencilPackageName,
             importPath: `types/${name}`,
             typesFilePath: relative(options.rootDir, declarationPath).split(sep).join("/"),
           });
+          const content =
+            name === "preact"
+              ? normalizePreactEventNames(generated, buildCtx.components)
+              : generated;
 
           if (content.length === 0) {
             throw new Error(`[qui] no ${name} declarations were generated`);
