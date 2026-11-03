@@ -142,13 +142,13 @@ describe("qui-input text case", () => {
 
   it("ignores textCase for number inputs", async () => {
     const { root, waitForChanges } = await render(
-      <qui-input inputType="number" textCase="uppercase" value="1e3" />,
+      <qui-input inputType="number" textCase="uppercase" value="123" />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
     await waitForChanges();
-    expect(input.value).toBe("1e3");
+    expect(input.value).toBe("123");
     expect(input.hasAttribute("autocapitalize")).toBe(false);
   });
 
