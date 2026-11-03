@@ -36,5 +36,6 @@ describe("Preact custom element events", () => {
     element.dispatchEvent(new CustomEvent("checkedchange", { detail: { checked: true } }));
 
     expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ detail: { checked: true } }));
   });
 });

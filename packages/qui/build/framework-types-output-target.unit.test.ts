@@ -117,6 +117,63 @@ describe("frameworkTypesOutputTarget", () => {
     expect(preact).not.toContain("JSX.HTMLAttributes");
   });
 
+  it("normalizes multiple Preact events and handles components without events", async () => {
+    const custom = [
+      {
+        tagName: "qui-alpha",
+        properties: [],
+        events: [
+          {
+            name: "valueChange",
+            complexType: { original: "void", references: {} },
+            docs: {},
+          },
+          {
+            name: "open",
+            complexType: { original: "void", references: {} },
+            docs: {},
+          },
+        ],
+      },
+      {
+        tagName: "qui-beta",
+        properties: [],
+        events: [],
+      },
+    ];
+    const { root, writes } = await generate({ components: custom });
+    const preact = writes.get(join(root, "dist", "types", "preact.d.ts")) ?? "";
+
+    expect(preact).toContain("'onvalueChange'");
+    expect(preact).toContain("'onopen'");
+    expect(preact).not.toContain("'onValueChange'");
+  });
+
+  it("rejects colliding Preact event names", async () => {
+    const custom = [
+      {
+        tagName: "qui-alpha",
+        properties: [],
+        events: [
+          {
+            name: "foo",
+            complexType: { original: "void", references: {} },
+            docs: {},
+          },
+          {
+            name: "Foo",
+            complexType: { original: "void", references: {} },
+            docs: {},
+          },
+        ],
+      },
+    ];
+
+    await expect(generate({ components: custom })).rejects.toThrow(
+      "conflicting Preact event names",
+    );
+  });
+
   it("fails when packageJsonFilePath is missing", async () => {
     await expect(generate({ packageJsonPath: null })).rejects.toThrow(
       "did not provide a package.json path",

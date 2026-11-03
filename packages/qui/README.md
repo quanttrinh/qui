@@ -90,7 +90,8 @@ import "@quanttrinh/qui/types/preact";
 <qui-checkbox oncheckedchange={(event) => event.detail.checked} />;
 ```
 
-The declarations use `export type *` and require TypeScript 5.0 or newer.
+The declarations use `export type *` and require TypeScript 5.0 or newer. The
+Preact declarations require Preact 10.28 or newer, including Preact 11.
 
 The React declarations target React 19+, which supports custom elements
 natively.

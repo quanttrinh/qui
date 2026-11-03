@@ -58,15 +58,26 @@ interface TextEdit {
 function normalizePreactDeclarations(
   content: string,
   components: readonly {
-    readonly events?: readonly { readonly name: string }[];
+    readonly events?: readonly { readonly internal?: boolean; readonly name: string }[];
   }[],
 ): string {
   const eventNames = new Map<string, string>();
 
   for (const component of components) {
     for (const event of component.events ?? []) {
+      if (event.internal === true) {
+        continue;
+      }
+
       const generated = `on${event.name.charAt(0).toUpperCase()}${event.name.slice(1)}`;
-      eventNames.set(generated, `on${event.name}`);
+      const replacement = `on${event.name}`;
+      const existing = eventNames.get(generated);
+
+      if (existing !== undefined && existing !== replacement) {
+        throw new Error(`[qui] conflicting Preact event names: "${existing}" and "${replacement}"`);
+      }
+
+      eventNames.set(generated, replacement);
     }
   }
 
@@ -77,7 +88,16 @@ function normalizePreactDeclarations(
     true,
     ts.ScriptKind.TS,
   );
+
+  if (sourceFile.parseDiagnostics.length > 0) {
+    const diagnostics = sourceFile.parseDiagnostics
+      .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"))
+      .join("; ");
+    throw new Error(`[qui] failed to parse generated Preact declarations: ${diagnostics}`);
+  }
+
   const edits: TextEdit[] = [];
+  let renamedImport = false;
 
   function visit(node: ts.Node): void {
     if (
@@ -87,13 +107,27 @@ function normalizePreactDeclarations(
       node.importClause?.namedBindings !== undefined &&
       ts.isNamedImports(node.importClause.namedBindings)
     ) {
-      for (const specifier of node.importClause.namedBindings.elements) {
-        if (specifier.name.text === "JSX") {
+      const elements = node.importClause.namedBindings.elements;
+      const importsHTMLAttributes = elements.some(
+        (specifier) => (specifier.propertyName ?? specifier.name).text === "HTMLAttributes",
+      );
+
+      for (const specifier of elements) {
+        if ((specifier.propertyName ?? specifier.name).text !== "JSX") {
+          continue;
+        }
+
+        if (specifier.propertyName !== undefined) {
+          throw new Error("[qui] unexpected aliased JSX import in Preact declarations");
+        }
+
+        if (!importsHTMLAttributes && !renamedImport) {
           edits.push({
             start: specifier.name.getStart(sourceFile),
             end: specifier.name.getEnd(),
             text: "HTMLAttributes",
           });
+          renamedImport = true;
         }
       }
     } else if (
@@ -123,12 +157,20 @@ function normalizePreactDeclarations(
 
   visit(sourceFile);
 
-  let normalized = content;
-  for (const edit of edits.sort((left, right) => right.start - left.start)) {
-    normalized = `${normalized.slice(0, edit.start)}${edit.text}${normalized.slice(edit.end)}`;
+  const sorted = edits.sort((left, right) => left.start - right.start);
+  const parts: string[] = [];
+  let cursor = 0;
+
+  for (const edit of sorted) {
+    if (edit.start < cursor) {
+      throw new Error("[qui] overlapping edits in generated Preact declarations");
+    }
+    parts.push(content.slice(cursor, edit.start), edit.text);
+    cursor = edit.end;
   }
 
-  return normalized;
+  parts.push(content.slice(cursor));
+  return parts.join("");
 }
 
 /**
