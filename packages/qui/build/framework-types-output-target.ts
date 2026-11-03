@@ -38,15 +38,21 @@ const FRAMEWORK_WRITERS: readonly FrameworkWriter[] = [
 const RUNTIME_STUB = "// Runtime stub for the type-only framework entry point.\nexport {};\n";
 
 /**
- * Generate React, Solid, and Preact declarations with the correct package name.
+ * Generate React, Solid, and Preact declarations under the `/types/*` entry
+ * points.
  *
- * `typesOutputTarget()` in @stencil/types-output-target 1.0.2 reads the package
- * manifest through an uninitialized `fs` shim, catches the failure, and falls
- * back to the Stencil namespace. The generator functions themselves are fine,
- * so this output target supplies the package name directly.
+ * We cannot use the upstream `typesOutputTarget()` as-is for two reasons:
  *
- * Remove this workaround once the upstream package reads the manifest
- * correctly.
+ * 1. It derives `importPath` from the declaration file's basename, so a file at
+ *    `dist/types/react.d.ts` would import `@quanttrinh/qui/react` instead of
+ *    `@quanttrinh/qui/types/react`.
+ * 2. In 1.0.2 its package-name lookup calls `readFileSync` on an empty shim
+ *    object, so it always falls back to the Stencil namespace instead of the
+ *    package name. See
+ *    https://unpkg.com/@stencil/types-output-target@1.0.2/dist/index.js
+ *
+ * Remove this workaround when the upstream target supports custom import paths
+ * and reads the manifest reliably.
  */
 export function frameworkTypesOutputTarget(
   options: FrameworkTypesOutputTargetOptions,
@@ -79,10 +85,11 @@ export function frameworkTypesOutputTarget(
             typesFilePath: relative(options.rootDir, declarationPath).split(sep).join("/"),
           });
 
-          if (content.length > 0) {
-            await compilerCtx.fs.writeFile(declarationPath, content);
+          if (content.length === 0) {
+            throw new Error(`[qui] no ${name} declarations were generated`);
           }
 
+          await compilerCtx.fs.writeFile(declarationPath, content);
           await compilerCtx.fs.writeFile(
             join(options.rootDir, "dist", "types", `${name}.js`),
             RUNTIME_STUB,

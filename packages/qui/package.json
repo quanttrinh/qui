@@ -116,7 +116,7 @@
     "build": "stencil build && bun run build:utilities && bun run build:types",
     "build:utilities": "bun build/build-utilities.ts",
     "build:types": "bun build/finalize-types.ts",
-    "test:framework-types": "tsc -p test/fixtures/framework-types/tsconfig.json",
+    "test:framework-types": "tsc -p test/fixtures/framework-types/react/tsconfig.json && tsc -p test/fixtures/framework-types/solid/tsconfig.json && tsc -p test/fixtures/framework-types/preact/tsconfig.json",
     "codegen": "panda codegen",
     "test": "NODE_ENV=test stencil-test",
     "test:unit": "NODE_ENV=test stencil-test --project unit",
@@ -148,6 +148,8 @@
     "jiti": "^2.7.0",
     "playwright": "^1.64.1",
     "postcss": "^8.5.30",
+    "preact": "^10",
+    "solid-js": "^1",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vitest": "^5.0.5"
   },
