@@ -22,7 +22,7 @@ export default defineVitestConfig({
       {
         test: {
           name: "browser",
-          include: ["src/**/*.browser.test.{ts,tsx}"],
+          include: ["src/**/*.browser.test.{ts,tsx}", "test/**/*.browser.test.{ts,tsx}"],
           exclude: ["src/**/*.smoke.browser.test.{ts,tsx}"],
           setupFiles: ["./vitest.setup.ts"],
           browser: {

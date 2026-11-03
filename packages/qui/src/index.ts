@@ -1,5 +1,7 @@
 // Loads Stencil's global HTML element declarations for package consumers.
-export type { Components } from "./components";
+// Re-export the full generated surface for the framework JSX declarations.
+// This includes Components, prop unions, and custom event types.
+export type * from "./components";
 
 export { QuiButton } from "./components/qui-button/qui-button";
 export type { ButtonSize, ButtonVariant } from "./components/qui-button/qui-button";

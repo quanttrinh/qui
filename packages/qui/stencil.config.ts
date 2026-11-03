@@ -5,6 +5,7 @@ import { createNodeLogger } from "@stencil/core/sys/node";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 
+import { frameworkTypesOutputTarget } from "./build/framework-types-output-target";
 import { createPandaDriver } from "./build/panda-driver";
 import { stylesPlugin } from "./styles.stencil.plugin";
 
@@ -43,6 +44,7 @@ function pandacssTransform(driver: ReturnType<typeof createPandaDriver>) {
 
 export const config: Config = {
   namespace: "qui",
+  rootDir: packageRoot,
   logger,
   plugins: [stylesPlugin({ root: packageRoot, driver: pandaDriver, logger })],
   tsconfig: "./tsconfig.build.json",
@@ -74,6 +76,7 @@ export const config: Config = {
       type: "dist-hydrate-script",
       dir: join(packageRoot, "dist", "hydrate"),
     },
+    frameworkTypesOutputTarget({ rootDir: packageRoot }),
   ],
   rollupPlugins: {
     before: pandacssTransform(pandaDriver),

@@ -93,6 +93,18 @@
     },
     "./types": {
       "types": "./styled-system/types/index.d.ts"
+    },
+    "./types/react": {
+      "types": "./dist/types/react.d.ts",
+      "default": "./dist/types/react.js"
+    },
+    "./types/solid": {
+      "types": "./dist/types/solid.d.ts",
+      "default": "./dist/types/solid.js"
+    },
+    "./types/preact": {
+      "types": "./dist/types/preact.d.ts",
+      "default": "./dist/types/preact.js"
     }
   },
   "publishConfig": {
@@ -104,6 +116,7 @@
     "build": "stencil build && bun run build:utilities && bun run build:types",
     "build:utilities": "bun build/build-utilities.ts",
     "build:types": "bun build/finalize-types.ts",
+    "test:framework-types": "bun build/require-built-types.ts && tsc -p test/fixtures/framework-types/react/tsconfig.json && tsc -p test/fixtures/framework-types/solid/tsconfig.json && tsc -p test/fixtures/framework-types/preact/tsconfig.json",
     "codegen": "panda codegen",
     "test": "NODE_ENV=test stencil-test",
     "test:unit": "NODE_ENV=test stencil-test --project unit",
@@ -126,21 +139,37 @@
     "@pandacss/preset-base": "^2.4.0",
     "@pandacss/preset-panda": "^2.4.0",
     "@pandacss/transformer": "2.5.0",
+    "@stencil/types-output-target": "^1.0.2",
     "@stencil/vitest": "^1.16.1",
     "@types/node": "^26.6.5",
+    "@types/react": "^19",
     "@typescript/native": "npm:typescript@^7.0.2",
     "@vitest/browser-playwright": "^5.0.5",
     "jiti": "^2.7.0",
     "playwright": "^1.64.1",
     "postcss": "^8.5.30",
+    "preact": "^10",
+    "solid-js": "^1",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vitest": "^5.0.5"
   },
   "peerDependencies": {
-    "@pandacss/dev": "^2.4.0"
+    "@pandacss/dev": "^2.4.0",
+    "@types/react": ">=19",
+    "preact": ">=10",
+    "solid-js": ">=1"
   },
   "peerDependenciesMeta": {
     "@pandacss/dev": {
+      "optional": true
+    },
+    "@types/react": {
+      "optional": true
+    },
+    "preact": {
+      "optional": true
+    },
+    "solid-js": {
       "optional": true
     }
   },

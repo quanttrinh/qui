@@ -45,6 +45,56 @@ const props: Components.QuiButton = button;
 Component subpath imports such as `@quanttrinh/qui/shared/qui-button` load the
 same declarations.
 
+### React, Solid, and Preact
+
+The package generates framework JSX declarations with
+`@stencil/types-output-target`. Import the file for the framework you use once,
+in the app's type entry:
+
+```ts
+// React 19+
+import "@quanttrinh/qui/types/react";
+
+// Solid
+// import "@quanttrinh/qui/types/solid";
+
+// Preact
+// import "@quanttrinh/qui/types/preact";
+```
+
+Each file augments that framework's `JSX.IntrinsicElements` with every `qui-*`
+element, its props, and its Stencil custom events. The entries are type-only and
+ship an empty runtime module, so a side-effect import resolves safely in
+bundlers. `@types/react`, `solid-js`, and `preact` are optional peer
+dependencies; consumers only need the framework they use.
+
+Stencil custom event names must stay lowercase so the generated React handler
+props match the dispatched event names.
+
+Solid uses Stencil's prefixed props and events:
+
+```tsx
+import "@quanttrinh/qui/types/solid";
+
+<qui-button prop:variant="filled" prop:size="sm" />;
+<qui-checkbox prop:checked on:checkedchange={(event) => event.detail.checked} />;
+```
+
+Preact uses the exact Stencil prop and event names. Preact assigns properties
+when they exist, so use `iconOnly`, not `icon-only`:
+
+```tsx
+import "@quanttrinh/qui/types/preact";
+
+<qui-button variant="filled" size="sm" iconOnly label="Add" />;
+<qui-checkbox oncheckedchange={(event) => event.detail.checked} />;
+```
+
+The declarations use `export type *` and require TypeScript 5.0 or newer.
+
+The React declarations target React 19+, which supports custom elements
+natively.
+
 ## Quick start
 
 `theme.css` establishes the canonical Panda layer order. If app CSS loads
@@ -614,24 +664,27 @@ styled-system/               generated Panda CSS and types
 
 Published entry points:
 
-| Entry                        | Purpose                               |
-| ---------------------------- | ------------------------------------- |
-| `@quanttrinh/qui`            | Components                            |
-| `@quanttrinh/qui/shared/*`   | Individual component                  |
-| `@quanttrinh/qui/register`   | Static component registration helper  |
-| `@quanttrinh/qui-unplugin`   | Auto-registration bundler plugin      |
-| `@quanttrinh/qui/hydrate`    | SSR/SSG renderer                      |
-| `@quanttrinh/qui/ssr`        | Shadow stylesheet SSR helper          |
-| `@quanttrinh/qui/runtime`    | Client stylesheet configuration       |
-| `@quanttrinh/qui/theme.css`  | Theme custom properties               |
-| `@quanttrinh/qui/styles.css` | Component CSS                         |
-| `@quanttrinh/qui/panda/*`    | Panda manifest, preset and build info |
-| `@quanttrinh/qui/css`        | Generated Panda CSS helper            |
-| `@quanttrinh/qui/patterns`   | Generated Panda patterns              |
-| `@quanttrinh/qui/jsx`        | Generated Panda JSX helpers           |
-| `@quanttrinh/qui/tokens`     | Generated Panda tokens                |
-| `@quanttrinh/qui/helpers`    | Generated Panda helpers               |
-| `@quanttrinh/qui/types`      | Generated Panda types                 |
+| Entry                          | Purpose                               |
+| ------------------------------ | ------------------------------------- |
+| `@quanttrinh/qui`              | Components                            |
+| `@quanttrinh/qui/shared/*`     | Individual component                  |
+| `@quanttrinh/qui/register`     | Static component registration helper  |
+| `@quanttrinh/qui/types/react`  | Generated React 19+ JSX declarations  |
+| `@quanttrinh/qui/types/solid`  | Generated Solid JSX declarations      |
+| `@quanttrinh/qui/types/preact` | Generated Preact JSX declarations     |
+| `@quanttrinh/qui-unplugin`     | Auto-registration bundler plugin      |
+| `@quanttrinh/qui/hydrate`      | SSR/SSG renderer                      |
+| `@quanttrinh/qui/ssr`          | Shadow stylesheet SSR helper          |
+| `@quanttrinh/qui/runtime`      | Client stylesheet configuration       |
+| `@quanttrinh/qui/theme.css`    | Theme custom properties               |
+| `@quanttrinh/qui/styles.css`   | Component CSS                         |
+| `@quanttrinh/qui/panda/*`      | Panda manifest, preset and build info |
+| `@quanttrinh/qui/css`          | Generated Panda CSS helper            |
+| `@quanttrinh/qui/patterns`     | Generated Panda patterns              |
+| `@quanttrinh/qui/jsx`          | Generated Panda JSX helpers           |
+| `@quanttrinh/qui/tokens`       | Generated Panda tokens                |
+| `@quanttrinh/qui/helpers`      | Generated Panda helpers               |
+| `@quanttrinh/qui/types`        | Generated Panda types                 |
 
 ## Development
 
@@ -674,6 +727,10 @@ bun run test:smoke
 bun run test
 bun run test:watch
 ```
+
+The root `bun run test` also runs `bun run test:framework-types`, which compiles
+the consumer fixtures against the built declarations. Run `bun run build` first
+so `dist/types` exists.
 
 The package test scripts set `NODE_ENV=test`, which makes Stencil build the
 test lazy loader into `.stencil-test` instead of the `www` demo output. Direct
