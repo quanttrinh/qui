@@ -30,7 +30,7 @@ import { applyFieldAria } from "../shared/field/aria";
 import { createFieldControl, focusElement } from "../shared/field/control";
 import { FormControlBase } from "../shared/form-control/component-base";
 import { FormController, type FormValidity } from "../shared/form-control/controller";
-import { appendFilteredChar, filterInputValue } from "./input-filter";
+import { appendAcceptedCharacter, filterNumericOrDecimalInput } from "./input-filter";
 import { styles } from "./styles";
 
 /** The input types `qui-input` can render. */
@@ -367,7 +367,7 @@ export class QuiInput extends FormControlBase {
     if (mode !== "numeric" && mode !== "decimal") {
       return raw;
     }
-    return filterInputValue(raw, { allowNegative: this.allowNegative, mode });
+    return filterNumericOrDecimalInput(raw, { allowNegative: this.allowNegative, mode });
   }
 
   private applyValue(raw: string): void {
@@ -477,7 +477,7 @@ export class QuiInput extends FormControlBase {
     const options = { allowNegative: this.allowNegative, mode };
     let result = el.value.slice(0, el.selectionStart ?? el.value.length);
     for (const char of data) {
-      const next = appendFilteredChar(result, char, options);
+      const next = appendAcceptedCharacter(result, char, options);
       if (next === undefined) {
         event.preventDefault();
         return;

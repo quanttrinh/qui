@@ -4,7 +4,7 @@ export interface InputFilterOptions {
   readonly mode: "numeric" | "decimal";
 }
 
-function isPunctuation(char: string): boolean {
+function isSignOrSeparator(char: string): boolean {
   return char === "-" || char === "." || char === ",";
 }
 
@@ -25,7 +25,7 @@ function normalizeLeadingZeros(value: string): string {
 }
 
 /** Appends a character if it is valid in the current filter mode. */
-export function appendFilteredChar(
+export function appendAcceptedCharacter(
   result: string,
   char: string,
   options: InputFilterOptions,
@@ -41,16 +41,16 @@ export function appendFilteredChar(
       return `-0${char}`;
     }
     const previous = result.at(-1);
-    return previous !== undefined && isPunctuation(previous) ? undefined : result + char;
+    return previous !== undefined && isSignOrSeparator(previous) ? undefined : result + char;
   }
   return undefined;
 }
 
 /** Filters and normalizes a raw value for numeric or decimal input modes. */
-export function filterInputValue(raw: string, options: InputFilterOptions): string {
+export function filterNumericOrDecimalInput(raw: string, options: InputFilterOptions): string {
   let result = "";
   for (const char of raw) {
-    const next = appendFilteredChar(result, char, options);
+    const next = appendAcceptedCharacter(result, char, options);
     if (next !== undefined) {
       result = next;
     }
