@@ -54,20 +54,7 @@ export type InputAutocapitalize = "none" | "off" | "sentences" | "on" | "words" 
 /** The native `enterkeyhint` hints supported by the inner input. */
 export type InputEnterKeyHint = "enter" | "done" | "go" | "next" | "previous" | "search" | "send";
 
-/** The Safari-specific `autocorrect` hint supported by the inner input. */
-export type InputAutocorrect = boolean;
-
 const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password", "url"]);
-
-/**
- * A character mask for text-like inputs. `#` matches a digit, `a` a letter and
- * `*` a letter or digit; any other character is a literal that is inserted
- * automatically.
- */
-export interface InputMask {
-  /** The pattern to apply, e.g. `"### ###-####"` or `"aa-######-a"`. */
-  pattern: string;
-}
 
 /** The values handed to `valuechange` after every edit. */
 export interface InputValueDetails {
@@ -97,9 +84,11 @@ export class QuiInput extends FormControlBase {
 
   /** The input type to render. */
   @Prop() inputType: InputType = "text";
-  /** A mask object. Property-only; use `maskPattern` from HTML. */
-  @Prop() mask?: InputMask;
-  /** A mask pattern, e.g. `"### ###-####"`. */
+  /**
+   * A character mask for text-like inputs. `#` matches a digit, `a` a letter and
+   * `*` a letter or digit; any other character is a literal that is inserted
+   * automatically.
+   */
   @Prop() maskPattern?: string;
   /** Normalizes the value's case before masking. Ignored for number inputs. */
   @Prop() textCase: InputTextCase = "none";
@@ -127,7 +116,7 @@ export class QuiInput extends FormControlBase {
   /** Native `spellcheck` hint for text and search inputs. */
   @Prop() spellcheckHint?: boolean;
   /** Native `autocorrect` hint for text, search, and email inputs. `true` maps to `on`, `false` to `off`. */
-  @Prop() autocorrectHint?: InputAutocorrect;
+  @Prop() autocorrectHint?: boolean;
   /** Input mode hint. */
   @Prop() inputModeHint?: InputMode;
   /** Maximum number of characters. */
@@ -248,7 +237,6 @@ export class QuiInput extends FormControlBase {
     this.applyValue(String(this.value));
   }
 
-  @Watch("mask")
   @Watch("maskPattern")
   @Watch("textCase")
   private resyncFormattedValue(): void {
@@ -271,7 +259,7 @@ export class QuiInput extends FormControlBase {
   }
 
   private get pattern(): string | undefined {
-    return this.mask?.pattern ?? this.maskPattern;
+    return this.maskPattern;
   }
 
   private get isNumber(): boolean {
