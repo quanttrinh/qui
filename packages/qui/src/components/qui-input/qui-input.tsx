@@ -312,10 +312,6 @@ export class QuiInput extends FormControlBase {
     return this.inputType;
   }
 
-  private get resolvedInputMode(): InputMode | undefined {
-    return this.effectiveInputMode;
-  }
-
   private get resolvedAutocapitalize(): InputAutocapitalize | undefined {
     if (this.autocapitalizeHint !== undefined) {
       return this.autocapitalizeHint;
@@ -634,7 +630,7 @@ export class QuiInput extends FormControlBase {
               enterKeyHint={this.keyboardHint === "" ? undefined : this.keyboardHint}
               spellcheck={this.supportsSpellcheck ? this.spellcheckHint : undefined}
               autocapitalize={this.resolvedAutocapitalize}
-              inputMode={this.resolvedInputMode}
+              inputMode={this.effectiveInputMode}
               maxLength={this.maxLength}
               minLength={this.minLength}
               pattern={this.inputPattern}
