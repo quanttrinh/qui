@@ -108,6 +108,15 @@ describe("frameworkTypesOutputTarget", () => {
     expect(preact).not.toContain("'onCheckedchange'");
   });
 
+  it("uses Preact's top-level HTMLAttributes type", async () => {
+    const { root, writes } = await generate();
+    const preact = writes.get(join(root, "dist", "types", "preact.d.ts")) ?? "";
+
+    expect(preact).toContain("import type { HTMLAttributes } from 'preact';");
+    expect(preact).toContain("HTMLAttributes<HTMLQuiButtonElement>");
+    expect(preact).not.toContain("JSX.HTMLAttributes");
+  });
+
   it("fails when packageJsonFilePath is missing", async () => {
     await expect(generate({ packageJsonPath: null })).rejects.toThrow(
       "did not provide a package.json path",
