@@ -92,12 +92,12 @@ export function frameworkTypesOutputTarget(
       }
 
       const manifest = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
-        name?: string;
+        name?: unknown;
       };
       const stencilPackageName = manifest.name;
 
-      if (stencilPackageName === undefined || stencilPackageName.length === 0) {
-        throw new Error("[qui] package.json is missing a package name");
+      if (typeof stencilPackageName !== "string" || stencilPackageName.length === 0) {
+        throw new Error("[qui] package.json is missing a valid package name");
       }
 
       await Promise.all(

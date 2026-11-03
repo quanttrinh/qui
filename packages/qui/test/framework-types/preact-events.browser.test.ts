@@ -17,20 +17,33 @@ afterEach(() => {
   }
 });
 
+// This documents Preact's runtime behavior, not the generator itself: custom
+// element events preserve the casing after `on`, so the capitalized handler
+// must not receive a lowercase `checkedchange` event.
 describe("Preact custom element events", () => {
-  it("listens for the exact checkedchange event name", () => {
-    const handler = vi.fn();
+  it("only fires the handler with the exact event name", () => {
+    const exact = vi.fn();
+    const capitalized = vi.fn();
     root = document.createElement("div");
     document.body.append(root);
-    render(createElement(tag, { oncheckedchange: handler }), root);
+    render(
+      createElement(
+        "div",
+        null,
+        createElement(tag, { oncheckedchange: exact }),
+        createElement(tag, { onCheckedchange: capitalized }),
+      ),
+      root,
+    );
 
-    const element = root.querySelector(tag);
-    if (element === null) {
-      throw new Error("test element was not rendered");
+    const elements = root.querySelectorAll(tag);
+    expect(elements).toHaveLength(2);
+
+    for (const element of elements) {
+      element.dispatchEvent(new CustomEvent("checkedchange", { detail: { checked: true } }));
     }
 
-    element.dispatchEvent(new CustomEvent("checkedchange", { detail: { checked: true } }));
-
-    expect(handler).toHaveBeenCalledTimes(1);
+    expect(exact).toHaveBeenCalledTimes(1);
+    expect(capitalized).not.toHaveBeenCalled();
   });
 });

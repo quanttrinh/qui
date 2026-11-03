@@ -71,6 +71,27 @@ dependencies; consumers only need the framework they use.
 Stencil custom event names must stay lowercase so the generated React handler
 props match the dispatched event names.
 
+Solid uses Stencil's prefixed props and events:
+
+```tsx
+import "@quanttrinh/qui/types/solid";
+
+<qui-button prop:variant="filled" prop:size="sm" />;
+<qui-checkbox prop:checked on:checkedchange={(event) => event.detail.checked} />;
+```
+
+Preact uses the exact Stencil prop and event names. Preact assigns properties
+when they exist, so use `iconOnly`, not `icon-only`:
+
+```tsx
+import "@quanttrinh/qui/types/preact";
+
+<qui-button variant="filled" size="sm" iconOnly label="Add" />;
+<qui-checkbox oncheckedchange={(event) => event.detail.checked} />;
+```
+
+The declarations use `export type *` and require TypeScript 5.0 or newer.
+
 The React declarations target React 19+, which supports custom elements
 natively.
 
@@ -706,6 +727,10 @@ bun run test:smoke
 bun run test
 bun run test:watch
 ```
+
+The root `bun run test` also runs `bun run test:framework-types`, which compiles
+the consumer fixtures against the built declarations. Run `bun run build` first
+so `dist/types` exists.
 
 The package test scripts set `NODE_ENV=test`, which makes Stencil build the
 test lazy loader into `.stencil-test` instead of the `www` demo output. Direct

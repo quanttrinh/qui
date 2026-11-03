@@ -85,6 +85,7 @@ describe("frameworkTypesOutputTarget", () => {
     const importLine = react.split("\n").find((line) => line.includes("from '@acme/qui';")) ?? "";
 
     expect(react).toContain("import '@acme/qui/types/react';");
+    expect(react).toContain('"./types/react": { "types": "./dist/types/react.d.ts" }');
     expect(importLine).toContain("ButtonVariant");
     expect(importLine).toContain("CheckedState");
     expect(importLine).toContain("QuiButtonCustomEvent");
@@ -114,7 +115,13 @@ describe("frameworkTypesOutputTarget", () => {
   });
 
   it("fails when the package manifest has no name", async () => {
-    await expect(generate({ manifest: "{}" })).rejects.toThrow("missing a package name");
+    await expect(generate({ manifest: "{}" })).rejects.toThrow("missing a valid package name");
+  });
+
+  it("fails when the package name is not a string", async () => {
+    await expect(generate({ manifest: '{"name":42}' })).rejects.toThrow(
+      "missing a valid package name",
+    );
   });
 
   it("fails when the package manifest is malformed", async () => {
