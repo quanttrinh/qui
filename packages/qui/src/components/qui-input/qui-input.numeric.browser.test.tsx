@@ -46,18 +46,6 @@ describe("qui-input numeric", () => {
     expect(host.value).toBe("a1b2");
   });
 
-  it("honors the native inputmode attribute as a fallback", async () => {
-    const { root, waitForChanges } = await render(<qui-input />);
-    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
-    const input = queryControl<HTMLInputElement>(host, "input");
-
-    host.setAttribute("inputmode", "numeric");
-    typeInto(input, "12a3");
-    await waitForChanges();
-
-    expect(input.value).toBe("123");
-  });
-
   it("re-sanitizes when the input mode changes", async () => {
     const { root, waitForChanges } = await render(<qui-input value="a1b2" />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
@@ -155,12 +143,28 @@ describe("qui-input numeric", () => {
   });
 
   it("accepts negative decimals in native number inputs", async () => {
-    const { root } = await render(<qui-input inputType="number" step="any" value={-1.5} />);
+    const { root } = await render(
+      <qui-input inputType="number" inputModeHint="decimal" step="any" value={-1.5} />,
+    );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
     expect(input.value).toBe("-1.5");
     expect(input.validity.valid).toBe(true);
+  });
+
+  it("filters invalid text from number inputs", async () => {
+    const { root, setProps, waitForChanges } = await render(
+      <qui-input inputType="number" value={3} />,
+    );
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    await setProps({ value: "3ssss" });
+    await waitForChanges();
+
+    expect(input.value).toBe("3");
+    expect(host.value).toBe("3");
   });
 });
 
@@ -206,7 +210,7 @@ describe("qui-input number constraints", () => {
 
   it("supports step any for number inputs", async () => {
     const { root, waitForChanges } = await render(
-      <qui-input inputType="number" step="any" value={1.5} />,
+      <qui-input inputType="number" inputModeHint="decimal" step="any" value={1.5} />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
@@ -226,7 +230,7 @@ describe("qui-input number constraints", () => {
 
   it("snaps stepper values to the step grid", async () => {
     const { root, waitForChanges } = await render(
-      <qui-input inputType="number" value={1.5} step={1} />,
+      <qui-input inputType="number" inputModeHint="decimal" value={1.5} step={1} />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");

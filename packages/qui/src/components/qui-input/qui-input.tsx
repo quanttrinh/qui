@@ -56,20 +56,6 @@ export type InputAutocapitalize = "none" | "off" | "sentences" | "on" | "words" 
 export type InputEnterKeyHint = "enter" | "done" | "go" | "next" | "previous" | "search" | "send";
 
 const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password", "url"]);
-const INPUT_MODES = new Set<string>([
-  "none",
-  "text",
-  "tel",
-  "url",
-  "email",
-  "numeric",
-  "decimal",
-  "search",
-]);
-
-function isInputMode(value: string | null): value is InputMode {
-  return value !== null && INPUT_MODES.has(value);
-}
 
 /** The values handed to `valuechange` after every edit. */
 export interface InputValueDetails {
@@ -316,10 +302,6 @@ export class QuiInput extends FormControlBase {
     if (this.inputModeHint !== undefined) {
       return this.inputModeHint;
     }
-    const hostMode = this.host.getAttribute("inputmode");
-    if (isInputMode(hostMode)) {
-      return hostMode;
-    }
     return this.isNumber ? "numeric" : undefined;
   }
 
@@ -410,16 +392,14 @@ export class QuiInput extends FormControlBase {
   }
 
   private sanitizeValue(raw: string): string {
-    if (this.isNumber || !this.supportsSelection) {
+    const mode = this.effectiveInputMode;
+    if (mode !== "numeric" && mode !== "decimal") {
       return raw;
     }
-    if (this.effectiveInputMode === "numeric") {
-      return this.filterNumeric(raw);
+    if (!this.isNumber && !this.supportsSelection) {
+      return raw;
     }
-    if (this.effectiveInputMode === "decimal") {
-      return this.filterDecimalCharacters(raw);
-    }
-    return raw;
+    return mode === "numeric" ? this.filterNumeric(raw) : this.filterDecimalCharacters(raw);
   }
 
   private applyValue(raw: string): void {
