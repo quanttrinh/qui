@@ -153,6 +153,22 @@ describe("qui-input numeric", () => {
 });
 
 describe("qui-input number constraints", () => {
+  it("defaults number inputs to numeric input mode", async () => {
+    const { root } = await render(<qui-input inputType="number" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(input.inputMode).toBe("numeric");
+  });
+
+  it("keeps an explicit input mode on number inputs", async () => {
+    const { root } = await render(<qui-input inputType="number" inputModeHint="decimal" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(input.inputMode).toBe("decimal");
+  });
+
   it("forwards number constraints to the native input", async () => {
     const { root } = await render(
       <qui-input inputType="number" value={5} min={1} max={3} step={1} />,

@@ -269,7 +269,8 @@ qui-input::part(input) {
 
 `input-type="number"` forwards `min`, `max`, and `step` to the native input so
 native constraint validation and keyboard stepping use the same bounds as the
-rendered stepper buttons.
+rendered stepper buttons. Number inputs also default to `inputmode="numeric"`;
+set `input-mode-hint` to override it.
 
 ```html
 <qui-input input-type="number" min="1" max="10" step="1" value="1"></qui-input>
