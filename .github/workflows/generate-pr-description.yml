@@ -86,9 +86,17 @@ jobs:
           Generate a pull request title and description for this PR from the
           diff below.
 
-          Write the title to /tmp/opencode-output/pr-title.txt and the
-          description body to /tmp/opencode-output/pr-body.txt. Keep the title
-          under 72 characters.
+          Write the title to /tmp/opencode-output/pr-title.txt in Conventional
+          Commits format:
+
+            <type>(<optional scope>): <description>
+
+          Allowed types: build, chore, ci, docs, feat, fix, perf, refactor,
+          revert, style, test. Write the description in the imperative mood,
+          keep the whole title under 72 characters, and do not end it with a
+          period.
+
+          Write the description body to /tmp/opencode-output/pr-body.txt.
 
           Include in the description:
           - A short summary of the changes
