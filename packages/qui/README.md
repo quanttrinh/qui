@@ -45,6 +45,26 @@ const props: Components.QuiButton = button;
 Component subpath imports such as `@quanttrinh/qui/shared/qui-button` load the
 same declarations.
 
+### React, Solid, and Preact
+
+The package generates framework JSX declarations with
+`@stencil/types-output-target`. Import the matching file once in the app's type
+entry:
+
+```ts
+import "@quanttrinh/qui/types/react";
+import "@quanttrinh/qui/types/solid";
+import "@quanttrinh/qui/types/preact";
+```
+
+Each file augments that framework's `JSX.IntrinsicElements` with every `qui-*`
+element, its props, and its Stencil custom events. `@types/react`,
+`solid-js`, and `preact` are optional peer dependencies; consumers only need the
+framework they use.
+
+The React declarations target React 19+, which supports custom elements
+natively.
+
 ## Quick start
 
 `theme.css` establishes the canonical Panda layer order. If app CSS loads
@@ -614,24 +634,27 @@ styled-system/               generated Panda CSS and types
 
 Published entry points:
 
-| Entry                        | Purpose                               |
-| ---------------------------- | ------------------------------------- |
-| `@quanttrinh/qui`            | Components                            |
-| `@quanttrinh/qui/shared/*`   | Individual component                  |
-| `@quanttrinh/qui/register`   | Static component registration helper  |
-| `@quanttrinh/qui-unplugin`   | Auto-registration bundler plugin      |
-| `@quanttrinh/qui/hydrate`    | SSR/SSG renderer                      |
-| `@quanttrinh/qui/ssr`        | Shadow stylesheet SSR helper          |
-| `@quanttrinh/qui/runtime`    | Client stylesheet configuration       |
-| `@quanttrinh/qui/theme.css`  | Theme custom properties               |
-| `@quanttrinh/qui/styles.css` | Component CSS                         |
-| `@quanttrinh/qui/panda/*`    | Panda manifest, preset and build info |
-| `@quanttrinh/qui/css`        | Generated Panda CSS helper            |
-| `@quanttrinh/qui/patterns`   | Generated Panda patterns              |
-| `@quanttrinh/qui/jsx`        | Generated Panda JSX helpers           |
-| `@quanttrinh/qui/tokens`     | Generated Panda tokens                |
-| `@quanttrinh/qui/helpers`    | Generated Panda helpers               |
-| `@quanttrinh/qui/types`      | Generated Panda types                 |
+| Entry                          | Purpose                               |
+| ------------------------------ | ------------------------------------- |
+| `@quanttrinh/qui`              | Components                            |
+| `@quanttrinh/qui/shared/*`     | Individual component                  |
+| `@quanttrinh/qui/register`     | Static component registration helper  |
+| `@quanttrinh/qui/types/react`  | Generated React 19+ JSX declarations  |
+| `@quanttrinh/qui/types/solid`  | Generated Solid JSX declarations      |
+| `@quanttrinh/qui/types/preact` | Generated Preact JSX declarations     |
+| `@quanttrinh/qui-unplugin`     | Auto-registration bundler plugin      |
+| `@quanttrinh/qui/hydrate`      | SSR/SSG renderer                      |
+| `@quanttrinh/qui/ssr`          | Shadow stylesheet SSR helper          |
+| `@quanttrinh/qui/runtime`      | Client stylesheet configuration       |
+| `@quanttrinh/qui/theme.css`    | Theme custom properties               |
+| `@quanttrinh/qui/styles.css`   | Component CSS                         |
+| `@quanttrinh/qui/panda/*`      | Panda manifest, preset and build info |
+| `@quanttrinh/qui/css`          | Generated Panda CSS helper            |
+| `@quanttrinh/qui/patterns`     | Generated Panda patterns              |
+| `@quanttrinh/qui/jsx`          | Generated Panda JSX helpers           |
+| `@quanttrinh/qui/tokens`       | Generated Panda tokens                |
+| `@quanttrinh/qui/helpers`      | Generated Panda helpers               |
+| `@quanttrinh/qui/types`        | Generated Panda types                 |
 
 ## Development
 

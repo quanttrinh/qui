@@ -93,6 +93,15 @@
     },
     "./types": {
       "types": "./styled-system/types/index.d.ts"
+    },
+    "./types/react": {
+      "types": "./dist/types/react.d.ts"
+    },
+    "./types/solid": {
+      "types": "./dist/types/solid.d.ts"
+    },
+    "./types/preact": {
+      "types": "./dist/types/preact.d.ts"
     }
   },
   "publishConfig": {
@@ -126,6 +135,7 @@
     "@pandacss/preset-base": "^2.4.0",
     "@pandacss/preset-panda": "^2.4.0",
     "@pandacss/transformer": "2.5.0",
+    "@stencil/types-output-target": "^1.0.2",
     "@stencil/vitest": "^1.16.1",
     "@types/node": "^26.6.5",
     "@typescript/native": "npm:typescript@^7.0.2",
@@ -137,10 +147,22 @@
     "vitest": "^5.0.5"
   },
   "peerDependencies": {
-    "@pandacss/dev": "^2.4.0"
+    "@pandacss/dev": "^2.4.0",
+    "@types/react": ">=19",
+    "preact": ">=10",
+    "solid-js": ">=1"
   },
   "peerDependenciesMeta": {
     "@pandacss/dev": {
+      "optional": true
+    },
+    "@types/react": {
+      "optional": true
+    },
+    "preact": {
+      "optional": true
+    },
+    "solid-js": {
       "optional": true
     }
   },

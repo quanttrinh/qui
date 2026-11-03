@@ -27,6 +27,7 @@
         "@pandacss/preset-base": "^2.4.0",
         "@pandacss/preset-panda": "^2.4.0",
         "@pandacss/transformer": "2.5.0",
+        "@stencil/types-output-target": "^1.0.2",
         "@stencil/vitest": "^1.16.1",
         "@types/node": "^26.6.5",
         "@typescript/native": "npm:typescript@^7.0.2",
@@ -433,6 +434,8 @@
     "@stencil/core": ["@stencil/core@4.45.2", "", { "optionalDependencies": { "@rollup/rollup-darwin-arm64": "4.44.0", "@rollup/rollup-darwin-x64": "4.44.0", "@rollup/rollup-linux-arm64-gnu": "4.44.0", "@rollup/rollup-linux-arm64-musl": "4.44.0", "@rollup/rollup-linux-x64-gnu": "4.44.0", "@rollup/rollup-linux-x64-musl": "4.44.0", "@rollup/rollup-win32-arm64-msvc": "4.44.0", "@rollup/rollup-win32-x64-msvc": "4.44.0" }, "bin": { "stencil": "bin/stencil" } }, "sha512-CNkPVZsqyNMjFMX9bEkMJsvBbQxjLw480OaoamoqiLPdQCFjJQReeOjnWX1A5ivSn3UYEIJ6MoN5VXDkaHGt8Q=="],
 
     "@stencil/eslint-plugin": ["@stencil/eslint-plugin@1.4.0", "", { "dependencies": { "eslint-utils": "^3.0.0", "jsdom": "^27.0.1", "tsutils": "^3.21.0" }, "peerDependencies": { "@stencil/core": "^4.0.0 || ^5.0.0 || >=5.0.0-alpha.19 <5.0.0-next.0", "@typescript-eslint/eslint-plugin": "^7.0.0 || ^8.0.0", "@typescript-eslint/parser": "^7.0.0 || ^8.0.0", "eslint": "^8.0.0 || ^9.0.0 || ^10.0.0", "eslint-plugin-react": "^7.37.4", "oxlint": "^1.73.0", "typescript": "^4.9.4 || ^5.0.0 || ^6.0.0" }, "optionalPeers": ["@typescript-eslint/eslint-plugin", "@typescript-eslint/parser", "eslint", "eslint-plugin-react", "oxlint"] }, "sha512-JpM9jJxeC7hKfKsh7/237ATNuyXBKiX1TPxJ7XEKEPtjlX6NpN5NjcNwhfJgbMVf++hP8qhQh65Ey6rtBWrzUA=="],
+
+    "@stencil/types-output-target": ["@stencil/types-output-target@1.0.2", "", { "peerDependencies": { "@stencil/core": ">=3 || >=4.0.0 || ^5.0.0 || >=5.0.0-beta.16" } }, "sha512-z+LlpDpjugd2brG8MoQ/W9dAt7Nh+R/YGKCGL5GxD26eBqYp21sRQeIZ2hWpwpxjudRP/xaG7bOoU2ohFiV5IA=="],
 
     "@stencil/vitest": ["@stencil/vitest@1.16.1", "", { "dependencies": { "jiti": "^2.6.1", "local-pkg": "^1.1.2", "vitest-environment-stencil": "1.16.1" }, "peerDependencies": { "@playwright/test": "*", "@stencil/core": "^4.0.0 || >=5.0.0-alpha.0 <5.0.0-next.0 || ^5.0.0", "@stencil/mock-doc": "*", "@vitest/browser-playwright": "*", "@vitest/browser-preview": "*", "@vitest/browser-webdriverio": "*", "@wdio/globals": "*", "happy-dom": "*", "jsdom": "*", "playwright": "*", "vitest": "^5.0.0 || ^4.0.0 || ^3.0.0 || ^2.0.0" }, "optionalPeers": ["@playwright/test", "@stencil/mock-doc", "@vitest/browser-playwright", "@vitest/browser-preview", "@vitest/browser-webdriverio", "@wdio/globals", "happy-dom", "jsdom", "playwright"], "bin": { "stencil-test": "dist/bin/stencil-test.js" } }, "sha512-2ZWw2NlFd9X04HLArnmwKavG3uPT55xiQSSnGk+EImlnP2Nx6+gEyuOLuHEELU+Efy5ybzZgjG/ebI3RkB1Mhg=="],
 
