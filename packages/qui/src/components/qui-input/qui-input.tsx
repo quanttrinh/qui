@@ -132,7 +132,7 @@ export class QuiInput extends FormControlBase {
   /** Marks the input required. Ignored while nested in a `qui-field`. */
   @Prop() required = false;
   /** Amount the number triggers add or remove, or `any` for arbitrary values. Defaults to `1`. */
-  @Prop() step?: number | "any";
+  @Prop({ mutable: true }) step?: number | "any";
   /** Lower bound enforced while stepping. */
   @Prop() min?: number;
   /** Upper bound enforced while stepping. */
@@ -200,6 +200,7 @@ export class QuiInput extends FormControlBase {
 
   public componentWillLoad(): void {
     super.componentWillLoad();
+    this.normalizeStep();
     this.initialValue = String(this.defaultValue ?? this.value ?? "");
     this.syncInitialValue();
   }
@@ -235,9 +236,22 @@ export class QuiInput extends FormControlBase {
     this.applyValue(String(this.value));
   }
 
+  @Watch("step")
+  private normalizeStep(): void {
+    const step: unknown = this.step;
+    if (typeof step !== "string" || step === "" || step === "any") {
+      return;
+    }
+    const value = Number(step);
+    if (Number.isFinite(value)) {
+      this.step = value;
+    }
+  }
+
   @Watch("maskPattern")
   @Watch("textCase")
   @Watch("inputModeHint")
+  @Watch("inputType")
   private resyncFormattedValue(): void {
     const el = this.inputEl;
     if (el === undefined) {
@@ -269,20 +283,17 @@ export class QuiInput extends FormControlBase {
     return SELECTABLE_INPUT_TYPES.has(this.inputType);
   }
 
+  // Textarea forwards spellcheck unconditionally; keep input scoped to prose-like types.
   private get supportsSpellcheck(): boolean {
     return this.inputType === "text" || this.inputType === "search";
   }
 
   private get numericStep(): number | undefined {
     const step: unknown = this.step;
-    if (step === undefined || step === "any") {
+    if (typeof step !== "number" || !Number.isFinite(step) || step <= 0) {
       return undefined;
     }
-    if (typeof step === "string" && step.trim() === "") {
-      return undefined;
-    }
-    const value = Number(step);
-    return Number.isFinite(value) ? value : undefined;
+    return step;
   }
 
   private get resolvedType(): string {

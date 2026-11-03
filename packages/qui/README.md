@@ -304,9 +304,9 @@ to `false` from JavaScript to disable spellcheck.
 For text-like inputs, `input-mode-hint="numeric"` strips everything except
 digits. `input-mode-hint="decimal"` additionally allows one leading `-` and one
 `.` or `,` decimal separator. A bare `-` or separator may appear transiently
-while typing. Masked inputs only preserve digits, so use decimal mode without a
-mask. When filtering changes a controlled `value`, the component updates `value`
-to the sanitized raw value.
+while typing. Masks do not preserve a leading sign or decimal separator, so use
+decimal mode without a mask. When filtering changes a controlled `value`, the
+component updates `value` to the sanitized raw value.
 
 ```html
 <qui-input input-mode-hint="numeric"></qui-input> <qui-input input-mode-hint="decimal"></qui-input>

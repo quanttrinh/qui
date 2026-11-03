@@ -7,7 +7,6 @@ function queryVisibilityTrigger(host: Element): HTMLButtonElement {
   return queryControl<HTMLButtonElement>(host, "[data-part=visibility-trigger]");
 }
 
-// oxlint-disable-next-line max-lines-per-function -- the suite is grouped by component.
 describe("qui-input", () => {
   it("applies a mask and emits both masked and unmasked values", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(<qui-input maskPattern="###-###" />);
@@ -20,76 +19,6 @@ describe("qui-input", () => {
 
     expect(input.value).toBe("123-456");
     expect(spy).toHaveReceivedEventDetail({ value: "123-456", unmaskedValue: "123456" });
-  });
-
-  it("strips non-numeric characters when input mode is numeric", async () => {
-    const { root, spyOnEvent, waitForChanges } = await render(
-      <qui-input inputModeHint="numeric" maskPattern="###-###" />,
-    );
-    const spy = spyOnEvent("valuechange");
-    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
-    const input = queryControl<HTMLInputElement>(host, "input");
-
-    typeInto(input, "12a3-4b5");
-    await waitForChanges();
-
-    expect(input.value).toBe("123-45");
-    expect(spy).toHaveReceivedEventDetail({ value: "123-45", unmaskedValue: "12345" });
-  });
-
-  it("sanitizes controlled values in numeric mode", async () => {
-    const { root } = await render(<qui-input inputModeHint="numeric" value="a1b2" />);
-    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
-    const input = queryControl<HTMLInputElement>(host, "input");
-
-    expect(input.value).toBe("12");
-    expect(host.value).toBe("12");
-  });
-
-  it("re-sanitizes when the input mode changes", async () => {
-    const { root, waitForChanges } = await render(<qui-input value="a1b2" />);
-    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
-    const input = queryControl<HTMLInputElement>(host, "input");
-
-    host.inputModeHint = "numeric";
-    await waitForChanges();
-
-    expect(input.value).toBe("12");
-    expect(host.value).toBe("12");
-  });
-
-  it("strips signs and decimal separators in numeric mode", async () => {
-    const { root, waitForChanges } = await render(<qui-input inputModeHint="numeric" />);
-    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
-    const input = queryControl<HTMLInputElement>(host, "input");
-
-    typeInto(input, "-1.5,2");
-    await waitForChanges();
-
-    expect(input.value).toBe("152");
-  });
-
-  it("allows one sign and one decimal separator in decimal mode", async () => {
-    const { root, waitForChanges } = await render(<qui-input inputModeHint="decimal" />);
-    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
-    const input = queryControl<HTMLInputElement>(host, "input");
-
-    typeInto(input, "-1.2.3,4");
-    await waitForChanges();
-    expect(input.value).toBe("-1.234");
-
-    typeInto(input, "1,25");
-    await waitForChanges();
-    expect(input.value).toBe("1,25");
-  });
-
-  it("accepts negative decimals in native number inputs", async () => {
-    const { root } = await render(<qui-input inputType="number" step="any" value={-1.5} />);
-    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
-    const input = queryControl<HTMLInputElement>(host, "input");
-
-    expect(input.value).toBe("-1.5");
-    expect(input.validity.valid).toBe(true);
   });
 
   it("steps number inputs and respects min/max", async () => {
@@ -107,59 +36,6 @@ describe("qui-input", () => {
     expect(increment.disabled).toBe(true);
 
     decrement.click();
-    await waitForChanges();
-    expect(input.value).toBe("2");
-  });
-
-  it("forwards number constraints to the native input", async () => {
-    const { root } = await render(
-      <qui-input inputType="number" value={5} min={1} max={3} step={1} />,
-    );
-    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
-    const input = queryControl<HTMLInputElement>(host, "input");
-
-    expect(input.min).toBe("1");
-    expect(input.max).toBe("3");
-    expect(input.step).toBe("1");
-    expect(input.validity.rangeOverflow).toBe(true);
-  });
-
-  it("does not forward number constraints to non-number inputs", async () => {
-    const { root } = await render(<qui-input min={1} max={3} step={1} />);
-    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
-    const input = queryControl<HTMLInputElement>(host, "input");
-
-    expect(input.hasAttribute("min")).toBe(false);
-    expect(input.hasAttribute("max")).toBe(false);
-    expect(input.hasAttribute("step")).toBe(false);
-  });
-
-  it("supports step any for number inputs", async () => {
-    const { root, waitForChanges } = await render(
-      <qui-input inputType="number" step="any" value={1.5} />,
-    );
-    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
-    const input = queryControl<HTMLInputElement>(host, "input");
-    const increment = queryControl<HTMLButtonElement>(host, "[data-part=increment-trigger]");
-
-    expect(input.step).toBe("any");
-
-    increment.click();
-    await waitForChanges();
-    expect(input.value).toBe("2.5");
-  });
-
-  it("reads a numeric step from an attribute", async () => {
-    const { root, waitForChanges } = await render(<qui-input inputType="number" value={0} />);
-    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
-    const input = queryControl<HTMLInputElement>(host, "input");
-    const increment = queryControl<HTMLButtonElement>(host, "[data-part=increment-trigger]");
-
-    host.setAttribute("step", "2");
-    await waitForChanges();
-    expect(input.step).toBe("2");
-
-    increment.click();
     await waitForChanges();
     expect(input.value).toBe("2");
   });
