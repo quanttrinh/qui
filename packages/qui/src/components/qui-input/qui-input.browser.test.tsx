@@ -7,6 +7,7 @@ function queryVisibilityTrigger(host: Element): HTMLButtonElement {
   return queryControl<HTMLButtonElement>(host, "[data-part=visibility-trigger]");
 }
 
+// oxlint-disable-next-line max-lines-per-function -- the suite is grouped by component.
 describe("qui-input", () => {
   it("applies a mask and emits both masked and unmasked values", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(<qui-input maskPattern="###-###" />);
@@ -42,6 +43,7 @@ describe("qui-input", () => {
     const input = queryControl<HTMLInputElement>(host, "input");
 
     expect(input.value).toBe("12");
+    expect(host.value).toBe("12");
   });
 
   it("strips signs and decimal separators in numeric mode", async () => {
@@ -135,6 +137,21 @@ describe("qui-input", () => {
     expect(input.value).toBe("2.5");
   });
 
+  it("reads a numeric step from an attribute", async () => {
+    const { root, waitForChanges } = await render(<qui-input inputType="number" value={0} />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+    const increment = queryControl<HTMLButtonElement>(host, "[data-part=increment-trigger]");
+
+    host.setAttribute("step", "2");
+    await waitForChanges();
+    expect(input.step).toBe("2");
+
+    increment.click();
+    await waitForChanges();
+    expect(input.value).toBe("2");
+  });
+
   it("forwards multiple for email inputs", async () => {
     const { root } = await render(<qui-input inputType="email" multiple />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
@@ -152,7 +169,7 @@ describe("qui-input", () => {
   });
 
   it("renders url inputs with keyboard hints", async () => {
-    const { root } = await render(<qui-input inputType="url" enterKeyHint="go" />);
+    const { root } = await render(<qui-input inputType="url" enterKeyAction="go" />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
@@ -166,6 +183,17 @@ describe("qui-input", () => {
     const input = queryControl<HTMLInputElement>(host, "input");
 
     expect(input.spellcheck).toBe(false);
+    expect(input.getAttribute("autocorrect")).toBe("off");
+  });
+
+  it("forwards autocorrect but not spellcheck to email", async () => {
+    const { root } = await render(
+      <qui-input inputType="email" spellcheckHint={false} autocorrectHint="off" />,
+    );
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(input.hasAttribute("spellcheck")).toBe(false);
     expect(input.getAttribute("autocorrect")).toBe("off");
   });
 

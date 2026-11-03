@@ -123,7 +123,7 @@ export class QuiInput extends FormControlBase {
   /** Allows multiple comma-separated values. Only applies to `email` inputs. */
   @Prop() multiple = false;
   /** Native `enterkeyhint` hint for the virtual keyboard. */
-  @Prop() enterKeyHint: InputEnterKeyHint | "" = "";
+  @Prop() enterKeyAction: InputEnterKeyHint | "" = "";
   /** Native `spellcheck` hint for text and search inputs. */
   @Prop() spellcheckHint?: boolean;
   /** Native `autocorrect` hint for text, search, and email inputs. */
@@ -290,6 +290,14 @@ export class QuiInput extends FormControlBase {
     return this.inputType === "text" || this.inputType === "search" || this.inputType === "email";
   }
 
+  private get numericStep(): number | undefined {
+    if (this.step === "any") {
+      return undefined;
+    }
+    const value = Number(this.step);
+    return Number.isFinite(value) ? value : undefined;
+  }
+
   private get resolvedType(): string {
     if (this.inputType === "password") {
       return this.passwordVisible ? "text" : "password";
@@ -356,18 +364,15 @@ export class QuiInput extends FormControlBase {
     let hasSeparator = false;
 
     for (const char of raw) {
-      if (char >= "0" && char <= "9") {
+      const isDigit = char >= "0" && char <= "9";
+      const isSign = !digitsOnly && char === "-" && result.length === 0;
+      const isSeparator = !digitsOnly && (char === "." || char === ",") && !hasSeparator;
+
+      if (isDigit) {
         result += char;
-        continue;
-      }
-      if (digitsOnly) {
-        continue;
-      }
-      if (char === "-" && result.length === 0) {
+      } else if (isSign) {
         result = "-";
-        continue;
-      }
-      if ((char === "." || char === ",") && !hasSeparator) {
+      } else if (isSeparator) {
         hasSeparator = true;
         result += char;
       }
@@ -378,6 +383,9 @@ export class QuiInput extends FormControlBase {
 
   private applyValue(raw: string): void {
     const sanitized = this.sanitizeValue(raw);
+    if (this.value !== undefined && String(this.value) !== sanitized) {
+      this.value = sanitized;
+    }
     this.rawValue = sanitized;
     const { pattern } = this;
     const cased = this.isNumber ? sanitized : applyTextCase(sanitized, this.textCase);
@@ -514,7 +522,7 @@ export class QuiInput extends FormControlBase {
       return;
     }
     const parsed = el.value === "" ? 0 : Number(el.value);
-    const increment = typeof this.step === "number" ? this.step : 1;
+    const increment = this.numericStep ?? 1;
     let next = (Number.isFinite(parsed) ? parsed : 0) + direction * increment;
     if (typeof this.min === "number") {
       next = Math.max(this.min, next);
@@ -588,7 +596,7 @@ export class QuiInput extends FormControlBase {
               placeholder={this.placeholder}
               autocomplete={this.autocomplete}
               multiple={this.inputType === "email" && this.multiple ? true : undefined}
-              enterKeyHint={this.enterKeyHint === "" ? undefined : this.enterKeyHint}
+              enterKeyHint={this.enterKeyAction === "" ? undefined : this.enterKeyAction}
               spellcheck={this.supportsSpellcheck ? this.spellcheckHint : undefined}
               autocorrect={this.supportsAutocorrect ? this.autocorrectHint : undefined}
               autocapitalize={this.resolvedAutocapitalize}

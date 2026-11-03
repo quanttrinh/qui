@@ -289,22 +289,19 @@ type:
 
 ```html
 <qui-input input-type="email" multiple></qui-input>
-<qui-input
-    input-type="url"
-    enter-key-hint="go"
-    spellcheck-hint="false"
-    autocorrect-hint="off"
-></qui-input>
+<qui-input input-type="url" enter-key-action="go"></qui-input>
+<qui-input spellcheck-hint="false" autocorrect-hint="off"></qui-input>
 ```
 
 - `multiple` applies only to `email`.
-- `enter-key-hint` applies to every input type.
+- `enter-key-action` applies to every input type.
 - `spellcheck-hint` applies to `text` and `search`.
 - `autocorrect-hint` applies to `text`, `search`, and `email`.
 
 For text-like inputs, `input-mode-hint="numeric"` strips everything except
 digits. `input-mode-hint="decimal"` additionally allows one leading `-` and one
-`.` or `,` decimal separator.
+`.` or `,` decimal separator. Masked inputs only preserve digits, so use decimal
+mode without a mask.
 
 ```html
 <qui-input input-mode-hint="numeric"></qui-input> <qui-input input-mode-hint="decimal"></qui-input>
