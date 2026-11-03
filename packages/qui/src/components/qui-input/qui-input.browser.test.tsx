@@ -32,8 +32,8 @@ describe("qui-input", () => {
     typeInto(input, "12a3-4b5");
     await waitForChanges();
 
-    expect(input.value).toBe("123-456");
-    expect(spy).toHaveReceivedEventDetail({ value: "123-456", unmaskedValue: "123456" });
+    expect(input.value).toBe("123-45");
+    expect(spy).toHaveReceivedEventDetail({ value: "123-45", unmaskedValue: "12345" });
   });
 
   it("sanitizes controlled values in numeric mode", async () => {
@@ -151,27 +151,32 @@ describe("qui-input", () => {
     expect(input.multiple).toBe(false);
   });
 
-  it("renders url inputs with keyboard and text hints", async () => {
-    const { root } = await render(
-      <qui-input inputType="url" enterKeyHint="go" spellcheckHint={false} autocorrectHint="off" />,
-    );
+  it("renders url inputs with keyboard hints", async () => {
+    const { root } = await render(<qui-input inputType="url" enterKeyHint="go" />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
     expect(input.type).toBe("url");
     expect(input.enterKeyHint).toBe("go");
+  });
+
+  it("forwards spellcheck and autocorrect hints to supported inputs", async () => {
+    const { root } = await render(<qui-input spellcheckHint={false} autocorrectHint="off" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
     expect(input.spellcheck).toBe(false);
     expect(input.getAttribute("autocorrect")).toBe("off");
   });
 
-  it("only forwards spellcheck and autocorrect to supported input types", async () => {
+  it("does not forward spellcheck and autocorrect to unsupported inputs", async () => {
     const { root } = await render(
       <qui-input inputType="password" spellcheckHint={false} autocorrectHint="off" />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
-    expect(input.spellcheck).toBe(true);
+    expect(input.hasAttribute("spellcheck")).toBe(false);
     expect(input.hasAttribute("autocorrect")).toBe(false);
   });
 

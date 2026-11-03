@@ -345,22 +345,35 @@ export class QuiInput extends FormControlBase {
     if (this.isNumber) {
       return raw;
     }
-    if (this.inputModeHint === "numeric") {
-      return raw.replace(/\D/gu, "");
+
+    const digitsOnly = this.inputModeHint === "numeric";
+    const allowDecimal = this.inputModeHint === "decimal";
+    if (!digitsOnly && !allowDecimal) {
+      return raw;
     }
-    if (this.inputModeHint === "decimal") {
-      const sign = raw.startsWith("-") ? "-" : "";
-      const body = raw.slice(sign.length).replace(/[^\d.,]/gu, "");
-      const separatorIndex = body.search(/[.,]/u);
-      if (separatorIndex === -1) {
-        return sign + body;
+
+    let result = "";
+    let hasSeparator = false;
+
+    for (const char of raw) {
+      if (char >= "0" && char <= "9") {
+        result += char;
+        continue;
       }
-      const integer = body.slice(0, separatorIndex);
-      const separator = body[separatorIndex];
-      const fraction = body.slice(separatorIndex + 1).replace(/[.,]/gu, "");
-      return `${sign}${integer}${separator}${fraction}`;
+      if (digitsOnly) {
+        continue;
+      }
+      if (char === "-" && result.length === 0) {
+        result = "-";
+        continue;
+      }
+      if ((char === "." || char === ",") && !hasSeparator) {
+        hasSeparator = true;
+        result += char;
+      }
     }
-    return raw;
+
+    return result;
   }
 
   private applyValue(raw: string): void {
