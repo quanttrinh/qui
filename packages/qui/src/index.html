@@ -176,6 +176,23 @@
                         <qui-field-error-text>Use at least three characters.</qui-field-error-text>
                     </qui-field>
 
+                    <qui-field id="field-numeric">
+                        <qui-field-label>Numeric only</qui-field-label>
+                        <qui-input
+                            input-mode-hint="numeric"
+                            placeholder="Digits and leading minus"
+                        ></qui-input>
+                        <qui-field-helper-text>Letters are removed.</qui-field-helper-text>
+                    </qui-field>
+
+                    <qui-field id="field-decimal">
+                        <qui-field-label>Decimal input</qui-field-label>
+                        <qui-input input-mode-hint="decimal" placeholder="1,234.56"></qui-input>
+                        <qui-field-helper-text
+                            >Decimal punctuation is preserved.</qui-field-helper-text
+                        >
+                    </qui-field>
+
                     <qui-field id="field-mask">
                         <qui-field-label>Card number</qui-field-label>
                         <qui-input

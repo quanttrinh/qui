@@ -299,6 +299,9 @@ type:
   text-like inputs and virtual keyboards.
 - `spellcheck-hint` applies to `text` and `search`.
 
+`inputmode` set directly on the host is also honored when `input-mode-hint` is
+omitted.
+
 `spellcheck-hint` is boolean. In HTML, presence means `true`; set the property
 to `false` from JavaScript to disable spellcheck.
 

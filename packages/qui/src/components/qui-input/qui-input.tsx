@@ -56,6 +56,20 @@ export type InputAutocapitalize = "none" | "off" | "sentences" | "on" | "words" 
 export type InputEnterKeyHint = "enter" | "done" | "go" | "next" | "previous" | "search" | "send";
 
 const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password", "url"]);
+const INPUT_MODES = new Set<string>([
+  "none",
+  "text",
+  "tel",
+  "url",
+  "email",
+  "numeric",
+  "decimal",
+  "search",
+]);
+
+function isInputMode(value: string | null): value is InputMode {
+  return value !== null && INPUT_MODES.has(value);
+}
 
 /** The values handed to `valuechange` after every edit. */
 export interface InputValueDetails {
@@ -298,6 +312,17 @@ export class QuiInput extends FormControlBase {
     return step;
   }
 
+  private get effectiveInputMode(): InputMode | undefined {
+    if (this.inputModeHint !== undefined) {
+      return this.inputModeHint;
+    }
+    const hostMode = this.host.getAttribute("inputmode");
+    if (isInputMode(hostMode)) {
+      return hostMode;
+    }
+    return this.isNumber ? "numeric" : undefined;
+  }
+
   private get resolvedType(): string {
     if (this.inputType === "password") {
       return this.passwordVisible ? "text" : "password";
@@ -306,10 +331,7 @@ export class QuiInput extends FormControlBase {
   }
 
   private get resolvedInputMode(): InputMode | undefined {
-    if (this.inputModeHint !== undefined) {
-      return this.inputModeHint;
-    }
-    return this.isNumber ? "numeric" : undefined;
+    return this.effectiveInputMode;
   }
 
   private get resolvedAutocapitalize(): InputAutocapitalize | undefined {
@@ -391,10 +413,10 @@ export class QuiInput extends FormControlBase {
     if (this.isNumber || !this.supportsSelection) {
       return raw;
     }
-    if (this.inputModeHint === "numeric") {
+    if (this.effectiveInputMode === "numeric") {
       return this.filterNumeric(raw);
     }
-    if (this.inputModeHint === "decimal") {
+    if (this.effectiveInputMode === "decimal") {
       return this.filterDecimalCharacters(raw);
     }
     return raw;

@@ -46,6 +46,18 @@ describe("qui-input numeric", () => {
     expect(host.value).toBe("a1b2");
   });
 
+  it("honors the native inputmode attribute as a fallback", async () => {
+    const { root, waitForChanges } = await render(<qui-input />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    host.setAttribute("inputmode", "numeric");
+    typeInto(input, "12a3");
+    await waitForChanges();
+
+    expect(input.value).toBe("123");
+  });
+
   it("re-sanitizes when the input mode changes", async () => {
     const { root, waitForChanges } = await render(<qui-input value="a1b2" />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
