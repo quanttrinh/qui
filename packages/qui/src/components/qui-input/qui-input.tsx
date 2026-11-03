@@ -1,3 +1,4 @@
+// oxlint-disable max-lines -- the input component owns its formatting, sanitization, and form logic.
 import {
   resolveVar,
   AttachInternals,
@@ -32,7 +33,7 @@ import { FormController, type FormValidity } from "../shared/form-control/contro
 import { styles } from "./styles";
 
 /** The input types `qui-input` can render. */
-export type InputType = "text" | "email" | "tel" | "search" | "password" | "number";
+export type InputType = "text" | "email" | "tel" | "search" | "password" | "number" | "url";
 
 /** The `inputmode` hints supported by the native input. */
 export type InputMode =
@@ -51,17 +52,10 @@ export type InputTextCase = TextCase;
 /** The native `autocapitalize` hints supported by the inner input. */
 export type InputAutocapitalize = "none" | "off" | "sentences" | "on" | "words" | "characters";
 
-const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password"]);
+/** The native `enterkeyhint` hints supported by the inner input. */
+export type InputEnterKeyHint = "enter" | "done" | "go" | "next" | "previous" | "search" | "send";
 
-/**
- * A character mask for text-like inputs. `#` matches a digit, `a` a letter and
- * `*` a letter or digit; any other character is a literal that is inserted
- * automatically.
- */
-export interface InputMask {
-  /** The pattern to apply, e.g. `"### ###-####"` or `"aa-######-a"`. */
-  pattern: string;
-}
+const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password", "url"]);
 
 /** The values handed to `valuechange` after every edit. */
 export interface InputValueDetails {
@@ -91,9 +85,11 @@ export class QuiInput extends FormControlBase {
 
   /** The input type to render. */
   @Prop() inputType: InputType = "text";
-  /** A mask object. Property-only; use `maskPattern` from HTML. */
-  @Prop() mask?: InputMask;
-  /** A mask pattern, e.g. `"### ###-####"`. */
+  /**
+   * A character mask for text-like inputs. `#` matches a digit, `a` a letter and
+   * `*` a letter or digit; any other character is a literal that is inserted
+   * automatically.
+   */
   @Prop() maskPattern?: string;
   /** Normalizes the value's case before masking. Ignored for number inputs. */
   @Prop() textCase: InputTextCase = "none";
@@ -114,6 +110,12 @@ export class QuiInput extends FormControlBase {
   @Prop() placeholder?: string;
   /** Autocomplete hint. */
   @Prop() autocomplete?: string;
+  /** Allows multiple comma-separated values. Only applies to `email` inputs. */
+  @Prop() multiple = false;
+  /** Native `enterkeyhint` hint for the virtual keyboard. */
+  @Prop() keyboardHint: InputEnterKeyHint | "" = "";
+  /** Native `spellcheck` hint for text and search inputs. */
+  @Prop() spellcheckHint?: boolean;
   /** Input mode hint. */
   @Prop() inputModeHint?: InputMode;
   /** Maximum number of characters. */
@@ -130,8 +132,8 @@ export class QuiInput extends FormControlBase {
   @Prop() readOnly = false;
   /** Marks the input required. Ignored while nested in a `qui-field`. */
   @Prop() required = false;
-  /** Amount the number triggers add or remove. Defaults to `1`. */
-  @Prop() step?: number;
+  /** Amount the number triggers add or remove, or `any` for arbitrary values. Defaults to `1`. */
+  @Prop({ mutable: true }) step?: number | "any";
   /** Lower bound enforced while stepping. */
   @Prop() min?: number;
   /** Upper bound enforced while stepping. */
@@ -199,6 +201,7 @@ export class QuiInput extends FormControlBase {
 
   public componentWillLoad(): void {
     super.componentWillLoad();
+    this.normalizeStep();
     this.initialValue = String(this.defaultValue ?? this.value ?? "");
     this.syncInitialValue();
   }
@@ -234,9 +237,24 @@ export class QuiInput extends FormControlBase {
     this.applyValue(String(this.value));
   }
 
-  @Watch("mask")
+  @Watch("step")
+  private normalizeStep(): void {
+    const step: unknown = this.step;
+    if (typeof step !== "string" || step === "any") {
+      return;
+    }
+    if (step.trim() === "") {
+      this.step = undefined;
+      return;
+    }
+    const value = Number(step);
+    this.step = Number.isFinite(value) ? value : undefined;
+  }
+
   @Watch("maskPattern")
   @Watch("textCase")
+  @Watch("inputModeHint")
+  @Watch("inputType")
   private resyncFormattedValue(): void {
     const el = this.inputEl;
     if (el === undefined) {
@@ -257,7 +275,7 @@ export class QuiInput extends FormControlBase {
   }
 
   private get pattern(): string | undefined {
-    return this.mask?.pattern ?? this.maskPattern;
+    return this.maskPattern;
   }
 
   private get isNumber(): boolean {
@@ -268,11 +286,30 @@ export class QuiInput extends FormControlBase {
     return SELECTABLE_INPUT_TYPES.has(this.inputType);
   }
 
+  private get supportsSpellcheck(): boolean {
+    return this.inputType === "text" || this.inputType === "search";
+  }
+
+  private get numericStep(): number | undefined {
+    const step: unknown = this.step;
+    if (typeof step !== "number" || !Number.isFinite(step) || step <= 0) {
+      return undefined;
+    }
+    return step;
+  }
+
   private get resolvedType(): string {
     if (this.inputType === "password") {
       return this.passwordVisible ? "text" : "password";
     }
     return this.inputType;
+  }
+
+  private get resolvedInputMode(): InputMode | undefined {
+    if (this.inputModeHint !== undefined) {
+      return this.inputModeHint;
+    }
+    return this.isNumber ? "numeric" : undefined;
   }
 
   private get resolvedAutocapitalize(): InputAutocapitalize | undefined {
@@ -319,16 +356,68 @@ export class QuiInput extends FormControlBase {
     }
   }
 
+  private get allowNegative(): boolean {
+    return this.min === undefined || this.min < 0;
+  }
+
+  private filterNumeric(raw: string): string {
+    let result = "";
+    for (const char of raw) {
+      if (char >= "0" && char <= "9") {
+        result += char;
+      } else if (this.allowNegative && char === "-" && result.length === 0) {
+        result = "-";
+      }
+    }
+    return result;
+  }
+
+  private filterDecimalCharacters(raw: string): string {
+    let result = "";
+    for (const char of raw) {
+      if (
+        (char >= "0" && char <= "9") ||
+        char === "." ||
+        char === "," ||
+        (this.allowNegative && char === "-")
+      ) {
+        result += char;
+      }
+    }
+    return result;
+  }
+
+  private sanitizeValue(raw: string): string {
+    if (this.isNumber || !this.supportsSelection) {
+      return raw;
+    }
+    if (this.inputModeHint === "numeric") {
+      return this.filterNumeric(raw);
+    }
+    if (this.inputModeHint === "decimal") {
+      return this.filterDecimalCharacters(raw);
+    }
+    return raw;
+  }
+
   private applyValue(raw: string): void {
-    this.rawValue = raw;
+    const sanitized = this.sanitizeValue(raw);
+    const normalized = this.value !== undefined && String(this.value) !== sanitized;
+    if (normalized) {
+      this.value = sanitized;
+    }
+    this.rawValue = sanitized;
     const { pattern } = this;
-    const cased = this.isNumber ? raw : applyTextCase(raw, this.textCase);
+    const cased = this.isNumber ? sanitized : applyTextCase(sanitized, this.textCase);
     const next = pattern === undefined ? cased : applyMask(cased, pattern);
     if (this.inputEl !== undefined && this.inputEl.value !== next) {
       this.inputEl.value = next;
     }
     if (this.isNumber) {
       this.currentValue = next;
+    }
+    if (normalized) {
+      this.emitValue(next, sanitized);
     }
     this.form.sync();
   }
@@ -412,9 +501,14 @@ export class QuiInput extends FormControlBase {
     }
     const { pattern } = this;
     const caret = el.selectionStart ?? el.value.length;
-    const raw = pattern === undefined ? el.value : rawFromMasked(el.value, pattern);
-    const rawCaret =
-      pattern === undefined ? caret : rawFromMasked(el.value.slice(0, caret), pattern).length;
+    const rawBeforeCaret =
+      pattern === undefined
+        ? el.value.slice(0, caret)
+        : rawFromMasked(el.value.slice(0, caret), pattern);
+    const raw = this.sanitizeValue(
+      pattern === undefined ? el.value : rawFromMasked(el.value, pattern),
+    );
+    const rawCaret = this.sanitizeValue(rawBeforeCaret).length;
     this.rawValue = raw;
     const cased = this.caseAtCaret(raw, rawCaret);
 
@@ -433,8 +527,8 @@ export class QuiInput extends FormControlBase {
 
   /** Whether the value can still move one `step` in the given direction. */
   private canStep(direction: 1 | -1): boolean {
-    const parsed = this.currentValue === "" ? 0 : Number(this.currentValue);
-    if (!Number.isFinite(parsed)) {
+    const parsed = this.inputEl?.valueAsNumber;
+    if (parsed === undefined || !Number.isFinite(parsed)) {
       return true;
     }
     const limit = direction > 0 ? this.max : this.min;
@@ -444,14 +538,27 @@ export class QuiInput extends FormControlBase {
     return direction > 0 ? parsed < limit : parsed > limit;
   }
 
-  /** Enforces `min`/`max` around the current value by `step`. */
+  private steppedValue(current: number, direction: 1 | -1): number {
+    const step = this.numericStep;
+    if (step === undefined) {
+      return current + direction;
+    }
+    const base = typeof this.min === "number" ? this.min : 0;
+    const steps = (current - base) / step;
+    const nextSteps = direction > 0 ? Math.floor(steps) + 1 : Math.ceil(steps) - 1;
+    return base + nextSteps * step;
+  }
+
+  /** Snaps one step in the given direction, respecting `min`/`max`. */
   private nudge(direction: 1 | -1): void {
     const el = this.inputEl;
     if (el === undefined) {
       return;
     }
-    const parsed = el.value === "" ? 0 : Number(el.value);
-    let next = (Number.isFinite(parsed) ? parsed : 0) + direction * (this.step ?? 1);
+    const parsed = el.valueAsNumber;
+    const current = Number.isFinite(parsed) ? parsed : 0;
+    let next = this.steppedValue(current, direction);
+
     if (typeof this.min === "number") {
       next = Math.max(this.min, next);
     }
@@ -523,8 +630,11 @@ export class QuiInput extends FormControlBase {
               type={this.resolvedType}
               placeholder={this.placeholder}
               autocomplete={this.autocomplete}
+              multiple={this.inputType === "email" && this.multiple ? true : undefined}
+              enterKeyHint={this.keyboardHint === "" ? undefined : this.keyboardHint}
+              spellcheck={this.supportsSpellcheck ? this.spellcheckHint : undefined}
               autocapitalize={this.resolvedAutocapitalize}
-              inputMode={this.inputModeHint}
+              inputMode={this.resolvedInputMode}
               maxLength={this.maxLength}
               minLength={this.minLength}
               pattern={this.inputPattern}

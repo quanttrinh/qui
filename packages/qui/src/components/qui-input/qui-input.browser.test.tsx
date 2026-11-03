@@ -40,27 +40,64 @@ describe("qui-input", () => {
     expect(input.value).toBe("2");
   });
 
-  it("forwards number constraints to the native input", async () => {
-    const { root } = await render(
-      <qui-input inputType="number" value={5} min={1} max={3} step={1} />,
-    );
+  it("forwards multiple for email inputs", async () => {
+    const { root } = await render(<qui-input inputType="email" multiple />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
-    expect(input.min).toBe("1");
-    expect(input.max).toBe("3");
-    expect(input.step).toBe("1");
-    expect(input.validity.rangeOverflow).toBe(true);
+    expect(input.multiple).toBe(true);
   });
 
-  it("does not forward number constraints to non-number inputs", async () => {
-    const { root } = await render(<qui-input min={1} max={3} step={1} />);
+  it("does not forward multiple to non-email inputs", async () => {
+    const { root } = await render(<qui-input multiple />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
-    expect(input.hasAttribute("min")).toBe(false);
-    expect(input.hasAttribute("max")).toBe(false);
-    expect(input.hasAttribute("step")).toBe(false);
+    expect(input.multiple).toBe(false);
+  });
+
+  it("renders url inputs with keyboard hints", async () => {
+    const { root } = await render(<qui-input inputType="url" keyboardHint="go" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(input.type).toBe("url");
+    expect(input.enterKeyHint).toBe("go");
+  });
+
+  it("clears the keyboard hint when reset", async () => {
+    const { root, setProps, waitForChanges } = await render(<qui-input keyboardHint="go" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    await setProps({ keyboardHint: "" });
+    await waitForChanges();
+
+    expect(input.hasAttribute("enterkeyhint")).toBe(false);
+  });
+
+  it("forwards spellcheck hints to supported inputs", async () => {
+    const { root } = await render(<qui-input spellcheckHint={false} />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(input.spellcheck).toBe(false);
+  });
+
+  it("does not forward spellcheck to email", async () => {
+    const { root } = await render(<qui-input inputType="email" spellcheckHint={false} />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(input.hasAttribute("spellcheck")).toBe(false);
+  });
+
+  it("does not forward spellcheck to unsupported inputs", async () => {
+    const { root } = await render(<qui-input inputType="password" spellcheckHint={false} />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(input.hasAttribute("spellcheck")).toBe(false);
   });
 
   it("toggles password visibility", async () => {

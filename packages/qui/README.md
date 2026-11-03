@@ -170,7 +170,7 @@ or per-tag network waterfall.
 - `<qui-switch>` — checked, disabled, required, `checkedchange`
 - `<qui-radio-group>` + `<qui-radio>` — orientation, disabled, required, `valuechange`
 - `<qui-field>` + label, helper text, error text and required indicator parts
-- `<qui-input>` — text/email/tel/search/password/number, masks, text case,
+- `<qui-input>` — text/email/tel/search/password/url/number, masks, text case,
   prefix/suffix slots, number stepping, password visibility, `valuechange`
 - `<qui-textarea>` — multi-line text, auto-growth, character counter, native
   resize modes, `valuechange`
@@ -269,10 +269,51 @@ qui-input::part(input) {
 
 `input-type="number"` forwards `min`, `max`, and `step` to the native input so
 native constraint validation and keyboard stepping use the same bounds as the
-rendered stepper buttons.
+rendered stepper buttons. Number inputs also default to `inputmode="numeric"`;
+set `input-mode-hint` to override it.
 
 ```html
 <qui-input input-type="number" min="1" max="10" step="1" value="1"></qui-input>
+```
+
+Use `step="any"` to allow arbitrary decimal values. The stepper buttons still
+increment and decrement by `1` in that mode.
+
+```html
+<qui-input input-type="number" step="any"></qui-input>
+```
+
+### Native input hints
+
+Additional native hints are forwarded when they apply to the selected input
+type:
+
+```html
+<qui-input input-type="email" multiple></qui-input>
+<qui-input input-type="url" keyboard-hint="go"></qui-input>
+<qui-input spellcheck-hint></qui-input>
+```
+
+- `multiple` applies only to `email`.
+- `keyboard-hint` is forwarded for every input type, but is most useful for
+  text-like inputs and virtual keyboards.
+- `spellcheck-hint` applies to `text` and `search`.
+
+`spellcheck-hint` is boolean. In HTML, presence means `true`; set the property
+to `false` from JavaScript to disable spellcheck.
+
+For text-like inputs, `input-mode-hint="numeric"` keeps digits and a leading
+`-` when `min` is unset or negative; a non-negative `min` strips the minus.
+`input-mode-hint="decimal"` keeps digits, `-`, `.`, and `,` under the same
+minus rules; it does not parse or normalize separators, so pasted grouped values
+keep their exact formatting. Masks do not preserve a leading sign or decimal
+separator, so use decimal mode without a mask. When filtering changes a
+controlled `value`, the component updates `value` and emits `valuechange` with
+the normalized value. Filtering applies to selectable text-like inputs; `email`
+is left unfiltered because it does not support caret restoration.
+
+```html
+<qui-input input-mode-hint="numeric"></qui-input> <qui-input input-mode-hint="decimal"></qui-input>
 ```
 
 ### Long text
