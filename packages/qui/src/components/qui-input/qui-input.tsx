@@ -1,4 +1,4 @@
-// oxlint-disable max-lines -- the input component owns its formatting, sanitization, and form logic.
+// oxlint-disable max-dependencies, max-lines -- the input component is the integration point for its helpers.
 import {
   resolveVar,
   AttachInternals,
@@ -30,6 +30,7 @@ import { applyFieldAria } from "../shared/field/aria";
 import { createFieldControl, focusElement } from "../shared/field/control";
 import { FormControlBase } from "../shared/form-control/component-base";
 import { FormController, type FormValidity } from "../shared/form-control/controller";
+import { appendFilteredChar, filterInputValue } from "./input-filter";
 import { styles } from "./styles";
 
 /** The input types `qui-input` can render. */
@@ -56,26 +57,6 @@ export type InputAutocapitalize = "none" | "off" | "sentences" | "on" | "words" 
 export type InputEnterKeyHint = "enter" | "done" | "go" | "next" | "previous" | "search" | "send";
 
 const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password", "url"]);
-
-function isPunctuation(char: string): boolean {
-  return char === "-" || char === "." || char === ",";
-}
-
-function normalizeLeadingZeros(value: string): string {
-  const sign = value.startsWith("-") ? "-" : "";
-  const body = value.slice(sign.length);
-  if (!body.startsWith("0")) {
-    return value;
-  }
-  let index = 0;
-  while (index < body.length && body[index] === "0") {
-    index += 1;
-  }
-  const next = body[index];
-  const normalized =
-    index < body.length && next >= "0" && next <= "9" ? body.slice(index) : `0${body.slice(index)}`;
-  return sign + normalized;
-}
 
 /** The values handed to `valuechange` after every edit. */
 export interface InputValueDetails {
@@ -381,45 +362,23 @@ export class QuiInput extends FormControlBase {
     return this.min === undefined || this.min < 0;
   }
 
-  private filterValue(raw: string): string {
-    let result = "";
-    let previousWasPunctuation = false;
-    for (const char of raw) {
-      if (this.isAllowedCharacter(char)) {
-        const punctuation = isPunctuation(char);
-        const numericMidMinus =
-          char === "-" && this.effectiveInputMode === "numeric" && result.length > 0;
-        const leadingSignSeparator = (char === "." || char === ",") && result === "-";
-
-        if (leadingSignSeparator) {
-          result += `0${char}`;
-          previousWasPunctuation = true;
-        } else if (!numericMidMinus && !(punctuation && previousWasPunctuation)) {
-          result += char;
-          previousWasPunctuation = punctuation;
-        }
-      }
-    }
-    return normalizeLeadingZeros(result);
-  }
-
-  private sanitizeValue(raw: string): string {
+  private normalizeInputValue(raw: string): string {
     const mode = this.effectiveInputMode;
     if (mode !== "numeric" && mode !== "decimal") {
       return raw;
     }
-    return this.filterValue(raw);
+    return filterInputValue(raw, { allowNegative: this.allowNegative, mode });
   }
 
   private applyValue(raw: string): void {
-    const sanitized = this.sanitizeValue(raw);
-    const normalized = this.value !== undefined && String(this.value) !== sanitized;
-    if (normalized) {
-      this.value = sanitized;
+    const normalizedValue = this.normalizeInputValue(raw);
+    const changed = this.value !== undefined && String(this.value) !== normalizedValue;
+    if (changed) {
+      this.value = normalizedValue;
     }
-    this.rawValue = sanitized;
+    this.rawValue = normalizedValue;
     const { pattern } = this;
-    const cased = this.isNumber ? sanitized : applyTextCase(sanitized, this.textCase);
+    const cased = this.isNumber ? normalizedValue : applyTextCase(normalizedValue, this.textCase);
     const next = pattern === undefined ? cased : applyMask(cased, pattern);
     if (this.inputEl !== undefined && this.inputEl.value !== next) {
       this.inputEl.value = next;
@@ -427,8 +386,8 @@ export class QuiInput extends FormControlBase {
     if (this.isNumber) {
       this.currentValue = next;
     }
-    if (normalized) {
-      this.emitValue(next, sanitized);
+    if (changed) {
+      this.emitValue(next, normalizedValue);
     }
     this.form.sync();
   }
@@ -505,16 +464,6 @@ export class QuiInput extends FormControlBase {
     this.form.sync();
   }
 
-  private isAllowedCharacter(char: string): boolean {
-    if (char >= "0" && char <= "9") {
-      return true;
-    }
-    if (this.allowNegative && char === "-") {
-      return true;
-    }
-    return this.effectiveInputMode === "decimal" && (char === "." || char === ",");
-  }
-
   private readonly handleBeforeInput = (event: InputEvent): void => {
     const mode = this.effectiveInputMode;
     if ((mode !== "numeric" && mode !== "decimal") || event.isComposing) {
@@ -525,11 +474,15 @@ export class QuiInput extends FormControlBase {
       return;
     }
     const data = event.data ?? event.dataTransfer?.getData("text") ?? "";
+    const options = { allowNegative: this.allowNegative, mode };
+    let result = el.value.slice(0, el.selectionStart ?? el.value.length);
     for (const char of data) {
-      if (!this.isAllowedCharacter(char)) {
+      const next = appendFilteredChar(result, char, options);
+      if (next === undefined) {
         event.preventDefault();
         return;
       }
+      result = next;
     }
   };
 
@@ -544,10 +497,10 @@ export class QuiInput extends FormControlBase {
       pattern === undefined
         ? el.value.slice(0, caret)
         : rawFromMasked(el.value.slice(0, caret), pattern);
-    const raw = this.sanitizeValue(
+    const raw = this.normalizeInputValue(
       pattern === undefined ? el.value : rawFromMasked(el.value, pattern),
     );
-    const rawCaret = this.sanitizeValue(rawBeforeCaret).length;
+    const rawCaret = this.normalizeInputValue(rawBeforeCaret).length;
     this.rawValue = raw;
     const cased = this.caseAtCaret(raw, rawCaret);
 
