@@ -293,6 +293,16 @@ export class QuiInput extends FormControlBase {
     return this.supportsAutocorrect ? this.autocorrectHint : undefined;
   }
 
+  /**
+   * `autocorrect` is a boolean DOM property, so assigning the string `"off"`
+   * as a property coerces it to true. Set the content attribute directly.
+   */
+  private get autocorrectAttributes(): { "attr:autocorrect"?: InputAutocorrect } {
+    return this.resolvedAutocorrect === undefined
+      ? {}
+      : { "attr:autocorrect": this.resolvedAutocorrect };
+  }
+
   private get resolvedType(): string {
     if (this.inputType === "password") {
       return this.passwordVisible ? "text" : "password";
@@ -593,7 +603,7 @@ export class QuiInput extends FormControlBase {
               multiple={this.inputType === "email" && this.multiple ? true : undefined}
               enterKeyHint={this.enterKeyAction === "" ? undefined : this.enterKeyAction}
               spellcheck={this.supportsSpellcheck ? this.spellcheckHint : undefined}
-              autocorrect={this.resolvedAutocorrect}
+              {...this.autocorrectAttributes}
               autocapitalize={this.resolvedAutocapitalize}
               inputMode={this.inputModeHint}
               maxLength={this.maxLength}
