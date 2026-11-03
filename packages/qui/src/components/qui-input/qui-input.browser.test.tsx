@@ -178,39 +178,51 @@ describe("qui-input", () => {
   });
 
   it("forwards spellcheck and autocorrect hints to supported inputs", async () => {
-    const { root } = await render(<qui-input spellcheckHint={false} autocorrectHint={false} />);
+    const { root, waitForChanges } = await render(<qui-input spellcheckHint={false} />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
+
+    host.autocorrectHint = false;
+    await waitForChanges();
 
     expect(input.spellcheck).toBe(false);
     expect(input.getAttribute("autocorrect")).toBe("off");
   });
 
   it("maps autocorrect true to the native on value", async () => {
-    const { root } = await render(<qui-input autocorrectHint />);
+    const { root, waitForChanges } = await render(<qui-input />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
+
+    host.autocorrectHint = true;
+    await waitForChanges();
 
     expect(input.getAttribute("autocorrect")).toBe("on");
   });
 
   it("forwards autocorrect but not spellcheck to email", async () => {
-    const { root } = await render(
-      <qui-input inputType="email" spellcheckHint={false} autocorrectHint={false} />,
+    const { root, waitForChanges } = await render(
+      <qui-input inputType="email" spellcheckHint={false} />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
+
+    host.autocorrectHint = false;
+    await waitForChanges();
 
     expect(input.hasAttribute("spellcheck")).toBe(false);
     expect(input.getAttribute("autocorrect")).toBe("off");
   });
 
   it("does not forward spellcheck and autocorrect to unsupported inputs", async () => {
-    const { root } = await render(
-      <qui-input inputType="password" spellcheckHint={false} autocorrectHint={false} />,
+    const { root, waitForChanges } = await render(
+      <qui-input inputType="password" spellcheckHint={false} />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
+
+    host.autocorrectHint = false;
+    await waitForChanges();
 
     expect(input.hasAttribute("spellcheck")).toBe(false);
     expect(input.hasAttribute("autocorrect")).toBe(false);

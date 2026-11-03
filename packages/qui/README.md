@@ -290,14 +290,17 @@ type:
 ```html
 <qui-input input-type="email" multiple></qui-input>
 <qui-input input-type="url" enter-key-action="go"></qui-input>
-<qui-input spellcheck-hint="false" autocorrect-hint="off"></qui-input>
+<qui-input autocorrect-hint></qui-input>
 ```
 
 - `multiple` applies only to `email`.
 - `enter-key-action` applies to every input type.
 - `spellcheck-hint` applies to `text` and `search`.
-- `autocorrect-hint` applies to `text`, `search`, and `email`; `true` maps to
-  the native `on` value and `false` to `off`.
+- `autocorrect-hint` applies to `text`, `search`, and `email`.
+
+`spellcheck-hint` and `autocorrect-hint` are boolean. In HTML, presence means
+`true`; set the property to `false` from JavaScript to emit the native `off`
+value.
 
 For text-like inputs, `input-mode-hint="numeric"` strips everything except
 digits. `input-mode-hint="decimal"` additionally allows one leading `-` and one
