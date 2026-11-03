@@ -54,9 +54,6 @@ export type InputAutocapitalize = "none" | "off" | "sentences" | "on" | "words" 
 /** The native `enterkeyhint` hints supported by the inner input. */
 export type InputEnterKeyHint = "enter" | "done" | "go" | "next" | "previous" | "search" | "send";
 
-/** The Safari-specific `autocorrect` hints supported by the inner input. */
-export type InputAutocorrect = "on" | "off";
-
 const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password", "url"]);
 
 /** The values handed to `valuechange` after every edit. */
@@ -118,8 +115,6 @@ export class QuiInput extends FormControlBase {
   @Prop() enterKeyAction: InputEnterKeyHint | "" = "";
   /** Native `spellcheck` hint for text and search inputs. */
   @Prop() spellcheckHint?: boolean;
-  /** Native `autocorrect` hint for text, search, and email inputs. */
-  @Prop() autocorrectHint?: InputAutocorrect;
   /** Input mode hint. */
   @Prop() inputModeHint?: InputMode;
   /** Maximum number of characters. */
@@ -242,6 +237,7 @@ export class QuiInput extends FormControlBase {
 
   @Watch("maskPattern")
   @Watch("textCase")
+  @Watch("inputModeHint")
   private resyncFormattedValue(): void {
     const el = this.inputEl;
     if (el === undefined) {
@@ -277,30 +273,16 @@ export class QuiInput extends FormControlBase {
     return this.inputType === "text" || this.inputType === "search";
   }
 
-  private get supportsAutocorrect(): boolean {
-    return this.inputType === "text" || this.inputType === "search" || this.inputType === "email";
-  }
-
   private get numericStep(): number | undefined {
-    if (this.step === "any") {
+    const step: unknown = this.step;
+    if (step === undefined || step === "any") {
       return undefined;
     }
-    const value = Number(this.step);
+    if (typeof step === "string" && step.trim() === "") {
+      return undefined;
+    }
+    const value = Number(step);
     return Number.isFinite(value) ? value : undefined;
-  }
-
-  private get resolvedAutocorrect(): InputAutocorrect | undefined {
-    return this.supportsAutocorrect ? this.autocorrectHint : undefined;
-  }
-
-  /**
-   * `autocorrect` is a boolean DOM property, so assigning the string `"off"`
-   * as a property coerces it to true. Set the content attribute directly.
-   */
-  private get autocorrectAttributes(): { "attr:autocorrect"?: InputAutocorrect } {
-    return this.resolvedAutocorrect === undefined
-      ? {}
-      : { "attr:autocorrect": this.resolvedAutocorrect };
   }
 
   private get resolvedType(): string {
@@ -603,7 +585,6 @@ export class QuiInput extends FormControlBase {
               multiple={this.inputType === "email" && this.multiple ? true : undefined}
               enterKeyHint={this.enterKeyAction === "" ? undefined : this.enterKeyAction}
               spellcheck={this.supportsSpellcheck ? this.spellcheckHint : undefined}
-              {...this.autocorrectAttributes}
               autocapitalize={this.resolvedAutocapitalize}
               inputMode={this.inputModeHint}
               maxLength={this.maxLength}

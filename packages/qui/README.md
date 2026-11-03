@@ -290,22 +290,23 @@ type:
 ```html
 <qui-input input-type="email" multiple></qui-input>
 <qui-input input-type="url" enter-key-action="go"></qui-input>
-<qui-input spellcheck-hint autocorrect-hint="off"></qui-input>
+<qui-input spellcheck-hint></qui-input>
 ```
 
 - `multiple` applies only to `email`.
-- `enter-key-action` applies to every input type.
+- `enter-key-action` is forwarded for every input type, but is most useful for
+  text-like inputs and virtual keyboards.
 - `spellcheck-hint` applies to `text` and `search`.
-- `autocorrect-hint` applies to `text`, `search`, and `email`, with `on` and
-  `off` values.
 
 `spellcheck-hint` is boolean. In HTML, presence means `true`; set the property
 to `false` from JavaScript to disable spellcheck.
 
 For text-like inputs, `input-mode-hint="numeric"` strips everything except
 digits. `input-mode-hint="decimal"` additionally allows one leading `-` and one
-`.` or `,` decimal separator. Masked inputs only preserve digits, so use decimal
-mode without a mask.
+`.` or `,` decimal separator. A bare `-` or separator may appear transiently
+while typing. Masked inputs only preserve digits, so use decimal mode without a
+mask. When filtering changes a controlled `value`, the component updates `value`
+to the sanitized raw value.
 
 ```html
 <qui-input input-mode-hint="numeric"></qui-input> <qui-input input-mode-hint="decimal"></qui-input>
