@@ -2,6 +2,6 @@
 "@quanttrinh/qui": patch
 ---
 
-Apply numeric and decimal input filtering only when `inputModeHint` is set.
-Number inputs are included, while inputs without a hint keep their native
-behavior.
+Apply numeric and decimal filtering based on the effective input mode. Number
+inputs default to `numeric`, while other input types filter when
+`input-mode-hint` is set.

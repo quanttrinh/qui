@@ -388,12 +388,11 @@ export class QuiInput extends FormControlBase {
   }
 
   private sanitizeValue(raw: string): string {
-    if (this.inputModeHint !== "numeric" && this.inputModeHint !== "decimal") {
+    const mode = this.effectiveInputMode;
+    if (mode !== "numeric" && mode !== "decimal") {
       return raw;
     }
-    return this.inputModeHint === "numeric"
-      ? this.filterNumeric(raw)
-      : this.filterDecimalCharacters(raw);
+    return mode === "numeric" ? this.filterNumeric(raw) : this.filterDecimalCharacters(raw);
   }
 
   private applyValue(raw: string): void {

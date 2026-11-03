@@ -177,7 +177,7 @@ describe("qui-input numeric", () => {
 
   it("filters invalid text from number inputs", async () => {
     const { root, setProps, waitForChanges } = await render(
-      <qui-input inputType="number" inputModeHint="numeric" value={3} />,
+      <qui-input inputType="number" value={3} />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
