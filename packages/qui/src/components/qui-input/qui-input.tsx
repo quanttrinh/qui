@@ -57,6 +57,26 @@ export type InputEnterKeyHint = "enter" | "done" | "go" | "next" | "previous" | 
 
 const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password", "url"]);
 
+function isPunctuation(char: string): boolean {
+  return char === "-" || char === "." || char === ",";
+}
+
+function normalizeLeadingZeros(value: string): string {
+  const sign = value.startsWith("-") ? "-" : "";
+  const body = value.slice(sign.length);
+  if (!body.startsWith("0")) {
+    return value;
+  }
+  let index = 0;
+  while (index < body.length && body[index] === "0") {
+    index += 1;
+  }
+  const next = body[index];
+  const normalized =
+    index < body.length && next >= "0" && next <= "9" ? body.slice(index) : `0${body.slice(index)}`;
+  return sign + normalized;
+}
+
 /** The values handed to `valuechange` after every edit. */
 export interface InputValueDetails {
   /** The value shown in the input, including mask literals. */
@@ -361,31 +381,26 @@ export class QuiInput extends FormControlBase {
     return this.min === undefined || this.min < 0;
   }
 
-  private filterNumeric(raw: string): string {
+  private filterValue(raw: string): string {
     let result = "";
+    let previousWasPunctuation = false;
     for (const char of raw) {
-      if (char >= "0" && char <= "9") {
-        result += char;
-      } else if (this.allowNegative && char === "-" && result.length === 0) {
-        result = "-";
-      }
-    }
-    return result;
-  }
+      if (this.isAllowedCharacter(char)) {
+        const punctuation = isPunctuation(char);
+        const numericMidMinus =
+          char === "-" && this.effectiveInputMode === "numeric" && result.length > 0;
+        const leadingSignSeparator = (char === "." || char === ",") && result === "-";
 
-  private filterDecimalCharacters(raw: string): string {
-    let result = "";
-    for (const char of raw) {
-      if (
-        (char >= "0" && char <= "9") ||
-        char === "." ||
-        char === "," ||
-        (this.allowNegative && char === "-")
-      ) {
-        result += char;
+        if (leadingSignSeparator) {
+          result += `0${char}`;
+          previousWasPunctuation = true;
+        } else if (!numericMidMinus && !(punctuation && previousWasPunctuation)) {
+          result += char;
+          previousWasPunctuation = punctuation;
+        }
       }
     }
-    return result;
+    return normalizeLeadingZeros(result);
   }
 
   private sanitizeValue(raw: string): string {
@@ -393,7 +408,7 @@ export class QuiInput extends FormControlBase {
     if (mode !== "numeric" && mode !== "decimal") {
       return raw;
     }
-    return mode === "numeric" ? this.filterNumeric(raw) : this.filterDecimalCharacters(raw);
+    return this.filterValue(raw);
   }
 
   private applyValue(raw: string): void {

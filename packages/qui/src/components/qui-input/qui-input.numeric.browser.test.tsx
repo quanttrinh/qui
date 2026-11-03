@@ -127,6 +127,28 @@ describe("qui-input numeric", () => {
     await waitForChanges();
     expect(input.value).toBe("-12");
   });
+
+  it("normalizes leading zeros and repeated punctuation", async () => {
+    const { root, waitForChanges } = await render(<qui-input inputModeHint="numeric" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    typeInto(input, "0123");
+    await waitForChanges();
+    expect(input.value).toBe("123");
+
+    typeInto(input, "0");
+    await waitForChanges();
+    expect(input.value).toBe("0");
+
+    typeInto(input, "-012");
+    await waitForChanges();
+    expect(input.value).toBe("-12");
+
+    typeInto(input, "1--2");
+    await waitForChanges();
+    expect(input.value).toBe("12");
+  });
 });
 
 describe("qui-input decimal", () => {
@@ -164,6 +186,28 @@ describe("qui-input decimal", () => {
     typeInto(input, "1.2.3");
     await waitForChanges();
     expect(input.value).toBe("1.2.3");
+  });
+
+  it("normalizes leading zeros and repeated punctuation", async () => {
+    const { root, waitForChanges } = await render(<qui-input inputModeHint="decimal" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    typeInto(input, "00.5");
+    await waitForChanges();
+    expect(input.value).toBe("0.5");
+
+    typeInto(input, "1..2");
+    await waitForChanges();
+    expect(input.value).toBe("1.2");
+
+    typeInto(input, "1,,2");
+    await waitForChanges();
+    expect(input.value).toBe("1,2");
+
+    typeInto(input, "-.5");
+    await waitForChanges();
+    expect(input.value).toBe("-0.5");
   });
 
   it("accepts negative decimals in native number inputs", async () => {

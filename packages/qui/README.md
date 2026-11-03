@@ -306,8 +306,9 @@ to `false` from JavaScript to disable spellcheck.
 For text-like inputs, `input-mode-hint="numeric"` keeps digits and a leading
 `-` when `min` is unset or negative; a non-negative `min` strips the minus.
 `input-mode-hint="decimal"` keeps digits, `-`, `.`, and `,` under the same
-minus rules; it does not parse or normalize separators, so pasted grouped values
-keep their exact formatting. Masks do not preserve a leading sign or decimal
+minus rules; it does not parse separators, so pasted grouped values keep their
+exact formatting. Leading zeros are removed and repeated `-`, `.`, or `,`
+characters are collapsed. Masks do not preserve a leading sign or decimal
 separator, so use decimal mode without a mask. When filtering changes a
 controlled `value`, the component updates `value` and emits `valuechange` with
 the normalized value. Filtering applies whenever the effective input mode is
