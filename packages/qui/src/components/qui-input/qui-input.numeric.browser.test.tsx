@@ -46,26 +46,26 @@ describe("qui-input numeric", () => {
     expect(host.value).toBe("12");
   });
 
-  it("does not sanitize email inputs", async () => {
+  it("filters email inputs when the hint is set", async () => {
     const { root } = await render(
       <qui-input inputType="email" inputModeHint="numeric" value="a1b2" />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
-    expect(input.value).toBe("a1b2");
-    expect(host.value).toBe("a1b2");
+    expect(input.value).toBe("12");
+    expect(host.value).toBe("12");
   });
 
-  it("does not sanitize url inputs", async () => {
+  it("filters url inputs when the hint is set", async () => {
     const { root } = await render(
       <qui-input inputType="url" inputModeHint="numeric" value="a1b2" />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
-    expect(input.value).toBe("a1b2");
-    expect(host.value).toBe("a1b2");
+    expect(input.value).toBe("12");
+    expect(host.value).toBe("12");
   });
 
   it("re-sanitizes when the input mode changes", async () => {
@@ -177,7 +177,7 @@ describe("qui-input numeric", () => {
 
   it("filters invalid text from number inputs", async () => {
     const { root, setProps, waitForChanges } = await render(
-      <qui-input inputType="number" value={3} />,
+      <qui-input inputType="number" inputModeHint="numeric" value={3} />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");

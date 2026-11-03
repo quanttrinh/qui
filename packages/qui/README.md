@@ -270,8 +270,8 @@ qui-input::part(input) {
 `input-type="number"` forwards `min`, `max`, and `step` to the native input so
 native constraint validation and keyboard stepping use the same bounds as the
 rendered stepper buttons. Number inputs also default to `inputmode="numeric"`
-and run through the same numeric filter; set `input-mode-hint="decimal"` when
-decimal values are allowed.
+for the keyboard. Add `input-mode-hint="numeric"` to filter them, or
+`input-mode-hint="decimal"` to allow decimal punctuation.
 
 ```html
 <qui-input input-type="number" min="1" max="10" step="1" value="1"></qui-input>
@@ -310,9 +310,9 @@ minus rules; it does not parse or normalize separators, so pasted grouped values
 keep their exact formatting. Masks do not preserve a leading sign or decimal
 separator, so use decimal mode without a mask. When filtering changes a
 controlled `value`, the component updates `value` and emits `valuechange` with
-the normalized value. Filtering applies to `text`, `tel`, `number`, `search`,
-and `password` inputs when `input-mode-hint` is `numeric` or `decimal`. `email`
-and `url` inputs are left unfiltered.
+the normalized value. Filtering applies whenever `input-mode-hint` is `numeric`
+or `decimal`, regardless of input type. Inputs without the hint are not
+filtered.
 
 ```html
 <qui-input input-mode-hint="numeric"></qui-input> <qui-input input-mode-hint="decimal"></qui-input>

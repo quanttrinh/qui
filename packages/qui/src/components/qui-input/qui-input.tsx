@@ -56,7 +56,6 @@ export type InputAutocapitalize = "none" | "off" | "sentences" | "on" | "words" 
 export type InputEnterKeyHint = "enter" | "done" | "go" | "next" | "previous" | "search" | "send";
 
 const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password", "url"]);
-const FILTERABLE_INPUT_TYPES = new Set<InputType>(["text", "tel", "number", "search", "password"]);
 
 /** The values handed to `valuechange` after every edit. */
 export interface InputValueDetails {
@@ -361,10 +360,6 @@ export class QuiInput extends FormControlBase {
     }
   }
 
-  private get supportsFiltering(): boolean {
-    return FILTERABLE_INPUT_TYPES.has(this.inputType);
-  }
-
   private get allowNegative(): boolean {
     return this.min === undefined || this.min < 0;
   }
@@ -397,11 +392,12 @@ export class QuiInput extends FormControlBase {
   }
 
   private sanitizeValue(raw: string): string {
-    const mode = this.effectiveInputMode;
-    if ((mode !== "numeric" && mode !== "decimal") || !this.supportsFiltering) {
+    if (this.inputModeHint !== "numeric" && this.inputModeHint !== "decimal") {
       return raw;
     }
-    return mode === "numeric" ? this.filterNumeric(raw) : this.filterDecimalCharacters(raw);
+    return this.inputModeHint === "numeric"
+      ? this.filterNumeric(raw)
+      : this.filterDecimalCharacters(raw);
   }
 
   private applyValue(raw: string): void {
