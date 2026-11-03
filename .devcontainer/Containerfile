@@ -28,8 +28,7 @@ RUN /sbin/ldconfig \
    ncurses-term \
  && rm -rf /var/lib/apt/lists/*
 
-RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
- && usermod --shell "$(command -v zsh)" "$(id -un)"
+RUN usermod --shell "$(command -v zsh)" "$(id -un)"
 
 RUN --mount=type=bind,from=build-scripts,source=/scripts,target=/tmp/build-scripts \
     bash /tmp/build-scripts/install-bun.sh
