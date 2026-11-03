@@ -239,13 +239,15 @@ export class QuiInput extends FormControlBase {
   @Watch("step")
   private normalizeStep(): void {
     const step: unknown = this.step;
-    if (typeof step !== "string" || step === "" || step === "any") {
+    if (typeof step !== "string" || step === "any") {
+      return;
+    }
+    if (step.trim() === "") {
+      this.step = undefined;
       return;
     }
     const value = Number(step);
-    if (Number.isFinite(value)) {
-      this.step = value;
-    }
+    this.step = Number.isFinite(value) ? value : undefined;
   }
 
   @Watch("maskPattern")

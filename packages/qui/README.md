@@ -306,7 +306,11 @@ digits. `input-mode-hint="decimal"` additionally allows one leading `-` and one
 `.` or `,` decimal separator. A bare `-` or separator may appear transiently
 while typing. Masks do not preserve a leading sign or decimal separator, so use
 decimal mode without a mask. When filtering changes a controlled `value`, the
-component updates `value` to the sanitized raw value.
+component updates `value` to the sanitized raw value without emitting
+`valuechange`; read the host `value` or rely on the updated property. Multiple
+separators are collapsed to one, so grouped values such as `1,234.56` are not
+treated as thousands separators. Filtering is intended for selectable text-like
+inputs; caret restoration may not be available for `email` or `password`.
 
 ```html
 <qui-input input-mode-hint="numeric"></qui-input> <qui-input input-mode-hint="decimal"></qui-input>

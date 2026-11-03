@@ -183,4 +183,19 @@ describe("qui-input number constraints", () => {
     await waitForChanges();
     expect(input.value).toBe("1");
   });
+
+  it("falls back to one for an invalid step attribute", async () => {
+    const { root, waitForChanges } = await render(<qui-input inputType="number" value={0} />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+    const increment = queryControl<HTMLButtonElement>(host, "[data-part=increment-trigger]");
+
+    host.setAttribute("step", "invalid");
+    await waitForChanges();
+    expect(host.step).toBeUndefined();
+
+    increment.click();
+    await waitForChanges();
+    expect(input.value).toBe("1");
+  });
 });
