@@ -178,7 +178,7 @@ describe("qui-input", () => {
   });
 
   it("forwards spellcheck and autocorrect hints to supported inputs", async () => {
-    const { root } = await render(<qui-input spellcheckHint={false} autocorrectHint="off" />);
+    const { root } = await render(<qui-input spellcheckHint={false} autocorrectHint={false} />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
@@ -186,9 +186,17 @@ describe("qui-input", () => {
     expect(input.getAttribute("autocorrect")).toBe("off");
   });
 
+  it("maps autocorrect true to the native on value", async () => {
+    const { root } = await render(<qui-input autocorrectHint />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(input.getAttribute("autocorrect")).toBe("on");
+  });
+
   it("forwards autocorrect but not spellcheck to email", async () => {
     const { root } = await render(
-      <qui-input inputType="email" spellcheckHint={false} autocorrectHint="off" />,
+      <qui-input inputType="email" spellcheckHint={false} autocorrectHint={false} />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
@@ -199,7 +207,7 @@ describe("qui-input", () => {
 
   it("does not forward spellcheck and autocorrect to unsupported inputs", async () => {
     const { root } = await render(
-      <qui-input inputType="password" spellcheckHint={false} autocorrectHint="off" />,
+      <qui-input inputType="password" spellcheckHint={false} autocorrectHint={false} />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");

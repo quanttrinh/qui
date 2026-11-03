@@ -54,8 +54,8 @@ export type InputAutocapitalize = "none" | "off" | "sentences" | "on" | "words" 
 /** The native `enterkeyhint` hints supported by the inner input. */
 export type InputEnterKeyHint = "enter" | "done" | "go" | "next" | "previous" | "search" | "send";
 
-/** The Safari-specific `autocorrect` hints supported by the inner input. */
-export type InputAutocorrect = "on" | "off";
+/** The Safari-specific `autocorrect` hint supported by the inner input. */
+export type InputAutocorrect = boolean;
 
 const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password", "url"]);
 
@@ -126,7 +126,7 @@ export class QuiInput extends FormControlBase {
   @Prop() enterKeyAction: InputEnterKeyHint | "" = "";
   /** Native `spellcheck` hint for text and search inputs. */
   @Prop() spellcheckHint?: boolean;
-  /** Native `autocorrect` hint for text, search, and email inputs. */
+  /** Native `autocorrect` hint for text, search, and email inputs. `true` maps to `on`, `false` to `off`. */
   @Prop() autocorrectHint?: InputAutocorrect;
   /** Input mode hint. */
   @Prop() inputModeHint?: InputMode;
@@ -296,6 +296,13 @@ export class QuiInput extends FormControlBase {
     }
     const value = Number(this.step);
     return Number.isFinite(value) ? value : undefined;
+  }
+
+  private get resolvedAutocorrect(): "on" | "off" | undefined {
+    if (!this.supportsAutocorrect || this.autocorrectHint === undefined) {
+      return undefined;
+    }
+    return this.autocorrectHint ? "on" : "off";
   }
 
   private get resolvedType(): string {
@@ -598,7 +605,7 @@ export class QuiInput extends FormControlBase {
               multiple={this.inputType === "email" && this.multiple ? true : undefined}
               enterKeyHint={this.enterKeyAction === "" ? undefined : this.enterKeyAction}
               spellcheck={this.supportsSpellcheck ? this.spellcheckHint : undefined}
-              autocorrect={this.supportsAutocorrect ? this.autocorrectHint : undefined}
+              autocorrect={this.resolvedAutocorrect}
               autocapitalize={this.resolvedAutocapitalize}
               inputMode={this.inputModeHint}
               maxLength={this.maxLength}

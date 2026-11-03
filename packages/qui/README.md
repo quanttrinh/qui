@@ -296,7 +296,8 @@ type:
 - `multiple` applies only to `email`.
 - `enter-key-action` applies to every input type.
 - `spellcheck-hint` applies to `text` and `search`.
-- `autocorrect-hint` applies to `text`, `search`, and `email`.
+- `autocorrect-hint` applies to `text`, `search`, and `email`; `true` maps to
+  the native `on` value and `false` to `off`.
 
 For text-like inputs, `input-mode-hint="numeric"` strips everything except
 digits. `input-mode-hint="decimal"` additionally allows one leading `-` and one
