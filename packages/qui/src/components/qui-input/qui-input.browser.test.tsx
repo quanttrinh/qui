@@ -21,6 +21,63 @@ describe("qui-input", () => {
     expect(spy).toHaveReceivedEventDetail({ value: "123-456", unmaskedValue: "123456" });
   });
 
+  it("strips non-numeric characters when input mode is numeric", async () => {
+    const { root, spyOnEvent, waitForChanges } = await render(
+      <qui-input inputModeHint="numeric" maskPattern="###-###" />,
+    );
+    const spy = spyOnEvent("valuechange");
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    typeInto(input, "12a3-4b5");
+    await waitForChanges();
+
+    expect(input.value).toBe("123-456");
+    expect(spy).toHaveReceivedEventDetail({ value: "123-456", unmaskedValue: "123456" });
+  });
+
+  it("sanitizes controlled values in numeric mode", async () => {
+    const { root } = await render(<qui-input inputModeHint="numeric" value="a1b2" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(input.value).toBe("12");
+  });
+
+  it("strips signs and decimal separators in numeric mode", async () => {
+    const { root, waitForChanges } = await render(<qui-input inputModeHint="numeric" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    typeInto(input, "-1.5,2");
+    await waitForChanges();
+
+    expect(input.value).toBe("152");
+  });
+
+  it("allows one sign and one decimal separator in decimal mode", async () => {
+    const { root, waitForChanges } = await render(<qui-input inputModeHint="decimal" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    typeInto(input, "-1.2.3,4");
+    await waitForChanges();
+    expect(input.value).toBe("-1.234");
+
+    typeInto(input, "1,25");
+    await waitForChanges();
+    expect(input.value).toBe("1,25");
+  });
+
+  it("accepts negative decimals in native number inputs", async () => {
+    const { root } = await render(<qui-input inputType="number" step="any" value={-1.5} />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(input.value).toBe("-1.5");
+    expect(input.validity.valid).toBe(true);
+  });
+
   it("steps number inputs and respects min/max", async () => {
     const { root, waitForChanges } = await render(
       <qui-input inputType="number" value={2} min={1} max={3} step={1} />,
@@ -61,6 +118,61 @@ describe("qui-input", () => {
     expect(input.hasAttribute("min")).toBe(false);
     expect(input.hasAttribute("max")).toBe(false);
     expect(input.hasAttribute("step")).toBe(false);
+  });
+
+  it("supports step any for number inputs", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-input inputType="number" step="any" value={1.5} />,
+    );
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+    const increment = queryControl<HTMLButtonElement>(host, "[data-part=increment-trigger]");
+
+    expect(input.step).toBe("any");
+
+    increment.click();
+    await waitForChanges();
+    expect(input.value).toBe("2.5");
+  });
+
+  it("forwards multiple for email inputs", async () => {
+    const { root } = await render(<qui-input inputType="email" multiple />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(input.multiple).toBe(true);
+  });
+
+  it("does not forward multiple to non-email inputs", async () => {
+    const { root } = await render(<qui-input multiple />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(input.multiple).toBe(false);
+  });
+
+  it("renders url inputs with keyboard and text hints", async () => {
+    const { root } = await render(
+      <qui-input inputType="url" enterKeyHint="go" spellcheckHint={false} autocorrectHint="off" />,
+    );
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(input.type).toBe("url");
+    expect(input.enterKeyHint).toBe("go");
+    expect(input.spellcheck).toBe(false);
+    expect(input.getAttribute("autocorrect")).toBe("off");
+  });
+
+  it("only forwards spellcheck and autocorrect to supported input types", async () => {
+    const { root } = await render(
+      <qui-input inputType="password" spellcheckHint={false} autocorrectHint="off" />,
+    );
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(input.spellcheck).toBe(true);
+    expect(input.hasAttribute("autocorrect")).toBe(false);
   });
 
   it("toggles password visibility", async () => {

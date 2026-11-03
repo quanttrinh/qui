@@ -32,7 +32,7 @@ import { FormController, type FormValidity } from "../shared/form-control/contro
 import { styles } from "./styles";
 
 /** The input types `qui-input` can render. */
-export type InputType = "text" | "email" | "tel" | "search" | "password" | "number";
+export type InputType = "text" | "email" | "tel" | "search" | "password" | "number" | "url";
 
 /** The `inputmode` hints supported by the native input. */
 export type InputMode =
@@ -51,7 +51,13 @@ export type InputTextCase = TextCase;
 /** The native `autocapitalize` hints supported by the inner input. */
 export type InputAutocapitalize = "none" | "off" | "sentences" | "on" | "words" | "characters";
 
-const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password"]);
+/** The native `enterkeyhint` hints supported by the inner input. */
+export type InputEnterKeyHint = "enter" | "done" | "go" | "next" | "previous" | "search" | "send";
+
+/** The Safari-specific `autocorrect` hints supported by the inner input. */
+export type InputAutocorrect = "on" | "off";
+
+const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password", "url"]);
 
 /**
  * A character mask for text-like inputs. `#` matches a digit, `a` a letter and
@@ -114,6 +120,14 @@ export class QuiInput extends FormControlBase {
   @Prop() placeholder?: string;
   /** Autocomplete hint. */
   @Prop() autocomplete?: string;
+  /** Allows multiple comma-separated values. Only applies to `email` inputs. */
+  @Prop() multiple = false;
+  /** Native `enterkeyhint` hint for the virtual keyboard. */
+  @Prop() enterKeyHint: InputEnterKeyHint | "" = "";
+  /** Native `spellcheck` hint for text and search inputs. */
+  @Prop() spellcheckHint?: boolean;
+  /** Native `autocorrect` hint for text, search, and email inputs. */
+  @Prop() autocorrectHint?: InputAutocorrect;
   /** Input mode hint. */
   @Prop() inputModeHint?: InputMode;
   /** Maximum number of characters. */
@@ -130,8 +144,8 @@ export class QuiInput extends FormControlBase {
   @Prop() readOnly = false;
   /** Marks the input required. Ignored while nested in a `qui-field`. */
   @Prop() required = false;
-  /** Amount the number triggers add or remove. Defaults to `1`. */
-  @Prop() step?: number;
+  /** Amount the number triggers add or remove, or `any` for arbitrary values. Defaults to `1`. */
+  @Prop() step?: number | "any";
   /** Lower bound enforced while stepping. */
   @Prop() min?: number;
   /** Upper bound enforced while stepping. */
@@ -268,6 +282,14 @@ export class QuiInput extends FormControlBase {
     return SELECTABLE_INPUT_TYPES.has(this.inputType);
   }
 
+  private get supportsSpellcheck(): boolean {
+    return this.inputType === "text" || this.inputType === "search";
+  }
+
+  private get supportsAutocorrect(): boolean {
+    return this.inputType === "text" || this.inputType === "search" || this.inputType === "email";
+  }
+
   private get resolvedType(): string {
     if (this.inputType === "password") {
       return this.passwordVisible ? "text" : "password";
@@ -319,10 +341,33 @@ export class QuiInput extends FormControlBase {
     }
   }
 
+  private sanitizeValue(raw: string): string {
+    if (this.isNumber) {
+      return raw;
+    }
+    if (this.inputModeHint === "numeric") {
+      return raw.replace(/\D/gu, "");
+    }
+    if (this.inputModeHint === "decimal") {
+      const sign = raw.startsWith("-") ? "-" : "";
+      const body = raw.slice(sign.length).replace(/[^\d.,]/gu, "");
+      const separatorIndex = body.search(/[.,]/u);
+      if (separatorIndex === -1) {
+        return sign + body;
+      }
+      const integer = body.slice(0, separatorIndex);
+      const separator = body[separatorIndex];
+      const fraction = body.slice(separatorIndex + 1).replace(/[.,]/gu, "");
+      return `${sign}${integer}${separator}${fraction}`;
+    }
+    return raw;
+  }
+
   private applyValue(raw: string): void {
-    this.rawValue = raw;
+    const sanitized = this.sanitizeValue(raw);
+    this.rawValue = sanitized;
     const { pattern } = this;
-    const cased = this.isNumber ? raw : applyTextCase(raw, this.textCase);
+    const cased = this.isNumber ? sanitized : applyTextCase(sanitized, this.textCase);
     const next = pattern === undefined ? cased : applyMask(cased, pattern);
     if (this.inputEl !== undefined && this.inputEl.value !== next) {
       this.inputEl.value = next;
@@ -412,9 +457,14 @@ export class QuiInput extends FormControlBase {
     }
     const { pattern } = this;
     const caret = el.selectionStart ?? el.value.length;
-    const raw = pattern === undefined ? el.value : rawFromMasked(el.value, pattern);
-    const rawCaret =
-      pattern === undefined ? caret : rawFromMasked(el.value.slice(0, caret), pattern).length;
+    const rawBeforeCaret =
+      pattern === undefined
+        ? el.value.slice(0, caret)
+        : rawFromMasked(el.value.slice(0, caret), pattern);
+    const raw = this.sanitizeValue(
+      pattern === undefined ? el.value : rawFromMasked(el.value, pattern),
+    );
+    const rawCaret = this.sanitizeValue(rawBeforeCaret).length;
     this.rawValue = raw;
     const cased = this.caseAtCaret(raw, rawCaret);
 
@@ -451,7 +501,8 @@ export class QuiInput extends FormControlBase {
       return;
     }
     const parsed = el.value === "" ? 0 : Number(el.value);
-    let next = (Number.isFinite(parsed) ? parsed : 0) + direction * (this.step ?? 1);
+    const increment = typeof this.step === "number" ? this.step : 1;
+    let next = (Number.isFinite(parsed) ? parsed : 0) + direction * increment;
     if (typeof this.min === "number") {
       next = Math.max(this.min, next);
     }
@@ -523,6 +574,10 @@ export class QuiInput extends FormControlBase {
               type={this.resolvedType}
               placeholder={this.placeholder}
               autocomplete={this.autocomplete}
+              multiple={this.inputType === "email" && this.multiple ? true : undefined}
+              enterKeyHint={this.enterKeyHint === "" ? undefined : this.enterKeyHint}
+              spellcheck={this.supportsSpellcheck ? this.spellcheckHint : undefined}
+              autocorrect={this.supportsAutocorrect ? this.autocorrectHint : undefined}
               autocapitalize={this.resolvedAutocapitalize}
               inputMode={this.inputModeHint}
               maxLength={this.maxLength}

@@ -170,7 +170,7 @@ or per-tag network waterfall.
 - `<qui-switch>` — checked, disabled, required, `checkedchange`
 - `<qui-radio-group>` + `<qui-radio>` — orientation, disabled, required, `valuechange`
 - `<qui-field>` + label, helper text, error text and required indicator parts
-- `<qui-input>` — text/email/tel/search/password/number, masks, text case,
+- `<qui-input>` — text/email/tel/search/password/url/number, masks, text case,
   prefix/suffix slots, number stepping, password visibility, `valuechange`
 - `<qui-textarea>` — multi-line text, auto-growth, character counter, native
   resize modes, `valuechange`
@@ -273,6 +273,41 @@ rendered stepper buttons.
 
 ```html
 <qui-input input-type="number" min="1" max="10" step="1" value="1"></qui-input>
+```
+
+Use `step="any"` to allow arbitrary decimal values. The stepper buttons still
+increment and decrement by `1` in that mode.
+
+```html
+<qui-input input-type="number" step="any"></qui-input>
+```
+
+### Native input hints
+
+Additional native hints are forwarded when they apply to the selected input
+type:
+
+```html
+<qui-input input-type="email" multiple></qui-input>
+<qui-input
+    input-type="url"
+    enter-key-hint="go"
+    spellcheck-hint="false"
+    autocorrect-hint="off"
+></qui-input>
+```
+
+- `multiple` applies only to `email`.
+- `enter-key-hint` applies to every input type.
+- `spellcheck-hint` applies to `text` and `search`.
+- `autocorrect-hint` applies to `text`, `search`, and `email`.
+
+For text-like inputs, `input-mode-hint="numeric"` strips everything except
+digits. `input-mode-hint="decimal"` additionally allows one leading `-` and one
+`.` or `,` decimal separator.
+
+```html
+<qui-input input-mode-hint="numeric"></qui-input> <qui-input input-mode-hint="decimal"></qui-input>
 ```
 
 ### Long text
