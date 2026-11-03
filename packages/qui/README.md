@@ -269,8 +269,9 @@ qui-input::part(input) {
 
 `input-type="number"` forwards `min`, `max`, and `step` to the native input so
 native constraint validation and keyboard stepping use the same bounds as the
-rendered stepper buttons. Number inputs also default to `inputmode="numeric"`;
-set `input-mode-hint` to override it.
+rendered stepper buttons. Number inputs also default to `inputmode="numeric"`
+and numeric filtering; set `input-mode-hint="decimal"` to allow decimal
+punctuation.
 
 ```html
 <qui-input input-type="number" min="1" max="10" step="1" value="1"></qui-input>
@@ -280,7 +281,7 @@ Use `step="any"` to allow arbitrary decimal values. The stepper buttons still
 increment and decrement by `1` in that mode.
 
 ```html
-<qui-input input-type="number" step="any"></qui-input>
+<qui-input input-type="number" input-mode-hint="decimal" step="any"></qui-input>
 ```
 
 ### Native input hints
@@ -305,12 +306,14 @@ to `false` from JavaScript to disable spellcheck.
 For text-like inputs, `input-mode-hint="numeric"` keeps digits and a leading
 `-` when `min` is unset or negative; a non-negative `min` strips the minus.
 `input-mode-hint="decimal"` keeps digits, `-`, `.`, and `,` under the same
-minus rules; it does not parse or normalize separators, so pasted grouped values
-keep their exact formatting. Masks do not preserve a leading sign or decimal
+minus rules; it does not parse separators, so pasted grouped values keep their
+exact formatting. Leading zeros are removed and repeated `-`, `.`, or `,`
+characters are collapsed. Masks do not preserve a leading sign or decimal
 separator, so use decimal mode without a mask. When filtering changes a
 controlled `value`, the component updates `value` and emits `valuechange` with
-the normalized value. Filtering applies to selectable text-like inputs; `email`
-is left unfiltered because it does not support caret restoration.
+the normalized value. Filtering applies whenever the effective input mode is
+`numeric` or `decimal`: from `input-mode-hint`, or the numeric default for
+number inputs.
 
 ```html
 <qui-input input-mode-hint="numeric"></qui-input> <qui-input input-mode-hint="decimal"></qui-input>

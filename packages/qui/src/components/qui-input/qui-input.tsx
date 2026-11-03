@@ -1,4 +1,4 @@
-// oxlint-disable max-lines -- the input component owns its formatting, sanitization, and form logic.
+// oxlint-disable max-dependencies, max-lines -- the input component is the integration point for its helpers.
 import {
   resolveVar,
   AttachInternals,
@@ -30,6 +30,10 @@ import { applyFieldAria } from "../shared/field/aria";
 import { createFieldControl, focusElement } from "../shared/field/control";
 import { FormControlBase } from "../shared/form-control/component-base";
 import { FormController, type FormValidity } from "../shared/form-control/controller";
+import {
+  appendAcceptedNumericOrDecimalCharacter,
+  filterNumericOrDecimalInput,
+} from "./input-filter";
 import { styles } from "./styles";
 
 /** The input types `qui-input` can render. */
@@ -220,6 +224,7 @@ export class QuiInput extends FormControlBase {
 
   public disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.inputEl?.removeEventListener("beforeinput", this.handleBeforeInput);
     this.clearHold();
   }
 
@@ -298,18 +303,18 @@ export class QuiInput extends FormControlBase {
     return step;
   }
 
+  private get effectiveInputMode(): InputMode | undefined {
+    if (this.inputModeHint !== undefined) {
+      return this.inputModeHint;
+    }
+    return this.isNumber ? "numeric" : undefined;
+  }
+
   private get resolvedType(): string {
     if (this.inputType === "password") {
       return this.passwordVisible ? "text" : "password";
     }
     return this.inputType;
-  }
-
-  private get resolvedInputMode(): InputMode | undefined {
-    if (this.inputModeHint !== undefined) {
-      return this.inputModeHint;
-    }
-    return this.isNumber ? "numeric" : undefined;
   }
 
   private get resolvedAutocapitalize(): InputAutocapitalize | undefined {
@@ -360,55 +365,23 @@ export class QuiInput extends FormControlBase {
     return this.min === undefined || this.min < 0;
   }
 
-  private filterNumeric(raw: string): string {
-    let result = "";
-    for (const char of raw) {
-      if (char >= "0" && char <= "9") {
-        result += char;
-      } else if (this.allowNegative && char === "-" && result.length === 0) {
-        result = "-";
-      }
-    }
-    return result;
-  }
-
-  private filterDecimalCharacters(raw: string): string {
-    let result = "";
-    for (const char of raw) {
-      if (
-        (char >= "0" && char <= "9") ||
-        char === "." ||
-        char === "," ||
-        (this.allowNegative && char === "-")
-      ) {
-        result += char;
-      }
-    }
-    return result;
-  }
-
-  private sanitizeValue(raw: string): string {
-    if (this.isNumber || !this.supportsSelection) {
+  private normalizeInputValue(raw: string): string {
+    const mode = this.effectiveInputMode;
+    if (mode !== "numeric" && mode !== "decimal") {
       return raw;
     }
-    if (this.inputModeHint === "numeric") {
-      return this.filterNumeric(raw);
-    }
-    if (this.inputModeHint === "decimal") {
-      return this.filterDecimalCharacters(raw);
-    }
-    return raw;
+    return filterNumericOrDecimalInput(raw, { allowNegative: this.allowNegative, mode });
   }
 
   private applyValue(raw: string): void {
-    const sanitized = this.sanitizeValue(raw);
-    const normalized = this.value !== undefined && String(this.value) !== sanitized;
-    if (normalized) {
-      this.value = sanitized;
+    const normalizedValue = this.normalizeInputValue(raw);
+    const changed = this.value !== undefined && String(this.value) !== normalizedValue;
+    if (changed) {
+      this.value = normalizedValue;
     }
-    this.rawValue = sanitized;
+    this.rawValue = normalizedValue;
     const { pattern } = this;
-    const cased = this.isNumber ? sanitized : applyTextCase(sanitized, this.textCase);
+    const cased = this.isNumber ? normalizedValue : applyTextCase(normalizedValue, this.textCase);
     const next = pattern === undefined ? cased : applyMask(cased, pattern);
     if (this.inputEl !== undefined && this.inputEl.value !== next) {
       this.inputEl.value = next;
@@ -416,8 +389,8 @@ export class QuiInput extends FormControlBase {
     if (this.isNumber) {
       this.currentValue = next;
     }
-    if (normalized) {
-      this.emitValue(next, sanitized);
+    if (changed) {
+      this.emitValue(next, normalizedValue);
     }
     this.form.sync();
   }
@@ -494,6 +467,28 @@ export class QuiInput extends FormControlBase {
     this.form.sync();
   }
 
+  private readonly handleBeforeInput = (event: InputEvent): void => {
+    const mode = this.effectiveInputMode;
+    if ((mode !== "numeric" && mode !== "decimal") || event.isComposing) {
+      return;
+    }
+    const el = event.target;
+    if (!isHTMLInputElement(el)) {
+      return;
+    }
+    const data = event.data ?? event.dataTransfer?.getData("text") ?? "";
+    const options = { allowNegative: this.allowNegative, mode };
+    let result = el.value.slice(0, el.selectionStart ?? el.value.length);
+    for (const char of data) {
+      const next = appendAcceptedNumericOrDecimalCharacter(result, char, options);
+      if (next === undefined) {
+        event.preventDefault();
+        return;
+      }
+      result = next;
+    }
+  };
+
   private readonly handleInput = (event: Event): void => {
     const el = event.target;
     if (!isHTMLInputElement(el)) {
@@ -505,10 +500,10 @@ export class QuiInput extends FormControlBase {
       pattern === undefined
         ? el.value.slice(0, caret)
         : rawFromMasked(el.value.slice(0, caret), pattern);
-    const raw = this.sanitizeValue(
+    const raw = this.normalizeInputValue(
       pattern === undefined ? el.value : rawFromMasked(el.value, pattern),
     );
-    const rawCaret = this.sanitizeValue(rawBeforeCaret).length;
+    const rawCaret = this.normalizeInputValue(rawBeforeCaret).length;
     this.rawValue = raw;
     const cased = this.caseAtCaret(raw, rawCaret);
 
@@ -625,7 +620,12 @@ export class QuiInput extends FormControlBase {
             <input
               {...this.inputProps}
               ref={(el) => {
+                if (this.inputEl === el) {
+                  return;
+                }
+                this.inputEl?.removeEventListener("beforeinput", this.handleBeforeInput);
                 this.inputEl = el;
+                el?.addEventListener("beforeinput", this.handleBeforeInput);
               }}
               type={this.resolvedType}
               placeholder={this.placeholder}
@@ -634,7 +634,7 @@ export class QuiInput extends FormControlBase {
               enterKeyHint={this.keyboardHint === "" ? undefined : this.keyboardHint}
               spellcheck={this.supportsSpellcheck ? this.spellcheckHint : undefined}
               autocapitalize={this.resolvedAutocapitalize}
-              inputMode={this.resolvedInputMode}
+              inputMode={this.effectiveInputMode}
               maxLength={this.maxLength}
               minLength={this.minLength}
               pattern={this.inputPattern}

@@ -35,15 +35,37 @@ describe("qui-input numeric", () => {
     expect(spy).toHaveReceivedEventDetail({ value: "34", unmaskedValue: "34" });
   });
 
-  it("does not sanitize email inputs in numeric mode", async () => {
+  it("sanitizes supported input types when the hint is set", async () => {
+    const { root } = await render(
+      <qui-input inputType="tel" inputModeHint="numeric" value="a1b2" />,
+    );
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(input.value).toBe("12");
+    expect(host.value).toBe("12");
+  });
+
+  it("filters email inputs when the hint is set", async () => {
     const { root } = await render(
       <qui-input inputType="email" inputModeHint="numeric" value="a1b2" />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
-    expect(input.value).toBe("a1b2");
-    expect(host.value).toBe("a1b2");
+    expect(input.value).toBe("12");
+    expect(host.value).toBe("12");
+  });
+
+  it("filters url inputs when the hint is set", async () => {
+    const { root } = await render(
+      <qui-input inputType="url" inputModeHint="numeric" value="a1b2" />,
+    );
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(input.value).toBe("12");
+    expect(host.value).toBe("12");
   });
 
   it("re-sanitizes when the input mode changes", async () => {
@@ -106,6 +128,30 @@ describe("qui-input numeric", () => {
     expect(input.value).toBe("-12");
   });
 
+  it("normalizes leading zeros and repeated punctuation", async () => {
+    const { root, waitForChanges } = await render(<qui-input inputModeHint="numeric" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    typeInto(input, "0123");
+    await waitForChanges();
+    expect(input.value).toBe("123");
+
+    typeInto(input, "0");
+    await waitForChanges();
+    expect(input.value).toBe("0");
+
+    typeInto(input, "-012");
+    await waitForChanges();
+    expect(input.value).toBe("-12");
+
+    typeInto(input, "1--2");
+    await waitForChanges();
+    expect(input.value).toBe("12");
+  });
+});
+
+describe("qui-input decimal", () => {
   it("only removes disallowed decimal characters", async () => {
     const { root, waitForChanges } = await render(<qui-input inputModeHint="decimal" />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
@@ -142,13 +188,73 @@ describe("qui-input numeric", () => {
     expect(input.value).toBe("1.2.3");
   });
 
+  it("normalizes leading zeros and repeated punctuation", async () => {
+    const { root, waitForChanges } = await render(<qui-input inputModeHint="decimal" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    typeInto(input, "00.5");
+    await waitForChanges();
+    expect(input.value).toBe("0.5");
+
+    typeInto(input, "1..2");
+    await waitForChanges();
+    expect(input.value).toBe("1.2");
+
+    typeInto(input, "1,,2");
+    await waitForChanges();
+    expect(input.value).toBe("1,2");
+
+    typeInto(input, "-.5");
+    await waitForChanges();
+    expect(input.value).toBe("-0.5");
+  });
+
   it("accepts negative decimals in native number inputs", async () => {
-    const { root } = await render(<qui-input inputType="number" step="any" value={-1.5} />);
+    const { root } = await render(
+      <qui-input inputType="number" inputModeHint="decimal" step="any" value={-1.5} />,
+    );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
     expect(input.value).toBe("-1.5");
     expect(input.validity.valid).toBe(true);
+  });
+});
+
+describe("qui-input numeric values", () => {
+  it("filters invalid text from number inputs", async () => {
+    const { root, setProps, waitForChanges } = await render(
+      <qui-input inputType="number" value={3} />,
+    );
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    await setProps({ value: "3ssss" });
+    await waitForChanges();
+
+    expect(input.value).toBe("3");
+    expect(host.value).toBe("3");
+  });
+
+  it("prevents disallowed characters before they are entered", async () => {
+    const { root } = await render(<qui-input inputType="number" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    const blocked = new InputEvent("beforeinput", {
+      bubbles: true,
+      cancelable: true,
+      data: "s",
+    });
+    expect(input.dispatchEvent(blocked)).toBe(false);
+
+    const allowed = new InputEvent("beforeinput", {
+      bubbles: true,
+      cancelable: true,
+      data: "1",
+    });
+    expect(input.dispatchEvent(allowed)).toBe(true);
   });
 });
 
@@ -194,7 +300,7 @@ describe("qui-input number constraints", () => {
 
   it("supports step any for number inputs", async () => {
     const { root, waitForChanges } = await render(
-      <qui-input inputType="number" step="any" value={1.5} />,
+      <qui-input inputType="number" inputModeHint="decimal" step="any" value={1.5} />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
@@ -214,7 +320,7 @@ describe("qui-input number constraints", () => {
 
   it("snaps stepper values to the step grid", async () => {
     const { root, waitForChanges } = await render(
-      <qui-input inputType="number" value={1.5} step={1} />,
+      <qui-input inputType="number" inputModeHint="decimal" value={1.5} step={1} />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
