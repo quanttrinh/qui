@@ -56,6 +56,26 @@ export type InputAutocapitalize = "none" | "off" | "sentences" | "on" | "words" 
 export type InputEnterKeyHint = "enter" | "done" | "go" | "next" | "previous" | "search" | "send";
 
 const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password", "url"]);
+
+function filterDigits(raw: string): string {
+  let result = "";
+  for (const char of raw) {
+    if (char >= "0" && char <= "9") {
+      result += char;
+    }
+  }
+  return result;
+}
+
+function filterDecimalCharacters(raw: string): string {
+  let result = "";
+  for (const char of raw) {
+    if ((char >= "0" && char <= "9") || char === "." || char === "," || char === "-") {
+      result += char;
+    }
+  }
+  return result;
+}
 /** The values handed to `valuechange` after every edit. */
 export interface InputValueDetails {
   /** The value shown in the input, including mask literals. */
@@ -352,32 +372,13 @@ export class QuiInput extends FormControlBase {
     if (this.isNumber || !this.supportsSelection) {
       return raw;
     }
-
-    const digitsOnly = this.inputModeHint === "numeric";
-    const allowDecimal = this.inputModeHint === "decimal";
-    if (!digitsOnly && !allowDecimal) {
-      return raw;
+    if (this.inputModeHint === "numeric") {
+      return filterDigits(raw);
     }
-
-    let result = "";
-    let hasSeparator = false;
-
-    for (const char of raw) {
-      const isDigit = char >= "0" && char <= "9";
-      const isSign = !digitsOnly && char === "-" && result.length === 0;
-      const isSeparator = !digitsOnly && (char === "." || char === ",") && !hasSeparator;
-
-      if (isDigit) {
-        result += char;
-      } else if (isSign) {
-        result = "-";
-      } else if (isSeparator) {
-        hasSeparator = true;
-        result += char;
-      }
+    if (this.inputModeHint === "decimal") {
+      return filterDecimalCharacters(raw);
     }
-
-    return result;
+    return raw;
   }
 
   private applyValue(raw: string): void {

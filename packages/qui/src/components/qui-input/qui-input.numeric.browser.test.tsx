@@ -83,18 +83,40 @@ describe("qui-input numeric", () => {
     expect(input.value).toBe("152");
   });
 
-  it("allows one sign and one decimal separator in decimal mode", async () => {
+  it("only removes disallowed decimal characters", async () => {
     const { root, waitForChanges } = await render(<qui-input inputModeHint="decimal" />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
-    typeInto(input, "-1.2.3,4");
+    typeInto(input, "-1.2.3,4x");
     await waitForChanges();
-    expect(input.value).toBe("-1.234");
+    expect(input.value).toBe("-1.2.3,4");
 
     typeInto(input, "1,25");
     await waitForChanges();
     expect(input.value).toBe("1,25");
+  });
+
+  it("keeps grouped decimal pastes unchanged", async () => {
+    const { root, waitForChanges } = await render(<qui-input inputModeHint="decimal" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    typeInto(input, "1,234.56");
+    await waitForChanges();
+    expect(input.value).toBe("1,234.56");
+
+    typeInto(input, "1.234,56");
+    await waitForChanges();
+    expect(input.value).toBe("1.234,56");
+
+    typeInto(input, "1,234,567");
+    await waitForChanges();
+    expect(input.value).toBe("1,234,567");
+
+    typeInto(input, "1.2.3");
+    await waitForChanges();
+    expect(input.value).toBe("1.2.3");
   });
 
   it("accepts negative decimals in native number inputs", async () => {

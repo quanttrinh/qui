@@ -302,15 +302,13 @@ type:
 to `false` from JavaScript to disable spellcheck.
 
 For text-like inputs, `input-mode-hint="numeric"` strips everything except
-digits. `input-mode-hint="decimal"` additionally allows one leading `-` and one
-`.` or `,` decimal separator. A bare `-` or separator may appear transiently
-while typing. Masks do not preserve a leading sign or decimal separator, so use
+digits. `input-mode-hint="decimal"` keeps digits, `-`, `.`, and `,`; it does not
+parse or normalize separators, so pasted grouped values keep their exact
+formatting. Masks do not preserve a leading sign or decimal separator, so use
 decimal mode without a mask. When filtering changes a controlled `value`, the
 component updates `value` and emits `valuechange` with the normalized value.
-Multiple separators are collapsed to one, so grouped values such as `1,234.56`
-are not treated as thousands separators. Filtering applies to selectable
-text-like inputs; `email` is left unfiltered because it does not support caret
-restoration.
+Filtering applies to selectable text-like inputs; `email` is left unfiltered
+because it does not support caret restoration.
 
 ```html
 <qui-input input-mode-hint="numeric"></qui-input> <qui-input input-mode-hint="decimal"></qui-input>
