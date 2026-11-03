@@ -8,6 +8,7 @@ import {
 } from "@stencil/types-output-target";
 import { readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
+import * as ts from "typescript";
 
 interface FrameworkTypesOutputTargetOptions {
   rootDir: string;
@@ -37,6 +38,12 @@ const FRAMEWORK_WRITERS: readonly FrameworkWriter[] = [
 // side-effect import resolvable by bundlers at runtime.
 const RUNTIME_STUB = "// Runtime stub for the type-only framework entry point.\nexport {};\n";
 
+interface TextEdit {
+  readonly start: number;
+  readonly end: number;
+  readonly text: string;
+}
+
 /**
  * Normalize the upstream Preact declarations for current Preact versions.
  *
@@ -54,15 +61,71 @@ function normalizePreactDeclarations(
     readonly events?: readonly { readonly name: string }[];
   }[],
 ): string {
-  let normalized = content
-    .replace("import type { JSX } from 'preact';", "import type { HTMLAttributes } from 'preact';")
-    .replaceAll("JSX.HTMLAttributes<", "HTMLAttributes<");
+  const eventNames = new Map<string, string>();
 
   for (const component of components) {
     for (const event of component.events ?? []) {
       const generated = `on${event.name.charAt(0).toUpperCase()}${event.name.slice(1)}`;
-      normalized = normalized.replaceAll(`'${generated}'`, `'on${event.name}'`);
+      eventNames.set(generated, `on${event.name}`);
     }
+  }
+
+  const sourceFile = ts.createSourceFile(
+    "preact.d.ts",
+    content,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const edits: TextEdit[] = [];
+
+  function visit(node: ts.Node): void {
+    if (
+      ts.isImportDeclaration(node) &&
+      ts.isStringLiteral(node.moduleSpecifier) &&
+      node.moduleSpecifier.text === "preact" &&
+      node.importClause?.namedBindings !== undefined &&
+      ts.isNamedImports(node.importClause.namedBindings)
+    ) {
+      for (const specifier of node.importClause.namedBindings.elements) {
+        if (specifier.name.text === "JSX") {
+          edits.push({
+            start: specifier.name.getStart(sourceFile),
+            end: specifier.name.getEnd(),
+            text: "HTMLAttributes",
+          });
+        }
+      }
+    } else if (
+      ts.isTypeReferenceNode(node) &&
+      ts.isQualifiedName(node.typeName) &&
+      node.typeName.left.getText(sourceFile) === "JSX" &&
+      node.typeName.right.text === "HTMLAttributes"
+    ) {
+      edits.push({
+        start: node.typeName.getStart(sourceFile),
+        end: node.typeName.getEnd(),
+        text: "HTMLAttributes",
+      });
+    } else if (ts.isPropertySignature(node) && ts.isStringLiteral(node.name)) {
+      const replacement = eventNames.get(node.name.text);
+      if (replacement !== undefined) {
+        edits.push({
+          start: node.name.getStart(sourceFile),
+          end: node.name.getEnd(),
+          text: `'${replacement}'`,
+        });
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  let normalized = content;
+  for (const edit of edits.sort((left, right) => right.start - left.start)) {
+    normalized = `${normalized.slice(0, edit.start)}${edit.text}${normalized.slice(edit.end)}`;
   }
 
   return normalized;
