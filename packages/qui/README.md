@@ -48,19 +48,25 @@ same declarations.
 ### React, Solid, and Preact
 
 The package generates framework JSX declarations with
-`@stencil/types-output-target`. Import the matching file once in the app's type
-entry:
+`@stencil/types-output-target`. Import the file for the framework you use once,
+in the app's type entry:
 
 ```ts
+// React 19+
 import "@quanttrinh/qui/types/react";
-import "@quanttrinh/qui/types/solid";
-import "@quanttrinh/qui/types/preact";
+
+// Solid
+// import "@quanttrinh/qui/types/solid";
+
+// Preact
+// import "@quanttrinh/qui/types/preact";
 ```
 
 Each file augments that framework's `JSX.IntrinsicElements` with every `qui-*`
-element, its props, and its Stencil custom events. `@types/react`,
-`solid-js`, and `preact` are optional peer dependencies; consumers only need the
-framework they use.
+element, its props, and its Stencil custom events. The entries are type-only and
+ship an empty runtime module, so a side-effect import resolves safely in
+bundlers. `@types/react`, `solid-js`, and `preact` are optional peer
+dependencies; consumers only need the framework they use.
 
 The React declarations target React 19+, which supports custom elements
 natively.

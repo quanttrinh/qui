@@ -95,13 +95,16 @@
       "types": "./styled-system/types/index.d.ts"
     },
     "./types/react": {
-      "types": "./dist/types/react.d.ts"
+      "types": "./dist/types/react.d.ts",
+      "default": "./dist/types/react.js"
     },
     "./types/solid": {
-      "types": "./dist/types/solid.d.ts"
+      "types": "./dist/types/solid.d.ts",
+      "default": "./dist/types/solid.js"
     },
     "./types/preact": {
-      "types": "./dist/types/preact.d.ts"
+      "types": "./dist/types/preact.d.ts",
+      "default": "./dist/types/preact.js"
     }
   },
   "publishConfig": {
@@ -110,9 +113,10 @@
   },
   "scripts": {
     "dev": "bun run build:utilities && stencil build --dev --watch --serve",
-    "build": "stencil build && bun run build:utilities && bun run build:types",
+    "build": "stencil build && bun run build:utilities && bun run build:types && bun run check:framework-types",
     "build:utilities": "bun build/build-utilities.ts",
     "build:types": "bun build/finalize-types.ts",
+    "check:framework-types": "tsc -p tsconfig.framework-types.json",
     "codegen": "panda codegen",
     "test": "NODE_ENV=test stencil-test",
     "test:unit": "NODE_ENV=test stencil-test --project unit",
@@ -138,6 +142,7 @@
     "@stencil/types-output-target": "^1.0.2",
     "@stencil/vitest": "^1.16.1",
     "@types/node": "^26.6.5",
+    "@types/react": "^19",
     "@typescript/native": "npm:typescript@^7.0.2",
     "@vitest/browser-playwright": "^5.0.5",
     "jiti": "^2.7.0",
