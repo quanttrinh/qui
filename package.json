@@ -12,7 +12,7 @@
     "build": "bun run --cwd packages/qui build && bun run --cwd packages/unplugin build",
     "build:release": "bun run --cwd packages/qui build:release && bun run --cwd packages/unplugin build",
     "build:lib": "bun run --cwd packages/qui build:lib",
-    "test": "bun run --cwd packages/qui test && bun run --cwd packages/unplugin test",
+    "test": "bun run --cwd packages/qui test && bun run --cwd packages/qui test:framework-types && bun run --cwd packages/unplugin test",
     "test:unit": "bun run --cwd packages/qui test:unit && bun run --cwd packages/unplugin test:unit",
     "test:integration": "bun run --cwd packages/qui test:integration",
     "test:browser": "bun run --cwd packages/qui test:browser",

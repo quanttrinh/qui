@@ -10,5 +10,5 @@
     "target": "es2022",
     "types": ["react"]
   },
-  "include": ["build/framework-types-consumer.tsx"]
+  "include": ["react-consumer.tsx"]
 }
