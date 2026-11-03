@@ -20,12 +20,30 @@ describe("qui-input numeric", () => {
   });
 
   it("sanitizes controlled values in numeric mode", async () => {
-    const { root } = await render(<qui-input inputModeHint="numeric" value="a1b2" />);
+    const { root, setProps, spyOnEvent, waitForChanges } = await render(
+      <qui-input inputModeHint="numeric" value="a1b2" />,
+    );
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+    const spy = spyOnEvent("valuechange");
+
+    await setProps({ value: "c3d4" });
+    await waitForChanges();
+
+    expect(input.value).toBe("34");
+    expect(host.value).toBe("34");
+    expect(spy).toHaveReceivedEventDetail({ value: "34", unmaskedValue: "34" });
+  });
+
+  it("does not sanitize email inputs in numeric mode", async () => {
+    const { root } = await render(
+      <qui-input inputType="email" inputModeHint="numeric" value="a1b2" />,
+    );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
-    expect(input.value).toBe("12");
-    expect(host.value).toBe("12");
+    expect(input.value).toBe("a1b2");
+    expect(host.value).toBe("a1b2");
   });
 
   it("re-sanitizes when the input mode changes", async () => {
@@ -120,12 +138,35 @@ describe("qui-input number constraints", () => {
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
     const increment = queryControl<HTMLButtonElement>(host, "[data-part=increment-trigger]");
+    const decrement = queryControl<HTMLButtonElement>(host, "[data-part=decrement-trigger]");
 
     expect(input.step).toBe("any");
 
     increment.click();
     await waitForChanges();
     expect(input.value).toBe("2.5");
+
+    decrement.click();
+    await waitForChanges();
+    expect(input.value).toBe("1.5");
+  });
+
+  it("snaps stepper values to the step grid", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-input inputType="number" value={1.5} step={1} />,
+    );
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+    const increment = queryControl<HTMLButtonElement>(host, "[data-part=increment-trigger]");
+    const decrement = queryControl<HTMLButtonElement>(host, "[data-part=decrement-trigger]");
+
+    increment.click();
+    await waitForChanges();
+    expect(input.value).toBe("2");
+
+    decrement.click();
+    await waitForChanges();
+    expect(input.value).toBe("1");
   });
 
   it("reads a numeric step from an attribute", async () => {

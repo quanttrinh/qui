@@ -57,12 +57,23 @@ describe("qui-input", () => {
   });
 
   it("renders url inputs with keyboard hints", async () => {
-    const { root } = await render(<qui-input inputType="url" enterKeyAction="go" />);
+    const { root } = await render(<qui-input inputType="url" keyboardHint="go" />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
     expect(input.type).toBe("url");
     expect(input.enterKeyHint).toBe("go");
+  });
+
+  it("clears the keyboard hint when reset", async () => {
+    const { root, setProps, waitForChanges } = await render(<qui-input keyboardHint="go" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    await setProps({ keyboardHint: "" });
+    await waitForChanges();
+
+    expect(input.hasAttribute("enterkeyhint")).toBe(false);
   });
 
   it("forwards spellcheck hints to supported inputs", async () => {

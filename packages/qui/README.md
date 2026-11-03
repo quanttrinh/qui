@@ -289,12 +289,12 @@ type:
 
 ```html
 <qui-input input-type="email" multiple></qui-input>
-<qui-input input-type="url" enter-key-action="go"></qui-input>
+<qui-input input-type="url" keyboard-hint="go"></qui-input>
 <qui-input spellcheck-hint></qui-input>
 ```
 
 - `multiple` applies only to `email`.
-- `enter-key-action` is forwarded for every input type, but is most useful for
+- `keyboard-hint` is forwarded for every input type, but is most useful for
   text-like inputs and virtual keyboards.
 - `spellcheck-hint` applies to `text` and `search`.
 
@@ -306,11 +306,11 @@ digits. `input-mode-hint="decimal"` additionally allows one leading `-` and one
 `.` or `,` decimal separator. A bare `-` or separator may appear transiently
 while typing. Masks do not preserve a leading sign or decimal separator, so use
 decimal mode without a mask. When filtering changes a controlled `value`, the
-component updates `value` to the sanitized raw value without emitting
-`valuechange`; read the host `value` or rely on the updated property. Multiple
-separators are collapsed to one, so grouped values such as `1,234.56` are not
-treated as thousands separators. Filtering is intended for selectable text-like
-inputs; caret restoration may not be available for `email` or `password`.
+component updates `value` and emits `valuechange` with the normalized value.
+Multiple separators are collapsed to one, so grouped values such as `1,234.56`
+are not treated as thousands separators. Filtering applies to selectable
+text-like inputs; `email` is left unfiltered because it does not support caret
+restoration.
 
 ```html
 <qui-input input-mode-hint="numeric"></qui-input> <qui-input input-mode-hint="decimal"></qui-input>

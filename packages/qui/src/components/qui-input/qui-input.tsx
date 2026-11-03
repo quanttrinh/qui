@@ -1,3 +1,4 @@
+// oxlint-disable max-lines -- the input component owns its formatting, sanitization, and form logic.
 import {
   resolveVar,
   AttachInternals,
@@ -55,7 +56,6 @@ export type InputAutocapitalize = "none" | "off" | "sentences" | "on" | "words" 
 export type InputEnterKeyHint = "enter" | "done" | "go" | "next" | "previous" | "search" | "send";
 
 const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password", "url"]);
-
 /** The values handed to `valuechange` after every edit. */
 export interface InputValueDetails {
   /** The value shown in the input, including mask literals. */
@@ -112,7 +112,7 @@ export class QuiInput extends FormControlBase {
   /** Allows multiple comma-separated values. Only applies to `email` inputs. */
   @Prop() multiple = false;
   /** Native `enterkeyhint` hint for the virtual keyboard. */
-  @Prop() enterKeyAction: InputEnterKeyHint | "" = "";
+  @Prop() keyboardHint: InputEnterKeyHint | "" = "";
   /** Native `spellcheck` hint for text and search inputs. */
   @Prop() spellcheckHint?: boolean;
   /** Input mode hint. */
@@ -285,7 +285,6 @@ export class QuiInput extends FormControlBase {
     return SELECTABLE_INPUT_TYPES.has(this.inputType);
   }
 
-  // Textarea forwards spellcheck unconditionally; keep input scoped to prose-like types.
   private get supportsSpellcheck(): boolean {
     return this.inputType === "text" || this.inputType === "search";
   }
@@ -350,7 +349,7 @@ export class QuiInput extends FormControlBase {
   }
 
   private sanitizeValue(raw: string): string {
-    if (this.isNumber) {
+    if (this.isNumber || !this.supportsSelection) {
       return raw;
     }
 
@@ -383,7 +382,8 @@ export class QuiInput extends FormControlBase {
 
   private applyValue(raw: string): void {
     const sanitized = this.sanitizeValue(raw);
-    if (this.value !== undefined && String(this.value) !== sanitized) {
+    const normalized = this.value !== undefined && String(this.value) !== sanitized;
+    if (normalized) {
       this.value = sanitized;
     }
     this.rawValue = sanitized;
@@ -395,6 +395,9 @@ export class QuiInput extends FormControlBase {
     }
     if (this.isNumber) {
       this.currentValue = next;
+    }
+    if (normalized) {
+      this.emitValue(next, sanitized);
     }
     this.form.sync();
   }
@@ -504,8 +507,8 @@ export class QuiInput extends FormControlBase {
 
   /** Whether the value can still move one `step` in the given direction. */
   private canStep(direction: 1 | -1): boolean {
-    const parsed = this.currentValue === "" ? 0 : Number(this.currentValue);
-    if (!Number.isFinite(parsed)) {
+    const parsed = this.inputEl?.valueAsNumber;
+    if (parsed === undefined || !Number.isFinite(parsed)) {
       return true;
     }
     const limit = direction > 0 ? this.max : this.min;
@@ -515,15 +518,27 @@ export class QuiInput extends FormControlBase {
     return direction > 0 ? parsed < limit : parsed > limit;
   }
 
-  /** Enforces `min`/`max` around the current value by `step`. */
+  private steppedValue(current: number, direction: 1 | -1): number {
+    const step = this.numericStep;
+    if (step === undefined) {
+      return current + direction;
+    }
+    const base = typeof this.min === "number" ? this.min : 0;
+    const steps = (current - base) / step;
+    const nextSteps = direction > 0 ? Math.floor(steps) + 1 : Math.ceil(steps) - 1;
+    return base + nextSteps * step;
+  }
+
+  /** Snaps one step in the given direction, respecting `min`/`max`. */
   private nudge(direction: 1 | -1): void {
     const el = this.inputEl;
     if (el === undefined) {
       return;
     }
-    const parsed = el.value === "" ? 0 : Number(el.value);
-    const increment = this.numericStep ?? 1;
-    let next = (Number.isFinite(parsed) ? parsed : 0) + direction * increment;
+    const parsed = el.valueAsNumber;
+    const current = Number.isFinite(parsed) ? parsed : 0;
+    let next = this.steppedValue(current, direction);
+
     if (typeof this.min === "number") {
       next = Math.max(this.min, next);
     }
@@ -596,7 +611,7 @@ export class QuiInput extends FormControlBase {
               placeholder={this.placeholder}
               autocomplete={this.autocomplete}
               multiple={this.inputType === "email" && this.multiple ? true : undefined}
-              enterKeyHint={this.enterKeyAction === "" ? undefined : this.enterKeyAction}
+              enterKeyHint={this.keyboardHint === "" ? undefined : this.keyboardHint}
               spellcheck={this.supportsSpellcheck ? this.spellcheckHint : undefined}
               autocapitalize={this.resolvedAutocapitalize}
               inputMode={this.inputModeHint}
