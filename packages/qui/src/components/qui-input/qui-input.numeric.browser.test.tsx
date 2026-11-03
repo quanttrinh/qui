@@ -86,6 +86,26 @@ describe("qui-input numeric", () => {
     expect(input.value).toBe("12");
   });
 
+  it("strips the minus when min is non-negative", async () => {
+    const { root, waitForChanges } = await render(<qui-input inputModeHint="numeric" min={0} />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    typeInto(input, "-12");
+    await waitForChanges();
+    expect(input.value).toBe("12");
+  });
+
+  it("keeps the minus when min is negative", async () => {
+    const { root, waitForChanges } = await render(<qui-input inputModeHint="numeric" min={-10} />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    typeInto(input, "-12");
+    await waitForChanges();
+    expect(input.value).toBe("-12");
+  });
+
   it("only removes disallowed decimal characters", async () => {
     const { root, waitForChanges } = await render(<qui-input inputModeHint="decimal" />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");

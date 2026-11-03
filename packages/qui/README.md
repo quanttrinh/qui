@@ -301,10 +301,11 @@ type:
 `spellcheck-hint` is boolean. In HTML, presence means `true`; set the property
 to `false` from JavaScript to disable spellcheck.
 
-For text-like inputs, `input-mode-hint="numeric"` strips everything except
-digits and a leading `-`. `input-mode-hint="decimal"` keeps digits, `-`, `.`,
-and `,`; it does not parse or normalize separators, so pasted grouped values keep
-their exact formatting. Masks do not preserve a leading sign or decimal
+For text-like inputs, `input-mode-hint="numeric"` keeps digits and a leading
+`-` when `min` is unset or negative; a non-negative `min` strips the minus.
+`input-mode-hint="decimal"` keeps digits, `-`, `.`, and `,` under the same
+minus rules; it does not parse or normalize separators, so pasted grouped values
+keep their exact formatting. Masks do not preserve a leading sign or decimal
 separator, so use decimal mode without a mask. When filtering changes a
 controlled `value`, the component updates `value` and emits `valuechange` with
 the normalized value. Filtering applies to selectable text-like inputs; `email`

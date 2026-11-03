@@ -57,27 +57,6 @@ export type InputEnterKeyHint = "enter" | "done" | "go" | "next" | "previous" | 
 
 const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password", "url"]);
 
-function filterNumeric(raw: string): string {
-  let result = "";
-  for (const char of raw) {
-    if (char >= "0" && char <= "9") {
-      result += char;
-    } else if (char === "-" && result.length === 0) {
-      result = "-";
-    }
-  }
-  return result;
-}
-
-function filterDecimalCharacters(raw: string): string {
-  let result = "";
-  for (const char of raw) {
-    if ((char >= "0" && char <= "9") || char === "." || char === "," || char === "-") {
-      result += char;
-    }
-  }
-  return result;
-}
 /** The values handed to `valuechange` after every edit. */
 export interface InputValueDetails {
   /** The value shown in the input, including mask literals. */
@@ -370,15 +349,46 @@ export class QuiInput extends FormControlBase {
     }
   }
 
+  private get allowNegative(): boolean {
+    return this.min === undefined || this.min < 0;
+  }
+
+  private filterNumeric(raw: string): string {
+    let result = "";
+    for (const char of raw) {
+      if (char >= "0" && char <= "9") {
+        result += char;
+      } else if (this.allowNegative && char === "-" && result.length === 0) {
+        result = "-";
+      }
+    }
+    return result;
+  }
+
+  private filterDecimalCharacters(raw: string): string {
+    let result = "";
+    for (const char of raw) {
+      if (
+        (char >= "0" && char <= "9") ||
+        char === "." ||
+        char === "," ||
+        (this.allowNegative && char === "-")
+      ) {
+        result += char;
+      }
+    }
+    return result;
+  }
+
   private sanitizeValue(raw: string): string {
     if (this.isNumber || !this.supportsSelection) {
       return raw;
     }
     if (this.inputModeHint === "numeric") {
-      return filterNumeric(raw);
+      return this.filterNumeric(raw);
     }
     if (this.inputModeHint === "decimal") {
-      return filterDecimalCharacters(raw);
+      return this.filterDecimalCharacters(raw);
     }
     return raw;
   }
