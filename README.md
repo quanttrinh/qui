@@ -56,7 +56,7 @@ bun run --cwd packages/qui build
 bun run --cwd packages/unplugin build
 ```
 
-Run `bun run build` before hydrate-based suites. Plugin tests do not require a prior build.
+Run `bun run build` before hydrate-based suites. Plugin tests do not require a prior build. The framework type check reads the built declarations, so run `bun run build` before `bun run test` as well.
 
 See [`packages/qui/README.md`](./packages/qui/README.md) for installation,
 components, styling, SSG/SSR, and Panda integration.
