@@ -7,6 +7,11 @@
   "prConcurrentLimit": 2,
   "packageRules": [
     {
+      "description": "Workspace packages are resolved from the local monorepo, not the registry",
+      "matchPackageNames": ["@quanttrinh/qui", "@quanttrinh/qui-unplugin"],
+      "enabled": false
+    },
+    {
       "description": "Expose the update type as a label for the auto-approve workflow",
       "matchUpdateTypes": ["major"],
       "addLabels": ["update-type:major"]
