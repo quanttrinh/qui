@@ -220,6 +220,7 @@ export class QuiInput extends FormControlBase {
 
   public disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.inputEl?.removeEventListener("beforeinput", this.handleBeforeInput);
     this.clearHold();
   }
 
@@ -489,6 +490,34 @@ export class QuiInput extends FormControlBase {
     this.form.sync();
   }
 
+  private isAllowedCharacter(char: string): boolean {
+    if (char >= "0" && char <= "9") {
+      return true;
+    }
+    if (this.allowNegative && char === "-") {
+      return true;
+    }
+    return this.effectiveInputMode === "decimal" && (char === "." || char === ",");
+  }
+
+  private readonly handleBeforeInput = (event: InputEvent): void => {
+    const mode = this.effectiveInputMode;
+    if ((mode !== "numeric" && mode !== "decimal") || event.isComposing) {
+      return;
+    }
+    const el = event.target;
+    if (!isHTMLInputElement(el)) {
+      return;
+    }
+    const data = event.data ?? event.dataTransfer?.getData("text") ?? "";
+    for (const char of data) {
+      if (!this.isAllowedCharacter(char)) {
+        event.preventDefault();
+        return;
+      }
+    }
+  };
+
   private readonly handleInput = (event: Event): void => {
     const el = event.target;
     if (!isHTMLInputElement(el)) {
@@ -620,7 +649,12 @@ export class QuiInput extends FormControlBase {
             <input
               {...this.inputProps}
               ref={(el) => {
+                if (this.inputEl === el) {
+                  return;
+                }
+                this.inputEl?.removeEventListener("beforeinput", this.handleBeforeInput);
                 this.inputEl = el;
+                el?.addEventListener("beforeinput", this.handleBeforeInput);
               }}
               type={this.resolvedType}
               placeholder={this.placeholder}

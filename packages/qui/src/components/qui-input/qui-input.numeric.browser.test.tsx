@@ -127,7 +127,9 @@ describe("qui-input numeric", () => {
     await waitForChanges();
     expect(input.value).toBe("-12");
   });
+});
 
+describe("qui-input decimal", () => {
   it("only removes disallowed decimal characters", async () => {
     const { root, waitForChanges } = await render(<qui-input inputModeHint="decimal" />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
@@ -174,7 +176,9 @@ describe("qui-input numeric", () => {
     expect(input.value).toBe("-1.5");
     expect(input.validity.valid).toBe(true);
   });
+});
 
+describe("qui-input numeric values", () => {
   it("filters invalid text from number inputs", async () => {
     const { root, setProps, waitForChanges } = await render(
       <qui-input inputType="number" value={3} />,
@@ -187,6 +191,26 @@ describe("qui-input numeric", () => {
 
     expect(input.value).toBe("3");
     expect(host.value).toBe("3");
+  });
+
+  it("prevents disallowed characters before they are entered", async () => {
+    const { root } = await render(<qui-input inputType="number" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    const blocked = new InputEvent("beforeinput", {
+      bubbles: true,
+      cancelable: true,
+      data: "s",
+    });
+    expect(input.dispatchEvent(blocked)).toBe(false);
+
+    const allowed = new InputEvent("beforeinput", {
+      bubbles: true,
+      cancelable: true,
+      data: "1",
+    });
+    expect(input.dispatchEvent(allowed)).toBe(true);
   });
 });
 
