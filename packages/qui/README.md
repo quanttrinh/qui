@@ -265,6 +265,16 @@ qui-input::part(input) {
 }
 ```
 
+### Number inputs
+
+`input-type="number"` forwards `min`, `max`, and `step` to the native input so
+native constraint validation and keyboard stepping use the same bounds as the
+rendered stepper buttons.
+
+```html
+<qui-input input-type="number" min="1" max="10" step="1" value="1"></qui-input>
+```
+
 ### Long text
 
 Use `qui-textarea` for multi-line values. It shares the field, form and validation
