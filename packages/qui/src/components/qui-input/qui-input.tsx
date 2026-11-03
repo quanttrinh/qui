@@ -57,11 +57,13 @@ export type InputEnterKeyHint = "enter" | "done" | "go" | "next" | "previous" | 
 
 const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password", "url"]);
 
-function filterDigits(raw: string): string {
+function filterNumeric(raw: string): string {
   let result = "";
   for (const char of raw) {
     if (char >= "0" && char <= "9") {
       result += char;
+    } else if (char === "-" && result.length === 0) {
+      result = "-";
     }
   }
   return result;
@@ -373,7 +375,7 @@ export class QuiInput extends FormControlBase {
       return raw;
     }
     if (this.inputModeHint === "numeric") {
-      return filterDigits(raw);
+      return filterNumeric(raw);
     }
     if (this.inputModeHint === "decimal") {
       return filterDecimalCharacters(raw);

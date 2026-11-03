@@ -72,15 +72,18 @@ describe("qui-input numeric", () => {
     expect(host.value).toBe("125");
   });
 
-  it("strips signs and decimal separators in numeric mode", async () => {
+  it("keeps a leading minus and strips separators in numeric mode", async () => {
     const { root, waitForChanges } = await render(<qui-input inputModeHint="numeric" />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
     typeInto(input, "-1.5,2");
     await waitForChanges();
+    expect(input.value).toBe("-152");
 
-    expect(input.value).toBe("152");
+    typeInto(input, "1-2");
+    await waitForChanges();
+    expect(input.value).toBe("12");
   });
 
   it("only removes disallowed decimal characters", async () => {
