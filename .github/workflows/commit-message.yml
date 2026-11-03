@@ -1,9 +1,12 @@
 name: Commit Message
 
-# pull_request_target so the check always runs from the base branch and cannot
-# be weakened by the PR under review. No PR code is checked out or executed.
+# pull_request rather than pull_request_target: Changesets pushes its release
+# branch with GITHUB_TOKEN, and GitHub does not create pull_request_target runs
+# for those pushes, so this required check never reported and blocked the
+# release PR. The validator script is still checked out from the default branch,
+# so no PR code is executed.
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, edited, synchronize, reopened]
 
 permissions:
