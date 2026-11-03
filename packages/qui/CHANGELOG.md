@@ -1,5 +1,25 @@
 # @quanttrinh/qui
 
+## 0.6.0
+
+### Minor Changes
+
+- ce1e172: Generate React 19+, Solid, and Preact JSX declarations with `@stencil/types-output-target` and expose them as `@quanttrinh/qui/types/react`, `@quanttrinh/qui/types/solid`, and `@quanttrinh/qui/types/preact`. The package root also re-exports the generated component prop and custom event types so the framework declarations resolve from one entry point. The Preact declarations require Preact 10.28 or newer.
+- 55a6238: Add a `url` input type and `multiple`, `keyboardHint`, and `spellcheckHint`
+  props, allow `step="any"` for number inputs, default number inputs to
+  `inputmode="numeric"`, strip non-digit characters when `inputModeHint="numeric"`,
+  and keep numeric punctuation when `inputModeHint="decimal"`. Remove the `mask`
+  object prop and `InputMask` type; use `maskPattern` instead.
+
+### Patch Changes
+
+- 4240263: Apply numeric and decimal filtering based on the effective input mode. Number
+  inputs default to `numeric`, while other input types filter when
+  `input-mode-hint` is set. Leading zeros are removed and repeated `-`, `.`, or
+  `,` characters are collapsed.
+- 8805334: Forward `min`, `max`, and `step` to the native number input so native constraint
+  validation and keyboard stepping use the same bounds as the component steppers.
+
 ## 0.5.0
 
 ### Minor Changes
