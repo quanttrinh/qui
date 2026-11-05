@@ -1,4 +1,7 @@
-import { type ReactiveController } from "../reactive-control/controller";
+import {
+  ReactiveControllerBase,
+  type ReactiveControllerHost,
+} from "../reactive-control/controller";
 import { type CheckedState } from "./checked-state";
 
 interface CheckableControllerOptions {
@@ -9,7 +12,6 @@ interface CheckableControllerOptions {
   isDisabled: () => boolean;
   isReadOnly: () => boolean;
   onChange: (checked: CheckedState) => void;
-  requestUpdate: () => void;
 }
 
 /** The `data-state` value for a checkable control. */
@@ -19,7 +21,7 @@ export type CheckableState = "checked" | "unchecked" | "indeterminate";
  * Checked state, input synchronization, and focus-visible tracking shared by
  * checkbox and switch. The host owns the form and field integration.
  */
-export class CheckableController implements ReactiveController {
+export class CheckableController extends ReactiveControllerBase<ReactiveControllerHost> {
   private readonly options: CheckableControllerOptions;
   private current: CheckedState = false;
   private initial: CheckedState = false;
@@ -28,7 +30,8 @@ export class CheckableController implements ReactiveController {
   private focused = false;
   private focusVisible = false;
 
-  constructor(options: CheckableControllerOptions) {
+  constructor(host: ReactiveControllerHost, options: CheckableControllerOptions) {
+    super(host);
     this.options = options;
   }
 
@@ -112,17 +115,17 @@ export class CheckableController implements ReactiveController {
     }
     this.current = checked;
     this.options.onChange(checked);
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 
   public reset(): void {
     this.current = this.initial;
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 
   public restore(checked: CheckedState): void {
     this.current = checked;
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 
   /** Push the effective state into the native input. */
@@ -151,7 +154,7 @@ export class CheckableController implements ReactiveController {
     }
     this.focused = true;
     this.focusVisible = focusVisible;
-    this.options.requestUpdate();
+    this.requestUpdate();
   };
 
   private readonly handleBlur = (): void => {
@@ -160,7 +163,7 @@ export class CheckableController implements ReactiveController {
     }
     this.focused = false;
     this.focusVisible = false;
-    this.options.requestUpdate();
+    this.requestUpdate();
   };
 
   private removeInputListeners(): void {

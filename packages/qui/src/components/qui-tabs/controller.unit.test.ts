@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { createTestControllerHost } from "../../test-utils/controller-host";
 import { TabsController } from "./controller";
 
 function createEnvironment(values: string[], activationMode: "manual" | "automatic" = "automatic") {
@@ -12,7 +13,7 @@ function createEnvironment(values: string[], activationMode: "manual" | "automat
     disabled: false,
     focus: vi.fn(),
   }));
-  const controller = new TabsController({
+  const controller = new TabsController(createTestControllerHost(), {
     getValue: () => selected,
     getDefaultValue: () => undefined,
     getActivationMode: () => activationMode,
@@ -21,7 +22,6 @@ function createEnvironment(values: string[], activationMode: "manual" | "automat
     onChange: (value) => {
       changes.push(value);
     },
-    requestUpdate: () => undefined,
   });
   controller.hostWillLoad();
   for (const [index, value] of values.entries()) {

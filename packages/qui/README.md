@@ -793,6 +793,29 @@ test lazy loader into `.stencil-test` instead of the `www` demo output. Direct
 `vitest.setup.ts` loads that loader and the generated theme/shared styles for
 browser tests.
 
+## Reactive controllers
+
+Controllers share a Lit-style lifecycle contract. A controller receives its
+host in the constructor and registers itself, so components only declare the
+fields:
+
+```ts
+export class QuiExample extends ReactiveControlBase {
+  @Element() host!: HTMLQuiExampleElement;
+
+  private readonly form = new FormController(this, {
+    getInternals: () => this.internals,
+    // ...
+  });
+}
+```
+
+`ReactiveControllerBase` provides `hostElement` and `requestUpdate()`.
+`ReactiveControlBase` forwards the Stencil lifecycle hooks, implements
+`addController()` / `removeController()`, and schedules renders with
+`forceUpdate()`. Override `requestUpdate()` in a component when a controller
+change also needs to notify context subscribers.
+
 ## Implementation notes
 
 - The original Zag integrations have been replaced with local controllers.

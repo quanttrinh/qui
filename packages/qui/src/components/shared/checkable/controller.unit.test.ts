@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createTestControllerHost } from "../../../test-utils/controller-host";
 import { type CheckedState } from "./checked-state";
 import { CheckableController } from "./controller";
 
@@ -11,7 +12,7 @@ function createController(options?: {
   const changes: CheckedState[] = [];
   let disabled = false;
   let readOnly = false;
-  const controller = new CheckableController({
+  const controller = new CheckableController(createTestControllerHost(), {
     getChecked: () => options?.checked,
     getDefaultChecked: () => options?.defaultChecked,
     getIndeterminate: () => options?.indeterminate ?? false,
@@ -20,7 +21,6 @@ function createController(options?: {
     onChange: (checked) => {
       changes.push(checked);
     },
-    requestUpdate: () => undefined,
   });
   controller.hostWillLoad();
   return {

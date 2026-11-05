@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { createTestControllerHost } from "../../../test-utils/controller-host";
 import { clearField, provideField, type FieldApi } from "../field/context";
 import { type FieldControlHandle } from "../field/registry";
 import { FormController } from "./controller";
@@ -45,22 +46,23 @@ function createController(host: FakeElement): FormController {
   const setValidity = vi.fn();
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   const internals = { setFormValue, setValidity } as unknown as ElementInternals;
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-  const controller = new FormController({
-    getHost: () => host as unknown as HTMLElement,
-    getInternals: () => internals,
-    getName: () => "test",
-    getMultiple: () => false,
-    getValue: () => [],
-    getDisabled: () => false,
-    getReadOnly: () => false,
-    getRequired: () => false,
-    getInvalid: () => false,
-    getValidationElement: () => undefined,
-    onReset: (): void => undefined,
-    onRestore: (): void => undefined,
-    requestUpdate: (): void => undefined,
-  });
+  const controller = new FormController(
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    createTestControllerHost(host as unknown as HTMLElement),
+    {
+      getInternals: () => internals,
+      getName: () => "test",
+      getMultiple: () => false,
+      getValue: () => [],
+      getDisabled: () => false,
+      getReadOnly: () => false,
+      getRequired: () => false,
+      getInvalid: () => false,
+      getValidationElement: () => undefined,
+      onReset: (): void => undefined,
+      onRestore: (): void => undefined,
+    },
+  );
   return controller;
 }
 

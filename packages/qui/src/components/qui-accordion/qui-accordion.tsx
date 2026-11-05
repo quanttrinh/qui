@@ -75,17 +75,13 @@ export class QuiAccordion extends ReactiveControlBase {
   private idBase = "";
   private readonly listeners = createListenerStore();
   private readonly generatedId = nextId("qui-accordion");
-  private readonly controller = new AccordionController({
+  private readonly controller = new AccordionController(this, {
     getValue: (): string[] | undefined => this.value,
     getDefaultValue: (): string[] | undefined => this.defaultValue,
     getMultiple: (): boolean => this.multiple,
     getCollapsible: (): boolean => this.collapsible,
     onChange: (value: string[]): void => {
       this.valueChange.emit({ value });
-    },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-      this.listeners.notify();
     },
   });
   private readonly context: AccordionContext = {
@@ -125,9 +121,9 @@ export class QuiAccordion extends ReactiveControlBase {
     subscribe: this.listeners.subscribe,
   };
 
-  constructor() {
-    super();
-    this.addController(this.controller);
+  public requestUpdate(): void {
+    super.requestUpdate();
+    this.listeners.notify();
   }
 
   public connectedCallback(): void {

@@ -1,4 +1,8 @@
 import { type OptionItem } from "../shared/option/option";
+import {
+  ReactiveControllerBase,
+  type ReactiveControllerHost,
+} from "../shared/reactive-control/controller";
 import { type ComboboxFilter, type ComboboxFilterMode, OptionFilter } from "./model";
 
 export interface ComboboxInputOptions {
@@ -8,14 +12,13 @@ export interface ComboboxInputOptions {
   getFilterDebounce: () => number;
   onInputValueChange: (value: string, reason: string) => void;
   onQueryApplied: () => void;
-  requestUpdate: () => void;
 }
 
 /**
  * Combobox text/query state: controlled input value, debounced filtering, and
  * the filtered-item cache. Unique to combobox; select has no query.
  */
-export class ComboboxInputController {
+export class ComboboxInputController extends ReactiveControllerBase<ReactiveControllerHost> {
   private readonly options: ComboboxInputOptions;
   private text = "";
   private query = "";
@@ -23,7 +26,8 @@ export class ComboboxInputController {
   private readonly optionFilter = new OptionFilter();
   private timer?: ReturnType<typeof setTimeout>;
 
-  constructor(options: ComboboxInputOptions) {
+  constructor(host: ReactiveControllerHost, options: ComboboxInputOptions) {
+    super(host);
     this.options = options;
   }
 
@@ -49,7 +53,7 @@ export class ComboboxInputController {
     this.text = value;
     this.updateQuery(value);
     this.options.onInputValueChange(value, "input");
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 
   public setText(value: string, reason?: string): void {
@@ -58,13 +62,13 @@ export class ComboboxInputController {
     if (reason !== undefined) {
       this.options.onInputValueChange(value, reason);
     }
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 
   public setTextSilently(value: string): void {
     this.text = value;
     this.updateQuery(value);
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 
   public syncControlled(value: string): void {
@@ -83,6 +87,10 @@ export class ComboboxInputController {
 
   public dispose(): void {
     this.clearTimer();
+  }
+
+  public hostDisconnected(): void {
+    this.dispose();
   }
 
   private updateQuery(value: string): void {
@@ -104,7 +112,7 @@ export class ComboboxInputController {
     }
     this.query = value;
     this.options.onQueryApplied();
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 
   private clearTimer(): void {

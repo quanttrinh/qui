@@ -168,22 +168,28 @@ describe("context provider notifications", () => {
       setFormValue: vi.fn(),
       setValidity: vi.fn(),
     } as unknown as ElementInternals;
-    const controller = new FormController({
-      getHost: () => consumer,
-      getInternals: () => internals,
-      getName: () => "test",
-      getMultiple: () => false,
-      getValue: () => [],
-      getDisabled: () => false,
-      getReadOnly: () => false,
-      getRequired: () => false,
-      getInvalid: () => false,
-      getValidationElement: () => undefined,
-      onReset: (): void => undefined,
-      onRestore: (): void => undefined,
-      requestUpdate,
-      onChange,
-    });
+    const controller = new FormController(
+      {
+        hostElement: consumer,
+        addController: vi.fn(),
+        removeController: vi.fn(),
+        requestUpdate,
+      },
+      {
+        getInternals: () => internals,
+        getName: () => "test",
+        getMultiple: () => false,
+        getValue: () => [],
+        getDisabled: () => false,
+        getReadOnly: () => false,
+        getRequired: () => false,
+        getInvalid: () => false,
+        getValidationElement: () => undefined,
+        onReset: (): void => undefined,
+        onRestore: (): void => undefined,
+        onChange,
+      },
+    );
 
     controller.hostConnected();
     expect(controller.fieldApi).toBeUndefined();

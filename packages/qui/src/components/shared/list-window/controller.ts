@@ -1,4 +1,7 @@
-import { type ReactiveController } from "../reactive-control/controller";
+import {
+  ReactiveControllerBase,
+  type ReactiveControllerHost,
+} from "../reactive-control/controller";
 import { ListMetrics, scrollIndexIntoView, type ListMode, type ListWindow } from "./model";
 import { ListSizeObserver } from "./size-observer";
 
@@ -6,7 +9,6 @@ interface ListWindowControllerOptions {
   getEstimateSize: () => number;
   fallbackViewportSize: number;
   getOverscan: () => number;
-  requestUpdate: () => void;
 }
 
 interface ListWindowOverrides {
@@ -20,7 +22,7 @@ interface ListWindowOverrides {
  * Owns list windowing: measured offsets, scroll offset, viewport, reveal, and
  * both virtualization and overflow window computation.
  */
-export class ListWindowController implements ReactiveController {
+export class ListWindowController extends ReactiveControllerBase<ReactiveControllerHost> {
   private readonly options: ListWindowControllerOptions;
   private readonly metrics: ListMetrics;
   private readonly sizeObserver: ListSizeObserver;
@@ -28,13 +30,14 @@ export class ListWindowController implements ReactiveController {
   private viewport?: HTMLElement;
   private viewportObserver?: ResizeObserver;
 
-  constructor(options: ListWindowControllerOptions) {
+  constructor(host: ReactiveControllerHost, options: ListWindowControllerOptions) {
+    super(host);
     this.options = options;
     this.metrics = new ListMetrics({ estimate: options.getEstimateSize() });
     this.sizeObserver = new ListSizeObserver({
       onMeasured: (index: number, size: number): boolean => this.metrics.setSize(index, size),
       onResize: (): void => {
-        this.options.requestUpdate();
+        this.requestUpdate();
       },
     });
   }
@@ -73,7 +76,7 @@ export class ListWindowController implements ReactiveController {
     this.viewport = element;
     if (element !== undefined && typeof ResizeObserver === "function") {
       this.viewportObserver = new ResizeObserver(() => {
-        this.options.requestUpdate();
+        this.requestUpdate();
       });
       this.viewportObserver.observe(element);
     }
@@ -86,7 +89,7 @@ export class ListWindowController implements ReactiveController {
       this.viewport.scrollTop = 0;
     }
     if (changed) {
-      this.options.requestUpdate();
+      this.requestUpdate();
     }
   }
 
@@ -100,7 +103,7 @@ export class ListWindowController implements ReactiveController {
       metrics: this.metrics,
       onScrollTo: (top) => {
         this.offset = top;
-        this.options.requestUpdate();
+        this.requestUpdate();
       },
     });
   }
@@ -109,13 +112,13 @@ export class ListWindowController implements ReactiveController {
     const { viewport } = this;
     if (viewport !== undefined && viewport.scrollTop !== this.offset) {
       this.offset = viewport.scrollTop;
-      this.options.requestUpdate();
+      this.requestUpdate();
     }
   }
 
   public hostDidRender(): void {
     if (this.sizeObserver.sync(this.renderedRows())) {
-      this.options.requestUpdate();
+      this.requestUpdate();
     }
   }
 

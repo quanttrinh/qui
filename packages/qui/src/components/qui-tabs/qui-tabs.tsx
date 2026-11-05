@@ -79,7 +79,7 @@ export class QuiTabs extends ReactiveControlBase {
   private readonly listeners = createListenerStore();
   private readonly generatedId = nextId("qui-tabs");
   private idBase = "";
-  private readonly controller = new TabsController({
+  private readonly controller = new TabsController(this, {
     getValue: (): string | undefined => this.value,
     getDefaultValue: (): string | undefined => this.defaultValue,
     getActivationMode: (): "manual" | "automatic" => this.activationMode,
@@ -87,10 +87,6 @@ export class QuiTabs extends ReactiveControlBase {
     getDeselectable: (): boolean => this.deselectable,
     onChange: (value: string | undefined): void => {
       this.valueChange.emit({ value });
-    },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-      this.listeners.notify();
     },
   });
   private readonly context: TabsContext = {
@@ -135,9 +131,9 @@ export class QuiTabs extends ReactiveControlBase {
     subscribe: this.listeners.subscribe,
   };
 
-  constructor() {
-    super();
-    this.addController(this.controller);
+  public requestUpdate(): void {
+    super.requestUpdate();
+    this.listeners.notify();
   }
 
   public connectedCallback(): void {

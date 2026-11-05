@@ -3,7 +3,6 @@ import {
   Component,
   Element,
   Event,
-  forceUpdate,
   h,
   Host,
   Method,
@@ -140,8 +139,7 @@ export class QuiCombobox extends OptionControlBase {
   private readonly generatedId = nextId("qui-combobox");
   private readonly listId = `${this.generatedId}-listbox`;
   private readonly fieldControl = createFieldControl(() => this.inputEl);
-  private readonly form = new FormController({
-    getHost: (): HTMLElement => this.host,
+  private readonly form = new FormController(this, {
     getInternals: (): ElementInternals => this.internals,
     getName: (): string | undefined => this.name,
     getMultiple: (): boolean => this.multiple,
@@ -165,27 +163,20 @@ export class QuiCombobox extends OptionControlBase {
         displayValueFor(this.source.items, this.selection.selected, this.multiple),
       );
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
 
   protected get formController(): FormController {
     return this.form;
   }
-  private readonly source = new OptionSourceController({
+  private readonly source = new OptionSourceController(this, {
     adapter: quiOptionSource,
-    getHost: (): HTMLElement => this.host,
     getItems: (): readonly ComboboxOption[] | undefined => this.items,
     getRenderedRoot: (): HTMLElement | undefined => this.rootEl,
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
     onInvalidate: (): void => {
       this.invalidateFilter();
     },
   });
-  private readonly selection = new SelectionController({
+  private readonly selection = new SelectionController(this, {
     getValue: (): string[] | undefined => this.value,
     getDefaultValue: (): string[] | undefined => this.defaultValue,
     getItems: (): readonly ComboboxOption[] => this.source.items,
@@ -196,19 +187,13 @@ export class QuiCombobox extends OptionControlBase {
       this.valueChange.emit({ value, items });
       this.form.sync();
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
-  private readonly window = new ListWindowController({
+  private readonly window = new ListWindowController(this, {
     getEstimateSize: (): number => this.estimateSize,
     fallbackViewportSize: PANEL_MAX_HEIGHT,
     getOverscan: (): number => this.overscan,
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
-  private readonly navigation = new OptionListNavigationController<ComboboxOption>({
+  private readonly navigation = new OptionListNavigationController<ComboboxOption>(this, {
     getItems: (): readonly ComboboxOption[] => this.visibleItems(this.source.items),
     getInitialActive: (): string | undefined => {
       const items = this.visibleItems(this.source.items);
@@ -227,12 +212,9 @@ export class QuiCombobox extends OptionControlBase {
     onReveal: (index: number): void => {
       this.window.revealIndex(index);
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
 
-  private readonly input = new ComboboxInputController({
+  private readonly input = new ComboboxInputController(this, {
     getControlledValue: (): string | undefined => this.inputValue,
     getFilter: (): ComboboxFilter | undefined => this.filter,
     getFilterMode: (): ComboboxFilterMode => this.filterMode,
@@ -246,18 +228,10 @@ export class QuiCombobox extends OptionControlBase {
         this.navigation.edge("first");
       }
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
 
   constructor() {
     super();
-    this.addController(this.form);
-    this.addController(this.source);
-    this.addController(this.selection);
-    this.addController(this.window);
-    this.addController(this.navigation);
     this.form.setControl(this.fieldControl);
   }
 
@@ -283,11 +257,6 @@ export class QuiCombobox extends OptionControlBase {
   public componentDidRender(): void {
     super.componentDidRender();
     applyFieldAria(this.inputEl, this.form.fieldApi);
-  }
-
-  public disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.input.dispose();
   }
 
   /** Moves focus to the internal input. */

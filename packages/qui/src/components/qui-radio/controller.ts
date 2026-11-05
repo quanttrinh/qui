@@ -1,4 +1,7 @@
-import { type ReactiveController } from "../shared/reactive-control/controller";
+import {
+  ReactiveControllerBase,
+  type ReactiveControllerHost,
+} from "../shared/reactive-control/controller";
 
 interface RadioGroupControllerOptions {
   getValue: () => string | undefined;
@@ -6,11 +9,10 @@ interface RadioGroupControllerOptions {
   isDisabled: () => boolean;
   isReadOnly: () => boolean;
   onChange: (value: string | undefined) => void;
-  requestUpdate: () => void;
 }
 
 /** Selected and focused state for `qui-radio-group`. */
-export class RadioGroupController implements ReactiveController {
+export class RadioGroupController extends ReactiveControllerBase<ReactiveControllerHost> {
   private readonly options: RadioGroupControllerOptions;
   private current?: string;
   private initial?: string;
@@ -18,7 +20,8 @@ export class RadioGroupController implements ReactiveController {
   private focusVisible?: string;
   private readonly inputs = new Map<string, HTMLInputElement>();
 
-  constructor(options: RadioGroupControllerOptions) {
+  constructor(host: ReactiveControllerHost, options: RadioGroupControllerOptions) {
+    super(host);
     this.options = options;
   }
 
@@ -50,7 +53,7 @@ export class RadioGroupController implements ReactiveController {
     }
     this.current = value;
     this.options.onChange(value);
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 
   /** Register a radio input so the group can focus it from a field label. */
@@ -79,7 +82,7 @@ export class RadioGroupController implements ReactiveController {
     }
     this.focused = value;
     this.focusVisible = focusVisible ? value : undefined;
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 
   public blur(): void {
@@ -88,16 +91,16 @@ export class RadioGroupController implements ReactiveController {
     }
     this.focused = undefined;
     this.focusVisible = undefined;
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 
   public reset(): void {
     this.current = this.initial;
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 
   public restore(value: string | undefined): void {
     this.current = value;
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 }

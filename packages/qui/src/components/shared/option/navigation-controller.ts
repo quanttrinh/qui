@@ -1,4 +1,7 @@
-import { type ReactiveController } from "../reactive-control/controller";
+import {
+  ReactiveControllerBase,
+  type ReactiveControllerHost,
+} from "../reactive-control/controller";
 import { type OptionItem } from "./option";
 
 interface OptionListNavigationControllerOptions<TItem extends OptionItem> {
@@ -10,7 +13,6 @@ interface OptionListNavigationControllerOptions<TItem extends OptionItem> {
   onOpenChange?: (open: boolean, reason: string) => void;
   /** Called when the active item changes, with its index in `getItems()`. */
   onReveal: (index: number) => void;
-  requestUpdate: () => void;
 }
 
 interface ListCommandOptions {
@@ -20,13 +22,14 @@ interface ListCommandOptions {
 /** Open state, active item, and keyboard navigation for a OptionList. */
 export class OptionListNavigationController<
   TItem extends OptionItem,
-> implements ReactiveController {
+> extends ReactiveControllerBase<ReactiveControllerHost> {
   private readonly options: OptionListNavigationControllerOptions<TItem>;
   private openState = false;
   private active?: string;
   private revealed?: string;
 
-  constructor(options: OptionListNavigationControllerOptions<TItem>) {
+  constructor(host: ReactiveControllerHost, options: OptionListNavigationControllerOptions<TItem>) {
+    super(host);
     this.options = options;
   }
 
@@ -43,7 +46,7 @@ export class OptionListNavigationController<
       return;
     }
     this.active = value;
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 
   public openMenu(reason: string): void {
@@ -53,7 +56,7 @@ export class OptionListNavigationController<
     this.openState = true;
     this.options.onOpenChange?.(true, reason);
     this.active = this.options.getInitialActive();
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 
   public closeMenu(reason: string): void {
@@ -64,7 +67,7 @@ export class OptionListNavigationController<
     this.active = undefined;
     this.revealed = undefined;
     this.options.onOpenChange?.(false, reason);
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 
   public toggleMenu(reason: string): void {

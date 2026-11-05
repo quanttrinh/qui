@@ -1,4 +1,7 @@
-import { type ReactiveController } from "../reactive-control/controller";
+import {
+  ReactiveControllerBase,
+  type ReactiveControllerHost,
+} from "../reactive-control/controller";
 import { type OptionItem } from "./option";
 
 interface OptionSelectionChangeDetails<TItem extends OptionItem> {
@@ -14,16 +17,18 @@ interface OptionSelectionControllerOptions<TItem extends OptionItem> {
   getDeselectable: () => boolean;
   isReadOnly: () => boolean;
   onChange: (details: OptionSelectionChangeDetails<TItem>) => void;
-  requestUpdate: () => void;
 }
 
 /** Selection state shared by select and combobox. */
-export class OptionSelectionController<TItem extends OptionItem> implements ReactiveController {
+export class OptionSelectionController<
+  TItem extends OptionItem,
+> extends ReactiveControllerBase<ReactiveControllerHost> {
   private readonly options: OptionSelectionControllerOptions<TItem>;
   private state: string[] = [];
   private initial: string[] = [];
 
-  constructor(options: OptionSelectionControllerOptions<TItem>) {
+  constructor(host: ReactiveControllerHost, options: OptionSelectionControllerOptions<TItem>) {
+    super(host);
     this.options = options;
   }
 
@@ -54,17 +59,17 @@ export class OptionSelectionController<TItem extends OptionItem> implements Reac
       .map((value) => this.options.getItems().find((item) => item.value === value))
       .filter((item): item is TItem => item !== undefined);
     this.options.onChange({ value: [...next], items });
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 
   public reset(): void {
     this.state = [...this.initial];
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 
   public restore(values: readonly string[]): void {
     this.state = [...values];
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 
   private nextValues(value: string): string[] {

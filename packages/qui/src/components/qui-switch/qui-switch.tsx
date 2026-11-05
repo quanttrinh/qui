@@ -4,7 +4,6 @@ import {
   Component,
   Element,
   Event,
-  forceUpdate,
   h,
   Host,
   Method,
@@ -149,7 +148,7 @@ export class QuiSwitch extends FormControlBase {
   private readonly fieldControl = createFieldControl(() => this.inputEl, {
     activateOnLabel: true,
   });
-  private readonly checkable = new CheckableController({
+  private readonly checkable = new CheckableController(this, {
     getChecked: (): boolean | undefined => normalizeBoolean(this.checked),
     getDefaultChecked: (): boolean | undefined => normalizeBoolean(this.defaultChecked),
     isDisabled: (): boolean => this.form.isDisabled,
@@ -158,12 +157,8 @@ export class QuiSwitch extends FormControlBase {
       this.checkedChange.emit({ checked: checked === true });
       this.form.sync();
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
-  private readonly form = new FormController({
-    getHost: (): HTMLElement => this.host,
+  private readonly form = new FormController(this, {
     getInternals: (): ElementInternals => this.internals,
     getName: (): string | undefined => this.name,
     getMultiple: (): boolean => false,
@@ -187,15 +182,10 @@ export class QuiSwitch extends FormControlBase {
       this.checked = checked;
       this.checkable.restore(checked);
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
 
   constructor() {
     super();
-    this.addController(this.checkable);
-    this.addController(this.form);
     this.form.setControl(this.fieldControl);
   }
 

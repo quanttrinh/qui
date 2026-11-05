@@ -1,6 +1,9 @@
 import { FocusState } from "../shared/focus-state";
 import { KeyedHostRegistry } from "../shared/keyed-host-registry";
-import { type ReactiveController } from "../shared/reactive-control/controller";
+import {
+  ReactiveControllerBase,
+  type ReactiveControllerHost,
+} from "../shared/reactive-control/controller";
 import {
   RovingFocusRegistry,
   sameTriggerRegistration,
@@ -14,7 +17,6 @@ interface TabsControllerOptions {
   getLoopFocus: () => boolean;
   getDeselectable: () => boolean;
   onChange: (value: string | undefined) => void;
-  requestUpdate: () => void;
 }
 
 /** A trigger button registered with the tabs root. */
@@ -23,7 +25,7 @@ export type TabsTriggerRegistration = TriggerRegistration;
 const LIST_KEY = "list";
 
 /** Selection and keyboard navigation for `qui-tabs`. */
-export class TabsController implements ReactiveController {
+export class TabsController extends ReactiveControllerBase<ReactiveControllerHost> {
   private readonly options: TabsControllerOptions;
   private readonly panels: KeyedHostRegistry<HTMLElement>;
   private readonly triggers: RovingFocusRegistry<TabsTriggerRegistration>;
@@ -31,10 +33,11 @@ export class TabsController implements ReactiveController {
   private readonly focusState = new FocusState();
   private current?: string;
 
-  constructor(options: TabsControllerOptions) {
+  constructor(host: ReactiveControllerHost, options: TabsControllerOptions) {
+    super(host);
     this.options = options;
     const onChange = (): void => {
-      options.requestUpdate();
+      this.requestUpdate();
     };
     this.panels = new KeyedHostRegistry({ onChange });
     this.triggers = new RovingFocusRegistry({ onChange });
@@ -102,18 +105,18 @@ export class TabsController implements ReactiveController {
       this.current = next;
       this.options.onChange(next);
     }
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 
   public focus(value: string): void {
     if (this.focusState.focus(value, true)) {
-      this.options.requestUpdate();
+      this.requestUpdate();
     }
   }
 
   public blur(): void {
     if (this.focusState.blur()) {
-      this.options.requestUpdate();
+      this.requestUpdate();
     }
   }
 

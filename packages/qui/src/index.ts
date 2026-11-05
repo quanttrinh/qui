@@ -3,6 +3,13 @@
 // This includes Components, prop unions, and custom event types.
 export type * from "./components";
 
+export { ReactiveControlBase } from "./components/shared/reactive-control/component-base";
+export {
+  ReactiveControllerBase,
+  type ReactiveController,
+  type ReactiveControllerHost,
+} from "./components/shared/reactive-control/controller";
+
 export { QuiButton } from "./components/qui-button/qui-button";
 export type { ButtonSize, ButtonVariant } from "./components/qui-button/qui-button";
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createTestControllerHost } from "../../../test-utils/controller-host";
 import { type OptionItem } from "./option";
 import { OptionSelectionController } from "./selection-controller";
 
@@ -18,7 +19,7 @@ function createController(options?: {
 }) {
   const changes: { value: string[]; items: OptionItem[] }[] = [];
   let readOnly = options?.readOnly ?? false;
-  const controller = new OptionSelectionController({
+  const controller = new OptionSelectionController(createTestControllerHost(), {
     getValue: () => options?.value,
     getDefaultValue: () => options?.defaultValue,
     getItems: () => items,
@@ -28,7 +29,6 @@ function createController(options?: {
     onChange: (details) => {
       changes.push(details);
     },
-    requestUpdate: () => undefined,
   });
   controller.hostWillLoad();
   return {

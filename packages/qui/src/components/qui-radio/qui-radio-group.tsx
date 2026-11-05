@@ -4,7 +4,6 @@ import {
   Component,
   Element,
   Event,
-  forceUpdate,
   h,
   Host,
   Method,
@@ -92,7 +91,7 @@ export class QuiRadioGroup extends FormControlBase {
       this.controller.focusInput(options);
     },
   };
-  private readonly controller = new RadioGroupController({
+  private readonly controller = new RadioGroupController(this, {
     getValue: (): string | undefined => this.value,
     getDefaultValue: (): string | undefined => this.defaultValue,
     isDisabled: (): boolean => this.form.isDisabled,
@@ -101,13 +100,8 @@ export class QuiRadioGroup extends FormControlBase {
       this.valueChange.emit({ value });
       this.form.sync();
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-      this.listeners.notify();
-    },
   });
-  private readonly form = new FormController({
-    getHost: (): HTMLElement => this.host,
+  private readonly form = new FormController(this, {
     getInternals: (): ElementInternals => this.internals,
     getName: (): string | undefined => this.name,
     getMultiple: (): boolean => false,
@@ -136,9 +130,6 @@ export class QuiRadioGroup extends FormControlBase {
       const value = restored === "" ? undefined : restored;
       this.value = value;
       this.controller.restore(value);
-    },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
     },
     onChange: (): void => {
       this.listeners.notify();
@@ -174,9 +165,12 @@ export class QuiRadioGroup extends FormControlBase {
 
   constructor() {
     super();
-    this.addController(this.controller);
-    this.addController(this.form);
     this.form.setControl(this.fieldControl);
+  }
+
+  public requestUpdate(): void {
+    super.requestUpdate();
+    this.listeners.notify();
   }
 
   protected get formController(): FormController {
@@ -196,10 +190,6 @@ export class QuiRadioGroup extends FormControlBase {
     super.componentWillLoad();
     this.idBase = this.host.id || this.generatedId;
     provideRadioGroup(this.host, this.context);
-  }
-
-  public componentDidLoad(): void {
-    super.componentDidLoad();
   }
 
   public componentDidRender(): void {

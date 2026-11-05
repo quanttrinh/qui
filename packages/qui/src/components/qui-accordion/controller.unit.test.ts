@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { createTestControllerHost } from "../../test-utils/controller-host";
 import { AccordionController } from "./controller";
 
 function createEnvironment(options?: {
@@ -13,7 +14,7 @@ function createEnvironment(options?: {
     disabled: false,
     focus: vi.fn(),
   }));
-  const controller = new AccordionController({
+  const controller = new AccordionController(createTestControllerHost(), {
     getValue: () => undefined,
     getDefaultValue: () => options?.defaultValue,
     getMultiple: () => options?.multiple ?? false,
@@ -21,7 +22,6 @@ function createEnvironment(options?: {
     onChange: (value) => {
       changes.push(value);
     },
-    requestUpdate: () => undefined,
   });
   controller.hostWillLoad();
   for (const [index, value] of ["one", "two", "three"].entries()) {

@@ -1,6 +1,9 @@
 import { Build } from "@stencil/core";
 
-import { type ReactiveController } from "../reactive-control/controller";
+import {
+  ReactiveControllerBase,
+  type ReactiveControllerHost,
+} from "../reactive-control/controller";
 import { type OptionItem } from "./option";
 
 /** DOM-specific half of an option source. Kept outside shared code. */
@@ -12,11 +15,9 @@ export interface OptionSourceAdapter {
 }
 
 interface OptionSourceControllerOptions {
-  getHost: () => HTMLElement;
   getItems: () => readonly OptionItem[] | undefined;
   getRenderedRoot: () => HTMLElement | undefined;
   adapter: OptionSourceAdapter;
-  requestUpdate: () => void;
   onInvalidate?: () => void;
 }
 
@@ -25,13 +26,14 @@ interface OptionSourceControllerOptions {
  * source in sync with a MutationObserver. The adapter owns all knowledge of the
  * concrete option element.
  */
-export class OptionSourceController implements ReactiveController {
+export class OptionSourceController extends ReactiveControllerBase<ReactiveControllerHost> {
   private readonly options: OptionSourceControllerOptions;
   private dirty = true;
   private cached: OptionItem[] = [];
   private observer?: MutationObserver;
 
-  constructor(options: OptionSourceControllerOptions) {
+  constructor(host: ReactiveControllerHost, options: OptionSourceControllerOptions) {
+    super(host);
     this.options = options;
   }
 
@@ -41,7 +43,7 @@ export class OptionSourceController implements ReactiveController {
       return items;
     }
     if (this.dirty) {
-      this.cached = this.options.adapter.read(this.options.getHost());
+      this.cached = this.options.adapter.read(this.hostElement);
       this.dirty = false;
     }
     return this.cached;
@@ -70,7 +72,7 @@ export class OptionSourceController implements ReactiveController {
       return;
     }
     const { adapter } = this.options;
-    const host = this.options.getHost();
+    const host = this.hostElement;
     this.observer = new MutationObserver((records) => {
       const root = this.options.getRenderedRoot();
       if (
@@ -84,8 +86,8 @@ export class OptionSourceController implements ReactiveController {
       }
       this.dirty = true;
       this.options.onInvalidate?.();
-      this.options.requestUpdate();
+      this.requestUpdate();
     });
-    this.observer.observe(this.options.getHost(), adapter.observerInit);
+    this.observer.observe(this.hostElement, adapter.observerInit);
   }
 }

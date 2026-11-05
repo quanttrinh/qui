@@ -1,6 +1,9 @@
 import { FocusState } from "../shared/focus-state";
 import { KeyedHostRegistry } from "../shared/keyed-host-registry";
-import { type ReactiveController } from "../shared/reactive-control/controller";
+import {
+  ReactiveControllerBase,
+  type ReactiveControllerHost,
+} from "../shared/reactive-control/controller";
 import {
   RovingFocusRegistry,
   sameTriggerRegistration,
@@ -13,24 +16,24 @@ interface AccordionControllerOptions {
   getMultiple: () => boolean;
   getCollapsible: () => boolean;
   onChange: (value: string[]) => void;
-  requestUpdate: () => void;
 }
 
 /** A trigger button registered with the accordion. */
 export type AccordionTriggerRegistration = TriggerRegistration;
 
 /** Expanded and focused state for `qui-accordion`. */
-export class AccordionController implements ReactiveController {
+export class AccordionController extends ReactiveControllerBase<ReactiveControllerHost> {
   private readonly options: AccordionControllerOptions;
   private readonly contents: KeyedHostRegistry<HTMLElement>;
   private readonly triggers: RovingFocusRegistry<AccordionTriggerRegistration>;
   private readonly focusState = new FocusState();
   private current: string[] = [];
 
-  constructor(options: AccordionControllerOptions) {
+  constructor(host: ReactiveControllerHost, options: AccordionControllerOptions) {
+    super(host);
     this.options = options;
     const onChange = (): void => {
-      options.requestUpdate();
+      this.requestUpdate();
     };
     this.contents = new KeyedHostRegistry({ onChange });
     this.triggers = new RovingFocusRegistry({ onChange });
@@ -88,13 +91,13 @@ export class AccordionController implements ReactiveController {
 
   public focus(value: string): void {
     if (this.focusState.focus(value)) {
-      this.options.requestUpdate();
+      this.requestUpdate();
     }
   }
 
   public blur(): void {
     if (this.focusState.blur()) {
-      this.options.requestUpdate();
+      this.requestUpdate();
     }
   }
 
@@ -114,6 +117,6 @@ export class AccordionController implements ReactiveController {
   private commit(value: string[]): void {
     this.current = value;
     this.options.onChange(value);
-    this.options.requestUpdate();
+    this.requestUpdate();
   }
 }

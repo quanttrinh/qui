@@ -5,7 +5,6 @@ import {
   Component,
   Element,
   Event as StencilEvent,
-  forceUpdate,
   h,
   Host,
   Method,
@@ -157,8 +156,7 @@ export class QuiInput extends FormControlBase {
   private rawValue = "";
   private readonly generatedId = nextId("qui-input");
   private readonly fieldControl = createFieldControl(() => this.inputEl);
-  private readonly form = new FormController({
-    getHost: (): HTMLElement => this.host,
+  private readonly form = new FormController(this, {
     getInternals: (): ElementInternals => this.internals,
     getName: (): string | undefined => this.name,
     getMultiple: (): boolean => false,
@@ -183,14 +181,10 @@ export class QuiInput extends FormControlBase {
       this.value = value;
       this.applyValue(value);
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
 
   constructor() {
     super();
-    this.addController(this.form);
     this.form.setControl(this.fieldControl);
   }
 

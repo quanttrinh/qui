@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createTestControllerHost } from "../../../test-utils/controller-host";
 import { OptionListNavigationController } from "./navigation-controller";
 import { type OptionItem } from "./option";
 
@@ -14,7 +15,7 @@ function createController(options?: { looping?: boolean; initial?: string }) {
   const opened: { open: boolean; reason: string }[] = [];
   const revealed: number[] = [];
   let readOnly = false;
-  const controller = new OptionListNavigationController<OptionItem>({
+  const controller = new OptionListNavigationController<OptionItem>(createTestControllerHost(), {
     getItems: () => items,
     getInitialActive: () => options?.initial,
     isDisabled: () => false,
@@ -26,7 +27,6 @@ function createController(options?: { looping?: boolean; initial?: string }) {
     onReveal: (index) => {
       revealed.push(index);
     },
-    requestUpdate: () => undefined,
   });
   return {
     controller,

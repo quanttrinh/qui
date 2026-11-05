@@ -1,3 +1,9 @@
+export { ReactiveControlBase } from "./reactive-control/component-base";
+export {
+  ReactiveControllerBase,
+  type ReactiveController,
+  type ReactiveControllerHost,
+} from "./reactive-control/controller";
 export { CheckableController } from "./checkable/controller";
 export { FormController } from "./form-control/controller";
 export { OptionListNavigationController } from "./option/navigation-controller";

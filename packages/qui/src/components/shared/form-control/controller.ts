@@ -3,7 +3,10 @@ import { Build } from "@stencil/core";
 import { onContextProvided } from "../context-part";
 import { consumeField, type FieldApi } from "../field/context";
 import { type FieldControlHandle } from "../field/registry";
-import { type ReactiveController } from "../reactive-control/controller";
+import {
+  ReactiveControllerBase,
+  type ReactiveControllerHost,
+} from "../reactive-control/controller";
 import { type FormControl } from "./component-base";
 
 export interface FormValidity {
@@ -13,7 +16,6 @@ export interface FormValidity {
 }
 
 export interface FormControllerOptions {
-  getHost: () => HTMLElement;
   getInternals: () => ElementInternals;
   getName: () => string | undefined;
   getMultiple: () => boolean;
@@ -27,7 +29,6 @@ export interface FormControllerOptions {
   onReset: () => void;
   /** Applies values restored from form state. */
   onRestore: (values: string[]) => void;
-  requestUpdate: () => void;
   /** Called when field/disabled state changes, e.g. to refresh machine props. */
   onChange?: () => void;
   /** Overrides the default string/FormData value for the form. */
@@ -97,7 +98,10 @@ function formSignature({
  * Form/field behaviour shared by every form-associated control: `qui-field`
  * integration, form value, validity, reset, and state restoration.
  */
-export class FormController implements FormControl, ReactiveController {
+export class FormController
+  extends ReactiveControllerBase<ReactiveControllerHost>
+  implements FormControl
+{
   private readonly options: FormControllerOptions;
   private field?: FieldApi;
   private control?: FieldControlHandle;
@@ -107,7 +111,8 @@ export class FormController implements FormControl, ReactiveController {
   private formDisabled = false;
   private signature = "";
 
-  constructor(options: FormControllerOptions) {
+  constructor(host: ReactiveControllerHost, options: FormControllerOptions) {
+    super(host);
     this.options = options;
   }
 
@@ -143,7 +148,7 @@ export class FormController implements FormControl, ReactiveController {
   public setDisabled(disabled: boolean): void {
     this.formDisabled = disabled;
     this.options.onChange?.();
-    this.options.requestUpdate();
+    this.requestUpdate();
     this.sync();
   }
 
@@ -222,13 +227,13 @@ export class FormController implements FormControl, ReactiveController {
     this.stopListening ??= onContextProvided("field", () => {
       if (this.attach()) {
         this.options.onChange?.();
-        this.options.requestUpdate();
+        this.requestUpdate();
       }
     });
   }
 
   private attach(): boolean {
-    const field = consumeField(this.options.getHost());
+    const field = consumeField(this.hostElement);
     if (field === this.field) {
       return false;
     }
@@ -241,7 +246,7 @@ export class FormController implements FormControl, ReactiveController {
       this.unsubscribe = field.subscribe(() => {
         this.signature = "";
         this.options.onChange?.();
-        this.options.requestUpdate();
+        this.requestUpdate();
         this.sync();
       });
     }

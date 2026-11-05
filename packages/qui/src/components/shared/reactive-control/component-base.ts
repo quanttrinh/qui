@@ -1,20 +1,44 @@
-import { type ReactiveController } from "./controller";
+import { forceUpdate } from "@stencil/core";
+
+import { type ReactiveController, type ReactiveControllerHost } from "./controller";
 
 /**
- * Composition host for Stencil components. Extend it, add controllers, and
- * call `super.<lifecycle>()` from any override.
+ * Composition host for Stencil components.
+ *
+ * Extend it, create controllers with `new Controller(this, options)`, and call
+ * `super.<lifecycle>()` from any override. The base forwards Stencil lifecycle
+ * hooks to every registered controller and provides the `requestUpdate()` the
+ * controllers use.
  */
-export class ReactiveControlBase {
+export abstract class ReactiveControlBase implements ReactiveControllerHost {
   private readonly controllers = new Set<ReactiveController>();
   private connected = false;
 
+  /** The Stencil `@Element()` host declared by the concrete component. */
+  protected abstract readonly host: HTMLElement;
+
+  public get hostElement(): HTMLElement {
+    return this.host;
+  }
+
   public addController(controller: ReactiveController): void {
-    if (this.controllers.has(controller)) {
+    // Controllers are registered during field initialization, before Stencil
+    // connects the element. Re-registering the same controller is a no-op.
+    this.controllers.add(controller);
+  }
+
+  public removeController(controller: ReactiveController): void {
+    if (!this.controllers.delete(controller)) {
       return;
     }
-    this.controllers.add(controller);
     if (this.connected) {
-      controller.hostConnected?.();
+      controller.hostDisconnected?.();
+    }
+  }
+
+  public requestUpdate(): void {
+    if (this.host !== undefined) {
+      forceUpdate(this.host);
     }
   }
 

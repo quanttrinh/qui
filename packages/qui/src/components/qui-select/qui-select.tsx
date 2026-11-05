@@ -3,7 +3,6 @@ import {
   Component,
   Element,
   Event,
-  forceUpdate,
   h,
   Host,
   Method,
@@ -101,8 +100,7 @@ export class QuiSelect extends OptionControlBase {
   private readonly generatedId = nextId("qui-select");
   private readonly listId = `${this.generatedId}-listbox`;
   private readonly fieldControl = createFieldControl(() => this.triggerEl);
-  private readonly form = new FormController({
-    getHost: (): HTMLElement => this.host,
+  private readonly form = new FormController(this, {
     getInternals: (): ElementInternals => this.internals,
     getName: (): string | undefined => this.name,
     getMultiple: (): boolean => this.multiple,
@@ -120,24 +118,17 @@ export class QuiSelect extends OptionControlBase {
     onRestore: (values: string[]): void => {
       this.selection.restore(values);
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
 
   protected get formController(): FormController {
     return this.form;
   }
-  private readonly source = new OptionSourceController({
+  private readonly source = new OptionSourceController(this, {
     adapter: quiOptionSource,
-    getHost: (): HTMLElement => this.host,
     getItems: (): readonly SelectOption[] | undefined => this.items,
     getRenderedRoot: (): HTMLElement | undefined => this.rootEl,
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
-  private readonly selection = new SelectionController({
+  private readonly selection = new SelectionController(this, {
     getValue: (): string[] | undefined => this.value,
     getDefaultValue: (): string[] | undefined => this.defaultValue,
     getItems: (): readonly SelectOption[] => this.source.items,
@@ -148,19 +139,13 @@ export class QuiSelect extends OptionControlBase {
       this.valueChange.emit({ value, items });
       this.form.sync();
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
-  private readonly window = new ListWindowController({
+  private readonly window = new ListWindowController(this, {
     getEstimateSize: (): number => this.estimateSize,
     fallbackViewportSize: PANEL_MAX_HEIGHT,
     getOverscan: (): number => this.overscan,
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
-  private readonly navigation = new OptionListNavigationController<SelectOption>({
+  private readonly navigation = new OptionListNavigationController<SelectOption>(this, {
     getItems: (): readonly SelectOption[] => this.source.items,
     getInitialActive: (): string | undefined => {
       const { items } = this.source;
@@ -179,18 +164,10 @@ export class QuiSelect extends OptionControlBase {
     onReveal: (index: number): void => {
       this.window.revealIndex(index);
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
 
   constructor() {
     super();
-    this.addController(this.form);
-    this.addController(this.source);
-    this.addController(this.selection);
-    this.addController(this.window);
-    this.addController(this.navigation);
     this.form.setControl(this.fieldControl);
   }
 
