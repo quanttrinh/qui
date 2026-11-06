@@ -35,6 +35,32 @@ describe("qui-popover", () => {
     expect(panel.matches(":popover-open")).toBe(false);
   });
 
+  it("accepts an explicit anchor element", async () => {
+    const { root, waitForChanges } = await render(
+      <div>
+        <button type="button">Anchor</button>
+        <section>
+          <qui-popover>Popover content</qui-popover>
+        </section>
+      </div>,
+    );
+    const anchor = root.querySelector("button");
+    const popover = resolveHost<HTMLQuiPopoverElement>(root, "qui-popover");
+    const panel = queryPartIn(popover, "content");
+    if (!(anchor instanceof HTMLButtonElement)) {
+      throw new Error("Expected a button anchor");
+    }
+
+    popover.anchor = anchor;
+    popover.open = true;
+    await waitForChanges();
+    await settle(30);
+
+    expect(panel.matches(":popover-open")).toBe(true);
+    expect(panel.style.top).not.toBe("");
+    expect(panel.style.left).not.toBe("");
+  });
+
   it("dismisses when the pointer goes outside", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(
       <div>

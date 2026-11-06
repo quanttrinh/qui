@@ -148,7 +148,7 @@ export class QuiPopover {
    * The anchor element. Property-only. Defaults to the previous element
    * sibling, so `<button>…</button><qui-popover>…</qui-popover>` just works.
    */
-  @Prop() anchor?: HTMLElement | (() => HTMLElement | undefined);
+  @Prop() anchor?: HTMLElement;
   /** Preferred side and alignment relative to the anchor. */
   @Prop() placement: PopoverPlacement = "bottom-start";
   /** Whether the popover flips sides when space runs out. Defaults to `true`. */
@@ -263,9 +263,6 @@ export class QuiPopover {
   }
 
   private resolveAnchor(): HTMLElement | undefined {
-    if (typeof this.anchor === "function") {
-      return this.anchor();
-    }
     if (this.anchor !== undefined) {
       return this.anchor;
     }
