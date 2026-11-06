@@ -44,7 +44,6 @@ export const styles = {
     flexShrink: 0,
     fontSize: "sm",
     color: "onSurfaceVariant",
-    "&:empty": { display: "none" },
   }),
   affixStart: css({ paddingInlineStart: "3" }),
   affixEnd: css({ paddingInlineEnd: "3" }),

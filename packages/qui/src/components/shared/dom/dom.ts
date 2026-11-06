@@ -38,6 +38,10 @@ export function isHTMLInputElement(value: unknown): value is HTMLInputElement {
   return isHTMLElement(value) && value.tagName === "INPUT";
 }
 
+export function isHTMLSlotElement(value: unknown): value is HTMLSlotElement {
+  return isHTMLElement(value) && value.tagName === "SLOT";
+}
+
 export function isHTMLTextAreaElement(value: unknown): value is HTMLTextAreaElement {
   return isHTMLElement(value) && value.tagName === "TEXTAREA";
 }

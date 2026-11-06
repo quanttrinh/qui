@@ -1,6 +1,7 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
 import { queryControl, resolveHost } from "../../../tests/test-utils/component";
+import { nextFrame, waitForShadowStyles } from "../../../tests/test-utils/dom-ready";
 import { expectFocusedDeep, typeInto } from "../../../tests/test-utils/interactions";
 
 function queryVisibilityTrigger(host: Element): HTMLButtonElement {
@@ -125,6 +126,37 @@ describe("qui-input", () => {
     await waitForChanges();
     expect(input.type).toBe("password");
     expect(svg?.querySelector("path")?.getAttribute("d")).toBe(hiddenPath);
+  });
+
+  it("does not reserve affix padding when the slots are empty", async () => {
+    const { root, waitForChanges } = await render(<qui-input />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    await waitForShadowStyles(host);
+    await waitForChanges();
+    await nextFrame();
+
+    const prefix = queryControl<HTMLSpanElement>(host, "[data-part=prefix]");
+    const suffix = queryControl<HTMLSpanElement>(host, "[data-part=suffix]");
+    expect(getComputedStyle(prefix).paddingInlineStart).toBe("0px");
+    expect(getComputedStyle(suffix).paddingInlineEnd).toBe("0px");
+  });
+
+  it("pads filled affixes", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-input>
+        <span slot="prefix">$</span>
+        <span slot="suffix">.00</span>
+      </qui-input>,
+    );
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    await waitForShadowStyles(host);
+    await waitForChanges();
+    await nextFrame();
+
+    const prefix = queryControl<HTMLSpanElement>(host, "[data-part=prefix]");
+    const suffix = queryControl<HTMLSpanElement>(host, "[data-part=suffix]");
+    expect(getComputedStyle(prefix).paddingInlineStart).toBe("12px");
+    expect(getComputedStyle(suffix).paddingInlineEnd).toBe("12px");
   });
 
   it("focuses the internal native input", async () => {

@@ -20,7 +20,7 @@ import { cx } from "#styled-system/css";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { AddIcon, RemoveIcon, VisibilityIcon, VisibilityOffIcon } from "../qui-icon/icons";
 import { ariaAttr, dataAttr } from "../shared/aria/attr";
-import { isHTMLInputElement } from "../shared/dom/dom";
+import { isHTMLInputElement, isHTMLSlotElement } from "../shared/dom/dom";
 import { nextId } from "../shared/dom/id";
 import { applyFieldAria } from "../shared/forms/field/aria";
 import { createFieldControl, focusElement } from "../shared/forms/field/control";
@@ -147,6 +147,8 @@ export class QuiInput extends FormControlBase {
 
   @State() private passwordVisible = false;
   @State() private currentValue = "";
+  @State() private hasPrefix = false;
+  @State() private hasSuffix = false;
 
   private inputEl?: HTMLInputElement;
   private holdDelay?: ReturnType<typeof setTimeout>;
@@ -592,6 +594,22 @@ export class QuiInput extends FormControlBase {
     this.passwordVisible = !this.passwordVisible;
   };
 
+  /** Slot contents are invisible to `:empty`, so track them for affix padding. */
+  private readonly handleSlotChange = (event: Event): void => {
+    const slot = event.target;
+    if (!isHTMLSlotElement(slot)) {
+      return;
+    }
+    const filled = slot
+      .assignedNodes()
+      .some((node) => node.nodeType === 1 || (node.textContent ?? "").trim() !== "");
+    if (slot.name === "prefix") {
+      this.hasPrefix = filled;
+    } else if (slot.name === "suffix") {
+      this.hasSuffix = filled;
+    }
+  };
+
   render(): VNode {
     return (
       <Host class={styles.host}>
@@ -605,8 +623,8 @@ export class QuiInput extends FormControlBase {
             class={styles.control}
             part="control"
           >
-            <span data-part="prefix" class={cx(styles.affix, styles.affixStart)}>
-              <slot name="prefix" />
+            <span data-part="prefix" class={cx(styles.affix, this.hasPrefix && styles.affixStart)}>
+              <slot name="prefix" onSlotchange={this.handleSlotChange} />
             </span>
 
             <input
@@ -638,8 +656,8 @@ export class QuiInput extends FormControlBase {
               onInput={this.handleInput}
             />
 
-            <span data-part="suffix" class={cx(styles.affix, styles.affixEnd)}>
-              <slot name="suffix" />
+            <span data-part="suffix" class={cx(styles.affix, this.hasSuffix && styles.affixEnd)}>
+              <slot name="suffix" onSlotchange={this.handleSlotChange} />
             </span>
 
             {this.isNumber ? (
