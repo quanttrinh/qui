@@ -57,6 +57,34 @@ describe("qui-field", () => {
     expect(errorHost.id).toBe("email::error-text");
   });
 
+  it("accepts individual id overrides", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-field
+        fieldId="account"
+        rootId="account-root"
+        controlId="account-control"
+        labelId="account-label"
+        errorTextId="account-error"
+        helperTextId="account-helper"
+      >
+        <qui-field-label>Account</qui-field-label>
+        <qui-input />
+        <qui-field-helper-text>Helper</qui-field-helper-text>
+        <qui-field-error-text>Error</qui-field-error-text>
+      </qui-field>,
+    );
+
+    await waitForChanges();
+
+    const { labelHost, helperHost, errorHost, input } = queryParts(root);
+
+    expect(root.id).toBe("account-root");
+    expect(input.id).toBe("account-control");
+    expect(labelHost.id).toBe("account-label");
+    expect(helperHost.id).toBe("account-helper");
+    expect(errorHost.id).toBe("account-error");
+  });
+
   it("keeps host layout minimal and styles the inner root", async () => {
     const { root, waitForChanges } = await render(
       <qui-field id="email" disabled>

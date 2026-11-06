@@ -15,7 +15,6 @@ import { styleUrls } from "#qui-style-url";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { FieldController } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";
-import { type FieldIds } from "../shared/helpers/field";
 import { ControllerHostMixin } from "../shared/mixins";
 import { fieldStyles } from "./styles";
 
@@ -38,8 +37,16 @@ export class QuiField extends Mixin(ControllerHostMixin) {
 
   /** Base id used to derive the field part ids. Defaults to the host id. */
   @Prop() fieldId?: string;
-  /** Overrides for any of the generated part ids. Property-only. */
-  @Prop() elementIds?: Partial<FieldIds>;
+  /** Overrides the generated root id. */
+  @Prop() rootId?: string;
+  /** Overrides the generated control id. */
+  @Prop() controlId?: string;
+  /** Overrides the generated label id. */
+  @Prop() labelId?: string;
+  /** Overrides the generated error-text id. */
+  @Prop() errorTextId?: string;
+  /** Overrides the generated helper-text id. */
+  @Prop() helperTextId?: string;
   /** Marks the field invalid. */
   @Prop() invalid = false;
   /** Disables the field and its controls. */
@@ -51,7 +58,13 @@ export class QuiField extends Mixin(ControllerHostMixin) {
 
   private readonly field = new FieldController(this, {
     getFieldId: () => this.fieldId,
-    getElementIds: () => this.elementIds,
+    getElementIds: () => ({
+      root: this.rootId,
+      control: this.controlId,
+      label: this.labelId,
+      errorText: this.errorTextId,
+      helperText: this.helperTextId,
+    }),
     isInvalid: () => this.invalid,
     isDisabled: () => this.disabled,
     isReadOnly: () => this.readOnly,
@@ -64,7 +77,11 @@ export class QuiField extends Mixin(ControllerHostMixin) {
   }
 
   @Watch("fieldId")
-  @Watch("elementIds")
+  @Watch("rootId")
+  @Watch("controlId")
+  @Watch("labelId")
+  @Watch("errorTextId")
+  @Watch("helperTextId")
   @Watch("invalid")
   @Watch("disabled")
   @Watch("readOnly")
