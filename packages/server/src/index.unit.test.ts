@@ -129,6 +129,18 @@ describe("server SSR helpers", () => {
     expect([...chunks.join("").matchAll(/nonce="head-nonce"/gu)]).toHaveLength(3);
   });
 
+  it("allows framework-style attribute names and rejects unsafe ones", async () => {
+    const result = await renderPage("<div></div>", {
+      htmlAttributes: { "@click": "save", "[attr]": "value" },
+    });
+    expect(result.html).toContain('@click="save"');
+    expect(result.html).toContain('[attr]="value"');
+
+    await expect(
+      renderPage("<div></div>", { htmlAttributes: { "bad name": "value" } }),
+    ).rejects.toThrow("Invalid HTML attribute name");
+  });
+
   it("renderToStream emits the shell before the rendered body", async () => {
     const chunks: string[] = [];
     let diagnostics: unknown[] | undefined;

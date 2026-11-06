@@ -98,6 +98,20 @@ export interface ReconcileDocumentStylesheetOptions {
   nonce?: string;
 }
 
+/** Keeps managed head links in the configured cascade order. */
+function reorderHeadLinks(document: Document, links: (HTMLLinkElement | undefined)[]): void {
+  let previous: HTMLLinkElement | undefined;
+  for (const link of links) {
+    if (link !== undefined && link.parentNode === document.head) {
+      if (previous !== undefined && link.previousSibling !== previous) {
+        link.remove();
+        document.head.insertBefore(link, previous.nextSibling);
+      }
+      previous = link;
+    }
+  }
+}
+
 /**
  * Reconciles document-level marked stylesheet links with the configured hrefs.
  * Runtime callers only update links that were already marked. SSR callers can
@@ -119,39 +133,58 @@ export function reconcileDocumentStylesheetLinks(
       managedByHref.set(href, link);
     }
   }
+
+  const selected: (HTMLLinkElement | undefined)[] = [];
   const claimed = new Set<HTMLLinkElement>();
-  const reusable = [...managed];
 
-  const takeReusable = (): HTMLLinkElement | undefined => {
-    while (reusable.length > 0) {
-      const link = reusable.shift();
-      if (link !== undefined && !claimed.has(link)) {
-        return link;
-      }
-    }
-    return undefined;
-  };
-
+  // Claim exact managed matches before reusing links reserved for later hrefs.
   for (const href of hrefs) {
-    let link = managedByHref.get(href);
-    if (link !== undefined) {
-      managedByHref.delete(href);
-    } else if (markExisting) {
-      link = findMatchingStylesheetLink(document, href);
-    }
-    link ??= takeReusable();
-
+    const link = managedByHref.get(href);
     if (link === undefined) {
-      if (create) {
-        link = createStylesheetLink(document, href, nonce);
-        document.head.append(link);
-      }
-    } else if (link.getAttribute("href") !== href) {
-      link.setAttribute("href", href);
-    }
-
-    if (link !== undefined) {
+      selected.push(undefined);
+    } else {
+      managedByHref.delete(href);
       claimed.add(link);
+      selected.push(link);
+    }
+  }
+
+  if (markExisting) {
+    for (const [index, href] of hrefs.entries()) {
+      if (selected[index] === undefined) {
+        const link = findMatchingStylesheetLink(document, href);
+        if (link !== undefined) {
+          claimed.add(link);
+          selected[index] = link;
+        }
+      }
+    }
+  }
+
+  // Reuse remaining managed links before creating new markup.
+  const reusable = managed.filter((link) => !claimed.has(link));
+  for (const index of hrefs.keys()) {
+    if (selected[index] === undefined) {
+      const link = reusable.shift();
+      if (link !== undefined) {
+        claimed.add(link);
+        selected[index] = link;
+      }
+    }
+  }
+
+  for (const [index, href] of hrefs.entries()) {
+    let link = selected[index];
+    if (link === undefined && create) {
+      link = createStylesheetLink(document, href, nonce);
+      document.head.append(link);
+      claimed.add(link);
+      selected[index] = link;
+    }
+    if (link !== undefined) {
+      if (link.getAttribute("href") !== href) {
+        link.setAttribute("href", href);
+      }
       link.setAttribute(STYLESHEET_ATTRIBUTE, "");
       applyStylesheetNonce(link, nonce);
     }
@@ -162,6 +195,8 @@ export function reconcileDocumentStylesheetLinks(
       link.remove();
     }
   }
+
+  reorderHeadLinks(document, selected);
 }
 
 export interface ReconcileShadowStylesheetOptions {

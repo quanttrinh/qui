@@ -225,6 +225,29 @@ describe("injectDocumentStylesheet", () => {
     expect(linkHrefs(document.head)).toEqual(["first.css", "second.css"]);
   });
 
+  it("keeps configured order when managed hrefs are reordered", () => {
+    const document = createFakeDocument();
+    createLink(document, { rel: "stylesheet", href: "first.css", [STYLESHEET_ATTRIBUTE]: "" });
+    createLink(document, { rel: "stylesheet", href: "second.css", [STYLESHEET_ATTRIBUTE]: "" });
+
+    injectDocumentStylesheet(document as unknown as Document, {
+      href: ["second.css", "first.css"],
+    });
+
+    expect(linkHrefs(document.head)).toEqual(["second.css", "first.css"]);
+  });
+
+  it("does not reuse a managed link reserved for a later href", () => {
+    const document = createFakeDocument();
+    createLink(document, { rel: "stylesheet", href: "first.css", [STYLESHEET_ATTRIBUTE]: "" });
+
+    injectDocumentStylesheet(document as unknown as Document, {
+      href: ["second.css", "first.css"],
+    });
+
+    expect(linkHrefs(document.head)).toEqual(["second.css", "first.css"]);
+  });
+
   it("applies the resolved nonce to existing and new links", () => {
     const document = createFakeDocument();
     createLink(document, { rel: "stylesheet", href: "first.css" });

@@ -23,6 +23,19 @@ export class FakeNode {
     return this.children[0];
   }
 
+  public get parentNode(): FakeNode | undefined {
+    return this.parent;
+  }
+
+  public get previousSibling(): FakeNode | undefined {
+    const { parent } = this;
+    if (!parent) {
+      return undefined;
+    }
+
+    return parent.children[parent.children.indexOf(this) - 1];
+  }
+
   public get nextSibling(): FakeNode | undefined {
     const { parent } = this;
     if (!parent) {

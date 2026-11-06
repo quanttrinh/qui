@@ -152,6 +152,26 @@ describe("qui-accordion", () => {
     expect(parts[1].trigger).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("updates a trigger when its item becomes disabled", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-accordion>
+        <qui-accordion-item value="one">
+          <qui-accordion-trigger>One</qui-accordion-trigger>
+          <qui-accordion-content>One content</qui-accordion-content>
+        </qui-accordion-item>
+      </qui-accordion>,
+    );
+    const item = root.querySelector("qui-accordion-item") as HTMLElement & { disabled: boolean };
+    const [{ trigger }] = items(root);
+
+    expect(trigger.disabled).toBe(false);
+
+    item.disabled = true;
+    await waitForChanges();
+
+    expect(trigger.disabled).toBe(true);
+  });
+
   it("moves focus with arrow, Home, and End keyboard navigation", async () => {
     const { root, waitForChanges } = await render(
       <qui-accordion>

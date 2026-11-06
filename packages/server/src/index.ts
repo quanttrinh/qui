@@ -167,7 +167,7 @@ export async function writeRegistrationManifest(
   return target;
 }
 
-const ATTRIBUTE_NAME = /^[A-Za-z_:][-A-Za-z0-9_:.]*$/u;
+const INVALID_ATTRIBUTE_NAME = /[\p{Cc}\s"'/>=<&\uFFFD]/u;
 
 function attributes(values: Record<string, string | undefined> | undefined): string {
   if (values === undefined) {
@@ -175,7 +175,7 @@ function attributes(values: Record<string, string | undefined> | undefined): str
   }
   const markup: string[] = [];
   for (const [name, value] of Object.entries(values)) {
-    if (!ATTRIBUTE_NAME.test(name)) {
+    if (name.length === 0 || INVALID_ATTRIBUTE_NAME.test(name)) {
       throw new Error(`Invalid HTML attribute name: ${JSON.stringify(name)}`);
     }
     if (typeof value === "string" && value.length > 0) {

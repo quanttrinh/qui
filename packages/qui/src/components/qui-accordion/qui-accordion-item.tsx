@@ -1,9 +1,19 @@
-import { Mixin, resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
+import {
+  Mixin,
+  resolveVar,
+  Component,
+  Element,
+  h,
+  Host,
+  Prop,
+  Watch,
+  type VNode,
+} from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { ContextPartController } from "../shared/controllers";
+import { ContextPartController, createListenerStore } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { ControllerHostMixin } from "../shared/mixins";
 import {
@@ -43,6 +53,8 @@ export class QuiAccordionItem extends Mixin(ControllerHostMixin) {
   /** Disables this item. */
   @Prop() disabled = false;
 
+  private readonly listeners = createListenerStore();
+
   protected readonly contextPart = new ContextPartController(this, {
     key: "accordion",
     consume: consumeAccordion,
@@ -53,6 +65,12 @@ export class QuiAccordionItem extends Mixin(ControllerHostMixin) {
       };
     },
   });
+
+  @Watch("disabled")
+  @Watch("value")
+  private notifyItem(): void {
+    this.listeners.notify();
+  }
 
   private isDisabled(accordion: AccordionContext): boolean {
     return this.disabled || accordion.isDisabled();
@@ -70,6 +88,14 @@ export class QuiAccordionItem extends Mixin(ControllerHostMixin) {
       ...accordion,
       item: () => this.item(),
       isItemDisabled: () => this.isDisabled(accordion),
+      subscribe: (listener: () => void) => {
+        const stopItem = this.listeners.subscribe(listener);
+        const stopAccordion = accordion.subscribe(listener);
+        return () => {
+          stopItem();
+          stopAccordion();
+        };
+      },
     };
   }
 

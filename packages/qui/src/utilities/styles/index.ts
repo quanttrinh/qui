@@ -140,26 +140,29 @@ function discoverDocumentHrefs(document: Document): string[] | undefined {
   }
 
   const result = hrefs.length > 0 ? hrefs : undefined;
-  discoveredHrefs.set(document, result);
 
   if (!documentObservers.has(document) && typeof MutationObserver !== "undefined") {
     const root = document.documentElement as Element | null;
-    if (root !== null) {
-      const observer = new MutationObserver((records) => {
-        if (hasLinkMutation(records)) {
-          invalidateDocumentLinkCache(document);
-        }
-      });
-      observer.observe(root, {
-        subtree: true,
-        childList: true,
-        attributes: true,
-        attributeFilter: ["href", STYLESHEET_ATTRIBUTE],
-      });
-      documentObservers.set(document, observer);
+    if (root === null) {
+      // Retry discovery once the document root exists so an observer can be
+      // Installed; caching now would freeze an empty result forever.
+      return result;
     }
+    const observer = new MutationObserver((records) => {
+      if (hasLinkMutation(records)) {
+        invalidateDocumentLinkCache(document);
+      }
+    });
+    observer.observe(root, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["href", STYLESHEET_ATTRIBUTE],
+    });
+    documentObservers.set(document, observer);
   }
 
+  discoveredHrefs.set(document, result);
   return result;
 }
 

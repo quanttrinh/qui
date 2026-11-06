@@ -148,10 +148,13 @@ function hashesDigest(hashes: Map<string, string>): string {
 
 /** Reuses an already computed source hash map for theme-only invalidation. */
 function themeHash(hashes: Map<string, string>, config: Config): string {
-  const prefix = `${config.source.theme}/`;
+  const themeRoot = toPosix(config.source.theme);
   return hashesDigest(
     new Map(
-      [...hashes].filter(([file]) => file === config.source.theme || file.startsWith(prefix)),
+      [...hashes].filter(([file]) => {
+        const normalized = toPosix(file);
+        return normalized === themeRoot || normalized.startsWith(`${themeRoot}/`);
+      }),
     ),
   );
 }
@@ -241,7 +244,7 @@ function findComponentsSync(config: Config): ComponentEntry[] {
   mkdirSync(outputDirectory, { recursive: true });
 
   return walkSync(config.source.components)
-    .filter((file) => file.endsWith(".tsx"))
+    .filter((file) => file.endsWith(".tsx") && !EXCLUDED_SOURCE.test(file))
     .flatMap((file) => componentEntries(file, readFileSync(file, "utf8"), outputDirectory))
     .sort((a, b) => a.tag.localeCompare(b.tag));
 }
@@ -250,7 +253,9 @@ async function findComponents(config: Config): Promise<ComponentEntry[]> {
   const outputDirectory = config.output.components;
   await mkdir(outputDirectory, { recursive: true });
 
-  const files = (await walk(config.source.components)).filter((file) => file.endsWith(".tsx"));
+  const files = (await walk(config.source.components)).filter(
+    (file) => file.endsWith(".tsx") && !EXCLUDED_SOURCE.test(file),
+  );
   const entries = await Promise.all(
     files.map(async (file) =>
       componentEntries(file, await readFile(file, "utf8"), outputDirectory),

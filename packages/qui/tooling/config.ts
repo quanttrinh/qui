@@ -102,6 +102,7 @@ export function createConfig(root: string): Config {
     configInputs: [join(root, "panda.config.ts")],
     styleBuildInputs: [
       join(root, "tooling", "config.ts"),
+      join(root, "tooling", "panda", "component-tags.ts"),
       join(root, "tooling", "panda", "css.ts"),
       join(root, "tooling", "panda", "layer-order.ts"),
       join(root, "tooling", "panda", "panda-driver.ts"),
