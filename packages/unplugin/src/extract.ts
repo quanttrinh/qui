@@ -1,4 +1,4 @@
-import { parse, visitorKeys, type Node } from "oxc-parser";
+import { parse, Visitor, type Node } from "oxc-parser";
 import { parseFragment, type DefaultTreeAdapterTypes } from "parse5";
 import { extname } from "pathe";
 
@@ -9,32 +9,6 @@ function isNode(value: unknown): value is Node {
   return (
     typeof value === "object" && value !== null && typeof Reflect.get(value, "type") === "string"
   );
-}
-
-function pushChildNodes(node: Node, stack: Node[]): void {
-  for (const key of visitorKeys[node.type] ?? []) {
-    const value: unknown = Reflect.get(node, key);
-    if (Array.isArray(value)) {
-      for (const child of value) {
-        if (isNode(child)) {
-          stack.push(child);
-        }
-      }
-    } else if (isNode(value)) {
-      stack.push(value);
-    }
-  }
-}
-
-function walk(node: Node, visit: (node: Node) => void): void {
-  const stack: Node[] = [node];
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (current !== undefined) {
-      visit(current);
-      pushChildNodes(current, stack);
-    }
-  }
 }
 
 function tagName(value: unknown): string | undefined {
@@ -105,9 +79,15 @@ export async function extractComponentsFromJavaScript(
   }
 
   const components = new Set<string>();
-  walk(result.program, (node) => {
-    collect(node, components);
+  const visitor = new Visitor({
+    JSXOpeningElement(node) {
+      collect(node, components);
+    },
+    CallExpression(node) {
+      collect(node, components);
+    },
   });
+  visitor.visit(result.program);
   return [...components].toSorted();
 }
 

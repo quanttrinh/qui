@@ -117,6 +117,8 @@ export class FakeNode {
 /** A fake document that can create child nodes owned by itself. */
 export type FakeDocument = FakeNode & {
   createElement: (tagName: string) => FakeNode;
+  head: FakeNode;
+  body: FakeNode;
 };
 
 /** Creates a fake document whose `createElement` records the owner document. */
@@ -127,6 +129,9 @@ export function createFakeDocument(): FakeDocument {
     element.ownerDocument = doc;
     return element;
   };
+  doc.head = doc.createElement("head");
+  doc.body = doc.createElement("body");
+  doc.append(doc.head, doc.body);
   return doc;
 }
 

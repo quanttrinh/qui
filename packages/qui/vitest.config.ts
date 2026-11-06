@@ -8,6 +8,9 @@ const testDefaults = {
 
 export default defineVitestConfig({
   stencilConfig: "./stencil.config.ts",
+  optimizeDeps: {
+    include: ["@stencil/vitest"],
+  },
   test: {
     projects: [
       {

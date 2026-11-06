@@ -203,7 +203,7 @@ describe("ensureShadowStylesheet", () => {
 });
 
 describe("document discovery", () => {
-  it("caches document link discovery between components", () => {
+  it("caches document href and nonce discovery between components", () => {
     const document = createFakeDocument();
     useDocument(document);
     createDocumentLink(document, "discovered.css");
@@ -216,7 +216,8 @@ describe("document discovery", () => {
 
     expect(linkHrefs(first.root)).toEqual(["discovered.css"]);
     expect(linkHrefs(second.root)).toEqual(["discovered.css"]);
-    expect(querySelectorAll).toHaveBeenCalledTimes(1);
+    // One href discovery and one cached nonce lookup (managed links + meta).
+    expect(querySelectorAll).toHaveBeenCalledTimes(3);
   });
 
   it("ignores unmarked link mutations when invalidating discovery", () => {

@@ -1,61 +1,31 @@
+import {
+  componentRegistrationModule,
+  isPrimaryStylesheetRel,
+  isStylesHrefValue,
+  normalizeComponentTags,
+  STYLESHEET_ATTRIBUTE,
+  stylesheetLinkHtml,
+  uniqueHrefs,
+  type QuiStylesHrefValue,
+} from "@quanttrinh/qui/internal";
 import matter from "gray-matter";
 import { parse, type DefaultTreeAdapterTypes } from "parse5";
 import { extname, normalize } from "pathe";
 
 import { extractComponentsFromJavaScript, extractComponentsFromText } from "./extract";
 
-/** A concrete stylesheet URL or an ordered list of URLs. */
-export type QuiStylesHref = string | string[];
-
-/** Minimal shape of a bundler asset needed to discover hashed CSS output. */
-export interface QuiStylesBundleAsset {
-  type: string;
-  fileName: string;
-  name?: string;
-  names?: string[];
-  originalFileNames?: string[];
-}
-
-/**
- * Context passed to a stylesheet resolver.
- *
- * `bundle` is available for production builds, where it lets a resolver select
- * the emitted (possibly content-hashed) CSS asset. `server` is available while
- * serving, for resolvers that need the Vite dev server.
- */
-export interface QuiStylesResolverContext {
-  command: "serve" | "build";
-  mode: string;
-  base: string;
-  isSsrBuild: boolean;
-  /** Path of the HTML document being processed, when known. */
-  path?: string;
-  /** Absolute filename of the HTML document being processed, when known. */
-  filename?: string;
-  bundle?: Readonly<Record<string, QuiStylesBundleAsset>>;
-  server?: unknown;
-}
-
-/**
- * Resolves the external stylesheet URL.
- *
- * Use a resolver when the final URL is not known when the plugin is configured,
- * for example when Vite adds a content hash to the emitted asset.
- */
-export type QuiStylesHrefResolver = (
-  context: QuiStylesResolverContext,
-) => QuiStylesHref | undefined | Promise<QuiStylesHref | undefined>;
-
-export type QuiStylesHrefValue = QuiStylesHref | QuiStylesHrefResolver;
-
-/** Returns whether a value is a supported configured stylesheet href. */
-export function isStylesHrefValue(value: unknown): value is QuiStylesHrefValue {
-  return (
-    typeof value === "string" ||
-    typeof value === "function" ||
-    (Array.isArray(value) && value.every((entry: unknown) => typeof entry === "string"))
-  );
-}
+export {
+  isStylesHrefValue,
+  resolveStylesheetHrefCandidates,
+  resolveStylesheetHrefs,
+} from "@quanttrinh/qui/internal";
+export type {
+  QuiStylesBundleAsset,
+  QuiStylesHref,
+  QuiStylesHrefResolver,
+  QuiStylesHrefValue,
+  QuiStylesResolverContext,
+} from "@quanttrinh/qui/internal";
 
 export interface QuiStylesOptions {
   /**
@@ -72,6 +42,16 @@ export interface QuiStylesOptions {
   theme?: boolean;
 }
 
+export interface QuiRegistrationOptions {
+  /**
+   * Path to a JSON manifest of components discovered from rendered SSR/SSG
+   * HTML. Relative paths are resolved from the Vite root.
+   */
+  manifest?: string;
+  /** Additional component tags to register alongside the manifest. */
+  components?: string[];
+}
+
 export interface QuiPluginOptions {
   /**
    * Emit the shared CSS and configure the stylesheet URL used by shadow roots.
@@ -84,9 +64,14 @@ export interface QuiPluginOptions {
    * Defaults to `true`.
    */
   styles?: boolean | QuiStylesOptions;
+  /**
+   * Register components discovered from rendered output. Import
+   * `virtual:qui/registration-manifest` from the client entry to merge these
+   * tags with the source-scanned registrations.
+   */
+  registration?: QuiRegistrationOptions;
 }
 
-const COMPONENT_TAG_NAME = /^qui-[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const JAVASCRIPT_EXTENSIONS = new Set([
   ".cjs",
   ".cts",
@@ -98,9 +83,6 @@ const JAVASCRIPT_EXTENSIONS = new Set([
   ".tsx",
 ]);
 const TRANSFORMABLE_EXTENSIONS = new Set([...JAVASCRIPT_EXTENSIONS, ".mdx"]);
-// Keep in sync with STYLESHEET_ATTRIBUTE exported by @quanttrinh/qui/runtime.
-const STYLESHEET_ATTRIBUTE = "data-qui-styles";
-const REL_TOKEN_SPLIT = /\s+/u;
 
 function fileFromId(id: string): string {
   return normalize(id.split("?")[0] ?? id);
@@ -108,19 +90,14 @@ function fileFromId(id: string): string {
 
 export const VIRTUAL_MODULE_ID = "virtual:qui/register";
 export const VIRTUAL_STYLES_ID = "virtual:qui/styles";
+export const VIRTUAL_REGISTRATION_MANIFEST_ID = "virtual:qui/registration-manifest";
 
 export function mayContainComponents(code: string): boolean {
   return code.includes("qui-") || code.includes(String.raw`\u`) || code.includes(String.raw`\x`);
 }
 
 export function normalizeComponents(components: Iterable<string>): string[] {
-  const normalized = new Set<string>();
-  for (const component of components) {
-    if (COMPONENT_TAG_NAME.test(component)) {
-      normalized.add(component);
-    }
-  }
-  return [...normalized].toSorted();
+  return normalizeComponentTags(components);
 }
 
 /**
@@ -208,79 +185,6 @@ export function isExternalStyles(
   return isStylesHrefValue(href);
 }
 
-function uniqueHrefs(values: Iterable<string>): string[] {
-  const hrefs: string[] = [];
-  for (const value of values) {
-    if (value.length > 0 && !hrefs.includes(value)) {
-      hrefs.push(value);
-    }
-  }
-  return hrefs;
-}
-
-function stylesheetHrefs(href: QuiStylesHref): string[] {
-  const values = Array.isArray(href) ? href : [href];
-  return uniqueHrefs(values);
-}
-
-/**
- * Applies Vite's public base the way Vite does: unconditionally to
- * root-relative URLs, leaving absolute and protocol-relative URLs alone.
- */
-function withBase(hrefs: string[], base: string): string[] {
-  if (base === "" || base === "/" || base.startsWith("./")) {
-    return hrefs;
-  }
-  const normalizedBase = base.endsWith("/") ? base : `${base}/`;
-  return hrefs.map((href) => {
-    if (!href.startsWith("/") || href.startsWith("//")) {
-      return href;
-    }
-    return `${normalizedBase}${href.slice(1)}`;
-  });
-}
-
-async function resolveRawStylesheetHrefs(
-  href: QuiStylesHrefValue | undefined,
-  context: QuiStylesResolverContext,
-): Promise<string[]> {
-  if (href === undefined) {
-    return [];
-  }
-  const resolved = typeof href === "function" ? await href(context) : href;
-  if (resolved === undefined) {
-    return [];
-  }
-  return stylesheetHrefs(resolved);
-}
-
-/**
- * Resolves configured stylesheet URLs, calling a resolver with the current
- * bundler context when one is configured. The returned URLs include the Vite
- * base, so callers can use them directly in SSR documents and shadow roots.
- * Empty and duplicate values are removed after base application.
- */
-export async function resolveStylesheetHrefs(
-  href: QuiStylesHrefValue | undefined,
-  context: QuiStylesResolverContext,
-): Promise<string[]> {
-  const hrefs = await resolveRawStylesheetHrefs(href, context);
-  return uniqueHrefs(withBase(hrefs, context.base));
-}
-
-/**
- * Returns both the raw and base-applied URLs. HTML marking uses these
- * candidates because Vite may already have prefixed a configured URL that
- * includes the base segment.
- */
-export async function resolveStylesheetHrefCandidates(
-  href: QuiStylesHrefValue | undefined,
-  context: QuiStylesResolverContext,
-): Promise<string[]> {
-  const hrefs = await resolveRawStylesheetHrefs(href, context);
-  return uniqueHrefs([...hrefs, ...withBase(hrefs, context.base)]);
-}
-
 function themeImport(styles: boolean | QuiStylesOptions | undefined): string[] {
   if (styles === false) {
     return [];
@@ -341,11 +245,6 @@ export function createExternalStylesModule(styles: QuiStylesOptions): string {
   return [...themeImport(styles), ""].join("\n");
 }
 
-function isPrimaryStylesheet(rel: string): boolean {
-  const tokens = rel.toLowerCase().split(REL_TOKEN_SPLIT);
-  return tokens.includes("stylesheet") && !tokens.includes("alternate");
-}
-
 function isElementNode(
   node: DefaultTreeAdapterTypes.Node,
 ): node is DefaultTreeAdapterTypes.Element {
@@ -371,7 +270,7 @@ function attributeValue(
  * therefore left untouched.
  */
 export function markStylesheetLinks(html: string, href: string | string[]): string {
-  const hrefs = new Set(stylesheetHrefs(href));
+  const hrefs = new Set(uniqueHrefs(href));
   if (hrefs.size === 0) {
     return html;
   }
@@ -391,8 +290,7 @@ export function markStylesheetLinks(html: string, href: string | string[]): stri
       if (
         hrefValue !== undefined &&
         hrefs.has(hrefValue) &&
-        relValue !== undefined &&
-        isPrimaryStylesheet(relValue) &&
+        isPrimaryStylesheetRel(relValue) &&
         startTag !== undefined
       ) {
         const selfClosing = html.slice(startTag.endOffset - 2, startTag.endOffset) === "/>";
@@ -416,6 +314,132 @@ export function markStylesheetLinks(html: string, href: string | string[]): stri
   return result;
 }
 
+export interface EnsureStylesheetLinksOptions {
+  /** CSP nonce applied to stylesheet links created by the helper. */
+  nonce?: string;
+}
+
+function markerOffsetForLink(
+  node: DefaultTreeAdapterTypes.Element,
+  html: string,
+): number | undefined {
+  const startTag = node.sourceCodeLocation?.startTag;
+  if (startTag === undefined) {
+    return undefined;
+  }
+  const selfClosing = html.slice(startTag.endOffset - 2, startTag.endOffset) === "/>";
+  return startTag.endOffset - (selfClosing ? 2 : 1);
+}
+
+interface StylesheetScan {
+  html: string;
+  hrefSet: Set<string>;
+  present: Set<string>;
+  markerOffsets: number[];
+}
+
+function collectStylesheetLink(node: DefaultTreeAdapterTypes.Element, scan: StylesheetScan): void {
+  if (node.tagName !== "link") {
+    return;
+  }
+  const hrefValue = attributeValue(node, "href");
+  const relValue = attributeValue(node, "rel");
+  if (
+    hrefValue === undefined ||
+    !scan.hrefSet.has(hrefValue) ||
+    !isPrimaryStylesheetRel(relValue)
+  ) {
+    return;
+  }
+
+  scan.present.add(hrefValue);
+  if (attributeValue(node, STYLESHEET_ATTRIBUTE) !== undefined) {
+    return;
+  }
+  const offset = markerOffsetForLink(node, scan.html);
+  if (offset !== undefined) {
+    scan.markerOffsets.push(offset);
+  }
+}
+
+interface StylesheetInsertion {
+  text: string;
+  offset?: number;
+}
+
+function applyStylesheetChanges(
+  html: string,
+  markerOffsets: number[],
+  insertion: StylesheetInsertion,
+): string {
+  let result =
+    insertion.offset === undefined
+      ? html
+      : `${html.slice(0, insertion.offset)}${insertion.text}${html.slice(insertion.offset)}`;
+
+  for (const offset of markerOffsets.toSorted((left, right) => right - left)) {
+    const adjusted =
+      insertion.offset !== undefined && offset >= insertion.offset
+        ? offset + insertion.text.length
+        : offset;
+    result = `${result.slice(0, adjusted)} ${STYLESHEET_ATTRIBUTE}${result.slice(adjusted)}`;
+  }
+
+  return result;
+}
+
+/**
+ * Ensures every configured href has a marked document stylesheet link. Existing
+ * matching links are marked in place. Missing links are inserted before
+ * `</head>`, matching the SSR helper's document behavior. HTML without a head
+ * is left unmodified when a link is missing.
+ */
+export function ensureStylesheetLinks(
+  html: string,
+  href: string | string[],
+  options: EnsureStylesheetLinksOptions = {},
+): string {
+  const hrefs = uniqueHrefs(href);
+  if (hrefs.length === 0) {
+    return html;
+  }
+
+  const scan: StylesheetScan = {
+    html,
+    hrefSet: new Set(hrefs),
+    present: new Set(),
+    markerOffsets: [],
+  };
+  const document = parse(html, { sourceCodeLocationInfo: true });
+  let headEndOffset: number | undefined;
+
+  const visit = (node: DefaultTreeAdapterTypes.Node): void => {
+    if (isElementNode(node)) {
+      if (node.tagName === "head") {
+        const endTag = node.sourceCodeLocation?.endTag;
+        if (endTag !== undefined) {
+          headEndOffset = endTag.startOffset;
+        }
+      }
+      collectStylesheetLink(node, scan);
+    }
+
+    if ("childNodes" in node) {
+      for (const child of node.childNodes) {
+        visit(child);
+      }
+    }
+  };
+
+  visit(document);
+
+  const missing = hrefs.filter((value) => !scan.present.has(value));
+  return applyStylesheetChanges(html, scan.markerOffsets, {
+    text: stylesheetLinkHtml(missing, { nonce: options.nonce }),
+    offset: missing.length > 0 ? headEndOffset : undefined,
+  });
+}
+
 /**
  * Creates a static module that defines the discovered components.
  *
@@ -426,26 +450,7 @@ export function createRegistrationModule(
   components: Iterable<string>,
   options: QuiPluginOptions = {},
 ): string {
-  const tags = normalizeComponents(components);
-  if (tags.length === 0) {
-    return "";
-  }
-
-  const bindings: string[] = [];
-  const definitions: string[] = [];
-  for (const [index, tag] of tags.entries()) {
-    const binding = `__qui_${index}`;
-    bindings.push(binding);
-    definitions.push(
-      `import { defineCustomElement as ${binding} } from "@quanttrinh/qui/shared/${tag}";`,
-    );
-  }
-
-  return [
-    ...(options.styles === false ? [] : [`import "${VIRTUAL_STYLES_ID}";`]),
-    'import { defineComponents } from "@quanttrinh/qui/register";',
-    ...definitions,
-    `defineComponents(${bindings.join(", ")});`,
-    "",
-  ].join("\n");
+  return componentRegistrationModule(components, {
+    stylesImport: options.styles === false ? undefined : VIRTUAL_STYLES_ID,
+  });
 }

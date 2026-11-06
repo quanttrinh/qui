@@ -8,7 +8,11 @@
   "packageRules": [
     {
       "description": "Workspace packages are resolved from the local monorepo, not the registry",
-      "matchPackageNames": ["@quanttrinh/qui", "@quanttrinh/qui-unplugin"],
+      "matchPackageNames": [
+        "@quanttrinh/qui",
+        "@quanttrinh/qui-server",
+        "@quanttrinh/qui-unplugin"
+      ],
       "enabled": false
     },
     {

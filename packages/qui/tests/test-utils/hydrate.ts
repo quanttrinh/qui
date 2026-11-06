@@ -6,11 +6,27 @@
  */
 
 /** The subset of the hydrate bundle used by the SSR tests. */
+export interface HydrateResult {
+  html: string | null;
+  diagnostics: unknown[];
+}
+
+export interface RenderResult {
+  html: string;
+  diagnostics: unknown[];
+}
+
+export interface HydrateWindow {
+  document: Document;
+}
+
 export interface HydrateModule {
-  renderToString: (
-    html: string,
+  createWindowFromHtml: (html: string, uniqueId: string) => HydrateWindow;
+  hydrateDocument: (
+    document: Document,
     options?: Record<string, unknown>,
-  ) => Promise<{ html: string; diagnostics: unknown[] }>;
+  ) => Promise<HydrateResult>;
+  renderToString: (html: string, options?: Record<string, unknown>) => Promise<RenderResult>;
   streamToString: (html: string, options?: Record<string, unknown>) => AsyncIterable<unknown>;
 }
 

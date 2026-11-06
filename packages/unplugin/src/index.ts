@@ -1,5 +1,7 @@
+import { normalizeComponentTags } from "@quanttrinh/qui/internal";
 import { MagicString } from "magic-string";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { createUnplugin, type TransformResult, type UnpluginInstance } from "unplugin";
 
 import {
@@ -7,6 +9,7 @@ import {
   createExternalStylesModule,
   createRegistrationModule,
   createStylesModule,
+  ensureStylesheetLinks,
   extractComponents,
   importInjectionOffset,
   isExternalStyles,
@@ -15,16 +18,21 @@ import {
   markStylesheetLinks,
   mayContainComponents,
   resolveStylesheetHrefCandidates,
+  resolveStylesheetHrefs,
   virtualModuleId,
+  VIRTUAL_REGISTRATION_MANIFEST_ID,
   VIRTUAL_STYLES_ID,
   type QuiPluginOptions,
+  type QuiRegistrationOptions,
   type QuiStylesBundleAsset,
   type QuiStylesResolverContext,
 } from "./core";
 import { resolveStylesheetPath } from "./resolve-styles";
 
 export type {
+  EnsureStylesheetLinksOptions,
   QuiPluginOptions,
+  QuiRegistrationOptions,
   QuiStylesBundleAsset,
   QuiStylesHref,
   QuiStylesHrefResolver,
@@ -32,12 +40,80 @@ export type {
   QuiStylesOptions,
   QuiStylesResolverContext,
 } from "./core";
-export { markStylesheetLinks, resolveStylesheetHrefs } from "./core";
+export {
+  ensureStylesheetLinks,
+  markStylesheetLinks,
+  resolveStylesheetHrefs,
+  VIRTUAL_REGISTRATION_MANIFEST_ID,
+} from "./core";
 
 const PLUGIN_NAME = "unplugin-qui";
 const RESOLVED_VIRTUAL_STYLES_ID = `\0${VIRTUAL_STYLES_ID}`;
+const RESOLVED_VIRTUAL_REGISTRATION_MANIFEST_ID = `\0${VIRTUAL_REGISTRATION_MANIFEST_ID}`;
 const COMPONENT_SOURCE = ["qui-", String.raw`\u`, String.raw`\x`] as const;
 const COMPONENT_CACHE_LIMIT = 128;
+
+function parseManifestComponents(value: unknown): string[] {
+  let components: unknown = value;
+  if (!Array.isArray(components)) {
+    components =
+      typeof value === "object" && value !== null && "components" in value
+        ? Reflect.get(value, "components")
+        : undefined;
+  }
+
+  if (
+    !Array.isArray(components) ||
+    !components.every((component): component is string => typeof component === "string")
+  ) {
+    throw new Error(
+      "qui registration manifest must be an array of component tags or an object with a components array.",
+    );
+  }
+  return normalizeComponentTags(components);
+}
+
+async function readRegistrationManifest(
+  file: string,
+  addWatchFile: ((id: string) => void) | undefined,
+): Promise<string[]> {
+  addWatchFile?.(file);
+  let contents: string;
+  try {
+    contents = await readFile(file, "utf8");
+  } catch (error) {
+    throw new Error(`qui registration manifest could not be read: ${file}`, { cause: error });
+  }
+
+  try {
+    return parseManifestComponents(JSON.parse(contents));
+  } catch (error) {
+    throw new Error(`qui registration manifest is invalid: ${file}`, { cause: error });
+  }
+}
+
+/** Writes a registration manifest that `virtual:qui/registration-manifest` reads. */
+export async function writeRegistrationManifest(
+  file: string,
+  components: Iterable<string>,
+): Promise<string> {
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(
+    file,
+    `${JSON.stringify({ components: normalizeComponentTags(components) }, null, 2)}\n`,
+  );
+  return file;
+}
+
+function validateRegistration(registration: QuiRegistrationOptions | undefined): void {
+  const components: unknown = registration?.components;
+  if (
+    components !== undefined &&
+    (!Array.isArray(components) || !components.every((component) => typeof component === "string"))
+  ) {
+    throw new Error("qui registration components must be an array of component tags.");
+  }
+}
 
 function isBundle(value: unknown): value is Readonly<Record<string, QuiStylesBundleAsset>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -114,11 +190,31 @@ export async function markExternalStylesheetLinks(
   return markStylesheetLinks(html, hrefs);
 }
 
+/**
+ * Resolves external styles and ensures every resolved URL has a marked document
+ * stylesheet link, inserting missing links into the document head. This matches
+ * the SSR helper's document-link behavior for pipelines that build complete HTML
+ * outside Vite's HTML transform.
+ */
+export async function ensureExternalStylesheetLinks(
+  html: string,
+  styles: QuiPluginOptions["styles"],
+  context: QuiStylesResolverContext,
+): Promise<string> {
+  validateStylesHref(styles);
+  if (!isExternalStyles(styles)) {
+    return html;
+  }
+  const hrefs = await resolveStylesheetHrefs(styles.href, context);
+  return ensureStylesheetLinks(html, hrefs);
+}
+
 const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUnplugin<
   QuiPluginOptions | undefined
 >((options, meta: { framework: string }) => {
   const pluginOptions = options ?? {};
   validateStylesOptions(pluginOptions.styles, meta.framework);
+  validateRegistration(pluginOptions.registration);
   const componentCache = new Map<string, { code: string; components: string[] }>();
   const pendingComponents = new Map<string, { code: string; promise: Promise<string[]> }>();
   const externalStyles = isExternalStyles(pluginOptions.styles) ? pluginOptions.styles : undefined;
@@ -126,6 +222,7 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
   let viteCommand: "serve" | "build" = "build";
   let viteMode = "production";
   let viteIsSsrBuild = false;
+  let viteRoot = process.cwd();
 
   async function extractComponentsCached(code: string, id: string): Promise<string[]> {
     const cached = componentCache.get(id);
@@ -169,12 +266,14 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
     vite: {
       configResolved(config: {
         base: string;
+        root?: string;
         command?: "serve" | "build";
         mode?: string;
         isSsrBuild?: boolean;
         build?: { ssr?: boolean | string };
       }): void {
         viteBase = config.base;
+        viteRoot = config.root ?? viteRoot;
         viteCommand = config.command ?? "build";
         viteMode = config.mode ?? "production";
         viteIsSsrBuild = Boolean(config.isSsrBuild ?? config.build?.ssr);
@@ -211,6 +310,9 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
         if (id === VIRTUAL_STYLES_ID) {
           return RESOLVED_VIRTUAL_STYLES_ID;
         }
+        if (id === VIRTUAL_REGISTRATION_MANIFEST_ID) {
+          return RESOLVED_VIRTUAL_REGISTRATION_MANIFEST_ID;
+        }
         if (componentsFromVirtualModuleId(id) === undefined) {
           return undefined;
         }
@@ -228,6 +330,25 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
           }
           this.addWatchFile?.(resolveStylesheetPath());
           return createStylesModule(await getStylesheetText(), pluginOptions.styles);
+        }
+        if (id === RESOLVED_VIRTUAL_REGISTRATION_MANIFEST_ID) {
+          const { registration } = pluginOptions;
+          const { manifest } = registration ?? {};
+          let manifestComponents: string[] = [];
+          if (manifest !== undefined) {
+            const manifestFile = path.isAbsolute(manifest)
+              ? manifest
+              : path.resolve(viteRoot, manifest);
+            manifestComponents = await readRegistrationManifest(
+              manifestFile,
+              this.addWatchFile?.bind(this),
+            );
+          }
+          const components = normalizeComponentTags([
+            ...manifestComponents,
+            ...(registration?.components ?? []),
+          ]);
+          return createRegistrationModule(components, pluginOptions);
         }
         const components = componentsFromVirtualModuleId(id.slice(1));
         if (!components?.length) {

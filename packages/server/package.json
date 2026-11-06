@@ -1,0 +1,56 @@
+{
+  "name": "@quanttrinh/qui-server",
+  "version": "0.0.0",
+  "description": "Server-first SSR/SSG helpers for @quanttrinh/qui",
+  "homepage": "https://quanttrinh.github.io/qui/",
+  "bugs": {
+    "url": "https://github.com/quanttrinh/qui/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/quanttrinh/qui.git",
+    "directory": "packages/server"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "FRAMEWORKS.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
+  },
+  "scripts": {
+    "build": "bun tooling/build.ts",
+    "prepublishOnly": "bun run build",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "entities": "^9.0.0",
+    "parse5": "^8.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "vitest": "^5.1.0"
+  },
+  "peerDependencies": {
+    "@quanttrinh/qui": "workspace:^"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
+}

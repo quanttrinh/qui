@@ -4,7 +4,8 @@ Monorepo for the `qui` Material Design 3 web components.
 
 | Package                                           | Purpose                                                   |
 | ------------------------------------------------- | --------------------------------------------------------- |
-| [`@quanttrinh/qui`](./packages/qui)               | Web components, SSR, runtime, theme and component CSS     |
+| [`@quanttrinh/qui`](./packages/qui)               | Web components, runtime, theme and component CSS          |
+| [`@quanttrinh/qui-server`](./packages/server)     | Server-first SSR/SSG rendering and streaming helpers      |
 | [`@quanttrinh/qui-unplugin`](./packages/unplugin) | Bundler plugin for auto-registration and stylesheet setup |
 
 ## Commit messages
@@ -42,14 +43,14 @@ workflow generates a Conventional Commit title.
 ```sh
 bun install
 
-bun run build       # build both packages
-bun run test:unit   # run both unit suites
+bun run build       # build all packages
+bun run test:unit   # run all unit suites
 bun run lint
 bun run fmt:check
 ```
 
-`bun run lint` runs the package-level Oxlint configs in `packages/qui` and
-`packages/unplugin`. The Panda rules are loaded through
+`bun run lint` runs the package-level Oxlint configs in `packages/qui`,
+`packages/server`, and `packages/unplugin`. The Panda rules are loaded through
 `packages/qui/tooling/plugins/pandacss/oxlint.mjs`, which points them at the
 package's `panda.config.ts`, so they lint against its actual tokens and
 recipes.
@@ -59,10 +60,13 @@ Package-specific commands:
 ```sh
 bun run --cwd packages/qui dev
 bun run --cwd packages/qui build
+bun run --cwd packages/server build
 bun run --cwd packages/unplugin build
 ```
 
-Run `bun run build` before hydrate-based suites. Plugin tests do not require a prior build. The framework type check reads the built declarations, so run `bun run build` before `bun run test` as well.
+Run `bun run build` before hydrate-based suites. Plugin tests do not require a prior build. Server package tests read the built `@quanttrinh/qui` hydrate output, and the framework type check reads the built declarations, so run `bun run build` before `bun run test` as well.
 
 See [`packages/qui/README.md`](./packages/qui/README.md) for installation,
-components, styling, SSG/SSR, and Panda integration.
+components, styling, and Panda integration, and
+[`packages/server/README.md`](./packages/server/README.md) for server rendering
+and streaming.

@@ -1,13 +1,23 @@
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { describe, expect, it, vi } from "vitest";
 
-import { markExternalStylesheetLinks, resolveStylesheetHrefs, rollup, vite } from "./index";
+import {
+  ensureExternalStylesheetLinks,
+  markExternalStylesheetLinks,
+  resolveStylesheetHrefs,
+  rollup,
+  vite,
+  writeRegistrationManifest,
+} from "./index";
 
 vi.mock("node:module", () => ({
   createRequire: () => ({ resolve: () => "/virtual/qui/styles.css" }),
 }));
 
 vi.mock("node:fs/promises", () => ({
+  mkdir: vi.fn().mockResolvedValue(undefined),
   readFile: vi.fn().mockResolvedValue(":host{display:block;--font-fallback:test;}"),
+  writeFile: vi.fn().mockResolvedValue(undefined),
 }));
 
 type TransformHandler = (
@@ -60,6 +70,41 @@ describe("vite adapter", () => {
     expect(code).toContain('import "virtual:qui/styles";');
     expect(code).toContain('from "@quanttrinh/qui/shared/qui-button"');
     expect(code).toContain("defineComponents(__qui_0);");
+  });
+
+  it("loads output-aware components from a registration manifest", async () => {
+    vi.mocked(readFile).mockResolvedValueOnce(
+      JSON.stringify({ components: ["qui-card", "not-a-component"] }),
+    );
+    const plugin = vite({
+      registration: {
+        manifest: "./.qui/components.json",
+        components: ["qui-button"],
+      },
+    });
+    const resolveId = plugin.resolveId as unknown as { handler: IdHandler };
+    const load = plugin.load as unknown as { handler: LoadHandler };
+    const resolved = resolveId.handler("virtual:qui/registration-manifest");
+
+    expect(resolved).toBe("\0virtual:qui/registration-manifest");
+    if (resolved === undefined) {
+      throw new Error("Expected the registration manifest module to resolve");
+    }
+
+    const code = await load.handler(resolved);
+    expect(code).toContain('from "@quanttrinh/qui/shared/qui-button"');
+    expect(code).toContain('from "@quanttrinh/qui/shared/qui-card"');
+    expect(code).not.toContain("not-a-component");
+  });
+
+  it("writes registration manifests", async () => {
+    await writeRegistrationManifest("/tmp/qui/components.json", ["qui-card", "qui-button"]);
+
+    expect(mkdir).toHaveBeenCalledWith("/tmp/qui", { recursive: true });
+    expect(writeFile).toHaveBeenCalledWith(
+      "/tmp/qui/components.json",
+      '{\n  "components": [\n    "qui-button",\n    "qui-card"\n  ]\n}\n',
+    );
   });
 
   it("resolves and loads the shadow styles module", async () => {
@@ -260,6 +305,16 @@ describe("stylesheet resolvers", () => {
     );
 
     expect(html).toContain("data-qui-styles");
+  });
+
+  it("ensures an external stylesheet link for SSR HTML", async () => {
+    const html = await ensureExternalStylesheetLinks(
+      "<html><head></head><body></body></html>",
+      { href: "/assets/app.css" },
+      BUILD_CONTEXT,
+    );
+
+    expect(html).toContain('<link rel="stylesheet" href="/assets/app.css" data-qui-styles></head>');
   });
 
   it("applies a non-root base to an array of resolved URLs", async () => {

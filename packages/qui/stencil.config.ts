@@ -54,6 +54,7 @@ if (needsHydrate) {
   outputTargets.push({
     type: "dist-hydrate-script",
     dir: build.output.hydrate,
+    minify: !isTest,
   });
 }
 

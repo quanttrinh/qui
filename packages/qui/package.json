@@ -41,11 +41,16 @@
     "./hydrate": {
       "types": "./dist/hydrate/index.d.ts",
       "import": "./dist/hydrate/index.mjs",
-      "require": "./dist/hydrate/index.js"
+      "require": "./dist/hydrate/index.js",
+      "default": "./dist/hydrate/index.js"
     },
     "./ssr": {
       "types": "./dist/utilities/ssr/index.d.ts",
       "default": "./dist/utilities/ssr/index.js"
+    },
+    "./internal": {
+      "types": "./dist/utilities/internal/index.d.ts",
+      "default": "./dist/utilities/internal/index.js"
     },
     "./runtime": {
       "types": "./dist/utilities/styles/index.d.ts",

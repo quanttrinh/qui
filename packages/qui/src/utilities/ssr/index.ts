@@ -1,5 +1,18 @@
-import { insertBefore } from "../insert-before";
-import { SHADOW_STYLES_MARKER, STYLESHEET_ATTRIBUTE, STYLESHEET_SELECTOR } from "../styles";
+import { SHADOW_STYLES_HOST_SELECTOR, uniqueHrefs } from "../internal";
+import {
+  reconcileDocumentStylesheetLinks,
+  reconcileShadowStylesheetLinks,
+  resolveStylesheetNonce,
+} from "../styles/links";
+
+export { isStylesHrefValue, resolveStylesheetHrefs } from "../internal";
+export type {
+  QuiStylesBundleAsset,
+  QuiStylesHref,
+  QuiStylesHrefResolver,
+  QuiStylesHrefValue,
+  QuiStylesResolverContext,
+} from "../internal";
 
 export interface ShadowStylesheetOptions {
   /**
@@ -7,58 +20,89 @@ export interface ShadowStylesheetOptions {
    * point at `theme.css`, which is document-only.
    */
   href: string | string[];
+  /**
+   * CSP nonce for generated stylesheet links. Defaults to the document's
+   * `meta[name="csp-nonce"]` value when present.
+   */
+  nonce?: string;
 }
 
 /**
  * Stencil's hydrate type is not exported through a resolvable subpath in the
- * installed package, so keep the minimal shape this helper relies on.
+ * installed package, so mirror the options this package supports.
  */
-interface SerializeDocumentOptions {
+export interface HydrateRenderOptions {
+  approximateLineWidth?: number;
   afterHydrate?: (document: Document) => unknown;
+  beforeHydrate?: (document: Document) => unknown;
+  buildId?: string;
+  canonicalUrl?: string;
+  clientHydrateAnnotations?: boolean;
+  constrainTimeouts?: boolean;
+  cookie?: string;
+  direction?: string;
+  excludeComponents?: string[];
+  fullDocument?: boolean;
+  language?: string;
+  maxHydrateCount?: number;
+  prettyHtml?: boolean;
+  referrer?: string;
+  removeAttributeQuotes?: boolean;
+  removeBooleanAttributeQuotes?: boolean;
+  removeEmptyAttributes?: boolean;
+  removeHtmlComments?: boolean;
+  removeScripts?: boolean;
+  removeUnusedStyles?: boolean;
+  resourcesUrl?: string;
+  runtimeLogging?: boolean;
+  serializeShadowRoot?: "declarative-shadow-dom" | false;
+  staticComponents?: string[];
+  timeout?: number;
+  title?: string;
+  url?: string;
+  userAgent?: string;
   [key: string]: unknown;
 }
-
-type StylesheetRoot = Document | ShadowRoot;
 
 interface InjectionContext {
   document: Document;
   hrefs: string[];
+  nonce?: string;
 }
 
-function injectStylesheetLinks(context: InjectionContext, root: StylesheetRoot): void {
-  const { document, hrefs } = context;
-  const existing = new Set<string>();
-  for (const link of root.querySelectorAll<HTMLLinkElement>(STYLESHEET_SELECTOR)) {
-    existing.add(link.getAttribute("href") ?? "");
-  }
-
-  const reference = root.firstChild;
-  for (const href of hrefs) {
-    if (!existing.has(href)) {
-      const link = document.createElement("link");
-      link.setAttribute("rel", "stylesheet");
-      link.setAttribute("href", href);
-      link.setAttribute(STYLESHEET_ATTRIBUTE, "");
-      if (reference) {
-        insertBefore(root, link, reference);
-      } else {
-        root.append(link);
-      }
-      existing.add(href);
-    }
-  }
-}
-
-function visitRoot(context: InjectionContext, root: StylesheetRoot): void {
-  for (const element of root.querySelectorAll("*")) {
+function visitStylableRoots(context: InjectionContext, root: Document | ShadowRoot): void {
+  for (const element of root.querySelectorAll(SHADOW_STYLES_HOST_SELECTOR)) {
     const { shadowRoot } = element;
     if (shadowRoot) {
-      if (element.hasAttribute(SHADOW_STYLES_MARKER)) {
-        injectStylesheetLinks(context, shadowRoot);
-      }
-      visitRoot(context, shadowRoot);
+      reconcileShadowStylesheetLinks(shadowRoot, context.hrefs, {
+        document: context.document,
+        nonce: context.nonce,
+      });
+      visitStylableRoots(context, shadowRoot);
     }
   }
+}
+
+/**
+ * Adds the document-level component/app stylesheet link. Existing matching
+ * stylesheet links are marked with `data-qui-styles`, and managed links are
+ * reconciled to the configured hrefs so the client runtime can discover the
+ * same URL. Safe to call during SSR; it only touches the document it is given.
+ */
+export function injectDocumentStylesheet(
+  document: Document,
+  options: ShadowStylesheetOptions,
+): void {
+  const hrefs = uniqueHrefs(options.href);
+  if (hrefs.length === 0) {
+    return;
+  }
+
+  reconcileDocumentStylesheetLinks(document, hrefs, {
+    create: true,
+    markExisting: true,
+    nonce: resolveStylesheetNonce(document, options.nonce),
+  });
 }
 
 /**
@@ -66,31 +110,51 @@ function visitRoot(context: InjectionContext, root: StylesheetRoot): void {
  * hydrated document. Components mark their host when they call
  * `ensureShadowStylesheet()` during SSR. Safe to call during SSR because it only
  * touches the document it is given and performs no work at module load.
+ *
+ * `withShadowStylesheet()` normally does not need this helper: adding the
+ * document link before hydration lets components inject their own shadow links.
+ * Call it directly when hydrating a document that is already hydrated or when
+ * you manage the document lifecycle yourself.
  */
 export function injectShadowStylesheet(document: Document, options: ShadowStylesheetOptions): void {
-  const hrefs = (Array.isArray(options.href) ? options.href : [options.href]).filter(
-    (href) => href.length > 0,
-  );
+  const hrefs = uniqueHrefs(options.href);
   if (hrefs.length > 0) {
-    visitRoot({ document, hrefs }, document);
+    visitStylableRoots(
+      { document, hrefs, nonce: resolveStylesheetNonce(document, options.nonce) },
+      document,
+    );
   }
 }
 
 /**
- * Returns Stencil hydrate options that inject shadow stylesheet links before
- * running a caller-provided `afterHydrate` hook.
+ * Returns Stencil hydrate options that make the document link discoverable
+ * before hydration. Components then inject their own shadow stylesheet links
+ * while they connect, so no second document traversal is required.
+ *
+ * For documents that are already hydrated, call `injectShadowStylesheet()`
+ * directly instead.
  */
 export function withShadowStylesheet(
   options: ShadowStylesheetOptions,
-  renderOptions: SerializeDocumentOptions = {},
-): SerializeDocumentOptions {
-  const { afterHydrate } = renderOptions;
+  renderOptions: HydrateRenderOptions = {},
+): HydrateRenderOptions {
+  const { beforeHydrate } = renderOptions;
+  const serializeShadowRoot: unknown = renderOptions.serializeShadowRoot;
+  if (
+    serializeShadowRoot !== undefined &&
+    serializeShadowRoot !== false &&
+    serializeShadowRoot !== "declarative-shadow-dom"
+  ) {
+    throw new Error(
+      "qui SSR supports only declarative shadow DOM. Use serializeShadowRoot: 'declarative-shadow-dom' or false.",
+    );
+  }
 
   return {
     ...renderOptions,
-    afterHydrate(document: Document) {
-      injectShadowStylesheet(document, options);
-      return afterHydrate?.(document);
+    beforeHydrate(document: Document) {
+      injectDocumentStylesheet(document, options);
+      return beforeHydrate?.(document);
     },
   };
 }
