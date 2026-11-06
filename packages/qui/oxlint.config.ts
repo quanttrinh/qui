@@ -1,10 +1,12 @@
 import stencil from "@stencil/eslint-plugin";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "oxlint";
 
 import baseConfig from "../../oxlint.config.ts";
-import { createConfig } from "./tooling/config";
+import { createConfig } from "./tooling/config.ts";
 
-const config = createConfig(__dirname);
+const config = createConfig(dirname(fileURLToPath(import.meta.url)));
 
 // Oxlint registers JS plugins by path, so the plugin module builds itself from
 // the resolved config path when Oxlint loads it.
