@@ -111,7 +111,7 @@ export class QuiCombobox extends Mixin(ControllerHostMixin, FormControlMixin, Op
    * Custom matcher for the visible options. Property-only. Receives each item
    * and the trimmed input value, and returns whether the item should be shown.
    */
-  @Prop() filter?: ComboboxFilter;
+  @Prop({ attribute: null }) filter?: ComboboxFilter;
   /**
    * Built-in matching strategy used when `filter` is not set. Set to `none`
    * when `items` is already filtered (for example by a server).

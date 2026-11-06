@@ -31,17 +31,17 @@ export interface OptionControlMixinInstance {
 const OptionControlMixin = (Base: MixedInCtor): MixedInCtor<OptionControlMixinInstance> => {
   class WithOptionProps extends Base {
     /** Options supplied as data. Property-only; overrides `qui-option` children. */
-    @Prop() items?: OptionItem[];
+    @Prop({ attribute: null }) items?: OptionItem[];
     /**
      * Replaces the entire content of each option row, including the selected
      * indicator. Property-only. State and selection styling remain on the row
      * wrapper.
      */
-    @Prop() optionRender?: OptionRender;
-    /** The controlled selected values. */
-    @Prop() value?: string[];
-    /** The initial selected values. */
-    @Prop() defaultValue?: string[];
+    @Prop({ attribute: null }) optionRender?: OptionRender;
+    /** The controlled selected values. Property-only. */
+    @Prop({ attribute: null }) value?: string[];
+    /** The initial selected values. Property-only. */
+    @Prop({ attribute: null }) defaultValue?: string[];
     /** The form field name. */
     @Prop() name?: string;
     /** Disables the control. */

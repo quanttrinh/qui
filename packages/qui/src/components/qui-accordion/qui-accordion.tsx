@@ -59,9 +59,9 @@ export class QuiAccordion extends Mixin(ControllerHostMixin) {
   /** Whether an expanded item may be collapsed. */
   @Prop() collapsible = false;
   /** The controlled expanded values. Property-only. */
-  @Prop() value?: string[];
+  @Prop({ attribute: null }) value?: string[];
   /** The initial expanded values. Property-only. */
-  @Prop() defaultValue?: string[];
+  @Prop({ attribute: null }) defaultValue?: string[];
   /** Disables every item. */
   @Prop() disabled = false;
   /** Layout orientation. */

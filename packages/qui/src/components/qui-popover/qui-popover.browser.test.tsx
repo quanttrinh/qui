@@ -48,7 +48,7 @@ describe("qui-popover", () => {
     const popover = resolveHost<HTMLQuiPopoverElement>(root, "qui-popover");
     const panel = queryPartIn(popover, "content");
     if (!(anchor instanceof HTMLButtonElement)) {
-      throw new Error("Expected a button anchor");
+      throw new TypeError("Expected a button anchor");
     }
 
     popover.anchor = anchor;
