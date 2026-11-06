@@ -76,6 +76,7 @@ export class QuiAccordionTrigger extends Mixin(ControllerHostMixin) {
   componentDidRender(): void {
     this.syncRegistration();
     this.syncAria();
+    this.item?.invalidateTriggers();
   }
 
   disconnectedCallback(): void {

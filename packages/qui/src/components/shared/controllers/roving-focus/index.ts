@@ -84,15 +84,45 @@ export function sameTriggerRegistration(
 /**
  * Trigger registry with the roving-focus behavior shared by accordion and
  * tabs. Movement strategies and activation stay with the specific controller.
+ *
+ * The enabled list is cached because keyboard navigation re-reads it on every
+ * key. The cache is cleared when registrations change and when a trigger
+ * reports that its disabled state changed.
  */
 export class RovingFocusRegistry<
   TEntry extends TriggerRegistration,
 > extends KeyedHostRegistry<TEntry> {
+  private enabledCache?: readonly TEntry[];
+
+  override register(
+    value: string,
+    entry: TEntry,
+    sameEntry: (existing: TEntry, next: TEntry) => boolean = Object.is,
+  ): () => void {
+    const unregister = super.register(value, entry, sameEntry);
+    this.enabledCache = undefined;
+    return () => {
+      this.enabledCache = undefined;
+      unregister();
+    };
+  }
+
+  override clear(): void {
+    super.clear();
+    this.enabledCache = undefined;
+  }
+
+  /** Clears the cached enabled list after a trigger's state changes. */
+  invalidate(): void {
+    this.enabledCache = undefined;
+  }
+
   /** Enabled registrations in document order. */
-  enabled(): TEntry[] {
-    return this.values()
+  enabled(): readonly TEntry[] {
+    this.enabledCache ??= this.values()
       .filter(({ trigger }) => !trigger.disabled)
       .toSorted(compareHostOrder);
+    return this.enabledCache;
   }
 
   /** Moves DOM focus to the registered button for `value`. */

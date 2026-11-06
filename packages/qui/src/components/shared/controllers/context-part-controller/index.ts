@@ -124,7 +124,11 @@ class ContextPartController<TContext extends ContextPartSource> extends Reactive
   };
 
   private start(): boolean {
-    this.stopListening ??= onContextProvided(this.options.key, this.handleProvided);
+    this.stopListening ??= onContextProvided(
+      this.options.key,
+      this.hostElement,
+      this.handleProvided,
+    );
     return this.attach();
   }
 }

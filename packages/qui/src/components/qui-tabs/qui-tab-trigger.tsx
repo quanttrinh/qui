@@ -148,6 +148,7 @@ export class QuiTabTrigger extends Mixin(ControllerHostMixin) {
   componentDidRender(): void {
     this.syncRegistration();
     this.syncAria();
+    this.tabs?.invalidateTriggers();
   }
 
   disconnectedCallback(): void {

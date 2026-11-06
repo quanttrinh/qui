@@ -30,6 +30,8 @@ export interface TabsContext {
   getPanel: (value: string) => HTMLElement | undefined;
   /** Moves DOM focus to the internal tab button for a value. */
   focusTrigger: (value: string) => void;
+  /** Clears cached trigger state after a trigger's disabled state changes. */
+  invalidateTriggers: () => void;
   variant: () => TabsVariant;
   orientation: () => TabsOrientation;
   textDirection: () => "ltr" | "rtl";

@@ -28,6 +28,8 @@ export interface AccordionContext {
   getContent: (value: string) => HTMLElement | undefined;
   /** Moves DOM focus to the internal trigger button for a value. */
   focusTrigger: (value: string) => void;
+  /** Clears cached trigger state after a trigger's disabled state changes. */
+  invalidateTriggers: () => void;
   rootId: () => string;
   itemId: (value: string) => string;
   triggerId: (value: string) => string;

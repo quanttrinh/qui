@@ -109,6 +109,7 @@ function createAccordionContext(): AccordionContext {
     getTrigger: () => undefined,
     getContent: () => undefined,
     focusTrigger: () => undefined,
+    invalidateTriggers: () => undefined,
     rootId: () => "accordion",
     itemId: (value) => `accordion-item-${value}`,
     triggerId: (value) => `accordion-trigger-${value}`,

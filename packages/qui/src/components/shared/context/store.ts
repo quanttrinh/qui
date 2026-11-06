@@ -7,60 +7,110 @@ import { isShadowRoot } from "../helpers/dom/dom";
 /** A provider key shared by a context family. */
 type ContextPartKey = "accordion" | "accordion-item" | "dialog" | "field" | "radio-group" | "tabs";
 
-// Notifications are scoped by context family, not by provider host.
-// Each matching provider wakes every consumer of that family.
-// Consumers re-walk ancestors, which is O(consumers x depth) at mount time.
-// Attach is a no-op for the current context.
-// A provider-to-consumer index would be more complex than this is worth.
-const contextChangedListeners = new Map<ContextPartKey, Set<() => void>>();
-const pendingKeys = new Set<ContextPartKey>();
+interface ContextListener {
+  host: Element;
+  notify: () => void;
+}
+
+// Notifications are routed to consumers inside the provider's subtree. A
+// Sibling provider therefore never wakes an unrelated form/accordion tree.
+const contextChangedListeners = new Map<ContextPartKey, Set<ContextListener>>();
+const pendingProviders = new Map<ContextPartKey, Set<Element | undefined>>();
 let flushScheduled = false;
 
-function notifyKey(key: ContextPartKey, errors: unknown[]): void {
+function parentElement(node: Element): Element | undefined {
+  const parent = node.parentElement;
+  if (parent) {
+    return parent;
+  }
+  const root = node.getRootNode();
+  return isShadowRoot(root) ? root.host : undefined;
+}
+
+/** Whether `node` is `ancestor` or lives inside its subtree, across shadow roots. */
+function isDescendant(node: Element, ancestor: Element): boolean {
+  const contains = Reflect.get(ancestor, "contains");
+  if (typeof contains === "function" && Reflect.apply(contains, ancestor, [node]) === true) {
+    return true;
+  }
+  let current: Element | undefined = node;
+  while (current !== undefined) {
+    if (current === ancestor) {
+      return true;
+    }
+    current = parentElement(current);
+  }
+  return false;
+}
+
+interface NotificationState {
+  errors: unknown[];
+  notified: Set<ContextListener>;
+}
+
+function notifyProvider(
+  key: ContextPartKey,
+  provider: Element | undefined,
+  state: NotificationState,
+): void {
   const listeners = contextChangedListeners.get(key);
-  if (listeners !== undefined) {
-    for (const listener of listeners) {
+  if (listeners === undefined) {
+    return;
+  }
+  for (const entry of listeners) {
+    if (
+      !state.notified.has(entry) &&
+      (provider === undefined || isDescendant(entry.host, provider))
+    ) {
+      state.notified.add(entry);
       try {
-        listener();
+        entry.notify();
       } catch (error) {
-        errors.push(error);
+        state.errors.push(error);
       }
     }
   }
 }
 
 function flushNotifications(): void {
-  const errors: unknown[] = [];
+  const state: NotificationState = { errors: [], notified: new Set() };
   try {
     // Drain iteratively so nested-provider notifications never recurse per item.
-    while (pendingKeys.size > 0) {
-      const keys = [...pendingKeys];
-      pendingKeys.clear();
-      for (const key of keys) {
-        notifyKey(key, errors);
+    while (pendingProviders.size > 0) {
+      const providers = [...pendingProviders];
+      pendingProviders.clear();
+      for (const [key, hosts] of providers) {
+        for (const host of hosts) {
+          notifyProvider(key, host, state);
+        }
       }
     }
   } finally {
     flushScheduled = false;
   }
-  if (errors.length > 0) {
-    throw errors[0];
+  if (state.errors.length > 0) {
+    throw state.errors[0];
   }
 }
 
 /**
- * Notifies waiting parts that context availability for `key` changed.
- * Providers call this after storing or clearing their context.
+ * Notifies waiting parts in `provider`'s subtree that context availability for
+ * `key` changed. Providers call this after storing or clearing their context.
  *
  * Components are defined in an arbitrary order, so a part can upgrade before
  * its provider. Those parts attach when this notification arrives instead of
  * depending on custom element registration order.
  */
-function notifyContextChanged(key: ContextPartKey): void {
+function notifyContextChanged(key: ContextPartKey, provider?: Element): void {
   if (Build.isServer) {
     return;
   }
-  pendingKeys.add(key);
+  let providers = pendingProviders.get(key);
+  if (providers === undefined) {
+    providers = new Set();
+    pendingProviders.set(key, providers);
+  }
+  providers.add(provider);
   if (flushScheduled) {
     return;
   }
@@ -68,8 +118,12 @@ function notifyContextChanged(key: ContextPartKey): void {
   queueMicrotask(flushNotifications);
 }
 
-/** Subscribes to provider notifications for `key`. Returns an unsubscribe function. */
-function onContextProvided(key: ContextPartKey, listener: () => void): () => void {
+/**
+ * Subscribes a consumer host to provider notifications for `key`. Returns an
+ * unsubscribe function. Notifications only wake consumers inside the changed
+ * provider's subtree.
+ */
+function onContextProvided(key: ContextPartKey, host: Element, listener: () => void): () => void {
   if (Build.isServer) {
     return () => undefined;
   }
@@ -78,9 +132,10 @@ function onContextProvided(key: ContextPartKey, listener: () => void): () => voi
     listeners = new Set();
     contextChangedListeners.set(key, listeners);
   }
-  listeners.add(listener);
+  const entry: ContextListener = { host, notify: listener };
+  listeners.add(entry);
   return () => {
-    listeners.delete(listener);
+    listeners.delete(entry);
     if (listeners.size === 0 && contextChangedListeners.get(key) === listeners) {
       contextChangedListeners.delete(key);
     }
@@ -97,15 +152,6 @@ interface ContextStore<TContext> {
   consume: (host: Element) => TContext | undefined;
 }
 
-function parentElement(node: Element): Element | undefined {
-  const parent = node.parentElement;
-  if (parent) {
-    return parent;
-  }
-  const root = node.getRootNode();
-  return isShadowRoot(root) ? root.host : undefined;
-}
-
 /**
  * Creates a context store scoped to one provider key. The store owns the
  * WeakMap, the ancestor walk, and provider notifications so each context
@@ -117,11 +163,11 @@ function createContextStore<TContext>(key: ContextPartKey): ContextStore<TContex
   return {
     provide: (host: Element, context: TContext) => {
       contexts.set(host, context);
-      notifyContextChanged(key);
+      notifyContextChanged(key, host);
     },
     clear: (host: Element) => {
       contexts.delete(host);
-      notifyContextChanged(key);
+      notifyContextChanged(key, host);
     },
     consume: (host: Element) => {
       let node = parentElement(host);

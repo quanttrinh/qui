@@ -122,6 +122,9 @@ export class QuiTabs extends Mixin(ControllerHostMixin) {
     focusTrigger: (value: string): void => {
       this.controller.focusTrigger(value);
     },
+    invalidateTriggers: (): void => {
+      this.controller.invalidateTriggers();
+    },
     variant: (): TabsVariant => this.variant,
     orientation: (): "horizontal" | "vertical" => this.orientation,
     textDirection: (): "ltr" | "rtl" => this.textDirection ?? "ltr",

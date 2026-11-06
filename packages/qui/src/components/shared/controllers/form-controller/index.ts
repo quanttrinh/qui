@@ -221,7 +221,7 @@ export class FormController extends ReactiveControllerBase {
   }
 
   private listenForField(): void {
-    this.stopListening ??= onContextProvided("field", () => {
+    this.stopListening ??= onContextProvided("field", this.hostElement, () => {
       if (this.attach()) {
         this.options.onChange?.();
         this.requestUpdate();

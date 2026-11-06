@@ -115,6 +115,9 @@ export class QuiAccordion extends Mixin(ControllerHostMixin) {
     focusTrigger: (value: string): void => {
       this.controller.focusTrigger(value);
     },
+    invalidateTriggers: (): void => {
+      this.controller.invalidateTriggers();
+    },
     rootId: (): string => this.rootId,
     itemId: (value: string): string => this.itemId(value),
     triggerId: (value: string): string => this.triggerId(value),

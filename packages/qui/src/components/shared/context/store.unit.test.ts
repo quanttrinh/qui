@@ -117,8 +117,9 @@ describe("createContextStore", () => {
   it("notifies consumers when a context is provided and cleared", async () => {
     const store = createContextStore<TestContext>(KEY);
     const provider = new FakeElement();
+    const consumer = childOf(provider);
     const listener = vi.fn((): void => undefined);
-    const unsubscribe = onContextProvided(KEY, listener);
+    const unsubscribe = onContextProvided(KEY, asHost(consumer), listener);
 
     store.provide(asHost(provider), { name: "notify" });
     await flush();
@@ -129,5 +130,27 @@ describe("createContextStore", () => {
     expect(listener).toHaveBeenCalledTimes(2);
 
     unsubscribe();
+  });
+
+  it("does not wake consumers in a sibling provider subtree", async () => {
+    const store = createContextStore<TestContext>(KEY);
+    const root = new FakeElement();
+    const firstProvider = childOf(root);
+    const secondProvider = childOf(root);
+    const firstConsumer = childOf(firstProvider);
+    const secondConsumer = childOf(secondProvider);
+    const firstListener = vi.fn((): void => undefined);
+    const secondListener = vi.fn((): void => undefined);
+    const unsubscribeFirst = onContextProvided(KEY, asHost(firstConsumer), firstListener);
+    const unsubscribeSecond = onContextProvided(KEY, asHost(secondConsumer), secondListener);
+
+    store.provide(asHost(firstProvider), { name: "first" });
+    await flush();
+
+    expect(firstListener).toHaveBeenCalledOnce();
+    expect(secondListener).not.toHaveBeenCalled();
+
+    unsubscribeFirst();
+    unsubscribeSecond();
   });
 });

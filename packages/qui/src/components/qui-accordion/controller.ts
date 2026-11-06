@@ -72,6 +72,11 @@ export class AccordionController extends ControlledControllerBase<string[]> {
     this.triggers.focusTrigger(value);
   }
 
+  /** Clears cached trigger state after a trigger's disabled state changes. */
+  invalidateTriggers(): void {
+    this.triggers.invalidate();
+  }
+
   toggle(value: string): void {
     const expanded = this.value.includes(value);
     if (expanded && !this.options.getMultiple() && !this.options.getCollapsible()) {

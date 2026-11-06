@@ -25,7 +25,10 @@ function createContext() {
 }
 
 function createHost(): HTMLElement {
-  return {} as HTMLElement;
+  return {
+    parentElement: null,
+    getRootNode: () => ({ nodeType: 1 }),
+  } as unknown as HTMLElement;
 }
 
 function createPart<TContext extends ContextPartSource>(
@@ -240,11 +243,12 @@ describe("ContextPartController provider notifications", () => {
   it("keeps a newer listener set when an old unsubscribe runs twice", async () => {
     const stale = onContextProvided(
       KEY,
+      createHost(),
       vi.fn((): void => undefined),
     );
     stale();
     const listener = vi.fn((): void => undefined);
-    const unsubscribe = onContextProvided(KEY, listener);
+    const unsubscribe = onContextProvided(KEY, createHost(), listener);
 
     stale();
     notifyContextChanged(KEY);

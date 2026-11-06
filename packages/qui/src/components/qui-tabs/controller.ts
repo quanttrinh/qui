@@ -95,6 +95,11 @@ export class TabsController extends ControlledControllerBase<string | undefined>
     this.triggers.focusTrigger(value);
   }
 
+  /** Clears cached trigger state after a trigger's disabled state changes. */
+  invalidateTriggers(): void {
+    this.triggers.invalidate();
+  }
+
   select(value: string): void {
     const selected = this.value;
     const next = this.options.getDeselectable() && selected === value ? undefined : value;

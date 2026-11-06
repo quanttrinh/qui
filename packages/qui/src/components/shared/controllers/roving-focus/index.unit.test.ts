@@ -97,4 +97,20 @@ describe("RovingFocusRegistry", () => {
     expect(registry.edge("first")).toBeUndefined();
     expect(registry.edge("last")).toBeUndefined();
   });
+
+  it("recomputes the enabled list after invalidation", () => {
+    const registry = new RovingFocusRegistry<TriggerRegistration>();
+    const first = registration("one", false, 1);
+    const second = registration("two", false, 2);
+    registry.register("one", first, sameTriggerRegistration);
+    registry.register("two", second, sameTriggerRegistration);
+
+    expect(registry.enabled()).toEqual([first, second]);
+
+    second.trigger.disabled = true;
+    expect(registry.enabled()).toEqual([first, second]);
+
+    registry.invalidate();
+    expect(registry.enabled()).toEqual([first]);
+  });
 });
