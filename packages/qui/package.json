@@ -119,7 +119,7 @@
   "scripts": {
     "dev": "stencil build --dev --watch --serve",
     "build": "stencil build",
-    "postbuild": "bun tooling/scripts/finalize-types.ts",
+    "postbuild": "bun tooling/scripts/finalize-types.ts && publint",
     "build:lib": "panda lib --files './**/*.{js,mjs}'",
     "build:release": "bun run build && bun run build:lib",
     "codegen": "panda codegen",

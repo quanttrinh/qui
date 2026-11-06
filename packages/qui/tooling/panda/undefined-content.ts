@@ -1,36 +1,11 @@
 /// <reference types="node" />
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import * as ts from "typescript";
 
 import { type Config } from "../config";
 
-const UNDEFINED_CONTENT_TAG = "undefinedContent";
-
-function hasUndefinedContentMarker(node: ts.ClassDeclaration): boolean {
-  return ts.getJSDocTags(node).some((tag) => tag.tagName.text === UNDEFINED_CONTENT_TAG);
-}
-
-function componentTag(node: ts.ClassDeclaration, source: ts.SourceFile): string | undefined {
-  const decorator = (ts.getDecorators(node) ?? []).find((candidate) => {
-    const expression = candidate.expression;
-    return ts.isCallExpression(expression) && expression.expression.getText(source) === "Component";
-  });
-  if (decorator === undefined || !ts.isCallExpression(decorator.expression)) {
-    return undefined;
-  }
-  const [options] = decorator.expression.arguments;
-  if (options === undefined || !ts.isObjectLiteralExpression(options)) {
-    return undefined;
-  }
-  const tag = options.properties.find(
-    (property): property is ts.PropertyAssignment =>
-      ts.isPropertyAssignment(property) && property.name.getText(source) === "tag",
-  );
-  return tag !== undefined && ts.isStringLiteralLike(tag.initializer)
-    ? tag.initializer.text
-    : undefined;
-}
+const UNDEFINED_CONTENT_COMPONENT =
+  /@undefinedContent[\s\S]*?@Component\s*\(\s*\{[\s\S]*?\btag:\s*"([^"]+)"/u;
 
 /**
  * Collects the tags of components marked with `@undefinedContent` in their
@@ -45,24 +20,10 @@ function undefinedContentTags(config: Config): string[] {
       continue;
     }
     const path = join(config.source.components, file);
-    const source = ts.createSourceFile(
-      path,
-      readFileSync(path, "utf8"),
-      ts.ScriptTarget.Latest,
-      true,
-      ts.ScriptKind.TSX,
-    );
-
-    const visit = (node: ts.Node): void => {
-      if (ts.isClassDeclaration(node) && hasUndefinedContentMarker(node)) {
-        const tag = componentTag(node, source);
-        if (tag !== undefined) {
-          tags.add(tag);
-        }
-      }
-      ts.forEachChild(node, visit);
-    };
-    visit(source);
+    const match = UNDEFINED_CONTENT_COMPONENT.exec(readFileSync(path, "utf8"));
+    if (match?.[1] !== undefined) {
+      tags.add(match[1]);
+    }
   }
 
   return [...tags].sort();

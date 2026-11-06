@@ -25,11 +25,6 @@ export function utilitiesOutputTarget(config: Config): OutputTargetCustom {
         unbundle: true,
         dts: true,
         clean: true,
-        publint: { level: "error" },
-        // ATW currently flags generated Panda declaration resolution and
-        // CSS-only export conditions. Keep publint here until those generated
-        // declarations and subpath types are normalized.
-        attw: false,
         exports: false,
         minify: false,
         treeshake: false,
