@@ -51,14 +51,32 @@ jobs:
         with:
           filters: |
             code:
-              - 'packages/**'
-              - 'tooling/**'
+              - 'packages/qui/**'
+              - 'packages/server/**'
+              - 'packages/unplugin/**'
               - '*.ts'
               - 'package.json'
               - 'bun.lock'
               - 'scripts/**'
               - '.github/actions/setup-bun/**'
               - '.github/actions/setup-opencode/**'
+              - '.github/workflows/ci.yml'
+              - '.devcontainer/Containerfile'
+              - 'renovate.json'
+            qui:
+              - 'packages/qui/**'
+            server:
+              - 'packages/server/**'
+            unplugin:
+              - 'packages/unplugin/**'
+            workspace:
+              - '*.ts'
+              - 'package.json'
+              - 'bun.lock'
+              - 'scripts/**'
+              - '.github/actions/setup-bun/**'
+              - '.github/actions/setup-opencode/**'
+              - '.github/workflows/ci.yml'
               - '.devcontainer/Containerfile'
               - 'renovate.json'
 
@@ -81,21 +99,68 @@ jobs:
         if: steps.filter.outputs.code == 'true'
         run: bun run build
 
+      - name: Get Playwright version
+        id: playwright-version
+        if: steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true'
+        run: echo "version=$(bun x playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      - name: Determine Playwright system dependencies
+        id: playwright-deps
+        if: steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true'
+        run: |
+          set -euo pipefail
+          output="$(bun x playwright install-deps --dry-run chromium firefox webkit 2>&1 || true)"
+          packages="$(printf '%s\n' "$output" | awk '/^Missing system dependencies/{found=1; next} found && /^  / { sub(/^  /, ""); printf "%s ", $0 }')"
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
+          if [ -n "$packages" ]; then
+            echo "Playwright system dependencies: $packages"
+          elif ! printf '%s\n' "$output" | grep -q '^All system dependencies are installed\.$'; then
+            echo "Unable to determine Playwright system dependencies." >&2
+            printf '%s\n' "$output" >&2
+            exit 1
+          else
+            echo "Playwright system dependencies are already installed."
+          fi
+
+      - name: Cache Playwright system dependencies
+        if: (steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true') && steps.playwright-deps.outputs.packages != ''
+        uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1.6.3
+        with:
+          packages: ${{ steps.playwright-deps.outputs.packages }}
+          version: playwright-${{ steps.playwright-version.outputs.version }}
+          execute_install_scripts: true
+
+      - name: Refresh Playwright system libraries
+        if: (steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true') && steps.playwright-deps.outputs.packages != ''
+        run: |
+          sudo ldconfig
+          if command -v fc-cache >/dev/null 2>&1; then
+            sudo fc-cache -f
+          fi
+
       - name: Restore Playwright browsers
         id: playwright-cache
-        if: steps.filter.outputs.code == 'true'
+        if: steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+          key: playwright-browsers-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.version }}-chromium-firefox-webkit
 
       - name: Install Playwright browsers
-        if: steps.filter.outputs.code == 'true'
-        run: bun x playwright install --with-deps chromium firefox webkit
+        if: (steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true') && steps.playwright-cache.outputs.cache-hit != 'true'
+        run: bun x playwright install chromium firefox webkit
 
-      - name: Test
-        if: steps.filter.outputs.code == 'true'
-        run: bun run test
+      - name: Test qui
+        if: steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true'
+        run: bun run --cwd packages/qui test
+
+      - name: Test server
+        if: steps.filter.outputs.server == 'true' || steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true'
+        run: bun run --cwd packages/server test
+
+      - name: Test unplugin
+        if: steps.filter.outputs.unplugin == 'true' || steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true'
+        run: bun run --cwd packages/unplugin test
 
       - name: Format check
         if: steps.filter.outputs.code == 'true'
