@@ -75,8 +75,8 @@ function quantifier(mask: string, start: number): { count: number; next: number 
     return { count: 1, next: start };
   }
   const body = mask.slice(start + 1, end);
-  const exact = /^(\d+)$/u.exec(body);
-  const range = /^(\d+),(\d*)$/u.exec(body);
+  const exact = /^(?<count>\d+)$/u.exec(body);
+  const range = /^(?<min>\d+),(?<max>\d*)$/u.exec(body);
   if (exact === null) {
     if (range !== null) {
       throw new Error(VARIABLE_QUANTIFIER);
@@ -84,7 +84,7 @@ function quantifier(mask: string, start: number): { count: number; next: number 
     return { count: 1, next: start };
   }
 
-  const count = Number(exact[1]);
+  const count = Number(exact.groups?.count);
   return { count, next: end + 1 };
 }
 

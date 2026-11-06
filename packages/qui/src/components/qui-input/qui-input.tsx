@@ -1,7 +1,9 @@
 import {
   Maskito,
   maskitoChangeEventPlugin,
+  maskitoInitialCalibrationPlugin,
   maskitoTransform,
+  type MaskitoOptions,
   type MaskitoPreprocessor,
 } from "@maskito/core";
 import {
@@ -39,7 +41,7 @@ import {
   appendAcceptedNumericOrDecimalCharacter,
   filterNumericOrDecimalInput,
 } from "./input-filter";
-import { compileMask, type CompiledMask } from "./mask";
+import { compileMask } from "./mask";
 import { styles } from "./styles";
 
 /** The input types `qui-input` can render. */
@@ -73,6 +75,12 @@ export interface InputValueDetails {
   value: string;
   /** The value with every mask literal removed. */
   unmaskedValue: string;
+}
+
+interface InputMaskConfig {
+  options: MaskitoOptions;
+  rawFromMasked: (value: string) => string;
+  caretForRaw?: (value: string, rawCount: number) => number;
 }
 
 /**
@@ -161,8 +169,8 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
   private inputEl?: HTMLInputElement;
   private maskito?: Maskito;
-  private compiledMask?: CompiledMask;
-  private compiledMaskKey = "";
+  private inputMask?: InputMaskConfig;
+  private inputMaskKey = "";
   private holdDelay?: ReturnType<typeof setTimeout>;
   private holdRepeat?: ReturnType<typeof setInterval>;
   private initialValue = "";
@@ -286,36 +294,66 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     this.form.sync();
   }
 
-  private get compiledMaskConfig(): CompiledMask | undefined {
-    if (this.mask === undefined || this.mask.length === 0 || this.isNumber) {
+  private get inputMaskConfig(): InputMaskConfig | undefined {
+    if (this.isNumber) {
       return undefined;
     }
 
-    const key = `${this.mask}\u0000${this.textCase}`;
-    if (this.compiledMask !== undefined && this.compiledMaskKey === key) {
-      return this.compiledMask;
+    const mode = this.effectiveInputMode;
+    const key = `${this.mask ?? ""}\u0000${this.textCase}\u0000${mode ?? ""}\u0000${this.allowNegative}`;
+    if (this.inputMask !== undefined && this.inputMaskKey === key) {
+      return this.inputMask;
+    }
+
+    let maskExpression: MaskitoOptions["mask"] = /^[\s\S]*$/u;
+    let rawFromMasked = (value: string): string => value;
+    let caretForRaw: ((value: string, rawCount: number) => number) | undefined;
+    if (this.mask !== undefined && this.mask.length > 0) {
+      const compiled = compileMask(this.mask);
+      maskExpression = compiled.options.mask;
+      rawFromMasked = compiled.rawFromMasked;
+      caretForRaw = compiled.caretForRaw;
     }
 
     const textCase = this.textCase;
-    const textCasePreprocessor: MaskitoPreprocessor = ({ elementState, data }) => ({
-      elementState: {
-        ...elementState,
-        value: applyTextCase(elementState.value, textCase),
-      },
-      data,
-    });
-    const base = compileMask(this.mask);
-    this.compiledMask = {
+    const preprocessors: MaskitoPreprocessor[] = [
+      ({ elementState, data }) => ({
+        elementState: {
+          ...elementState,
+          value: applyTextCase(elementState.value, textCase),
+        },
+        data,
+      }),
+    ];
+    if (
+      (mode === "numeric" || mode === "decimal") &&
+      (this.mask === undefined || this.mask.length === 0)
+    ) {
+      const inputMode = mode;
+      const allowNegative = this.allowNegative;
+      preprocessors.push(({ elementState, data }) => ({
+        elementState: {
+          ...elementState,
+          value: filterNumericOrDecimalInput(elementState.value, {
+            allowNegative,
+            mode: inputMode,
+          }),
+        },
+        data,
+      }));
+    }
+
+    this.inputMask = {
       options: {
-        ...base.options,
-        preprocessors: [...(base.options.preprocessors ?? []), textCasePreprocessor],
-        plugins: [...(base.options.plugins ?? []), maskitoChangeEventPlugin()],
+        mask: maskExpression,
+        preprocessors,
+        plugins: [maskitoInitialCalibrationPlugin(), maskitoChangeEventPlugin()],
       },
-      rawFromMasked: base.rawFromMasked,
-      caretForRaw: base.caretForRaw,
+      rawFromMasked,
+      caretForRaw,
     };
-    this.compiledMaskKey = key;
-    return this.compiledMask;
+    this.inputMaskKey = key;
+    return this.inputMask;
   }
 
   private syncMaskito(): void {
@@ -326,7 +364,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
       return;
     }
     const el = this.inputEl;
-    const config = this.compiledMaskConfig;
+    const config = this.inputMaskConfig;
     if (el !== undefined && config !== undefined) {
       this.maskito = new Maskito(el, config.options);
       // Run after Maskito's own input listener so the caret reflects the
@@ -431,9 +469,9 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
       this.value = normalizedValue;
     }
     this.rawValue = normalizedValue;
-    const config = this.compiledMaskConfig;
-    const cased = this.isNumber ? normalizedValue : applyTextCase(normalizedValue, this.textCase);
-    const next = config === undefined ? cased : maskitoTransform(normalizedValue, config.options);
+    const config = this.inputMaskConfig;
+    const next =
+      config === undefined ? normalizedValue : maskitoTransform(normalizedValue, config.options);
     if (this.inputEl !== undefined && this.inputEl.value !== next) {
       this.inputEl.value = next;
     }
@@ -490,17 +528,6 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     }\u0001${element?.validity.valid ? 1 : 0}\u0001${element?.validationMessage ?? ""}`;
   }
 
-  private caseAtCaret(value: string, caret: number): { caret: number; value: string } {
-    if (this.isNumber) {
-      return { caret, value };
-    }
-    const cased = applyTextCase(value, this.textCase);
-    if (cased === value) {
-      return { caret, value };
-    }
-    return { caret: applyTextCase(value.slice(0, caret), this.textCase).length, value: cased };
-  }
-
   private commitInput(
     el: HTMLInputElement,
     result: { caret: number; unmaskedValue: string; value: string },
@@ -519,22 +546,22 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   }
 
   private readonly handleBeforeInput = (event: InputEvent): void => {
-    if (this.compiledMaskConfig !== undefined) {
+    if (!this.isNumber || event.isComposing) {
       return;
     }
     const mode = this.effectiveInputMode;
-    if ((mode !== "numeric" && mode !== "decimal") || event.isComposing) {
+    if (mode !== "numeric" && mode !== "decimal") {
       return;
     }
-    const el = event.target;
-    if (!isHTMLInputElement(el)) {
+    const element = event.target;
+    if (!isHTMLInputElement(element)) {
       return;
     }
     const data = event.data ?? event.dataTransfer?.getData("text") ?? "";
     const options = { allowNegative: this.allowNegative, mode };
-    let result = el.value.slice(0, el.selectionStart ?? el.value.length);
-    for (const char of data) {
-      const next = appendAcceptedNumericOrDecimalCharacter(result, char, options);
+    let result = element.value.slice(0, element.selectionStart ?? element.value.length);
+    for (const character of data) {
+      const next = appendAcceptedNumericOrDecimalCharacter(result, character, options);
       if (next === undefined) {
         event.preventDefault();
         return;
@@ -545,7 +572,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
   private readonly handleMaskInput = (event: Event): void => {
     const element = event.target;
-    const mask = this.compiledMaskConfig;
+    const mask = this.inputMaskConfig;
     if (!isHTMLInputElement(element) || mask === undefined) {
       return;
     }
@@ -556,7 +583,11 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     if (element.value !== next) {
       element.value = next;
     }
-    if (this.supportsSelection && element.ownerDocument.activeElement === element) {
+    if (
+      mask.caretForRaw !== undefined &&
+      this.supportsSelection &&
+      element.ownerDocument.activeElement === element
+    ) {
       const position = mask.caretForRaw(next, rawBeforeCaret.length);
       element.setSelectionRange(position, position);
     }
@@ -568,20 +599,17 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
   private readonly handleInput = (event: Event): void => {
     const el = event.target;
-    if (!isHTMLInputElement(el)) {
+    if (!isHTMLInputElement(el) || !this.isNumber) {
       return;
     }
 
-    if (this.compiledMaskConfig !== undefined) {
-      return;
-    }
-
-    const caret = el.selectionStart ?? el.value.length;
     const raw = this.normalizeInputValue(el.value);
-    const rawCaret = this.normalizeInputValue(el.value.slice(0, caret)).length;
     this.rawValue = raw;
-    const cased = this.caseAtCaret(raw, rawCaret);
-    this.commitInput(el, { ...cased, unmaskedValue: cased.value });
+    this.commitInput(el, {
+      caret: el.selectionStart ?? el.value.length,
+      unmaskedValue: raw,
+      value: raw,
+    });
   };
 
   private emitValue(value: string, unmaskedValue: string): void {
@@ -708,8 +736,8 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
                 if (this.inputEl === el) {
                   return;
                 }
-                this.inputEl?.removeEventListener("beforeinput", this.handleBeforeInput);
                 this.inputEl?.removeEventListener("input", this.handleMaskInput);
+                this.inputEl?.removeEventListener("beforeinput", this.handleBeforeInput);
                 this.inputEl = el;
                 el?.addEventListener("beforeinput", this.handleBeforeInput);
                 this.syncMaskito();
