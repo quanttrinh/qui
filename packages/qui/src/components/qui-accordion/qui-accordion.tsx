@@ -1,4 +1,5 @@
 import {
+  Mixin,
   resolveVar,
   Component,
   Element,
@@ -16,9 +17,9 @@ import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
 import { ensureShadowStylesheet } from "../../utilities/styles";
-import { createListenerStore } from "../shared/controllers/listener-store";
-import { ReactiveControlBase } from "../shared/controllers/reactive-control/component-base";
-import { nextId } from "../shared/dom/id";
+import { createListenerStore } from "../shared/controllers";
+import { nextId } from "../shared/helpers/dom/id";
+import { ControllerHostMixin } from "../shared/mixins";
 import { clearAccordion, provideAccordion, type AccordionContext } from "./accordion-context";
 import { AccordionController } from "./controller";
 
@@ -50,7 +51,7 @@ export interface AccordionValueChangeDetails {
   styleUrl: resolveVar(styleUrls.quiAccordion),
   shadow: true,
 })
-export class QuiAccordion extends ReactiveControlBase {
+export class QuiAccordion extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiAccordionElement;
 
   /** Whether multiple items may be expanded at once. */

@@ -1,14 +1,24 @@
-import { resolveVar, Component, Element, h, Host, Method, Prop, type VNode } from "@stencil/core";
+import {
+  Mixin,
+  resolveVar,
+  Component,
+  Element,
+  h,
+  Host,
+  Method,
+  Prop,
+  type VNode,
+} from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { ariaAttr, dataAttr } from "../shared/aria/attr";
-import { consumeContextPart } from "../shared/context/context-part";
-import { ContextPartElement } from "../shared/context/context-part-element";
-import { isHTMLInputElement } from "../shared/dom/dom";
-import { focusElement } from "../shared/forms/field/control";
-import { focusRing } from "../shared/styles/styles";
+import { ContextPartController } from "../shared/controllers";
+import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
+import { isHTMLInputElement } from "../shared/helpers/dom/dom";
+import { focusElement } from "../shared/helpers/dom/focus";
+import { ControllerHostMixin } from "../shared/mixins";
+import { focusRing } from "../shared/styles";
 import {
   consumeRadioGroup,
   type RadioGroupContext,
@@ -79,7 +89,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiRadio),
   shadow: true,
 })
-export class QuiRadio extends ContextPartElement<RadioGroupContext> {
+export class QuiRadio extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiRadioElement;
 
   /** The value submitted when this item is selected. */
@@ -91,8 +101,7 @@ export class QuiRadio extends ContextPartElement<RadioGroupContext> {
   /** Plain-text label fallback when no slot content is supplied. */
   @Prop() label?: string;
 
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
+  protected readonly contextPart = new ContextPartController(this, {
     key: "radio-group",
     consume: consumeRadioGroup,
   });

@@ -1,15 +1,14 @@
-import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { setAriaControls } from "../shared/aria/aria";
-import { dataAttr } from "../shared/aria/attr";
-import { consumeContextPart } from "../shared/context/context-part";
-import { ContextPartElement } from "../shared/context/context-part-element";
-import { RegistrationReconciler } from "../shared/controllers/registration-reconciler";
-import { isHTMLElement } from "../shared/dom/dom";
-import { focusRingInset } from "../shared/styles/styles";
+import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
+import { setAriaControls } from "../shared/helpers/aria/aria";
+import { dataAttr } from "../shared/helpers/aria/attr";
+import { isHTMLElement } from "../shared/helpers/dom/dom";
+import { ControllerHostMixin } from "../shared/mixins";
+import { focusRingInset } from "../shared/styles";
 import { consumeTabs, type TabsContext, type TabsVariant } from "./context";
 
 const styles = {
@@ -123,7 +122,7 @@ function renderIndicator(variant: TabsVariant, orientation: "horizontal" | "vert
   styleUrl: resolveVar(styleUrls.quiTabTrigger),
   shadow: true,
 })
-export class QuiTabTrigger extends ContextPartElement<TabsContext> {
+export class QuiTabTrigger extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiTabTriggerElement;
 
   /** The value linking this trigger to its panel. */
@@ -134,8 +133,7 @@ export class QuiTabTrigger extends ContextPartElement<TabsContext> {
   private triggerEl?: HTMLButtonElement;
   private readonly registration = new RegistrationReconciler();
 
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
+  protected readonly contextPart = new ContextPartController(this, {
     key: "tabs",
     consume: consumeTabs,
   });

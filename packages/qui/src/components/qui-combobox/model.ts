@@ -1,4 +1,4 @@
-import { type OptionItem } from "../shared/option/option";
+import { type OptionItem } from "../shared/helpers/option";
 
 const WHITESPACE = /\s+/u;
 

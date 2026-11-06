@@ -2,79 +2,73 @@
 import type { Config } from "@stencil/core";
 
 import { createNodeLogger } from "@stencil/core/sys/node";
-import { createRequire } from "node:module";
-import { join } from "node:path";
 
 import { watchIgnoredPatterns } from "../../tooling/ignore";
-import { frameworkTypesOutputTarget } from "./build/framework-types-output-target";
-import { createPandaDriver } from "./build/panda-driver";
-import { stylesPlugin } from "./styles.stencil.plugin";
+import { createBuildConfig } from "./build/config";
+import { frameworkTypesOutputTarget } from "./build/output-targets/framework-types-output-target";
+import { utilitiesOutputTarget } from "./build/output-targets/utilities-output-target";
+import { createPandaDriver } from "./build/panda/panda-driver";
+import { pandacssTransform } from "./build/plugins/rollup/pandacss";
+import { stylesPlugin } from "./build/plugins/stencil/styles";
 
-const packageRoot = __dirname;
-const requireFromConfig = createRequire(join(packageRoot, "package.json"));
-const pandaTransformer = requireFromConfig(
-  "@pandacss/transformer",
-) as typeof import("@pandacss/transformer");
+const build = createBuildConfig(__dirname);
 const logger = createNodeLogger();
-const pandaDriver = createPandaDriver(packageRoot);
-const globalCss = join(packageRoot, "styled-system/styles.css");
-const outputDirectory = join(packageRoot, "dist", "shared");
+const pandaDriver = createPandaDriver(build);
+const isTest = process.env.NODE_ENV === "test";
+const testProject = process.env.STENCIL_TEST_PROJECT;
+const needsHydrate =
+  !isTest ||
+  testProject === undefined ||
+  testProject === "all" ||
+  testProject === "unit" ||
+  testProject === "integration";
 
-/**
- * Runs only Panda's source transformer. `stylesPlugin` owns codegen and CSS
- * generation; both use the same shared compiler driver.
- */
-function pandacssTransform(driver: ReturnType<typeof createPandaDriver>) {
-  const transformer = pandaTransformer.rollup({ getCompiler: () => driver.getCompiler() });
-  const transformerPlugins = Array.isArray(transformer) ? transformer : [transformer];
-
-  return [
-    {
-      name: "qui-panda-transform",
-      async buildStart(): Promise<void> {
-        await driver.ensureMain();
+const outputTargets: NonNullable<Config["outputTargets"]> = [
+  isTest
+    ? {
+        type: "www" as const,
+        dir: build.output.test,
+        serviceWorker: null,
+      }
+    : {
+        type: "www" as const,
+        serviceWorker: null,
+        copy: [
+          { src: build.file.sharedCss, dest: "styles.css" },
+          { src: build.file.themeCss, dest: "theme.css" },
+        ],
       },
-    },
-    ...(transformerPlugins as unknown[]),
-  ];
+];
+
+if (!isTest) {
+  outputTargets.push({
+    type: "dist-custom-elements",
+    dir: build.output.shared,
+    generateTypeDeclarations: true,
+    customElementsExportBehavior: "single-export-module",
+    externalRuntime: false,
+  });
+}
+
+if (needsHydrate) {
+  outputTargets.push({
+    type: "dist-hydrate-script",
+    dir: build.output.hydrate,
+  });
+}
+
+if (!isTest) {
+  outputTargets.push(utilitiesOutputTarget(build), frameworkTypesOutputTarget({ config: build }));
 }
 
 export const config: Config = {
   namespace: "qui",
   logger,
-  plugins: [stylesPlugin({ root: packageRoot, driver: pandaDriver, logger })],
-  tsconfig: "./tsconfig.build.json",
-  // Tests and Vitest setup are not part of the component build.
-  watchIgnoredRegex: watchIgnoredPatterns,
-  outputTargets: [
-    process.env.NODE_ENV === "test"
-      ? {
-          type: "www" as const,
-          dir: join(packageRoot, ".stencil-test"),
-          serviceWorker: null,
-        }
-      : {
-          type: "www" as const,
-          serviceWorker: null,
-          copy: [
-            { src: globalCss, dest: "styles.css" },
-            { src: join(packageRoot, "styled-system/theme.css"), dest: "theme.css" },
-          ],
-        },
-    {
-      type: "dist-custom-elements",
-      dir: outputDirectory,
-      generateTypeDeclarations: true,
-      customElementsExportBehavior: "single-export-module",
-      externalRuntime: false,
-    },
-    {
-      type: "dist-hydrate-script",
-      dir: join(packageRoot, "dist", "hydrate"),
-    },
-    frameworkTypesOutputTarget({ rootDir: packageRoot }),
-  ],
+  plugins: [stylesPlugin({ config: build, driver: pandaDriver, logger })],
   rollupPlugins: {
-    before: pandacssTransform(pandaDriver),
+    before: pandacssTransform({ config: build, driver: pandaDriver, logger }),
   },
+  tsconfig: build.file.tsconfig,
+  watchIgnoredRegex: watchIgnoredPatterns,
+  outputTargets,
 };

@@ -1,4 +1,4 @@
-import { isHTMLElement } from "../shared/dom/dom";
+import { isHTMLElement } from "../shared/helpers/dom/dom";
 
 /**
  * Exceptions that report a non-negative `tabIndex` but cannot receive focus:

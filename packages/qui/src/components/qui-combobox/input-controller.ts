@@ -1,8 +1,5 @@
-import {
-  ReactiveControllerBase,
-  type ReactiveControllerHost,
-} from "../shared/controllers/reactive-control/controller";
-import { type OptionItem } from "../shared/option/option";
+import { ReactiveControllerBase, type ReactiveControllerHost } from "../shared/controllers";
+import { type OptionItem } from "../shared/helpers/option";
 import { type ComboboxFilter, type ComboboxFilterMode, OptionFilter } from "./model";
 
 export interface ComboboxInputOptions {

@@ -1,10 +1,20 @@
-import { Build, resolveVar, Component, Element, h, Host, State, type VNode } from "@stencil/core";
+import {
+  Mixin,
+  Build,
+  resolveVar,
+  Component,
+  Element,
+  h,
+  Host,
+  State,
+  type VNode,
+} from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { consumeContextPart } from "../shared/context/context-part";
-import { ContextPartElement } from "../shared/context/context-part-element";
+import { ContextPartController } from "../shared/controllers";
+import { ControllerHostMixin } from "../shared/mixins";
 import { consumeDialog, type DialogContext, type DialogControl } from "./context";
 import { applyDialogAria } from "./dialog-aria";
 
@@ -50,20 +60,20 @@ const styles = {
  * The native `<dialog>` surface for `qui-dialog`.
  *
  * @slot - Dialog title, description, body, and actions.
+ * @undefinedContent
  */
 @Component({
   tag: "qui-dialog-content",
   styleUrl: resolveVar(styleUrls.quiDialogContent),
   shadow: true,
 })
-export class QuiDialogContent extends ContextPartElement<DialogContext> {
+export class QuiDialogContent extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiDialogContentElement;
 
   @State() private dialogRole: "dialog" | "alertdialog" = "dialog";
   @State() private dialogLabel?: string;
 
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
+  protected readonly contextPart = new ContextPartController(this, {
     key: "dialog",
     consume: consumeDialog,
     update: (): void => {

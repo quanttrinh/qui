@@ -1,7 +1,9 @@
-import { ControlledControllerBase } from "../shared/controllers/controlled-controller";
-import { FocusState } from "../shared/controllers/focus-state";
-import { KeyedHostRegistry } from "../shared/controllers/keyed-host-registry";
-import { type ReactiveControllerHost } from "../shared/controllers/reactive-control/controller";
+import {
+  ControlledControllerBase,
+  FocusState,
+  KeyedHostRegistry,
+  type ReactiveControllerHost,
+} from "../shared/controllers";
 
 interface RadioGroupControllerOptions {
   getValue: () => string | undefined;

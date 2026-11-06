@@ -35,8 +35,7 @@
     "prepublishOnly": "bun run build",
     "test": "vitest run",
     "test:unit": "vitest run",
-    "test:watch": "vitest",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",

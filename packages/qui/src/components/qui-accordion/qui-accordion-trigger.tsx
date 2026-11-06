@@ -1,17 +1,16 @@
-import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
 import { ExpandMoreIcon } from "../qui-icon/icons";
-import { setAriaControls } from "../shared/aria/aria";
-import { dataAttr } from "../shared/aria/attr";
-import { consumeContextPart } from "../shared/context/context-part";
-import { ContextPartElement } from "../shared/context/context-part-element";
-import { RegistrationReconciler } from "../shared/controllers/registration-reconciler";
-import { isHTMLElement } from "../shared/dom/dom";
-import { arrowDelta, edgeKey } from "../shared/dom/keyboard";
-import { focusRingInset } from "../shared/styles/styles";
+import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
+import { setAriaControls } from "../shared/helpers/aria/aria";
+import { dataAttr } from "../shared/helpers/aria/attr";
+import { isHTMLElement } from "../shared/helpers/dom/dom";
+import { arrowDelta, edgeKey } from "../shared/helpers/dom/keyboard";
+import { ControllerHostMixin } from "../shared/mixins";
+import { focusRingInset } from "../shared/styles";
 import { consumeAccordionItem, type AccordionItemContext } from "./accordion-context";
 
 const styles = {
@@ -60,14 +59,13 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiAccordionTrigger),
   shadow: true,
 })
-export class QuiAccordionTrigger extends ContextPartElement<AccordionItemContext> {
+export class QuiAccordionTrigger extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiAccordionTriggerElement;
 
   private triggerEl?: HTMLButtonElement;
   private readonly registration = new RegistrationReconciler();
 
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
+  protected readonly contextPart = new ContextPartController(this, {
     key: "accordion-item",
     consume: consumeAccordionItem,
   });

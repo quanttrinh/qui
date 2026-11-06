@@ -1,11 +1,11 @@
-import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { consumeContextPart } from "../shared/context/context-part";
-import { ContextPartElement } from "../shared/context/context-part-element";
-import { consumeField, type FieldApi } from "../shared/forms/field/context";
+import { FieldPartController } from "../shared/controllers";
+import { type FieldApi } from "../shared/helpers/field";
+import { ControllerHostMixin } from "../shared/mixins";
 import { fieldStyles } from "./styles";
 
 const styles = {
@@ -23,23 +23,13 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiFieldHelperText),
   shadow: true,
 })
-export class QuiFieldHelperText extends ContextPartElement<FieldApi> {
+export class QuiFieldHelperText extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiFieldHelperTextElement;
 
-  protected readonly needsShadowStyles = false;
-
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
-    key: "field",
-    consume: consumeField,
-    setup: (field): (() => void) => {
-      this.host.id = field.getHelperTextProps().id;
-      return field.registerHelperText(this.host);
-    },
-  });
+  protected readonly fieldPart = new FieldPartController(this, { part: "helper-text" });
 
   private get field(): FieldApi | undefined {
-    return this.contextPart.context;
+    return this.fieldPart.field;
   }
 
   render(): VNode {

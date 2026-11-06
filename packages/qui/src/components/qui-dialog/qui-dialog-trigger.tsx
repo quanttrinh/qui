@@ -1,11 +1,11 @@
-import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { consumeContextPart } from "../shared/context/context-part";
-import { ContextPartElement } from "../shared/context/context-part-element";
-import { dialogButtonBase } from "../shared/styles/styles";
+import { ContextPartController } from "../shared/controllers";
+import { ControllerHostMixin } from "../shared/mixins";
+import { dialogButtonBase } from "../shared/styles";
 import { consumeDialog, type DialogContext } from "./context";
 
 const styles = {
@@ -26,14 +26,13 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiDialogTrigger),
   shadow: true,
 })
-export class QuiDialogTrigger extends ContextPartElement<DialogContext> {
+export class QuiDialogTrigger extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiDialogTriggerElement;
 
   /** Disables the trigger. */
   @Prop() disabled = false;
 
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
+  protected readonly contextPart = new ContextPartController(this, {
     key: "dialog",
     consume: consumeDialog,
   });

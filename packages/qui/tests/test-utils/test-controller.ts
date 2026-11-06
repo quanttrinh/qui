@@ -1,4 +1,4 @@
-import { ReactiveControllerBase } from "../../src/components/shared/controllers/reactive-control/controller";
+import { ReactiveControllerBase } from "../../src/components/shared/controllers/reactive-controller";
 
 /** Controller that records lifecycle calls for unit tests. */
 export class TestController extends ReactiveControllerBase {

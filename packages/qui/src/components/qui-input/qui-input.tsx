@@ -1,4 +1,5 @@
 import {
+  Mixin,
   resolveVar,
   AttachInternals,
   Component,
@@ -19,13 +20,13 @@ import { cx } from "#styled-system/css";
 
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { AddIcon, RemoveIcon, VisibilityIcon, VisibilityOffIcon } from "../qui-icon/icons";
-import { ariaAttr, dataAttr } from "../shared/aria/attr";
-import { isHTMLInputElement, isHTMLSlotElement } from "../shared/dom/dom";
-import { nextId } from "../shared/dom/id";
-import { applyFieldAria } from "../shared/forms/field/aria";
-import { createFieldControl, focusElement } from "../shared/forms/field/control";
-import { FormControlBase } from "../shared/forms/form-control/component-base";
-import { FormController, type FormValidity } from "../shared/forms/form-control/controller";
+import { FormController, type FormValidity } from "../shared/controllers";
+import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
+import { isHTMLInputElement, isHTMLSlotElement } from "../shared/helpers/dom/dom";
+import { focusElement } from "../shared/helpers/dom/focus";
+import { nextId } from "../shared/helpers/dom/id";
+import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
+import { ControllerHostMixin, FormControlMixin } from "../shared/mixins";
 import { applyTextCase, type TextCase } from "./case";
 import {
   appendAcceptedNumericOrDecimalCharacter,
@@ -81,7 +82,7 @@ export interface InputValueDetails {
   shadow: true,
   formAssociated: true,
 })
-export class QuiInput extends FormControlBase {
+export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   @Element() host!: HTMLQuiInputElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -157,7 +158,7 @@ export class QuiInput extends FormControlBase {
   private rawValue = "";
   private readonly generatedId = nextId("qui-input");
   private readonly fieldControl = createFieldControl(() => this.inputEl);
-  private readonly form = new FormController(this, {
+  protected readonly form = new FormController(this, {
     getInternals: (): ElementInternals => this.internals,
     getName: (): string | undefined => this.name,
     getMultiple: (): boolean => false,
@@ -187,10 +188,6 @@ export class QuiInput extends FormControlBase {
   constructor() {
     super();
     this.form.setControl(this.fieldControl);
-  }
-
-  protected get formController(): FormController {
-    return this.form;
   }
 
   connectedCallback(): void {

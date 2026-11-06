@@ -1,4 +1,4 @@
-import { createContextStore } from "../shared/context/context-store";
+import { createContextStore } from "../shared/context";
 
 /** A radio item's component-owned props. */
 export interface RadioItem {
@@ -38,19 +38,10 @@ export interface RadioGroupContext {
   subscribe: (listener: () => void) => () => void;
 }
 
-const groups = createContextStore<RadioGroupContext>("radio-group");
-
-function provideRadioGroup(host: HTMLElement, group: RadioGroupContext): void {
-  groups.provide(host, group);
-}
-
-function clearRadioGroup(host: HTMLElement): void {
-  groups.clear(host);
-}
-
-/** Find the closest ancestor radio group, crossing shadow boundaries. */
-function consumeRadioGroup(host: HTMLElement): RadioGroupContext | undefined {
-  return groups.consume(host);
-}
+const {
+  provide: provideRadioGroup,
+  clear: clearRadioGroup,
+  consume: consumeRadioGroup,
+} = createContextStore<RadioGroupContext>("radio-group");
 
 export { clearRadioGroup, consumeRadioGroup, provideRadioGroup };

@@ -1,4 +1,5 @@
 import {
+  Mixin,
   resolveVar,
   Component,
   Element,
@@ -16,10 +17,10 @@ import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
 import { ensureShadowStylesheet } from "../../utilities/styles";
-import { dataAttr } from "../shared/aria/attr";
-import { createListenerStore } from "../shared/controllers/listener-store";
-import { ReactiveControlBase } from "../shared/controllers/reactive-control/component-base";
-import { nextId } from "../shared/dom/id";
+import { createListenerStore } from "../shared/controllers";
+import { dataAttr } from "../shared/helpers/aria/attr";
+import { nextId } from "../shared/helpers/dom/id";
+import { ControllerHostMixin } from "../shared/mixins";
 import { clearTabs, provideTabs, type TabsContext, type TabsVariant } from "./context";
 import { TabsController } from "./controller";
 
@@ -52,7 +53,7 @@ export interface TabsValueChangeDetails {
   styleUrl: resolveVar(styleUrls.quiTabs),
   shadow: true,
 })
-export class QuiTabs extends ReactiveControlBase {
+export class QuiTabs extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiTabsElement;
 
   /** The controlled selected tab value. */

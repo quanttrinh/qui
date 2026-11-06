@@ -1,6 +1,6 @@
 import { css } from "#styled-system/css";
 
-import { fieldSurface, focusRingFlush } from "../shared/styles/styles";
+import { fieldSurface, focusRingFlush } from "../shared/styles";
 
 export const selectStyles = {
   host: css({ display: "block" }),

@@ -3,12 +3,12 @@
 // This includes Components, prop unions, and custom event types.
 export type * from "./components";
 
-export { ReactiveControlBase } from "./components/shared/controllers/reactive-control/component-base";
+export { ControllerHostMixin, FormControlMixin } from "./components/shared/mixins";
 export {
   ReactiveControllerBase,
   type ReactiveController,
   type ReactiveControllerHost,
-} from "./components/shared/controllers/reactive-control/controller";
+} from "./components/shared/controllers";
 
 export { QuiButton } from "./components/qui-button/qui-button";
 export type { ButtonSize, ButtonVariant } from "./components/qui-button/qui-button";
@@ -19,7 +19,7 @@ export { QuiCard } from "./components/qui-card/qui-card";
 export type { CardVariant } from "./components/qui-card/qui-card";
 
 export { QuiCheckbox } from "./components/qui-checkbox/qui-checkbox";
-export type { CheckedState as CheckboxState } from "./components/shared/forms/checkable/checked-state";
+export type { CheckedState as CheckboxState } from "./components/shared/controllers";
 
 export { QuiSwitch } from "./components/qui-switch/qui-switch";
 
@@ -32,7 +32,7 @@ export { QuiFieldLabel } from "./components/qui-field/qui-field-label";
 export { QuiFieldHelperText } from "./components/qui-field/qui-field-helper-text";
 export { QuiFieldErrorText } from "./components/qui-field/qui-field-error-text";
 export { QuiFieldRequiredIndicator } from "./components/qui-field/qui-field-required-indicator";
-export type { FieldApi, FieldIds } from "./components/shared/forms/field/context";
+export type { FieldApi, FieldIds } from "./components/shared/helpers/field";
 
 export { QuiInput } from "./components/qui-input/qui-input";
 export type {
@@ -73,7 +73,7 @@ export type {
   OptionItem,
   OptionRender as OptionRenderer,
   OptionRenderState,
-} from "./components/shared/option/option";
+} from "./components/shared/helpers/option";
 export { Fragment, h } from "./utilities/h";
 export type { VNode } from "./utilities/h";
 export { QuiPopover } from "./components/qui-popover/qui-popover";

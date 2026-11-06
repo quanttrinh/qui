@@ -1,13 +1,12 @@
-import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { dataAttr } from "../shared/aria/attr";
-import { consumeContextPart } from "../shared/context/context-part";
-import { ContextPartElement } from "../shared/context/context-part-element";
-import { RegistrationReconciler } from "../shared/controllers/registration-reconciler";
-import { arrowDelta, edgeKey } from "../shared/dom/keyboard";
+import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
+import { dataAttr } from "../shared/helpers/aria/attr";
+import { arrowDelta, edgeKey } from "../shared/helpers/dom/keyboard";
+import { ControllerHostMixin } from "../shared/mixins";
 import { consumeTabs, type TabsContext } from "./context";
 
 const styles = {
@@ -36,11 +35,10 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiTabList),
   shadow: true,
 })
-export class QuiTabList extends ContextPartElement<TabsContext> {
+export class QuiTabList extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiTabListElement;
 
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
+  protected readonly contextPart = new ContextPartController(this, {
     key: "tabs",
     consume: consumeTabs,
   });

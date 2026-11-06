@@ -4,7 +4,7 @@ import { queryControl, queryPartIn, resolveHost } from "../../../tests/test-util
 import { nextFrame, waitForShadowStyles } from "../../../tests/test-utils/dom-ready";
 import { expectFocusedDeep, typeInto } from "../../../tests/test-utils/interactions";
 import { deepQuery, queryInside } from "../../../tests/test-utils/shadow";
-import { isHTMLFormElement } from "../shared/dom/dom";
+import { isHTMLFormElement } from "../shared/helpers/dom/dom";
 
 const pixels = (value: string): number => Number(value.replace(/px$/u, ""));
 

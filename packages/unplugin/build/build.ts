@@ -6,7 +6,7 @@ import { buildModules } from "../../../tooling/module-builder";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 
-const count = buildModules({
+const count = await buildModules({
   root,
   source: "src",
   output: "dist",

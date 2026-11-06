@@ -4,7 +4,7 @@ import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
 import { ensureShadowStylesheet } from "../../utilities/styles";
-import { focusRing } from "../shared/styles/styles";
+import { focusRing } from "../shared/styles";
 
 export type ButtonVariant = "filled" | "tonal" | "elevated" | "outlined" | "text";
 export type ButtonSize = "sm" | "md" | "lg";

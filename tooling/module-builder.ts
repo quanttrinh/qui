@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { access, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { ModuleKind, ScriptTarget, transpileDeclaration, transpileModule } from "typescript";
 
@@ -20,11 +20,18 @@ export interface ModuleBuildOptions {
   clean?: string[];
 }
 
-function walk(directory: string): string[] {
-  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+async function walk(directory: string): Promise<string[]> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files: string[] = [];
+  for (const entry of entries) {
     const path = join(directory, entry.name);
-    return entry.isDirectory() ? walk(path) : [path];
-  });
+    if (entry.isDirectory()) {
+      files.push(...(await walk(path)));
+    } else {
+      files.push(path);
+    }
+  }
+  return files;
 }
 
 function isSourceFile(file: string): boolean {
@@ -40,62 +47,88 @@ function outputPath(sourceFile: string, options: ModuleBuildOptions): string {
   return join(options.root, options.output, relativePath.replace(TYPESCRIPT_EXTENSION, ".js"));
 }
 
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Standalone modules are consumed directly as ESM. TypeScript keeps
  * extensionless relative imports, so add the runtime `.js` extension here.
  */
-function rewriteRelativeImports(code: string, sourceFile: string): string {
-  return code.replaceAll(RUNTIME_IMPORT, (match, quote: string, specifier: string) => {
-    if (RESOLVED_MODULE.test(specifier)) {
-      return match;
+async function rewriteRelativeImports(code: string, sourceFile: string): Promise<string> {
+  let result = "";
+  let lastIndex = 0;
+
+  for (const match of code.matchAll(RUNTIME_IMPORT)) {
+    const [full, quote, specifier] = match;
+    if (quote === undefined || specifier === undefined || RESOLVED_MODULE.test(specifier)) {
+      continue;
     }
     const base = resolve(dirname(sourceFile), specifier);
-    if (existsSync(`${base}.ts`) || existsSync(`${base}.tsx`)) {
-      return `from ${quote}${specifier}.js${quote}`;
+    let replacement = full;
+    if ((await pathExists(`${base}.ts`)) || (await pathExists(`${base}.tsx`))) {
+      replacement = `from ${quote}${specifier}.js${quote}`;
+    } else if (
+      (await pathExists(join(base, "index.ts"))) ||
+      (await pathExists(join(base, "index.tsx")))
+    ) {
+      replacement = `from ${quote}${specifier}${specifier.endsWith("/") ? "" : "/"}index.js${quote}`;
     }
-    if (existsSync(join(base, "index.ts")) || existsSync(join(base, "index.tsx"))) {
-      return `from ${quote}${specifier}${specifier.endsWith("/") ? "" : "/"}index.js${quote}`;
+    if (replacement !== full) {
+      const index = match.index ?? 0;
+      result += code.slice(lastIndex, index) + replacement;
+      lastIndex = index + full.length;
     }
-    return match;
-  });
-}
-
-function writeIfChanged(file: string, contents: string): void {
-  if (existsSync(file) && readFileSync(file, "utf8") === contents) {
-    return;
   }
-  mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, contents);
+
+  return result + code.slice(lastIndex);
 }
 
-export function buildModules(options: ModuleBuildOptions): number {
-  const sourceDirectory = join(options.root, options.source);
-  const sourceFiles = walk(sourceDirectory).filter((file) => isSourceFile(file));
+async function writeIfChanged(file: string, contents: string): Promise<void> {
+  try {
+    if ((await readFile(file, "utf8")) === contents) {
+      return;
+    }
+  } catch {
+    // The file does not exist yet.
+  }
+  await mkdir(dirname(file), { recursive: true });
+  await writeFile(file, contents);
+}
 
-  rmSync(join(options.root, options.output), { recursive: true, force: true });
+export async function buildModules(options: ModuleBuildOptions): Promise<number> {
+  const sourceDirectory = join(options.root, options.source);
+  const sourceFiles = (await walk(sourceDirectory)).filter((file) => isSourceFile(file));
+
+  await rm(join(options.root, options.output), { recursive: true, force: true });
   for (const file of options.clean ?? []) {
-    rmSync(join(options.root, file), { force: true });
+    await rm(join(options.root, file), { force: true });
   }
 
   for (const sourceFile of sourceFiles) {
-    const source = readFileSync(sourceFile, "utf8");
+    const source = await readFile(sourceFile, "utf8");
     const compilerOptions = {
       module: ModuleKind.ESNext,
       target: ScriptTarget.ES2022,
     };
-    const js = rewriteRelativeImports(
+    const js = await rewriteRelativeImports(
       transpileModule(source, { compilerOptions }).outputText,
       sourceFile,
     );
-    const declaration = rewriteRelativeImports(
+    const declaration = await rewriteRelativeImports(
       transpileDeclaration(source, {
         compilerOptions: { ...compilerOptions, declaration: true, emitDeclarationOnly: true },
       }).outputText,
       sourceFile,
     );
     const file = outputPath(sourceFile, options);
-    writeIfChanged(file, js);
-    writeIfChanged(file.replace(JAVASCRIPT_EXTENSION, ".d.ts"), declaration);
+    await writeIfChanged(file, js);
+    await writeIfChanged(file.replace(JAVASCRIPT_EXTENSION, ".d.ts"), declaration);
   }
 
   return sourceFiles.length;

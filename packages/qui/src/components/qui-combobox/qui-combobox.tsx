@@ -1,4 +1,5 @@
 import {
+  Mixin,
   AttachInternals,
   Component,
   Element,
@@ -19,7 +20,6 @@ import { ensureShadowStylesheet } from "../../utilities/styles";
 import { UnfoldMoreIcon } from "../qui-icon/icons";
 import { quiOptionSource } from "../qui-option/option-source";
 import { type PopoverDismissEvent } from "../qui-popover/qui-popover";
-import { ariaAttr, dataAttr } from "../shared/aria/attr";
 import {
   FormController,
   OptionListNavigationController,
@@ -27,18 +27,20 @@ import {
   OptionSourceController,
   SelectionController,
 } from "../shared/controllers";
-import { isHTMLInputElement } from "../shared/dom/dom";
-import { nextId } from "../shared/dom/id";
-import { applyFieldAria } from "../shared/forms/field/aria";
-import { createFieldControl, focusElement } from "../shared/forms/field/control";
-import { OptionControlBase } from "../shared/option/component-base";
-import { labelForValue, type OptionItem } from "../shared/option/option";
+import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
+import { isHTMLInputElement } from "../shared/helpers/dom/dom";
+import { focusElement } from "../shared/helpers/dom/focus";
+import { nextId } from "../shared/helpers/dom/id";
+import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
 import {
   PANEL_MAX_HEIGHT,
+  labelForValue,
   listStyles,
   renderOptionList,
   renderOptionRow,
-} from "../shared/option/option-list";
+  type OptionItem,
+} from "../shared/helpers/option";
+import { ControllerHostMixin, FormControlMixin, OptionControlMixin } from "../shared/mixins";
 import { ComboboxInputController } from "./input-controller";
 import { type ComboboxFilter, type ComboboxFilterMode, type ComboboxOption } from "./model";
 import { comboboxStyles as styles } from "./styles";
@@ -79,6 +81,7 @@ function displayValueFor(
  *
  * The list renders in the top layer with `popover="manual"` and is positioned
  * with JavaScript, so it does not depend on CSS anchor positioning.
+ * @undefinedContent
  */
 @Component({
   tag: "qui-combobox",
@@ -86,7 +89,7 @@ function displayValueFor(
   shadow: true,
   formAssociated: true,
 })
-export class QuiCombobox extends OptionControlBase {
+export class QuiCombobox extends Mixin(ControllerHostMixin, FormControlMixin, OptionControlMixin) {
   @Element() host!: HTMLQuiComboboxElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -139,7 +142,7 @@ export class QuiCombobox extends OptionControlBase {
   private readonly generatedId = nextId("qui-combobox");
   private readonly listId = `${this.generatedId}-listbox`;
   private readonly fieldControl = createFieldControl(() => this.inputEl);
-  private readonly form = new FormController(this, {
+  protected readonly form = new FormController(this, {
     getInternals: (): ElementInternals => this.internals,
     getName: (): string | undefined => this.name,
     getMultiple: (): boolean => this.multiple,
@@ -165,9 +168,6 @@ export class QuiCombobox extends OptionControlBase {
     },
   });
 
-  protected get formController(): FormController {
-    return this.form;
-  }
   private readonly source = new OptionSourceController(this, {
     adapter: quiOptionSource,
     getItems: (): readonly ComboboxOption[] | undefined => this.items,

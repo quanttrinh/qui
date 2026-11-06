@@ -33,6 +33,7 @@ export default defineConfig({
   jsPlugins: [{ name: "stencil", specifier: "@stencil/eslint-plugin" }],
   options: {
     typeAware: true,
+    typeCheck: true,
   },
   overrides: [
     {
@@ -76,10 +77,7 @@ export default defineConfig({
         // --- Stencil -------------------------------------------------------
         // Panda's `css()` is a pure build-time helper, and the other entries
         // are pure factory/lookup helpers.
-        "stencil/ban-side-effects": [
-          "error",
-          ["css", "createContextStore", "createGlobalHrefKey", "createRequire", "createUnplugin"],
-        ],
+        "stencil/ban-side-effects": ["error", ["css", "createContextStore", "createGlobalHrefKey"]],
         "stencil/decorators-style": [
           "error",
           {
@@ -92,8 +90,16 @@ export default defineConfig({
             listen: "multiline",
           },
         ],
-        // Props inherited from OptionControlBase are not visible to the
-        // Stencil lint plugin, so watches on those props look unused.
+      },
+    },
+    {
+      files: [
+        "packages/qui/src/components/qui-select/qui-select.tsx",
+        "packages/qui/src/components/qui-combobox/qui-combobox.tsx",
+      ],
+      rules: {
+        // These watches target props supplied by OptionControlMixin, which the
+        // Stencil lint plugin cannot associate with the component class.
         "stencil/no-unused-watch": "off",
       },
     },
@@ -107,7 +113,7 @@ export default defineConfig({
       },
     },
     {
-      files: ["packages/qui/src/utilities/ssr.hydration.integration.test.ts"],
+      files: ["packages/qui/src/utilities/ssr/ssr.hydration.integration.test.ts"],
       rules: {
         // This test starts a local HTTP server and drives real browsers.
         "import/no-nodejs-modules": "off",
@@ -143,6 +149,7 @@ export default defineConfig({
           "Event",
           "Listen",
           "Method",
+          "Mixin",
           "Prop",
           "State",
           "StencilEvent",

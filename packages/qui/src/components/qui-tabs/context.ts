@@ -1,4 +1,4 @@
-import { createContextStore } from "../shared/context/context-store";
+import { createContextStore } from "../shared/context";
 import { type TabsTriggerRegistration } from "./controller";
 
 export type TabsVariant = "primary" | "secondary";
@@ -40,18 +40,10 @@ export interface TabsContext {
   subscribe: (listener: () => void) => () => void;
 }
 
-const tabs = createContextStore<TabsContext>("tabs");
-
-function provideTabs(host: HTMLElement, context: TabsContext): void {
-  tabs.provide(host, context);
-}
-
-function clearTabs(host: HTMLElement): void {
-  tabs.clear(host);
-}
-
-function consumeTabs(host: HTMLElement): TabsContext | undefined {
-  return tabs.consume(host);
-}
+const {
+  provide: provideTabs,
+  clear: clearTabs,
+  consume: consumeTabs,
+} = createContextStore<TabsContext>("tabs");
 
 export { clearTabs, consumeTabs, provideTabs };

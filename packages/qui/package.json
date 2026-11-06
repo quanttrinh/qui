@@ -35,8 +35,8 @@
       "default": "./dist/shared/index.js"
     },
     "./register": {
-      "types": "./dist/utilities/register.d.ts",
-      "default": "./dist/utilities/register.js"
+      "types": "./dist/utilities/register/index.d.ts",
+      "default": "./dist/utilities/register/index.js"
     },
     "./hydrate": {
       "types": "./dist/hydrate/index.d.ts",
@@ -44,12 +44,12 @@
       "require": "./dist/hydrate/index.js"
     },
     "./ssr": {
-      "types": "./dist/utilities/ssr.d.ts",
-      "default": "./dist/utilities/ssr.js"
+      "types": "./dist/utilities/ssr/index.d.ts",
+      "default": "./dist/utilities/ssr/index.js"
     },
     "./runtime": {
-      "types": "./dist/utilities/styles.d.ts",
-      "default": "./dist/utilities/styles.js"
+      "types": "./dist/utilities/styles/index.d.ts",
+      "default": "./dist/utilities/styles/index.js"
     },
     "./shared/*": {
       "types": "./dist/shared/*.d.ts",
@@ -112,22 +112,20 @@
     "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
-    "dev": "bun run build:utilities && stencil build --dev --watch --serve",
-    "build": "stencil build && bun run build:utilities && bun run build:types",
-    "build:utilities": "bun build/build-utilities.ts",
-    "build:types": "bun build/finalize-types.ts",
-    "test:framework-types": "bun build/require-built-types.ts && tsc -p test/fixtures/framework-types/react/tsconfig.json && tsc -p test/fixtures/framework-types/solid/tsconfig.json && tsc -p test/fixtures/framework-types/preact/tsconfig.json",
-    "codegen": "panda codegen",
-    "test": "NODE_ENV=test stencil-test",
-    "test:unit": "NODE_ENV=test stencil-test --project unit",
-    "test:integration": "NODE_ENV=test stencil-test --project integration",
-    "test:browser": "NODE_ENV=test stencil-test --project browser",
-    "test:smoke": "NODE_ENV=test stencil-test --project smoke",
-    "test:watch": "NODE_ENV=test stencil-test --watch",
-    "build:release": "bun run build && bun run build:lib",
-    "prepublishOnly": "bun run build:release",
+    "dev": "stencil build --dev --watch --serve",
+    "build": "stencil build",
+    "postbuild": "bun build/scripts/finalize-types.ts",
     "build:lib": "panda lib --files './**/*.{js,mjs}'",
-    "typecheck": "tsc --noEmit -p tsconfig.build.json"
+    "build:release": "bun run build && bun run build:lib",
+    "codegen": "panda codegen",
+    "test": "bun build/scripts/stencil-test.ts",
+    "test:unit": "bun build/scripts/stencil-test.ts --project unit",
+    "test:integration": "bun build/scripts/stencil-test.ts --project integration",
+    "test:browser": "bun build/scripts/stencil-test.ts --project browser",
+    "test:smoke": "bun build/scripts/stencil-test.ts --project smoke",
+    "test:watch": "bun build/scripts/stencil-test.ts --watch",
+    "test:framework-types": "bun build/scripts/require-built-types.ts && tsc -p tests/fixtures/framework-types/react/tsconfig.json && tsc -p tests/fixtures/framework-types/solid/tsconfig.json && tsc -p tests/fixtures/framework-types/preact/tsconfig.json",
+    "prepublishOnly": "bun run build:release"
   },
   "dependencies": {
     "@material/material-color-utilities": "^0.4.0",
@@ -149,6 +147,7 @@
     "playwright": "^1.64.1",
     "postcss": "^8.5.30",
     "preact": "^11.0.0",
+    "rollup": "^4.67.5",
     "solid-js": "^1",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vitest": "^5.0.5"

@@ -16,9 +16,10 @@ import {
   type DynamicScheme,
 } from "@material/material-color-utilities";
 
-import { colorRoles, cssVariableNames, type ColorRole } from "./color-roles";
+import { colorRoles, type ColorRole } from "./color-roles";
+import { buildRecord } from "./record";
 
-export { colorRoles, cssVariableNames, type ColorRole } from "./color-roles";
+export { colorRoles, cssVariableName, cssVariableNames, type ColorRole } from "./color-roles";
 
 /** The palette style used to derive the scheme. Maps to the MD3 dynamic scheme variants. */
 export type SchemeVariant =
@@ -148,46 +149,15 @@ export function schemeToColors(scheme: DynamicScheme): Record<ColorRole, string>
     return cached;
   }
 
-  const colors = {} as Record<ColorRole, string>;
-
   const dynamicColors = getRoleDynamicColors();
-  for (const role of colorRoles) {
+  const colors = buildRecord(colorRoles, (role) => {
     const dynamicColor = dynamicColors.get(role);
-    if (dynamicColor !== undefined) {
-      colors[role] = hexFromArgb(dynamicColor.getArgb(scheme));
+    if (dynamicColor === undefined) {
+      throw new Error(`Missing dynamic color for role "${role}"`);
     }
-  }
+    return hexFromArgb(dynamicColor.getArgb(scheme));
+  });
 
-  Object.freeze(colors);
   colorsByScheme.set(scheme, colors);
   return colors;
-}
-
-/** Custom properties keyed by MD3 variable name. */
-export type ColorVariables = Record<`--${string}`, string>;
-
-/** Map resolved colors to MD3 CSS custom properties. */
-export function colorsToVariables(colors: Readonly<Record<ColorRole, string>>): ColorVariables {
-  const variables = {} as ColorVariables;
-
-  for (const role of colorRoles) {
-    variables[cssVariableNames[role]] = colors[role];
-  }
-
-  return variables;
-}
-
-const variablesByScheme = new WeakMap<DynamicScheme, ColorVariables>();
-
-/** Every role in a scheme as MD3 CSS custom properties (cached per scheme). */
-export function schemeToCssVariables(scheme: DynamicScheme): ColorVariables {
-  const cached = variablesByScheme.get(scheme);
-  if (cached) {
-    return cached;
-  }
-
-  const variables = colorsToVariables(schemeToColors(scheme));
-  Object.freeze(variables);
-  variablesByScheme.set(scheme, variables);
-  return variables;
 }

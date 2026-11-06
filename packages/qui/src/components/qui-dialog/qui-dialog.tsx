@@ -16,9 +16,9 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { createListenerStore } from "../shared/controllers/listener-store";
-import { nextId } from "../shared/dom/id";
-import { lockDocumentScroll } from "../shared/dom/scroll-lock";
+import { createListenerStore } from "../shared/controllers";
+import { nextId } from "../shared/helpers/dom/id";
+import { lockDocumentScroll } from "../shared/helpers/dom/scroll-lock";
 import {
   clearDialog,
   provideDialog,

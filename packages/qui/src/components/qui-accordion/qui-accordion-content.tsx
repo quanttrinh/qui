@@ -1,14 +1,13 @@
-import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { setAriaControls, setAriaLabelledBy } from "../shared/aria/aria";
-import { dataAttr } from "../shared/aria/attr";
-import { consumeContextPart } from "../shared/context/context-part";
-import { ContextPartElement } from "../shared/context/context-part-element";
-import { RegistrationReconciler } from "../shared/controllers/registration-reconciler";
-import { consumeAccordionItem, type AccordionItemContext } from "./accordion-context";
+import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
+import { setAriaControls, setAriaLabelledBy } from "../shared/helpers/aria/aria";
+import { dataAttr } from "../shared/helpers/aria/attr";
+import { ControllerHostMixin } from "../shared/mixins";
+import { consumeAccordionItem } from "./accordion-context";
 
 const styles = {
   host: css({ display: "block" }),
@@ -42,20 +41,20 @@ const styles = {
  * The collapsible content for a `qui-accordion-item`.
  *
  * @slot - Accordion body content.
+ * @undefinedContent
  */
 @Component({
   tag: "qui-accordion-content",
   styleUrl: resolveVar(styleUrls.quiAccordionContent),
   shadow: true,
 })
-export class QuiAccordionContent extends ContextPartElement<AccordionItemContext> {
+export class QuiAccordionContent extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiAccordionContentElement;
 
   private contentEl?: HTMLElement;
   private readonly registration = new RegistrationReconciler();
 
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
+  protected readonly contextPart = new ContextPartController(this, {
     key: "accordion-item",
     consume: consumeAccordionItem,
   });

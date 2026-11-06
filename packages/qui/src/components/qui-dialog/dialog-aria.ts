@@ -1,4 +1,4 @@
-import { setAriaDescribedBy, setAriaLabelledBy } from "../shared/aria/aria";
+import { setAriaDescribedBy, setAriaLabelledBy } from "../shared/helpers/aria/aria";
 
 /** Lazily resolves the mounted dialog title and description host elements. */
 export interface DialogHostRefs {

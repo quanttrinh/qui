@@ -17,7 +17,7 @@ import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
 import { ensureShadowStylesheet } from "../../utilities/styles";
-import { isHTMLElement } from "../shared/dom/dom";
+import { isHTMLElement } from "../shared/helpers/dom/dom";
 
 /** Emitted when the popover asks its owner to close it. */
 export interface PopoverDismissEvent {
@@ -133,6 +133,7 @@ function placePopover(
  * or presses Escape, and the owner closes it by setting `open` to `false`.
  *
  * @slot - The popover content.
+ * @undefinedContent
  */
 @Component({
   tag: "qui-popover",

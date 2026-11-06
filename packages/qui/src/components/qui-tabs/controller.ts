@@ -1,13 +1,13 @@
-import { ControlledControllerBase } from "../shared/controllers/controlled-controller";
-import { FocusState } from "../shared/controllers/focus-state";
-import { KeyedHostRegistry } from "../shared/controllers/keyed-host-registry";
-import { type ReactiveControllerHost } from "../shared/controllers/reactive-control/controller";
 import {
+  ControlledControllerBase,
+  FocusState,
+  KeyedHostRegistry,
   moveIndex,
   RovingFocusRegistry,
   sameTriggerRegistration,
+  type ReactiveControllerHost,
   type TriggerRegistration,
-} from "../shared/controllers/roving-focus";
+} from "../shared/controllers";
 
 interface TabsControllerOptions {
   getValue: () => string | undefined;

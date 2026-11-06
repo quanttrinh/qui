@@ -4,7 +4,7 @@ import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
 import { ensureShadowStylesheet } from "../../utilities/styles";
-import { dialogButtonBase } from "../shared/styles/styles";
+import { dialogButtonBase } from "../shared/styles";
 import { consumeDialog } from "./context";
 
 const styles = {

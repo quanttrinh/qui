@@ -1,9 +1,10 @@
-import type { Preset } from "@pandacss/types";
+import { defineConfig, type Preset } from "@pandacss/dev";
 
-import { defineConfig } from "@pandacss/dev";
-
-import { UNDEFINED_CONTENT_SELECTOR } from "./build/undefined-content";
+import { createBuildConfig } from "./build/config";
+import { undefinedContentSelector } from "./build/panda/undefined-content";
 import { colorRoles, cssVariableNames } from "./src/utilities/theme/color-roles";
+
+const build = createBuildConfig(process.cwd());
 
 const colorTokens = Object.fromEntries(
   colorRoles.map((role) => [role, { value: `var(${cssVariableNames[role]})` }]),
@@ -25,7 +26,7 @@ export const quiPreset: Preset = {
     // covers the gap before that runtime boots. SSR hosts already carry
     // `.hydrated`, so server-rendered content stays visible until the client
     // takes over.
-    [UNDEFINED_CONTENT_SELECTOR]: {
+    [undefinedContentSelector(build)]: {
       display: "none !important",
     },
     body: {
@@ -58,9 +59,9 @@ export const quiPreset: Preset = {
 export default defineConfig({
   presets: ["@pandacss/preset-base", "@pandacss/preset-panda", quiPreset],
   preflight: true,
-  include: ["./src/**/*.{ts,tsx}"],
+  include: [build.source.include],
   exclude: [],
-  outdir: "styled-system",
+  outdir: build.output.styledSystemName,
   jsxFramework: "react",
   jsxStyleProps: "none",
   optimize: {

@@ -1,4 +1,5 @@
 import {
+  Mixin,
   resolveVar,
   AttachInternals,
   Component,
@@ -18,15 +19,18 @@ import { css } from "#styled-system/css";
 
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { CheckIcon, RemoveIcon } from "../qui-icon/icons";
-import { dataAttr } from "../shared/aria/attr";
-import { nextId } from "../shared/dom/id";
-import { normalizeChecked, type CheckedState } from "../shared/forms/checkable/checked-state";
-import { CheckableController } from "../shared/forms/checkable/controller";
-import { applyFieldAria } from "../shared/forms/field/aria";
-import { createFieldControl, focusElement } from "../shared/forms/field/control";
-import { FormControlBase } from "../shared/forms/form-control/component-base";
-import { FormController, type FormValidity } from "../shared/forms/form-control/controller";
-import { focusRing, requiredIndicatorStyle } from "../shared/styles/styles";
+import {
+  CheckableController,
+  FormController,
+  type CheckedState,
+  type FormValidity,
+} from "../shared/controllers";
+import { dataAttr } from "../shared/helpers/aria/attr";
+import { focusElement } from "../shared/helpers/dom/focus";
+import { nextId } from "../shared/helpers/dom/id";
+import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
+import { ControllerHostMixin, FormControlMixin } from "../shared/mixins";
+import { focusRing, requiredIndicatorStyle } from "../shared/styles";
 
 const styles = {
   host: css({ display: "inline-flex" }),
@@ -100,7 +104,7 @@ const styles = {
   shadow: true,
   formAssociated: true,
 })
-export class QuiCheckbox extends FormControlBase {
+export class QuiCheckbox extends Mixin(ControllerHostMixin, FormControlMixin) {
   @Element() host!: HTMLQuiCheckboxElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -137,8 +141,8 @@ export class QuiCheckbox extends FormControlBase {
     activateOnLabel: true,
   });
   private readonly checkable = new CheckableController(this, {
-    getChecked: (): CheckedState | undefined => normalizeChecked(this.checked),
-    getDefaultChecked: (): CheckedState | undefined => normalizeChecked(this.defaultChecked),
+    getChecked: (): CheckedState | undefined => this.checked,
+    getDefaultChecked: (): CheckedState | undefined => this.defaultChecked,
     getIndeterminate: (): boolean => this.indeterminate,
     isDisabled: (): boolean => this.form.isDisabled,
     isReadOnly: (): boolean => this.form.isReadOnly,
@@ -147,7 +151,7 @@ export class QuiCheckbox extends FormControlBase {
       this.form.sync();
     },
   });
-  private readonly form = new FormController(this, {
+  protected readonly form = new FormController(this, {
     getInternals: (): ElementInternals => this.internals,
     getName: (): string | undefined => this.name,
     getMultiple: (): boolean => false,
@@ -165,7 +169,7 @@ export class QuiCheckbox extends FormControlBase {
       this.checkable.reset();
     },
     onRestore: (values: string[]): void => {
-      const checked = normalizeChecked(values.at(0)) ?? false;
+      const checked = this.checkable.normalize(values.at(0)) ?? false;
       this.checked = checked;
       this.checkable.restore(checked);
     },
@@ -174,10 +178,6 @@ export class QuiCheckbox extends FormControlBase {
   constructor() {
     super();
     this.form.setControl(this.fieldControl);
-  }
-
-  protected get formController(): FormController {
-    return this.form;
   }
 
   connectedCallback(): void {

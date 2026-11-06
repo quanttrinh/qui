@@ -1,11 +1,11 @@
-import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { dataAttr } from "../shared/aria/attr";
-import { consumeContextPart } from "../shared/context/context-part";
-import { ContextPartElement } from "../shared/context/context-part-element";
+import { ContextPartController } from "../shared/controllers";
+import { dataAttr } from "../shared/helpers/aria/attr";
+import { ControllerHostMixin } from "../shared/mixins";
 import {
   clearAccordionItem,
   consumeAccordion,
@@ -35,7 +35,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiAccordionItem),
   shadow: true,
 })
-export class QuiAccordionItem extends ContextPartElement<AccordionContext> {
+export class QuiAccordionItem extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiAccordionItemElement;
 
   /** The value that identifies this item. */
@@ -43,8 +43,7 @@ export class QuiAccordionItem extends ContextPartElement<AccordionContext> {
   /** Disables this item. */
   @Prop() disabled = false;
 
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
+  protected readonly contextPart = new ContextPartController(this, {
     key: "accordion",
     consume: consumeAccordion,
     setup: (accordion): (() => void) => {

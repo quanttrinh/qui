@@ -1,4 +1,5 @@
 import {
+  Mixin,
   resolveVar,
   AttachInternals,
   Component,
@@ -17,13 +18,11 @@ import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
 import { ensureShadowStylesheet } from "../../utilities/styles";
-import { dataAttr } from "../shared/aria/attr";
-import { createListenerStore } from "../shared/controllers/listener-store";
-import { nextId } from "../shared/dom/id";
-import { applyFieldAria } from "../shared/forms/field/aria";
-import { type FieldControlHandle } from "../shared/forms/field/registry";
-import { FormControlBase } from "../shared/forms/form-control/component-base";
-import { FormController, type FormValidity } from "../shared/forms/form-control/controller";
+import { createListenerStore, FormController, type FormValidity } from "../shared/controllers";
+import { dataAttr } from "../shared/helpers/aria/attr";
+import { nextId } from "../shared/helpers/dom/id";
+import { applyFieldAria, type FieldControlHandle } from "../shared/helpers/field";
+import { ControllerHostMixin, FormControlMixin } from "../shared/mixins";
 import {
   clearRadioGroup,
   provideRadioGroup,
@@ -55,7 +54,7 @@ const styles = {
   shadow: true,
   formAssociated: true,
 })
-export class QuiRadioGroup extends FormControlBase {
+export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin) {
   @Element() host!: HTMLQuiRadioGroupElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -101,7 +100,7 @@ export class QuiRadioGroup extends FormControlBase {
       this.form.sync();
     },
   });
-  private readonly form = new FormController(this, {
+  protected readonly form = new FormController(this, {
     getInternals: (): ElementInternals => this.internals,
     getName: (): string | undefined => this.name,
     getMultiple: (): boolean => false,
@@ -175,10 +174,6 @@ export class QuiRadioGroup extends FormControlBase {
 
   protected onRequestUpdate(): void {
     this.listeners.notify();
-  }
-
-  protected get formController(): FormController {
-    return this.form;
   }
 
   connectedCallback(): void {

@@ -1,7 +1,7 @@
 import {
   type ReactiveController,
   type ReactiveControllerHost,
-} from "../../src/components/shared/controllers/reactive-control/controller";
+} from "../../src/components/shared/controllers/reactive-controller";
 
 /** Minimal `ReactiveControllerHost` for unit tests. */
 export interface TestControllerHost extends ReactiveControllerHost {

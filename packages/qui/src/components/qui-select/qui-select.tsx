@@ -1,4 +1,5 @@
 import {
+  Mixin,
   AttachInternals,
   Component,
   Element,
@@ -18,7 +19,6 @@ import { styleUrls } from "#qui-style-url";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { UnfoldMoreIcon } from "../qui-icon/icons";
 import { quiOptionSource } from "../qui-option/option-source";
-import { ariaAttr, dataAttr } from "../shared/aria/attr";
 import {
   FormController,
   OptionListNavigationController,
@@ -26,17 +26,19 @@ import {
   OptionSourceController,
   SelectionController,
 } from "../shared/controllers";
-import { nextId } from "../shared/dom/id";
-import { applyFieldAria } from "../shared/forms/field/aria";
-import { createFieldControl, focusElement } from "../shared/forms/field/control";
-import { OptionControlBase } from "../shared/option/component-base";
-import { labelForValue, type OptionItem } from "../shared/option/option";
+import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
+import { focusElement } from "../shared/helpers/dom/focus";
+import { nextId } from "../shared/helpers/dom/id";
+import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
 import {
   PANEL_MAX_HEIGHT,
+  labelForValue,
   listStyles,
   renderOptionList,
   renderOptionRow,
-} from "../shared/option/option-list";
+  type OptionItem,
+} from "../shared/helpers/option";
+import { ControllerHostMixin, FormControlMixin, OptionControlMixin } from "../shared/mixins";
 import { selectStyles as styles } from "./styles";
 
 /** A select option. */
@@ -65,6 +67,7 @@ function labelsForValues(
 /**
  * MD3 select. Provide options with `qui-option` children or an `items`
  * property. The list and popover are shared with `qui-combobox`.
+ * @undefinedContent
  */
 @Component({
   tag: "qui-select",
@@ -72,7 +75,7 @@ function labelsForValues(
   shadow: true,
   formAssociated: true,
 })
-export class QuiSelect extends OptionControlBase {
+export class QuiSelect extends Mixin(ControllerHostMixin, FormControlMixin, OptionControlMixin) {
   @Element() host!: HTMLQuiSelectElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -100,7 +103,7 @@ export class QuiSelect extends OptionControlBase {
   private readonly generatedId = nextId("qui-select");
   private readonly listId = `${this.generatedId}-listbox`;
   private readonly fieldControl = createFieldControl(() => this.triggerEl);
-  private readonly form = new FormController(this, {
+  protected readonly form = new FormController(this, {
     getInternals: (): ElementInternals => this.internals,
     getName: (): string | undefined => this.name,
     getMultiple: (): boolean => this.multiple,
@@ -120,9 +123,6 @@ export class QuiSelect extends OptionControlBase {
     },
   });
 
-  protected get formController(): FormController {
-    return this.form;
-  }
   private readonly source = new OptionSourceController(this, {
     adapter: quiOptionSource,
     getItems: (): readonly SelectOption[] | undefined => this.items,

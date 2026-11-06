@@ -1,6 +1,6 @@
 import { css } from "#styled-system/css";
 
-import { fieldSurface, focusRingFlush, focusRingInset } from "../shared/styles/styles";
+import { fieldSurface, focusRingFlush, focusRingInset } from "../shared/styles";
 
 export const styles = {
   host: css({ display: "block" }),
