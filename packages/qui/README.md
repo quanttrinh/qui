@@ -281,11 +281,14 @@ qui-input::part(input) {
 
 ### Number inputs
 
-`input-type="number"` forwards `min`, `max`, and `step` to the native input so
-native constraint validation and keyboard stepping use the same bounds as the
-rendered stepper buttons. Number inputs also default to `inputmode="numeric"`
-and numeric filtering; set `input-mode-hint="decimal"` to allow decimal
-punctuation.
+`input-type="number"` renders a Maskito-managed text input with numeric or
+decimal keyboard hints. It accepts digits, an optional leading `-`, and a single
+decimal separator; commas are normalized to `.`, and leading zeros are removed.
+Number inputs default to `inputmode="numeric"` but still accept decimal values —
+set `input-mode-hint="numeric"` to reject decimal punctuation.
+
+`min`, `max`, and `step` are validated by the component and surface through the
+form's constraint validation. The rendered stepper buttons use the same bounds.
 
 ```html
 <qui-input input-type="number" min="1" max="10" step="1" value="1"></qui-input>
@@ -295,7 +298,7 @@ Use `step="any"` to allow arbitrary decimal values. The stepper buttons still
 increment and decrement by `1` in that mode.
 
 ```html
-<qui-input input-type="number" input-mode-hint="decimal" step="any"></qui-input>
+<qui-input input-type="number" step="any"></qui-input>
 ```
 
 ### Native input hints
@@ -323,8 +326,7 @@ characters are collapsed. Masks do not preserve a leading sign or decimal
 separator, so use decimal mode without a mask. When filtering changes a
 controlled `value`, the component updates `value` and emits `valuechange` with
 the normalized value. Filtering applies whenever the effective input mode is
-`numeric` or `decimal`: from `input-mode-hint`, or the numeric default for
-number inputs.
+`numeric` or `decimal` (from `input-mode-hint`) and to every number input.
 
 ```html
 <qui-input input-mode-hint="numeric"></qui-input> <qui-input input-mode-hint="decimal"></qui-input>

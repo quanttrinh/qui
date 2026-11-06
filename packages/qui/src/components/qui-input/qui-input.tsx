@@ -37,11 +37,16 @@ import { nextId } from "../shared/helpers/dom/id";
 import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
 import { ControllerHostMixin, FormControlMixin } from "../shared/mixins";
 import { applyTextCase, type TextCase } from "./case";
-import {
-  appendAcceptedNumericOrDecimalCharacter,
-  filterNumericOrDecimalInput,
-} from "./input-filter";
+import { filterNumericOrDecimalInput } from "./input-filter";
 import { compileMask } from "./mask";
+import {
+  canStepNumber,
+  compileNumberMask,
+  formatNumber,
+  numberValidity,
+  parseNumber,
+  stepNumber,
+} from "./number-mask";
 import { styles } from "./styles";
 
 /** The input types `qui-input` can render. */
@@ -67,7 +72,14 @@ export type InputAutocapitalize = "none" | "off" | "sentences" | "on" | "words" 
 /** The native `enterkeyhint` hints supported by the inner input. */
 export type InputEnterKeyHint = "enter" | "done" | "go" | "next" | "previous" | "search" | "send";
 
-const SELECTABLE_INPUT_TYPES = new Set<InputType>(["text", "search", "tel", "password", "url"]);
+const SELECTABLE_INPUT_TYPES = new Set<InputType>([
+  "text",
+  "search",
+  "tel",
+  "password",
+  "url",
+  "number",
+]);
 
 /** The values handed to `valuechange` after every edit. */
 export interface InputValueDetails {
@@ -82,6 +94,9 @@ interface InputMaskConfig {
   rawFromMasked: (value: string) => string;
   caretForRaw?: (value: string, rawCount: number) => number;
 }
+
+const PASS_THROUGH_MASK = /^[\s\S]*$/u;
+const identity = (value: string): string => value;
 
 /**
  * A single-line input with optional masks, number stepping, and a password
@@ -236,7 +251,6 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     this.maskito?.destroy();
     this.maskito = undefined;
     this.inputEl?.removeEventListener("input", this.handleMaskInput);
-    this.inputEl?.removeEventListener("beforeinput", this.handleBeforeInput);
     this.clearHold();
   }
 
@@ -272,6 +286,8 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   @Watch("textCase")
   @Watch("inputModeHint")
   @Watch("inputType")
+  @Watch("min")
+  @Watch("max")
   private resyncFormattedValue(): void {
     const el = this.inputEl;
     if (el === undefined) {
@@ -288,32 +304,49 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
   @Watch("required")
   @Watch("invalid")
+  @Watch("min")
+  @Watch("max")
+  @Watch("step")
   private syncFormValidity(): void {
     this.form.sync();
   }
 
   private get inputMaskConfig(): InputMaskConfig | undefined {
+    const mode = this.effectiveInputMode;
     if (this.isNumber) {
-      return undefined;
+      const numberMode = this.numberFilterMode;
+      const key = `number\u0000${numberMode}\u0000${this.allowNegative ? 1 : 0}`;
+      if (this.inputMask !== undefined && this.inputMaskKey === key) {
+        return this.inputMask;
+      }
+      this.inputMask = {
+        options: compileNumberMask({
+          allowNegative: this.allowNegative,
+          decimal: numberMode === "decimal",
+        }),
+        rawFromMasked: (value: string): string => value,
+      };
+      this.inputMaskKey = key;
+      return this.inputMask;
     }
 
-    const mode = this.effectiveInputMode;
     const key = `${this.mask ?? ""}\u0000${this.textCase}\u0000${mode ?? ""}\u0000${this.allowNegative}`;
     if (this.inputMask !== undefined && this.inputMaskKey === key) {
       return this.inputMask;
     }
 
-    let maskExpression: MaskitoOptions["mask"] = /^[\s\S]*$/u;
-    let rawFromMasked = (value: string): string => value;
+    let maskExpression: MaskitoOptions["mask"] = PASS_THROUGH_MASK;
+    let rawFromMasked = identity;
     let caretForRaw: ((value: string, rawCount: number) => number) | undefined;
     if (this.mask !== undefined && this.mask.length > 0) {
       const compiled = compileMask(this.mask);
-      maskExpression = compiled.options.mask;
-      rawFromMasked = compiled.rawFromMasked;
-      caretForRaw = compiled.caretForRaw;
+      const { options, rawFromMasked: compiledRaw, caretForRaw: compiledCaret } = compiled;
+      maskExpression = options.mask;
+      rawFromMasked = compiledRaw;
+      caretForRaw = compiledCaret;
     }
 
-    const textCase = this.textCase;
+    const { textCase } = this;
     const preprocessors: MaskitoPreprocessor[] = [
       ({ elementState, data }) => ({
         elementState: {
@@ -328,7 +361,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
       (this.mask === undefined || this.mask.length === 0)
     ) {
       const inputMode = mode;
-      const allowNegative = this.allowNegative;
+      const { allowNegative } = this;
       preprocessors.push(({ elementState, data }) => ({
         elementState: {
           ...elementState,
@@ -365,8 +398,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     const config = this.inputMaskConfig;
     if (el !== undefined && config !== undefined) {
       this.maskito = new Maskito(el, config.options);
-      // Run after Maskito's own input listener so the caret reflects the
-      // pre-mask selection rather than being forced to the end.
+      // This runs after Maskito's listener so the caret reflects the pre-mask selection.
       el.addEventListener("input", this.handleMaskInput);
     }
   }
@@ -399,6 +431,9 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   }
 
   private get resolvedType(): string {
+    if (this.isNumber) {
+      return "text";
+    }
     if (this.inputType === "password") {
       return this.passwordVisible ? "text" : "password";
     }
@@ -452,7 +487,15 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     return this.min == null || this.min < 0;
   }
 
+  /** Number inputs accept decimals unless the numeric hint is explicit. */
+  private get numberFilterMode(): "numeric" | "decimal" {
+    return this.inputModeHint === "numeric" ? "numeric" : "decimal";
+  }
+
   private normalizeInputValue(raw: string): string {
+    if (this.isNumber) {
+      return raw;
+    }
     const mode = this.effectiveInputMode;
     if (mode !== "numeric" && mode !== "decimal") {
       return raw;
@@ -461,15 +504,15 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   }
 
   private applyValue(raw: string): void {
-    const normalizedValue = this.normalizeInputValue(raw);
-    const changed = this.value !== undefined && String(this.value) !== normalizedValue;
-    if (changed) {
-      this.value = normalizedValue;
-    }
-    this.rawValue = normalizedValue;
+    const rawValue = this.normalizeInputValue(raw);
     const config = this.inputMaskConfig;
-    const next =
-      config === undefined ? normalizedValue : maskitoTransform(normalizedValue, config.options);
+    const next = config === undefined ? rawValue : maskitoTransform(rawValue, config.options);
+    const canonical = this.isNumber ? next : rawValue;
+    const changed = this.value !== undefined && String(this.value) !== canonical;
+    if (changed) {
+      this.value = canonical;
+    }
+    this.rawValue = canonical;
     if (this.inputEl !== undefined && this.inputEl.value !== next) {
       this.inputEl.value = next;
     }
@@ -477,7 +520,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
       this.currentValue = next;
     }
     if (changed) {
-      this.emitValue(next, normalizedValue);
+      this.emitValue(next, this.isNumber ? next : rawValue);
     }
     this.form.sync();
   }
@@ -497,76 +540,45 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
         element,
       };
     }
-    const { validity } = element;
-    if (validity.valid) {
-      return { flags: {} };
-    }
-    return {
-      flags: {
-        badInput: validity.badInput,
-        customError: validity.customError,
-        patternMismatch: validity.patternMismatch,
-        rangeOverflow: validity.rangeOverflow,
-        rangeUnderflow: validity.rangeUnderflow,
-        stepMismatch: validity.stepMismatch,
-        tooLong: validity.tooLong,
-        tooShort: validity.tooShort,
-        typeMismatch: validity.typeMismatch,
-        valueMissing: validity.valueMissing,
-      },
-      message: element.validationMessage,
-      element,
+
+    const native = element.validity;
+    const number = this.isNumber
+      ? numberValidity(element.value, this.numberConstraints)
+      : undefined;
+    const flags = {
+      badInput: native.badInput || number?.flags.badInput,
+      customError: native.customError || number?.flags.customError,
+      patternMismatch: native.patternMismatch,
+      rangeOverflow: native.rangeOverflow || number?.flags.rangeOverflow,
+      rangeUnderflow: native.rangeUnderflow || number?.flags.rangeUnderflow,
+      stepMismatch: native.stepMismatch || number?.flags.stepMismatch,
+      tooLong: native.tooLong,
+      tooShort: native.tooShort,
+      typeMismatch: native.typeMismatch,
+      valueMissing: native.valueMissing,
     };
+    if (Object.values(flags).some((value) => value === true)) {
+      return {
+        flags,
+        message: number?.message ?? element.validationMessage,
+        element,
+      };
+    }
+    return { flags: {} };
   }
 
   private formSignature(): string {
     const element = this.inputEl;
+    const validity = this.validity();
+    const activeFlags = Object.entries(validity.flags)
+      .filter(([, value]) => value === true)
+      .map(([flag]) => flag)
+      .toSorted()
+      .join(",");
     return `${element?.value ?? ""}\u0001${this.form.isRequired ? 1 : 0}\u0001${
       this.form.isInvalid ? 1 : 0
-    }\u0001${element?.validity.valid ? 1 : 0}\u0001${element?.validationMessage ?? ""}`;
+    }\u0001${activeFlags}\u0001${validity.message ?? ""}`;
   }
-
-  private commitInput(
-    el: HTMLInputElement,
-    result: { caret: number; unmaskedValue: string; value: string },
-  ): void {
-    if (result.value !== el.value) {
-      el.value = result.value;
-      if (this.supportsSelection) {
-        el.setSelectionRange(result.caret, result.caret);
-      }
-    }
-    if (this.isNumber) {
-      this.currentValue = result.value;
-    }
-    this.emitValue(result.value, result.unmaskedValue);
-    this.form.sync();
-  }
-
-  private readonly handleBeforeInput = (event: InputEvent): void => {
-    if (!this.isNumber || event.isComposing) {
-      return;
-    }
-    const mode = this.effectiveInputMode;
-    if (mode !== "numeric" && mode !== "decimal") {
-      return;
-    }
-    const element = event.target;
-    if (!isHTMLInputElement(element)) {
-      return;
-    }
-    const data = event.data ?? event.dataTransfer?.getData("text") ?? "";
-    const options = { allowNegative: this.allowNegative, mode };
-    let result = element.value.slice(0, element.selectionStart ?? element.value.length);
-    for (const character of data) {
-      const next = appendAcceptedNumericOrDecimalCharacter(result, character, options);
-      if (next === undefined) {
-        event.preventDefault();
-        return;
-      }
-      result = next;
-    }
-  };
 
   private readonly handleMaskInput = (event: Event): void => {
     const element = event.target;
@@ -589,25 +601,13 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
       const position = mask.caretForRaw(next, rawBeforeCaret.length);
       element.setSelectionRange(position, position);
     }
+    if (this.isNumber) {
+      this.currentValue = next;
+    }
     const unmasked = mask.rawFromMasked(next);
     this.rawValue = unmasked;
     this.emitValue(next, unmasked);
     this.form.sync();
-  };
-
-  private readonly handleInput = (event: Event): void => {
-    const el = event.target;
-    if (!isHTMLInputElement(el) || !this.isNumber) {
-      return;
-    }
-
-    const raw = this.normalizeInputValue(el.value);
-    this.rawValue = raw;
-    this.commitInput(el, {
-      caret: el.selectionStart ?? el.value.length,
-      unmaskedValue: raw,
-      value: raw,
-    });
   };
 
   private emitValue(value: string, unmaskedValue: string): void {
@@ -615,27 +615,12 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   }
 
   /** Whether the value can still move one `step` in the given direction. */
-  private canStep(direction: 1 | -1): boolean {
-    const parsed = this.inputEl?.valueAsNumber;
-    if (parsed == null || !Number.isFinite(parsed)) {
-      return true;
-    }
-    const limit = direction > 0 ? this.max : this.min;
-    if (typeof limit !== "number") {
-      return true;
-    }
-    return direction > 0 ? parsed < limit : parsed > limit;
+  private get numberConstraints(): { min?: number; max?: number; step?: number } {
+    return { min: this.min, max: this.max, step: this.numericStep };
   }
 
-  private steppedValue(current: number, direction: 1 | -1): number {
-    const step = this.numericStep;
-    if (step === undefined) {
-      return current + direction;
-    }
-    const base = typeof this.min === "number" ? this.min : 0;
-    const steps = (current - base) / step;
-    const nextSteps = direction > 0 ? Math.floor(steps) + 1 : Math.ceil(steps) - 1;
-    return base + nextSteps * step;
+  private canStep(direction: 1 | -1): boolean {
+    return canStepNumber(this.inputEl?.value ?? "", direction, this.numberConstraints);
   }
 
   /** Snaps one step in the given direction, respecting `min`/`max`. */
@@ -644,17 +629,9 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     if (el === undefined) {
       return;
     }
-    const parsed = el.valueAsNumber;
-    const current = Number.isFinite(parsed) ? parsed : 0;
-    let next = this.steppedValue(current, direction);
-
-    if (typeof this.min === "number") {
-      next = Math.max(this.min, next);
-    }
-    if (typeof this.max === "number") {
-      next = Math.min(this.max, next);
-    }
-    const value = String(Number(next.toFixed(10)));
+    const parsed = parseNumber(el.value);
+    const next = stepNumber(Number.isNaN(parsed) ? 0 : parsed, direction, this.numberConstraints);
+    const value = formatNumber(next);
     if (value === el.value) {
       return;
     }
@@ -735,9 +712,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
                   return;
                 }
                 this.inputEl?.removeEventListener("input", this.handleMaskInput);
-                this.inputEl?.removeEventListener("beforeinput", this.handleBeforeInput);
                 this.inputEl = el;
-                el?.addEventListener("beforeinput", this.handleBeforeInput);
                 this.syncMaskito();
               }}
               type={this.resolvedType}
@@ -750,12 +725,8 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
               maxLength={this.maxLength}
               minLength={this.minLength}
               pattern={this.inputPattern}
-              min={this.isNumber ? this.min : undefined}
-              max={this.isNumber ? this.max : undefined}
-              step={this.isNumber ? this.step : undefined}
               class={styles.input}
               part="input"
-              onInput={this.handleInput}
             />
 
             <span data-part="suffix" class={cx(styles.affix, this.hasSuffix && styles.affixEnd)}>

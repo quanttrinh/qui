@@ -96,8 +96,8 @@ function parse(mask: string): MaskitoMaskExpression {
     const character = mask[index];
 
     if (character === "\\") {
-      const token = mask[index + 1];
-      if (token === undefined) {
+      const token = mask.charAt(index + 1);
+      if (token === "") {
         throw new Error("Mask pattern cannot end with an unescaped backslash.");
       }
       const atom = atomForEscape(token);
@@ -111,21 +111,17 @@ function parse(mask: string): MaskitoMaskExpression {
         }
         index = next;
       }
-      continue;
-    }
-
-    if (character === "[") {
+    } else if (character === "[") {
       const { regex, next } = characterClass(mask, index);
       const { count, next: afterQuantifier } = quantifier(mask, next);
       for (let repetition = 0; repetition < count; repetition += 1) {
         parts.push(regex);
       }
       index = afterQuantifier;
-      continue;
+    } else {
+      parts.push(character);
+      index += 1;
     }
-
-    parts.push(character);
-    index += 1;
   }
 
   return parts;
@@ -143,19 +139,50 @@ function rawFromMasked(value: string, mask: MaskitoMaskExpression): string {
       if (value[index] === part) {
         index += 1;
       }
-      continue;
-    }
-
-    while (index < value.length) {
-      const character = value[index];
-      index += 1;
-      if (part.test(character)) {
-        raw += character;
-        break;
+    } else {
+      while (index < value.length) {
+        const character = value[index];
+        index += 1;
+        if (part.test(character)) {
+          raw += character;
+          break;
+        }
       }
     }
   }
   return raw;
+}
+
+function caretForRaw(value: string, mask: MaskitoMaskExpression, rawCount: number): number {
+  if (!Array.isArray(mask)) {
+    return value.length;
+  }
+  if (rawCount <= 0) {
+    return 0;
+  }
+
+  let seen = 0;
+  let index = 0;
+  for (const part of mask) {
+    if (typeof part === "string") {
+      if (value[index] === part) {
+        index += 1;
+      }
+    } else {
+      while (index < value.length) {
+        const character = value[index];
+        index += 1;
+        if (part.test(character)) {
+          seen += 1;
+          break;
+        }
+      }
+      if (seen >= rawCount) {
+        return index;
+      }
+    }
+  }
+  return index;
 }
 
 /**
@@ -178,39 +205,6 @@ export function compileMask(mask: string): CompiledMask {
   };
   cache.set(mask, compiled);
   return compiled;
-}
-
-function caretForRaw(value: string, mask: MaskitoMaskExpression, rawCount: number): number {
-  if (!Array.isArray(mask)) {
-    return value.length;
-  }
-  if (rawCount <= 0) {
-    return 0;
-  }
-
-  let seen = 0;
-  let index = 0;
-  for (const part of mask) {
-    if (typeof part === "string") {
-      if (value[index] === part) {
-        index += 1;
-      }
-      continue;
-    }
-
-    while (index < value.length) {
-      const character = value[index];
-      index += 1;
-      if (part.test(character)) {
-        seen += 1;
-        break;
-      }
-    }
-    if (seen >= rawCount) {
-      return index;
-    }
-  }
-  return index;
 }
 
 /** Clears cached compiled masks. Useful for tests and hot reload. */
