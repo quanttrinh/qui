@@ -1,7 +1,6 @@
 import { defineConfig } from "oxlint";
 
 import baseConfig from "../../oxlint.config.ts";
-import { toolIgnorePatterns } from "../../tooling/ignore";
 
 export default defineConfig({
   // `extends` only inherits rules, plugins, and overrides, so carry the
@@ -12,7 +11,7 @@ export default defineConfig({
     node: true,
   },
   extends: [baseConfig],
-  ignorePatterns: [...toolIgnorePatterns],
+  ignorePatterns: ["node_modules/", "dist/"],
   rules: {
     // The server package is Node-only and writes registration manifests.
     "import/no-nodejs-modules": "off",

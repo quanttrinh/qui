@@ -1,7 +1,5 @@
 import { defineConfig } from "oxlint";
 
-import { toolIgnorePatterns } from "./tooling/ignore";
-
 export default defineConfig({
   categories: {
     correctness: "error",
@@ -23,7 +21,6 @@ export default defineConfig({
     "typescript",
     "unicorn",
   ],
-  ignorePatterns: [...toolIgnorePatterns],
   options: {
     typeAware: true,
     typeCheck: true,

@@ -2,7 +2,6 @@ import stencil from "@stencil/eslint-plugin";
 import { defineConfig } from "oxlint";
 
 import baseConfig from "../../oxlint.config.ts";
-import { toolIgnorePatterns } from "../../tooling/ignore";
 import { createConfig } from "./tooling/config";
 
 const config = createConfig(__dirname);
@@ -21,7 +20,16 @@ export default defineConfig({
     node: true,
   },
   extends: [baseConfig],
-  ignorePatterns: [...toolIgnorePatterns],
+  ignorePatterns: [
+    "node_modules/",
+    "dist/",
+    "styled-system/",
+    "www/",
+    ".stencil/",
+    ".stencil-test/",
+    "loader/",
+    "docs/",
+  ],
   jsPlugins: [
     { name: "stencil", specifier: "@stencil/eslint-plugin" },
     "./tooling/plugins/pandacss/oxlint.mjs",

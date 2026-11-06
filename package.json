@@ -22,8 +22,8 @@
     "test:watch:server": "bun run --cwd packages/server test:watch",
     "lint": "oxlint packages/qui/src packages/server/src packages/unplugin/src",
     "lint:fix": "oxlint --fix packages/qui/src packages/server/src packages/unplugin/src",
-    "fmt": "oxfmt --config oxfmt.config.ts",
-    "fmt:check": "oxfmt --config oxfmt.config.ts --check",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
     "version": "changeset version",
     "release": "changeset publish"
   },
