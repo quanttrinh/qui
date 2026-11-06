@@ -1,35 +1,60 @@
+import { maskitoTransform } from "@maskito/core";
 import { describe, expect, it } from "vitest";
 
-import { applyMask, formatMask, rawFromMasked, unmask } from "./mask";
+import { clearMaskCache, compileMask } from "./mask";
 
-describe("mask helpers", () => {
-  it("applies digits, letters, and alphanumeric placeholders", () => {
-    expect(applyMask("1234", "#### #### #### ####")).toBe("1234");
-    expect(applyMask("1234567812345678", "#### #### #### ####")).toBe("1234 5678 1234 5678");
-    expect(applyMask("ab123456c", "aa-######-a")).toBe("ab-123456-c");
-    expect(applyMask("a1b2", "**-**")).toBe("a1-b2");
+describe("compileMask", () => {
+  it("applies fixed-width tokens and literals", () => {
+    const mask = compileMask("\\d{3}-\\d{3}");
+
+    expect(maskitoTransform("123456", mask.options)).toBe("123-456");
+    expect(maskitoTransform("12", mask.options)).toBe("12");
   });
 
-  it("drops invalid characters and trailing literals", () => {
-    expect(applyMask("12a34", "###-###")).toBe("123-4");
-    expect(applyMask("12", "###-###")).toBe("12");
-    expect(applyMask("", "###-###")).toBe("");
+  it("supports escaped literal characters", () => {
+    const mask = compileMask("\\+\\d \\(\\d{3}\\)-\\d{3}-\\d{4}");
+
+    expect(maskitoTransform("15551234567", mask.options)).toBe("+1 (555)-123-4567");
+    expect(maskitoTransform("1555", mask.options)).toBe("+1 (555");
   });
 
-  it("removes every non-alphanumeric character", () => {
-    expect(unmask("(555) 123-4567")).toBe("5551234567");
-    expect(unmask("ab-12_cd")).toBe("ab12cd");
+  it("supports character classes", () => {
+    const mask = compileMask("[a-zA-Z]{2}-\\d{4}");
+
+    expect(maskitoTransform("ab1234", mask.options)).toBe("ab-1234");
   });
 
-  it("keeps the caret next to the same placeholder", () => {
-    expect(formatMask("1234", "###-###", 3)).toEqual({ value: "123-4", caret: 3 });
-    expect(formatMask("1234", "###-###", 1)).toEqual({ value: "123-4", caret: 1 });
-    expect(formatMask("12a", "###-###", 3)).toEqual({ value: "12", caret: 2 });
+  it("uses raw extraction that respects literals", () => {
+    const mask = compileMask("X-\\w{2}-\\d{4}");
+
+    expect(mask.rawFromMasked("X-AB-1234")).toBe("AB1234");
   });
 
-  it("extracts raw data without consuming mask literals", () => {
-    expect(rawFromMasked("+1 555 123 4567", "+1 ### ### ####")).toBe("5551234567");
-    expect(rawFromMasked("X-AB-1234", "X-aa-####")).toBe("AB1234");
-    expect(rawFromMasked("AB-1234", "aa-####")).toBe("AB1234");
+  it("maps raw character counts back to masked caret positions", () => {
+    const mask = compileMask("[a-zA-Z]{2}-\\d{4}");
+
+    expect(mask.caretForRaw("AB-1234", 0)).toBe(0);
+    expect(mask.caretForRaw("AB-1234", 2)).toBe(2);
+    expect(mask.caretForRaw("AB-1234", 3)).toBe(4);
+  });
+
+  it("rejects variable-width quantifiers until dynamic masks exist", () => {
+    expect(() => compileMask("\\d+")).toThrow("Variable-width masks");
+    expect(() => compileMask("\\d*")).toThrow("Variable-width masks");
+    expect(() => compileMask("\\d?")).toThrow("Variable-width masks");
+    expect(() => compileMask("\\d{2,}")).toThrow("Variable-width masks");
+    expect(() => compileMask("\\d{2,4}")).toThrow("Variable-width masks");
+  });
+
+  it("rejects malformed masks", () => {
+    expect(() => compileMask("[abc")).toThrow("missing its closing ]");
+    expect(() => compileMask("\\")).toThrow("unescaped backslash");
+    expect(() => compileMask("[]")).toThrow("cannot be empty");
+  });
+
+  it("caches compiled masks", () => {
+    clearMaskCache();
+
+    expect(compileMask("\\d{3}")).toBe(compileMask("\\d{3}"));
   });
 });

@@ -133,6 +133,7 @@
     "prepublishOnly": "bun run build:release"
   },
   "dependencies": {
+    "@maskito/core": "^5.6.1",
     "@material/material-color-utilities": "^0.4.0",
     "@stencil/core": "^4.45.2"
   },

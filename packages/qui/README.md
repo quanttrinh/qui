@@ -237,6 +237,20 @@ Register every tag used by the form. For a field with an input:
 defineComponents(defineField, defineFieldLabel, defineFieldHelperText, defineInput);
 ```
 
+### Input masks
+
+Use `mask` on non-number inputs. `\d`, `\w`, and `\s` match characters,
+`[ ... ]` defines a character class, `{n}` repeats a matching token a fixed
+number of times, and `\` escapes a literal. Other characters are inserted
+automatically:
+
+```html
+<qui-input mask="\d{3}-\d{3}"></qui-input> <qui-input mask="\+\d (\d{3})-\d{3}-\d{4}"></qui-input>
+```
+
+Variable-width quantifiers such as `+`, `*`, `?`, `{n,}`, and `{n,m}` are not
+supported yet.
+
 ### Input text case
 
 Use `text-case` to normalize the value itself, not just its appearance:
@@ -244,7 +258,7 @@ Use `text-case` to normalize the value itself, not just its appearance:
 ```html
 <qui-input text-case="uppercase"></qui-input>
 <qui-input text-case="lowercase" input-type="email"></qui-input>
-<qui-input text-case="uppercase" mask-pattern="aa-####"></qui-input>
+<qui-input text-case="uppercase" mask="[a-zA-Z]{2}-\d{4}"></qui-input>
 ```
 
 Casing runs before masking, so mask literals keep their authored case and the

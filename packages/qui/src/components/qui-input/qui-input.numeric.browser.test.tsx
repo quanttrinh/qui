@@ -6,7 +6,7 @@ import { typeInto } from "../../../tests/test-utils/interactions";
 describe("qui-input numeric", () => {
   it("strips non-numeric characters when input mode is numeric", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(
-      <qui-input inputModeHint="numeric" maskPattern="###-###" />,
+      <qui-input inputModeHint="numeric" mask={String.raw`\d{3}-\d{3}`} />,
     );
     const spy = spyOnEvent("valuechange");
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");

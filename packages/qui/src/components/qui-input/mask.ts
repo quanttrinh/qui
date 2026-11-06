@@ -1,131 +1,219 @@
-/** The outcome of applying a mask, including where the caret should land. */
-interface MaskResult {
-  /** The formatted value. */
-  value: string;
-  /** The caret position that keeps the placeholder boundary stable. */
-  caret: number;
+import { type MaskitoMaskExpression, type MaskitoOptions } from "@maskito/core";
+
+/** A compiled mask plus the helpers the input needs to report raw values. */
+export interface CompiledMask {
+  options: MaskitoOptions;
+  /** Extracts user-typed characters from an already-masked value. */
+  rawFromMasked: (value: string) => string;
+  /** Maps a count of typed characters to a caret offset in a masked value. */
+  caretForRaw: (value: string, rawCount: number) => number;
 }
 
-// Hoisted so per-keystroke masking never allocates regexes (all stateless: no `g`).
 const DIGIT = /\d/u;
-const LETTER = /[a-z]/iu;
-const ALPHANUMERIC = /[a-z0-9]/iu;
-const NON_ALPHANUMERIC = /[^a-z0-9]/giu;
+const NON_DIGIT = /\D/u;
+const WORD = /[a-z0-9_]/iu;
+const NON_WORD = /[^a-z0-9_]/iu;
+const SPACE = /\s/u;
+const NON_SPACE = /\S/u;
 
-/**
- * Returns the matcher for a pattern placeholder token:
- * - `#` matches a digit
- * - `a` matches a letter
- * - `*` matches a letter or digit
- *
- * Every other pattern character is a literal.
- */
-function placeholderRegex(token: string): RegExp | undefined {
-  if (token === "#") {
-    return DIGIT;
-  }
-  if (token === "a") {
-    return LETTER;
-  }
-  if (token === "*") {
-    return ALPHANUMERIC;
-  }
-  return undefined;
+const cache = new Map<string, CompiledMask>();
+
+const VARIABLE_QUANTIFIER =
+  'Variable-width masks ("?", "*", "+", "{n,}", and "{n,m}") require a dynamic Maskito mask and are not supported yet.';
+
+const ESCAPE_ATOMS: Record<string, RegExp> = {
+  d: DIGIT,
+  D: NON_DIGIT,
+  w: WORD,
+  W: NON_WORD,
+  s: SPACE,
+  S: NON_SPACE,
+};
+
+function atomForEscape(token: string): RegExp | undefined {
+  return ESCAPE_ATOMS[token];
 }
 
-/** Removes every character that cannot fill a placeholder. */
-function unmask(value: string): string {
-  return value.replaceAll(NON_ALPHANUMERIC, "");
-}
-
-/**
- * Applies a pattern to a raw value.
- *
- * Placeholders (`#` digit, `a` letter, `*` alphanumeric) each consume the next
- * matching character; every other pattern character is a literal. A literal is
- * only kept when a following placeholder is filled, so a trailing separator is
- * never shown on its own.
- *
- * @example applyMask("1234", "#### #### #### ####") //=> "1234"
- * @example applyMask("ab123456c", "aa-######-a") //=> "ab-123456-c"
- */
-function applyMask(value: string, pattern: string): string {
-  let result = "";
-  let index = 0;
-  // End of the last filled placeholder; the tail (unfilled literals) is dropped.
-  let end = 0;
-
-  for (const token of pattern) {
-    const regex = placeholderRegex(token);
-    if (regex === undefined) {
-      result += token;
-    } else {
-      let character: string | undefined;
-      while (index < value.length) {
-        const candidate = value[index];
-        index += 1;
-        if (regex.test(candidate)) {
-          character = candidate;
-          break;
-        }
+function characterClass(mask: string, start: number): { regex: RegExp; next: number } {
+  let index = start + 1;
+  let escaped = false;
+  while (index < mask.length) {
+    const character = mask[index];
+    if (escaped) {
+      escaped = false;
+    } else if (character === "\\") {
+      escaped = true;
+    } else if (character === "]") {
+      const source = mask.slice(start + 1, index);
+      if (source.length === 0) {
+        throw new Error("Mask character class cannot be empty.");
       }
-      if (character === undefined) {
+      let regex: RegExp;
+      try {
+        regex = new RegExp(`^[${source}]$`, "u");
+      } catch (error) {
+        throw new Error(`Invalid mask character class "[${source}]".`, { cause: error });
+      }
+      return { regex, next: index + 1 };
+    }
+    index += 1;
+  }
+  throw new Error("Mask character class is missing its closing ].");
+}
+
+function quantifier(mask: string, start: number): { count: number; next: number } {
+  const character = mask[start];
+  if (character === "?" || character === "*" || character === "+") {
+    throw new Error(VARIABLE_QUANTIFIER);
+  }
+  if (character !== "{") {
+    return { count: 1, next: start };
+  }
+
+  const end = mask.indexOf("}", start + 1);
+  if (end === -1) {
+    return { count: 1, next: start };
+  }
+  const body = mask.slice(start + 1, end);
+  const exact = /^(\d+)$/u.exec(body);
+  const range = /^(\d+),(\d*)$/u.exec(body);
+  if (exact === null) {
+    if (range !== null) {
+      throw new Error(VARIABLE_QUANTIFIER);
+    }
+    return { count: 1, next: start };
+  }
+
+  const count = Number(exact[1]);
+  return { count, next: end + 1 };
+}
+
+function parse(mask: string): MaskitoMaskExpression {
+  const parts: (string | RegExp)[] = [];
+  let index = 0;
+
+  while (index < mask.length) {
+    const character = mask[index];
+
+    if (character === "\\") {
+      const token = mask[index + 1];
+      if (token === undefined) {
+        throw new Error("Mask pattern cannot end with an unescaped backslash.");
+      }
+      const atom = atomForEscape(token);
+      if (atom === undefined) {
+        parts.push(token);
+        index += 2;
+      } else {
+        const { count, next } = quantifier(mask, index + 2);
+        for (let repetition = 0; repetition < count; repetition += 1) {
+          parts.push(atom);
+        }
+        index = next;
+      }
+      continue;
+    }
+
+    if (character === "[") {
+      const { regex, next } = characterClass(mask, index);
+      const { count, next: afterQuantifier } = quantifier(mask, next);
+      for (let repetition = 0; repetition < count; repetition += 1) {
+        parts.push(regex);
+      }
+      index = afterQuantifier;
+      continue;
+    }
+
+    parts.push(character);
+    index += 1;
+  }
+
+  return parts;
+}
+
+function rawFromMasked(value: string, mask: MaskitoMaskExpression): string {
+  if (!Array.isArray(mask)) {
+    return value;
+  }
+
+  let raw = "";
+  let index = 0;
+  for (const part of mask) {
+    if (typeof part === "string") {
+      if (value[index] === part) {
+        index += 1;
+      }
+      continue;
+    }
+
+    while (index < value.length) {
+      const character = value[index];
+      index += 1;
+      if (part.test(character)) {
+        raw += character;
         break;
       }
-      result += character;
-      end = result.length;
     }
   }
-
-  return result.slice(0, end);
-}
-
-/** Applies a mask while keeping the caret next to the same placeholder it was before. */
-function formatMask(value: string, pattern: string, caret: number): MaskResult {
-  const placeholdersBeforeCaret = unmask(value.slice(0, caret)).length;
-  const masked = applyMask(value, pattern);
-
-  let position = 0;
-  let seen = 0;
-  while (position < masked.length && seen < placeholdersBeforeCaret) {
-    if (ALPHANUMERIC.test(masked[position] ?? "")) {
-      seen += 1;
-    }
-    position += 1;
-  }
-
-  return { value: masked, caret: position };
+  return raw;
 }
 
 /**
- * Extracts the raw placeholder characters from an already-masked value. Mask
- * literals are skipped when they appear at their pattern position, so literal
- * digits and letters are not consumed as user data.
+ * Compiles a Maskito-compatible mask expression with an ergonomic regex-like
+ * syntax. Fixed-width tokens support `{n}`; variable-width quantifiers are
+ * rejected until dynamic masks are implemented.
  */
-function rawFromMasked(value: string, pattern: string): string {
-  let result = "";
-  let index = 0;
-
-  for (const token of pattern) {
-    const regex = placeholderRegex(token);
-    if (regex === undefined) {
-      if (value[index] === token) {
-        index += 1;
-      }
-    } else {
-      while (index < value.length) {
-        const candidate = value[index];
-        index += 1;
-        if (regex.test(candidate)) {
-          result += candidate;
-          break;
-        }
-      }
-    }
+export function compileMask(mask: string): CompiledMask {
+  const cached = cache.get(mask);
+  if (cached !== undefined) {
+    return cached;
   }
 
-  return result;
+  const expression = parse(mask);
+  const compiled: CompiledMask = {
+    options: { mask: expression },
+    rawFromMasked: (value: string): string => rawFromMasked(value, expression),
+    caretForRaw: (value: string, rawCount: number): number =>
+      caretForRaw(value, expression, rawCount),
+  };
+  cache.set(mask, compiled);
+  return compiled;
 }
 
-export { applyMask, formatMask, rawFromMasked, unmask };
-export type { MaskResult };
+function caretForRaw(value: string, mask: MaskitoMaskExpression, rawCount: number): number {
+  if (!Array.isArray(mask)) {
+    return value.length;
+  }
+  if (rawCount <= 0) {
+    return 0;
+  }
+
+  let seen = 0;
+  let index = 0;
+  for (const part of mask) {
+    if (typeof part === "string") {
+      if (value[index] === part) {
+        index += 1;
+      }
+      continue;
+    }
+
+    while (index < value.length) {
+      const character = value[index];
+      index += 1;
+      if (part.test(character)) {
+        seen += 1;
+        break;
+      }
+    }
+    if (seen >= rawCount) {
+      return index;
+    }
+  }
+  return index;
+}
+
+/** Clears cached compiled masks. Useful for tests and hot reload. */
+export function clearMaskCache(): void {
+  cache.clear();
+}

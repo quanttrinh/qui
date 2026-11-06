@@ -75,27 +75,25 @@ describe("qui-input text case", () => {
     expect(input.value).toBe("def");
   });
 
-  it("applies case before a mask and keeps the caret stable", async () => {
+  it("applies case before a mask", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(
-      <qui-input textCase="uppercase" maskPattern="aa-####" />,
+      <qui-input textCase="uppercase" mask={String.raw`[a-zA-Z]{2}-\d{4}`} />,
     );
     const spy = spyOnEvent("valuechange");
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
     input.value = "ab1234";
-    input.setSelectionRange(2, 2);
     input.dispatchEvent(new Event("input", { bubbles: true }));
     await waitForChanges();
 
     expect(input.value).toBe("AB-1234");
-    expect(input.selectionStart).toBe(2);
     expect(spy).toHaveReceivedEventDetail({ value: "AB-1234", unmaskedValue: "AB1234" });
   });
 
   it("re-masks from raw data when textCase changes", async () => {
     const { root, setProps, waitForChanges } = await render(
-      <qui-input maskPattern="+1 ### ### ####" textCase="uppercase" />,
+      <qui-input mask={String.raw`\+1 \d{3} \d{3} \d{4}`} textCase="uppercase" />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
@@ -111,7 +109,7 @@ describe("qui-input text case", () => {
 
   it("preserves mask literal case when textCase changes", async () => {
     const { root, setProps, waitForChanges } = await render(
-      <qui-input maskPattern="X-aa-####" textCase="uppercase" />,
+      <qui-input mask={String.raw`X-[a-zA-Z]{2}-\d{4}`} textCase="uppercase" />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");

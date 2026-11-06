@@ -10,7 +10,9 @@ function queryVisibilityTrigger(host: Element): HTMLButtonElement {
 
 describe("qui-input", () => {
   it("applies a mask and emits both masked and unmasked values", async () => {
-    const { root, spyOnEvent, waitForChanges } = await render(<qui-input maskPattern="###-###" />);
+    const { root, spyOnEvent, waitForChanges } = await render(
+      <qui-input mask={String.raw`\d{3}-\d{3}`} />,
+    );
     const spy = spyOnEvent("valuechange");
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");

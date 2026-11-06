@@ -1,5 +1,12 @@
 import {
+  Maskito,
+  maskitoChangeEventPlugin,
+  maskitoTransform,
+  type MaskitoPreprocessor,
+} from "@maskito/core";
+import {
   Mixin,
+  Build,
   resolveVar,
   AttachInternals,
   Component,
@@ -32,7 +39,7 @@ import {
   appendAcceptedNumericOrDecimalCharacter,
   filterNumericOrDecimalInput,
 } from "./input-filter";
-import { applyMask, formatMask, rawFromMasked, unmask } from "./mask";
+import { compileMask, type CompiledMask } from "./mask";
 import { styles } from "./styles";
 
 /** The input types `qui-input` can render. */
@@ -89,11 +96,12 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   /** The input type to render. */
   @Prop() inputType: InputType = "text";
   /**
-   * A character mask for text-like inputs. `#` matches a digit, `a` a letter and
-   * `*` a letter or digit; any other character is a literal that is inserted
-   * automatically.
+   * A mask for text-like inputs. Use `\d`, `\w`, `\s` (and their negations) for
+   * matching tokens, `[a-z]` for character classes, and `{n}` for a fixed
+   * repetition count. Escape literals with `\`; every other character is
+   * literal. Variable-width quantifiers are not supported yet.
    */
-  @Prop() maskPattern?: string;
+  @Prop() mask?: string;
   /** Normalizes the value's case before masking. Ignored for number inputs. */
   @Prop() textCase: InputTextCase = "none";
   /**
@@ -152,6 +160,9 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   @State() private hasSuffix = false;
 
   private inputEl?: HTMLInputElement;
+  private maskito?: Maskito;
+  private compiledMask?: CompiledMask;
+  private compiledMaskKey = "";
   private holdDelay?: ReturnType<typeof setTimeout>;
   private holdRepeat?: ReturnType<typeof setInterval>;
   private initialValue = "";
@@ -216,6 +227,9 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.maskito?.destroy();
+    this.maskito = undefined;
+    this.inputEl?.removeEventListener("input", this.handleMaskInput);
     this.inputEl?.removeEventListener("beforeinput", this.handleBeforeInput);
     this.clearHold();
   }
@@ -248,7 +262,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     this.step = Number.isFinite(value) ? value : undefined;
   }
 
-  @Watch("maskPattern")
+  @Watch("mask")
   @Watch("textCase")
   @Watch("inputModeHint")
   @Watch("inputType")
@@ -258,6 +272,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
       return;
     }
     const caret = el.selectionStart ?? el.value.length;
+    this.syncMaskito();
     this.applyValue(this.rawValue);
     if (this.supportsSelection && el.ownerDocument.activeElement === el) {
       const position = Math.min(caret, el.value.length);
@@ -271,8 +286,53 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     this.form.sync();
   }
 
-  private get pattern(): string | undefined {
-    return this.maskPattern;
+  private get compiledMaskConfig(): CompiledMask | undefined {
+    if (this.mask === undefined || this.mask.length === 0 || this.isNumber) {
+      return undefined;
+    }
+
+    const key = `${this.mask}\u0000${this.textCase}`;
+    if (this.compiledMask !== undefined && this.compiledMaskKey === key) {
+      return this.compiledMask;
+    }
+
+    const textCase = this.textCase;
+    const textCasePreprocessor: MaskitoPreprocessor = ({ elementState, data }) => ({
+      elementState: {
+        ...elementState,
+        value: applyTextCase(elementState.value, textCase),
+      },
+      data,
+    });
+    const base = compileMask(this.mask);
+    this.compiledMask = {
+      options: {
+        ...base.options,
+        preprocessors: [...(base.options.preprocessors ?? []), textCasePreprocessor],
+        plugins: [...(base.options.plugins ?? []), maskitoChangeEventPlugin()],
+      },
+      rawFromMasked: base.rawFromMasked,
+      caretForRaw: base.caretForRaw,
+    };
+    this.compiledMaskKey = key;
+    return this.compiledMask;
+  }
+
+  private syncMaskito(): void {
+    this.maskito?.destroy();
+    this.maskito = undefined;
+    this.inputEl?.removeEventListener("input", this.handleMaskInput);
+    if (!Build.isBrowser) {
+      return;
+    }
+    const el = this.inputEl;
+    const config = this.compiledMaskConfig;
+    if (el !== undefined && config !== undefined) {
+      this.maskito = new Maskito(el, config.options);
+      // Run after Maskito's own input listener so the caret reflects the
+      // pre-mask selection rather than being forced to the end.
+      el.addEventListener("input", this.handleMaskInput);
+    }
   }
 
   private get isNumber(): boolean {
@@ -371,9 +431,9 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
       this.value = normalizedValue;
     }
     this.rawValue = normalizedValue;
-    const { pattern } = this;
+    const config = this.compiledMaskConfig;
     const cased = this.isNumber ? normalizedValue : applyTextCase(normalizedValue, this.textCase);
-    const next = pattern === undefined ? cased : applyMask(cased, pattern);
+    const next = config === undefined ? cased : maskitoTransform(normalizedValue, config.options);
     if (this.inputEl !== undefined && this.inputEl.value !== next) {
       this.inputEl.value = next;
     }
@@ -459,6 +519,9 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   }
 
   private readonly handleBeforeInput = (event: InputEvent): void => {
+    if (this.compiledMaskConfig !== undefined) {
+      return;
+    }
     const mode = this.effectiveInputMode;
     if ((mode !== "numeric" && mode !== "decimal") || event.isComposing) {
       return;
@@ -480,31 +543,45 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     }
   };
 
+  private readonly handleMaskInput = (event: Event): void => {
+    const element = event.target;
+    const mask = this.compiledMaskConfig;
+    if (!isHTMLInputElement(element) || mask === undefined) {
+      return;
+    }
+
+    const caret = element.selectionStart ?? element.value.length;
+    const rawBeforeCaret = mask.rawFromMasked(element.value.slice(0, caret));
+    const next = maskitoTransform(element.value, mask.options);
+    if (element.value !== next) {
+      element.value = next;
+    }
+    if (this.supportsSelection && element.ownerDocument.activeElement === element) {
+      const position = mask.caretForRaw(next, rawBeforeCaret.length);
+      element.setSelectionRange(position, position);
+    }
+    const unmasked = mask.rawFromMasked(next);
+    this.rawValue = unmasked;
+    this.emitValue(next, unmasked);
+    this.form.sync();
+  };
+
   private readonly handleInput = (event: Event): void => {
     const el = event.target;
     if (!isHTMLInputElement(el)) {
       return;
     }
-    const { pattern } = this;
-    const caret = el.selectionStart ?? el.value.length;
-    const rawBeforeCaret =
-      pattern === undefined
-        ? el.value.slice(0, caret)
-        : rawFromMasked(el.value.slice(0, caret), pattern);
-    const raw = this.normalizeInputValue(
-      pattern === undefined ? el.value : rawFromMasked(el.value, pattern),
-    );
-    const rawCaret = this.normalizeInputValue(rawBeforeCaret).length;
-    this.rawValue = raw;
-    const cased = this.caseAtCaret(raw, rawCaret);
 
-    if (pattern === undefined) {
-      this.commitInput(el, { ...cased, unmaskedValue: cased.value });
+    if (this.compiledMaskConfig !== undefined) {
       return;
     }
 
-    const next = formatMask(cased.value, pattern, cased.caret);
-    this.commitInput(el, { ...next, unmaskedValue: unmask(next.value) });
+    const caret = el.selectionStart ?? el.value.length;
+    const raw = this.normalizeInputValue(el.value);
+    const rawCaret = this.normalizeInputValue(el.value.slice(0, caret)).length;
+    this.rawValue = raw;
+    const cased = this.caseAtCaret(raw, rawCaret);
+    this.commitInput(el, { ...cased, unmaskedValue: cased.value });
   };
 
   private emitValue(value: string, unmaskedValue: string): void {
@@ -632,8 +709,10 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
                   return;
                 }
                 this.inputEl?.removeEventListener("beforeinput", this.handleBeforeInput);
+                this.inputEl?.removeEventListener("input", this.handleMaskInput);
                 this.inputEl = el;
                 el?.addEventListener("beforeinput", this.handleBeforeInput);
+                this.syncMaskito();
               }}
               type={this.resolvedType}
               placeholder={this.placeholder}
