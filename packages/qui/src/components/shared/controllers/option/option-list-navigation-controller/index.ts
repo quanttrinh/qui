@@ -162,6 +162,15 @@ export class OptionListNavigationController<
   }
 
   hostDidRender(): void {
+    if (
+      this.active !== undefined &&
+      !this.options.getItems().some((item) => item.value === this.active)
+    ) {
+      this.active = undefined;
+      this.revealed = undefined;
+      this.requestUpdate();
+      return;
+    }
     if (!this.openState || this.active === this.revealed) {
       return;
     }

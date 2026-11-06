@@ -104,7 +104,7 @@ export function normalizeComponents(components: Iterable<string>): string[] {
  * Finds opening component tags in JavaScript-family source using Oxc's AST,
  * with a lexical fallback for MDX and files the parser rejects.
  */
-export async function extractComponents(code: string, id = "component.tsx"): Promise<string[]> {
+export function extractComponents(code: string, id = "component.tsx"): string[] {
   // Every detectable tag either contains this prefix or an escaped character.
   // Oxc resolves escaped characters in static tag names.
   if (!mayContainComponents(code)) {
@@ -112,7 +112,7 @@ export async function extractComponents(code: string, id = "component.tsx"): Pro
   }
   const file = fileFromId(id);
   const components = JAVASCRIPT_EXTENSIONS.has(extname(file))
-    ? ((await extractComponentsFromJavaScript(code, file)) ?? extractComponentsFromText(code))
+    ? (extractComponentsFromJavaScript(code, file) ?? extractComponentsFromText(code))
     : extractComponentsFromText(code);
   return normalizeComponents(components);
 }
@@ -336,6 +336,7 @@ interface StylesheetScan {
   hrefSet: Set<string>;
   present: Set<string>;
   markerOffsets: number[];
+  removals: { start: number; end: number }[];
 }
 
 function collectStylesheetLink(node: DefaultTreeAdapterTypes.Element, scan: StylesheetScan): void {
@@ -343,17 +344,27 @@ function collectStylesheetLink(node: DefaultTreeAdapterTypes.Element, scan: Styl
     return;
   }
   const hrefValue = attributeValue(node, "href");
-  const relValue = attributeValue(node, "rel");
+  const marked = attributeValue(node, STYLESHEET_ATTRIBUTE) !== undefined;
+  const startTag = node.sourceCodeLocation?.startTag;
+
+  // Managed links that no longer point at a configured href are stale.
+  if (marked && (hrefValue === undefined || !scan.hrefSet.has(hrefValue))) {
+    if (startTag !== undefined) {
+      scan.removals.push({ start: startTag.startOffset, end: startTag.endOffset });
+    }
+    return;
+  }
+
   if (
     hrefValue === undefined ||
     !scan.hrefSet.has(hrefValue) ||
-    !isPrimaryStylesheetRel(relValue)
+    !isPrimaryStylesheetRel(attributeValue(node, "rel"))
   ) {
     return;
   }
 
   scan.present.add(hrefValue);
-  if (attributeValue(node, STYLESHEET_ATTRIBUTE) !== undefined) {
+  if (marked) {
     return;
   }
   const offset = markerOffsetForLink(node, scan.html);
@@ -362,37 +373,37 @@ function collectStylesheetLink(node: DefaultTreeAdapterTypes.Element, scan: Styl
   }
 }
 
-interface StylesheetInsertion {
+interface Edit {
+  start: number;
+  end: number;
   text: string;
-  offset?: number;
 }
 
-function applyStylesheetChanges(
-  html: string,
-  markerOffsets: number[],
-  insertion: StylesheetInsertion,
-): string {
-  let result =
-    insertion.offset === undefined
-      ? html
-      : `${html.slice(0, insertion.offset)}${insertion.text}${html.slice(insertion.offset)}`;
-
-  for (const offset of markerOffsets.toSorted((left, right) => right - left)) {
-    const adjusted =
-      insertion.offset !== undefined && offset >= insertion.offset
-        ? offset + insertion.text.length
-        : offset;
-    result = `${result.slice(0, adjusted)} ${STYLESHEET_ATTRIBUTE}${result.slice(adjusted)}`;
+function applyEdits(html: string, edits: Edit[]): string {
+  let result = html;
+  for (const edit of edits.toSorted(
+    (left, right) => right.start - left.start || right.end - left.end,
+  )) {
+    result = `${result.slice(0, edit.start)}${edit.text}${result.slice(edit.end)}`;
   }
-
   return result;
+}
+
+function lastChildEnd(node: DefaultTreeAdapterTypes.Element): number | undefined {
+  for (let index = node.childNodes.length - 1; index >= 0; index -= 1) {
+    const end = node.childNodes[index]?.sourceCodeLocation?.endOffset;
+    if (end !== undefined) {
+      return end;
+    }
+  }
+  return undefined;
 }
 
 /**
  * Ensures every configured href has a marked document stylesheet link. Existing
- * matching links are marked in place. Missing links are inserted before
- * `</head>`, matching the SSR helper's document behavior. HTML without a head
- * is left unmodified when a link is missing.
+ * matching links are marked in place, managed links that point elsewhere are
+ * removed, and missing links are inserted before `</head>` (or the end of the
+ * last head child when the end tag is implied).
  */
 export function ensureStylesheetLinks(
   html: string,
@@ -409,6 +420,7 @@ export function ensureStylesheetLinks(
     hrefSet: new Set(hrefs),
     present: new Set(),
     markerOffsets: [],
+    removals: [],
   };
   const document = parse(html, { sourceCodeLocationInfo: true });
   let headEndOffset: number | undefined;
@@ -417,9 +429,9 @@ export function ensureStylesheetLinks(
     if (isElementNode(node)) {
       if (node.tagName === "head") {
         const endTag = node.sourceCodeLocation?.endTag;
-        if (endTag !== undefined) {
-          headEndOffset = endTag.startOffset;
-        }
+        headEndOffset =
+          endTag?.startOffset ??
+          (node.sourceCodeLocation?.startTag === undefined ? undefined : lastChildEnd(node));
       }
       collectStylesheetLink(node, scan);
     }
@@ -434,10 +446,22 @@ export function ensureStylesheetLinks(
   visit(document);
 
   const missing = hrefs.filter((value) => !scan.present.has(value));
-  return applyStylesheetChanges(html, scan.markerOffsets, {
-    text: stylesheetLinkHtml(missing, { nonce: options.nonce }),
-    offset: missing.length > 0 ? headEndOffset : undefined,
-  });
+  const edits: Edit[] = [
+    ...scan.markerOffsets.map((offset) => ({
+      start: offset,
+      end: offset,
+      text: ` ${STYLESHEET_ATTRIBUTE}`,
+    })),
+    ...scan.removals.map((range) => ({ start: range.start, end: range.end, text: "" })),
+  ];
+  if (missing.length > 0 && headEndOffset !== undefined) {
+    edits.push({
+      start: headEndOffset,
+      end: headEndOffset,
+      text: stylesheetLinkHtml(missing, { nonce: options.nonce }),
+    });
+  }
+  return applyEdits(html, edits);
 }
 
 /**

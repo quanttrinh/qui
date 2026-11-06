@@ -20,6 +20,7 @@ const build = createConfig(__dirname);
 const logger = createNodeLogger();
 const pandaDriver = createPandaDriver(build);
 const isTest = process.env.NODE_ENV === "test";
+const isDev = process.argv.some((argument) => argument === "--dev" || argument === "--watch");
 const testProject = process.env.STENCIL_TEST_PROJECT;
 const needsHydrate =
   !isTest ||
@@ -59,12 +60,16 @@ if (needsHydrate) {
   outputTargets.push({
     type: "dist-hydrate-script",
     dir: build.output.hydrate,
-    minify: !isTest,
+    minify: !isTest && !isDev,
   });
 }
 
 if (!isTest) {
-  outputTargets.push(utilitiesOutputTarget(build), frameworkTypesOutputTarget({ config: build }));
+  outputTargets.push(utilitiesOutputTarget(build));
+}
+
+if (!isTest && !isDev) {
+  outputTargets.push(frameworkTypesOutputTarget({ config: build }));
 }
 
 export const config: Config = {

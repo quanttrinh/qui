@@ -15,7 +15,8 @@ import {
   type ShadowStylesheetOptions,
 } from "@quanttrinh/qui/ssr";
 import { escapeAttribute, escapeText } from "entities";
-import { mkdir, writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseFragment, type DefaultTreeAdapterTypes } from "parse5";
 
@@ -57,6 +58,8 @@ export interface PageRenderOptions extends ServerRenderOptions {
   title?: string;
   /** Document-only theme stylesheet URL(s). */
   themeHref?: string | string[];
+  /** CSP nonce for the generated theme stylesheet link. */
+  themeNonce?: string;
   /** Extra markup appended to the generated `<head>`. */
   head?: string;
   /** Attributes for the generated `<html>` element. */
@@ -108,7 +111,7 @@ export function collectComponents(html: string): string[] {
   };
 
   visit(parseFragment(html));
-  return [...components].toSorted();
+  return normalizeComponentTags(components);
 }
 
 function registrationMetadata(html: string): RegistrationMetadata {
@@ -120,21 +123,48 @@ function registrationMetadata(html: string): RegistrationMetadata {
   };
 }
 
+export interface WriteRegistrationManifestOptions {
+  /** Base directory for relative paths. Defaults to `process.cwd()`. */
+  root?: string;
+}
+
 /**
  * Writes a registration manifest that `virtual:qui/registration-manifest` in
  * `@quanttrinh/qui-unplugin` reads during the client build.
+ *
+ * Intended for a build/SSG pass after rendering all pages, not for every SSR
+ * request: concurrent writers would overwrite each other's component sets.
+ * Writes are atomic and skipped when the contents are unchanged.
  */
 export async function writeRegistrationManifest(
   file: string,
   components: Iterable<string>,
+  options: WriteRegistrationManifestOptions = {},
 ): Promise<string> {
-  await mkdir(path.dirname(file), { recursive: true });
-  await writeFile(
-    file,
-    `${JSON.stringify({ components: normalizeComponentTags(components) }, null, 2)}\n`,
-  );
-  return file;
+  const target = path.resolve(options.root ?? process.cwd(), file);
+  const contents = `${JSON.stringify({ components: normalizeComponentTags(components) }, null, 2)}\n`;
+
+  try {
+    if ((await readFile(target, "utf8")) === contents) {
+      return target;
+    }
+  } catch {
+    // The manifest does not exist yet.
+  }
+
+  await mkdir(path.dirname(target), { recursive: true });
+  const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporary, contents);
+    await rename(temporary, target);
+  } catch (error) {
+    await rm(temporary, { force: true });
+    throw error;
+  }
+  return target;
 }
+
+const ATTRIBUTE_NAME = /^[A-Za-z_:][-A-Za-z0-9_:.]*$/u;
 
 function attributes(values: Record<string, string | undefined> | undefined): string {
   if (values === undefined) {
@@ -142,11 +172,41 @@ function attributes(values: Record<string, string | undefined> | undefined): str
   }
   const markup: string[] = [];
   for (const [name, value] of Object.entries(values)) {
+    if (!ATTRIBUTE_NAME.test(name)) {
+      throw new Error(`Invalid HTML attribute name: ${JSON.stringify(name)}`);
+    }
     if (typeof value === "string" && value.length > 0) {
       markup.push(` ${name}="${escapeAttribute(value)}"`);
     }
   }
   return markup.join("");
+}
+
+/** Reads a CSP nonce from a `<meta name="csp-nonce">` element in custom head markup. */
+function headNonce(head: string | undefined): string | undefined {
+  if (head === undefined) {
+    return undefined;
+  }
+  let nonce: string | undefined;
+  const visit = (node: DefaultTreeAdapterTypes.Node): void => {
+    if (nonce !== undefined) {
+      return;
+    }
+    if ("tagName" in node && node.tagName === "meta") {
+      const name = node.attrs.find((attribute) => attribute.name === "name")?.value;
+      const content = node.attrs.find((attribute) => attribute.name === "content")?.value;
+      if (name === "csp-nonce" && content !== undefined && content.length > 0) {
+        nonce = content;
+      }
+    }
+    if ("childNodes" in node) {
+      for (const child of node.childNodes) {
+        visit(child);
+      }
+    }
+  };
+  visit(parseFragment(head));
+  return nonce;
 }
 
 function pageParts(options: PageRenderOptions): { prefix: string; suffix: string } {
@@ -156,14 +216,18 @@ function pageParts(options: PageRenderOptions): { prefix: string; suffix: string
     ...options.htmlAttributes,
   };
   const title = options.title === undefined ? "" : `<title>${escapeText(options.title)}</title>`;
+  const nonce = options.styles?.nonce ?? headNonce(options.head);
   const theme =
     options.themeHref === undefined
       ? ""
-      : stylesheetLinkHtml(uniqueHrefs(options.themeHref), { marker: false });
+      : stylesheetLinkHtml(uniqueHrefs(options.themeHref), {
+          marker: false,
+          nonce: options.themeNonce ?? nonce,
+        });
   const componentStyles =
     options.styles === undefined
       ? ""
-      : stylesheetLinkHtml(uniqueHrefs(options.styles.href), { nonce: options.styles.nonce });
+      : stylesheetLinkHtml(uniqueHrefs(options.styles.href), { nonce });
 
   const prefix = [
     "<!doctype html><html",
@@ -242,15 +306,23 @@ export async function renderPage(
     ...render
   } = options;
   const { prefix, suffix } = pageParts(options);
-  const result = await renderToString(markup, { ...render, fullDocument: false });
+  const shellNonce = options.styles?.nonce ?? headNonce(options.head);
+  const styles =
+    render.styles === undefined
+      ? undefined
+      : { ...render.styles, nonce: render.styles.nonce ?? shellNonce };
+  const result = await renderToString(markup, {
+    ...render,
+    ...(styles === undefined ? {} : { styles }),
+    fullDocument: false,
+  });
   const html = `${prefix}${result.html}${suffix}`;
-  const registration = registrationMetadata(result.html);
 
   return {
     html,
     diagnostics: result.diagnostics,
-    registration,
-    components: registration.components,
+    registration: result.registration,
+    components: result.components,
   };
 }
 
@@ -277,9 +349,9 @@ export async function* renderToStream(
     bodyAttributes: _bodyAttributes,
     ...render
   } = options;
-  const generated = pageParts(options);
-  const documentPrefix = prefix ?? generated.prefix;
-  const documentSuffix = suffix ?? generated.suffix;
+  let generated: { prefix: string; suffix: string } | undefined;
+  const documentPrefix = prefix ?? (generated ??= pageParts(options)).prefix;
+  const documentSuffix = suffix ?? (generated ?? pageParts(options)).suffix;
 
   if (documentPrefix.length > 0) {
     yield documentPrefix;
@@ -337,9 +409,16 @@ function isHydrateWindow(value: unknown): value is { document: Document } {
   return typeof document === "object" && document !== null;
 }
 
-/** Creates a mock window with a typed document for hydrateDocument(). */
+/**
+ * Creates a mock window with a typed document for hydrateDocument().
+ *
+ * Stencil caches parsed templates by `uniqueId`, so the id is combined with a
+ * hash of the HTML. Pass a stable template name, not a per-request identifier:
+ * reusing an id with different markup otherwise hydrates the first template.
+ */
 export function createWindowFromHtml(html: string, uniqueId: string): { document: Document } {
-  const window: unknown = stencilCreateWindowFromHtml(html, uniqueId);
+  const templateKey = `${uniqueId}:${createHash("sha1").update(html).digest("hex")}`;
+  const window: unknown = stencilCreateWindowFromHtml(html, templateKey);
   if (!isHydrateWindow(window)) {
     throw new Error("Stencil did not return a hydrate window with a document.");
   }

@@ -158,6 +158,6 @@ export function schemeToColors(scheme: DynamicScheme): Record<ColorRole, string>
     return hexFromArgb(dynamicColor.getArgb(scheme));
   });
 
-  colorsByScheme.set(scheme, colors);
+  colorsByScheme.set(scheme, Object.freeze(colors));
   return colors;
 }

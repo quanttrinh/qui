@@ -42,9 +42,13 @@ const ControllerHostMixin = (Base: MixedInCtor): MixedInCtor<ControllerHostMixin
     }
 
     addController(controller: ReactiveController): void {
-      // Controllers are registered during field initialization, before Stencil
-      // Connects the element. A duplicate registration is a no-op.
+      if (this.controllers.has(controller)) {
+        return;
+      }
       this.controllers.add(controller);
+      if (this.connected) {
+        controller.hostConnected?.();
+      }
     }
 
     removeController(controller: ReactiveController): void {

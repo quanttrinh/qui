@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -17,6 +17,8 @@ vi.mock("node:module", () => ({
 vi.mock("node:fs/promises", () => ({
   mkdir: vi.fn().mockResolvedValue(undefined),
   readFile: vi.fn().mockResolvedValue(":host{display:block;--font-fallback:test;}"),
+  rename: vi.fn().mockResolvedValue(undefined),
+  rm: vi.fn().mockResolvedValue(undefined),
   writeFile: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -97,14 +99,16 @@ describe("vite adapter", () => {
     expect(code).not.toContain("not-a-component");
   });
 
-  it("writes registration manifests", async () => {
+  it("writes registration manifests atomically", async () => {
     await writeRegistrationManifest("/tmp/qui/components.json", ["qui-card", "qui-button"]);
 
     expect(mkdir).toHaveBeenCalledWith("/tmp/qui", { recursive: true });
-    expect(writeFile).toHaveBeenCalledWith(
-      "/tmp/qui/components.json",
+    const temporary = vi.mocked(writeFile).mock.calls[0]?.[0];
+    expect(temporary).toMatch(/^\/tmp\/qui\/components\.json\.\d+\..+\.tmp$/u);
+    expect(vi.mocked(writeFile).mock.calls[0]?.[1]).toBe(
       '{\n  "components": [\n    "qui-button",\n    "qui-card"\n  ]\n}\n',
     );
+    expect(rename).toHaveBeenCalledWith(temporary, "/tmp/qui/components.json");
   });
 
   it("resolves and loads the shadow styles module", async () => {

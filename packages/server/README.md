@@ -54,7 +54,9 @@ const { html } = await renderToString(markup, {
 ```ts
 import { createWindowFromHtml, hydrateDocument } from "@quanttrinh/qui-server";
 
-const window = createWindowFromHtml(template, requestId);
+// Pass a stable template name, not a per-request id. Stencil caches parsed
+// templates by id; the helper combines the id with a content hash.
+const window = createWindowFromHtml(template, "email-page");
 const { html, diagnostics } = await hydrateDocument(window.document, {
     styles: { href: "/assets/qui.css" },
 });
@@ -131,13 +133,19 @@ registration.module; // static import/define module source
 registration.manifest; // JSON manifest
 ```
 
-Write the manifest for the unplugin's build-time registration module:
+Write the manifest for the unplugin's build-time registration module. Call this
+once after a build/SSG pass has rendered every page, not from per-request
+handlers, because the manifest describes one component set:
 
 ```ts
 import { writeRegistrationManifest } from "@quanttrinh/qui-server";
 
 await writeRegistrationManifest("./.qui/components.json", registration.components);
 ```
+
+Relative paths are resolved from `process.cwd()`; pass `{ root }` to use another
+base. The unplugin resolves relative manifest paths from the Vite root, so keep
+both roots the same or use an absolute path.
 
 Then configure the unplugin and import the virtual module from the client entry:
 

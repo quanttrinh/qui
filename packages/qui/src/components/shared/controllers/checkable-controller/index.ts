@@ -46,6 +46,7 @@ export class CheckableController extends ControlledControllerBase<CheckedState> 
   private listening = false;
   private focused = false;
   private focusVisible = false;
+  private focusRenderPending = false;
 
   constructor(host: ReactiveControllerHost, options: CheckableControllerOptions) {
     const supportsIndeterminate = options.supportsIndeterminate !== false;
@@ -101,12 +102,22 @@ export class CheckableController extends ControlledControllerBase<CheckedState> 
     return this.initialValue;
   }
 
+  hostConnected(): void {
+    if (this.focusRenderPending) {
+      this.focusRenderPending = false;
+      this.requestUpdate();
+    }
+  }
+
   hostDidRender(): void {
     this.syncInput();
   }
 
   hostDisconnected(): void {
     this.removeInputListeners();
+    if (this.focused || this.focusVisible) {
+      this.focusRenderPending = true;
+    }
     this.focused = false;
     this.focusVisible = false;
   }

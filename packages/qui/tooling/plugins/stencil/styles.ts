@@ -9,8 +9,10 @@ import { dirname, join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 
 import { type Config } from "../../config";
+import { componentDeclarationsFromSource } from "../../panda/component-tags";
 import { type PandaDriver } from "../../panda/panda-driver";
 import { generateThemeCss } from "../../panda/theme-css";
+import { undefinedContentTags } from "../../panda/undefined-content";
 
 interface ComponentEntry {
   file: string;
@@ -37,7 +39,7 @@ interface PluginState {
 
 const SHARED_PLACEHOLDER = "/* Styles are provided by the shared stylesheet. */\n";
 const KEBAB_SEGMENT = /-([a-z])/gu;
-const COMPONENT_TAG = /tag:\s*"([^"]+)"/u;
+const EXCLUDED_SOURCE = /(?:\.test|\.spec|\.e2e)\.(?:[cm]?[jt]sx?)$/u;
 
 let pluginState: PluginState | undefined;
 
@@ -96,31 +98,32 @@ async function writeIfChanged(file: string, contents: string): Promise<void> {
   await writeFile(file, contents);
 }
 
-function fileHashesSync(config: Config): Map<string, string> {
-  const files = [
+function hashInputs(config: Config, sourceFiles: string[]): string[] {
+  const metadata = [config.file.packageJson, config.file.lockfile].filter((file) =>
+    existsSync(file),
+  );
+  return [
     ...config.configInputs,
     ...config.styleBuildInputs,
-    ...walkSync(config.source.src).filter(
+    ...metadata,
+    ...sourceFiles.filter(
       (file) =>
         (file.endsWith(".ts") || file.endsWith(".tsx")) &&
-        !file.endsWith(config.file.generatedComponents),
+        !file.endsWith(config.file.generatedComponents) &&
+        !EXCLUDED_SOURCE.test(file),
     ),
   ];
+}
+
+function fileHashesSync(config: Config): Map<string, string> {
+  const files = hashInputs(config, walkSync(config.source.src));
   return new Map(
     files.sort().map((file) => [file, createHash("sha1").update(readFileSync(file)).digest("hex")]),
   );
 }
 
 async function fileHashes(config: Config): Promise<Map<string, string>> {
-  const files = [
-    ...config.configInputs,
-    ...config.styleBuildInputs,
-    ...(await walk(config.source.src)).filter(
-      (file) =>
-        (file.endsWith(".ts") || file.endsWith(".tsx")) &&
-        !file.endsWith(config.file.generatedComponents),
-    ),
-  ];
+  const files = hashInputs(config, await walk(config.source.src));
   const entries = await Promise.all(
     files.sort().map(
       async (file) =>
@@ -143,21 +146,14 @@ function hashesDigest(hashes: Map<string, string>): string {
   return digest.digest("hex");
 }
 
-/** Theme source files, used to avoid reloading Material on every rebuild. */
-async function themeSourceHash(config: Config): Promise<string> {
-  const files = (await walk(config.source.theme)).filter((file) => file.endsWith(".ts"));
-  const entries = await Promise.all(
-    files.sort().map(
-      async (file) =>
-        [
-          file,
-          createHash("sha1")
-            .update(await readFile(file))
-            .digest("hex"),
-        ] as const,
+/** Reuses an already computed source hash map for theme-only invalidation. */
+function themeHash(hashes: Map<string, string>, config: Config): string {
+  const prefix = `${config.source.theme}/`;
+  return hashesDigest(
+    new Map(
+      [...hashes].filter(([file]) => file === config.source.theme || file.startsWith(prefix)),
     ),
   );
-  return hashesDigest(new Map(entries));
 }
 
 function manifestHash(config: Config): string | undefined {
@@ -231,25 +227,13 @@ async function pandaAsync(config: Config, args: string[], logger: Logger): Promi
   }
 }
 
-function componentEntry(
-  file: string,
-  source: string,
-  outputDirectory: string,
-): ComponentEntry | undefined {
-  if (!source.includes("@Component(")) {
-    return undefined;
-  }
-  const tag = source.match(COMPONENT_TAG)?.[1];
-  if (tag === undefined) {
-    return undefined;
-  }
-  const name = file.slice(file.lastIndexOf("/") + 1, -".tsx".length);
-  return {
+function componentEntries(file: string, source: string, outputDirectory: string): ComponentEntry[] {
+  return componentDeclarationsFromSource(source).map((declaration) => ({
     file,
-    tag,
-    name,
-    output: join(outputDirectory, `${name}.css`),
-  };
+    tag: declaration.tag,
+    name: declaration.tag,
+    output: join(outputDirectory, `${declaration.tag}.css`),
+  }));
 }
 
 function findComponentsSync(config: Config): ComponentEntry[] {
@@ -258,10 +242,7 @@ function findComponentsSync(config: Config): ComponentEntry[] {
 
   return walkSync(config.source.components)
     .filter((file) => file.endsWith(".tsx"))
-    .flatMap((file) => {
-      const entry = componentEntry(file, readFileSync(file, "utf8"), outputDirectory);
-      return entry === undefined ? [] : [entry];
-    })
+    .flatMap((file) => componentEntries(file, readFileSync(file, "utf8"), outputDirectory))
     .sort((a, b) => a.tag.localeCompare(b.tag));
 }
 
@@ -271,11 +252,11 @@ async function findComponents(config: Config): Promise<ComponentEntry[]> {
 
   const files = (await walk(config.source.components)).filter((file) => file.endsWith(".tsx"));
   const entries = await Promise.all(
-    files.map(async (file) => componentEntry(file, await readFile(file, "utf8"), outputDirectory)),
+    files.map(async (file) =>
+      componentEntries(file, await readFile(file, "utf8"), outputDirectory),
+    ),
   );
-  return entries
-    .filter((entry): entry is ComponentEntry => entry !== undefined)
-    .sort((a, b) => a.tag.localeCompare(b.tag));
+  return entries.flat().sort((a, b) => a.tag.localeCompare(b.tag));
 }
 
 function sameComponents(a: ComponentEntry[], b: ComponentEntry[]): boolean {
@@ -333,7 +314,10 @@ class StyleGenerator {
   private components: ComponentEntry[];
   private cssPending = false;
   private cssPromise?: Promise<void>;
+  private pendingReload = false;
+  private pendingHashes?: Map<string, string>;
   private themeCache?: { key: string; css: string };
+  private undefinedContentKey?: string;
 
   constructor(config: Config, driver: PandaDriver, logger: Logger) {
     this.config = config;
@@ -342,6 +326,7 @@ class StyleGenerator {
     this.driver = driver;
     this.logger = logger;
     this.components = findComponentsSync(config);
+    this.undefinedContentKey = this.currentUndefinedContentKey();
     mkdirSync(this.outdir, { recursive: true });
   }
 
@@ -356,6 +341,7 @@ class StyleGenerator {
   generateBootstrap(reason: string): void {
     this.logger.info(`[qui] bootstrapping Panda styles (${reason})`);
     this.components = findComponentsSync(this.config);
+    this.undefinedContentKey = this.currentUndefinedContentKey();
 
     this.logger.info("[qui] generating Panda styled-system");
     panda(this.config, ["codegen"], this.logger);
@@ -368,6 +354,7 @@ class StyleGenerator {
   private async generateBootstrapAsync(reason: string): Promise<void> {
     this.logger.info(`[qui] bootstrapping Panda styles (${reason})`);
     this.components = await findComponents(this.config);
+    this.undefinedContentKey = this.currentUndefinedContentKey();
 
     this.logger.info("[qui] generating Panda styled-system");
     await pandaAsync(this.config, ["codegen"], this.logger);
@@ -385,6 +372,7 @@ class StyleGenerator {
       await this.generateBootstrapAsync("config or theme changed");
       return true;
     }
+
     const nextComponents = await findComponents(this.config);
     if (!sameComponents(this.components, nextComponents)) {
       this.components = nextComponents;
@@ -392,7 +380,14 @@ class StyleGenerator {
       await this.writePlaceholders();
       await this.pruneComponentStyles();
       this.cssPending = true;
-      return false;
+    }
+
+    // The undefined-content selector is embedded in the Panda config, so the
+    // driver must reload when a marker is added, removed, or renamed.
+    const undefinedContentKey = this.currentUndefinedContentKey();
+    if (undefinedContentKey !== this.undefinedContentKey) {
+      this.undefinedContentKey = undefinedContentKey;
+      return true;
     }
 
     return false;
@@ -402,19 +397,36 @@ class StyleGenerator {
     return this.cssPending;
   }
 
-  async generateCss(reload: boolean): Promise<void> {
-    this.cssPromise ??= this.generateCssNow(reload).finally(() => {
-      this.cssPromise = undefined;
-    });
-    await this.cssPromise;
+  async generateCss(reload: boolean, hashes: Map<string, string>): Promise<void> {
+    this.pendingReload ||= reload;
+    this.pendingHashes = hashes;
+    if (this.cssPromise !== undefined) {
+      await this.cssPromise;
+      return;
+    }
+
+    do {
+      const shouldReload = this.pendingReload;
+      this.pendingReload = false;
+      const currentHashes = this.pendingHashes ?? hashes;
+      this.pendingHashes = undefined;
+      this.cssPromise = this.generateCssNow(shouldReload, currentHashes).finally(() => {
+        this.cssPromise = undefined;
+      });
+      await this.cssPromise;
+    } while (this.pendingReload || this.pendingHashes !== undefined);
   }
 
-  private async generateCssNow(reload: boolean): Promise<void> {
+  private currentUndefinedContentKey(): string {
+    return undefinedContentTags(this.config).join(",");
+  }
+
+  private async generateCssNow(reload: boolean, hashes: Map<string, string>): Promise<void> {
     this.logger.info("[qui] generating shared styles");
     if (reload) {
       await this.driver.reload();
     }
-    const themeKey = await themeSourceHash(this.config);
+    const themeKey = themeHash(hashes, this.config);
     if (this.themeCache?.key !== themeKey) {
       this.themeCache = { key: themeKey, css: await generateThemeCss(this.config) };
     }
@@ -423,7 +435,7 @@ class StyleGenerator {
     await writeIfChanged(this.config.file.themeCss, themeCss);
     await writeIfChanged(this.config.file.sharedCss, sharedCss);
     this.cssPending = false;
-    await this.writeManifest();
+    await this.writeManifest(hashes);
     this.logger.info("[qui] styles generated");
   }
 
@@ -475,13 +487,13 @@ class StyleGenerator {
     return toPosix(file).startsWith(`${toPosix(this.config.source.theme)}/`);
   }
 
-  private async writeManifest(): Promise<void> {
+  private async writeManifest(hashes: Map<string, string>): Promise<void> {
     await rm(this.config.file.styleStrategy, { force: true });
     await writeIfChanged(
       this.config.file.styleManifest,
       `${JSON.stringify(
         {
-          hash: hashesDigest(await fileHashes(this.config)),
+          hash: hashesDigest(hashes),
           components: this.components.map((component) => ({
             tag: component.tag,
             file: relativePath(this.root, component.file),
@@ -493,6 +505,19 @@ class StyleGenerator {
       )}\n`,
     );
   }
+}
+
+function generatedArtifactsExist(config: Config): boolean {
+  const styledSystem = config.output.styledSystem;
+  return [
+    config.file.themeCss,
+    config.file.sharedCss,
+    config.file.styleUrlsModule,
+    config.file.styleUrlsDeclaration,
+    join(styledSystem, "css", "index.js"),
+    join(styledSystem, "tokens", "index.js"),
+    join(styledSystem, "patterns", "index.js"),
+  ].every((file) => existsSync(file));
 }
 
 /**
@@ -511,11 +536,7 @@ export function stylesPlugin({ config, driver, logger }: StylesPluginOptions) {
       ? previous
       : undefined;
   const generator = reusableState?.generator ?? new StyleGenerator(config, driver, logger);
-  const generatedFilesExist = [
-    config.file.themeCss,
-    config.file.sharedCss,
-    config.file.styleUrlsModule,
-  ].every((file) => existsSync(file));
+  const generatedFilesExist = generatedArtifactsExist(config);
   const canReuseMemoryState = reusableState !== undefined && generatedFilesExist;
   const canReuseDiskState =
     reusableState === undefined &&
@@ -526,6 +547,7 @@ export function stylesPlugin({ config, driver, logger }: StylesPluginOptions) {
     generator.generateBootstrap("initial build");
   }
   pluginState = { generator, hashes, key };
+  let firstBuild = true;
 
   return {
     name: "qui-styles",
@@ -534,18 +556,20 @@ export function stylesPlugin({ config, driver, logger }: StylesPluginOptions) {
         this.addWatchFile(input);
       }
 
+      const next = firstBuild ? hashes : await fileHashes(config);
+      firstBuild = false;
+
       if (generator.hasPendingCss()) {
-        await generator.generateCss(false);
+        await generator.generateCss(false, next);
       }
 
-      const next = await fileHashes(config);
       const current = pluginState;
       if (current !== undefined) {
         const changed = changedFiles(current.hashes, next);
         if (changed.length > 0) {
           const reload = await current.generator.update(changed);
           if (reload !== undefined) {
-            await current.generator.generateCss(reload);
+            await current.generator.generateCss(reload, next);
           }
         }
       }

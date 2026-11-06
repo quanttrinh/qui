@@ -143,18 +143,21 @@ function discoverDocumentHrefs(document: Document): string[] | undefined {
   discoveredHrefs.set(document, result);
 
   if (!documentObservers.has(document) && typeof MutationObserver !== "undefined") {
-    const observer = new MutationObserver((records) => {
-      if (hasLinkMutation(records)) {
-        invalidateDocumentLinkCache(document);
-      }
-    });
-    observer.observe(document.documentElement, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-      attributeFilter: ["href", STYLESHEET_ATTRIBUTE],
-    });
-    documentObservers.set(document, observer);
+    const root = document.documentElement as Element | null;
+    if (root !== null) {
+      const observer = new MutationObserver((records) => {
+        if (hasLinkMutation(records)) {
+          invalidateDocumentLinkCache(document);
+        }
+      });
+      observer.observe(root, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: ["href", STYLESHEET_ATTRIBUTE],
+      });
+      documentObservers.set(document, observer);
+    }
   }
 
   return result;
@@ -169,8 +172,13 @@ function resolveHrefs(document: Document): string[] | undefined {
   return discoverDocumentHrefs(document);
 }
 
-function hasManagedLink(root: ShadowRoot): boolean {
-  return Boolean(root.querySelector(STYLESHEET_SELECTOR));
+/** Whether the managed links already match the configured hrefs in order. */
+function hasMatchingManagedLinks(root: ShadowRoot, hrefs: string[]): boolean {
+  const managed = [...root.querySelectorAll<HTMLLinkElement>(STYLESHEET_SELECTOR)];
+  return (
+    managed.length === hrefs.length &&
+    managed.every((link, index) => link.getAttribute("href") === hrefs[index])
+  );
 }
 
 /**
@@ -217,16 +225,30 @@ export function ensureShadowStylesheet(host: HTMLElement): void {
     return;
   }
 
-  if (hasManagedLink(root)) {
-    return;
-  }
-
   const hrefs = resolveHrefs(document);
   if (!hrefs) {
     return;
   }
 
+  if (hasMatchingManagedLinks(root, hrefs)) {
+    return;
+  }
+
   reconcileShadowStylesheetLinks(root, hrefs, { document });
+}
+
+/** Clears the configured href and managed shadow-root links. */
+export function resetQuiStylesHref(): void {
+  delete configuredHrefCache.entry;
+  Reflect.deleteProperty(globalThis, GLOBAL_HREF_KEY);
+  const document = getDocument();
+  if (!document) {
+    return;
+  }
+  invalidateDocumentLinkCache(document);
+  for (const root of collectShadowRoots(document)) {
+    reconcileShadowStylesheetLinks(root, [], { document });
+  }
 }
 
 /**
@@ -245,6 +267,11 @@ export function ensureShadowStylesheet(host: HTMLElement): void {
  */
 export function setQuiStylesHref(href: string | string[]): void {
   const hrefs = uniqueHrefs(href);
+  if (typeof href === "string" && href.length === 0) {
+    resetQuiStylesHref();
+    return;
+  }
+
   const value: string | string[] = Array.isArray(href) ? hrefs : href;
   configuredHrefCache.entry = { value, hrefs };
   Reflect.set(globalThis, GLOBAL_HREF_KEY, value);
@@ -258,20 +285,6 @@ export function setQuiStylesHref(href: string | string[]): void {
   reconcileDocumentStylesheetLinks(document, hrefs);
   for (const root of collectShadowRoots(document)) {
     reconcileShadowStylesheetLinks(root, hrefs, { document });
-  }
-}
-
-/** Clears the configured href and managed shadow-root links. */
-export function resetQuiStylesHref(): void {
-  delete configuredHrefCache.entry;
-  Reflect.deleteProperty(globalThis, GLOBAL_HREF_KEY);
-  const document = getDocument();
-  if (!document) {
-    return;
-  }
-  invalidateDocumentLinkCache(document);
-  for (const root of collectShadowRoots(document)) {
-    reconcileShadowStylesheetLinks(root, [], { document });
   }
 }
 
@@ -297,5 +310,5 @@ export function getQuiStylesHref(): string | string[] | undefined {
     return undefined;
   }
 
-  return hrefs.length === 1 ? hrefs[0] : hrefs;
+  return hrefs.length === 1 ? hrefs[0] : [...hrefs];
 }

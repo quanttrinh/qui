@@ -20,7 +20,7 @@ import {
 } from "./core";
 
 describe("extractComponents", () => {
-  it("finds opening component tags, ignores closing tags, and deduplicates", async () => {
+  it("finds opening component tags, ignores closing tags, and deduplicates", () => {
     const code = `
       export const Form = () => (
         <qui-field>
@@ -31,68 +31,68 @@ describe("extractComponents", () => {
       );
     `;
 
-    expect(await extractComponents(code, "/app/Form.tsx")).toEqual([
+    expect(extractComponents(code, "/app/Form.tsx")).toEqual([
       "qui-button",
       "qui-field",
       "qui-input",
     ]);
   });
 
-  it("ignores tags inside strings and comments", async () => {
+  it("ignores tags inside strings and comments", () => {
     const code = `
       const example = "<qui-button>";
       // <qui-input>
       export const Form = () => <qui-card />;
     `;
 
-    expect(await extractComponents(code, "/app/Form.tsx")).toEqual(["qui-card"]);
+    expect(extractComponents(code, "/app/Form.tsx")).toEqual(["qui-card"]);
   });
 
-  it("finds component calls", async () => {
+  it("finds component calls", () => {
     const code = `
       h("qui-button", null);
       React.createElement("qui-input");
       jsx("div", null);
     `;
 
-    expect(await extractComponents(code, "/app/render.ts")).toEqual(["qui-button", "qui-input"]);
+    expect(extractComponents(code, "/app/render.ts")).toEqual(["qui-button", "qui-input"]);
   });
 
-  it("uses lexical extraction for Astro and MDX", async () => {
+  it("uses lexical extraction for Astro and MDX", () => {
     const astro = '$$render`<qui-select><qui-option value="a">A</qui-option></qui-select>`;';
     const mdx = "# Example\n\n<qui-button>Save</qui-button>";
 
-    expect(await extractComponents(astro, "/app/page.astro")).toEqual(["qui-option", "qui-select"]);
-    expect(await extractComponents(mdx, "/app/page.mdx")).toEqual(["qui-button"]);
+    expect(extractComponents(astro, "/app/page.astro")).toEqual(["qui-option", "qui-select"]);
+    expect(extractComponents(mdx, "/app/page.mdx")).toEqual(["qui-button"]);
   });
 
-  it("ignores unterminated tags in malformed source", async () => {
-    expect(await extractComponents("export const x = <qui-button", "/app/broken.tsx")).toEqual([]);
+  it("ignores unterminated tags in malformed source", () => {
+    expect(extractComponents("export const x = <qui-button", "/app/broken.tsx")).toEqual([]);
   });
 
-  it("skips source that cannot contain a component tag", async () => {
-    expect(await extractComponents("export const value = 1;", "/app/value.ts")).toEqual([]);
+  it("skips source that cannot contain a component tag", () => {
+    expect(extractComponents("export const value = 1;", "/app/value.ts")).toEqual([]);
   });
 
-  it("drops malformed component tags", async () => {
-    expect(await extractComponents("const value = <qui- />;", "/app/value.tsx")).toEqual([]);
+  it("drops malformed component tags", () => {
+    expect(extractComponents("const value = <qui- />;", "/app/value.tsx")).toEqual([]);
   });
 
-  it("resolves escaped static tag names", async () => {
+  it("resolves escaped static tag names", () => {
     const stringTag = String.raw`h("qui\u002Dbutton");`;
     const templateTag = ["h(`", String.raw`\u0071ui-button`, "`);"].join("");
 
-    expect(await extractComponents(stringTag, "/app/render.ts")).toEqual(["qui-button"]);
-    expect(await extractComponents(templateTag, "/app/render.ts")).toEqual(["qui-button"]);
+    expect(extractComponents(stringTag, "/app/render.ts")).toEqual(["qui-button"]);
+    expect(extractComponents(templateTag, "/app/render.ts")).toEqual(["qui-button"]);
   });
 
-  it("walks deeply nested and wide JSX trees", async () => {
+  it("walks deeply nested and wide JSX trees", () => {
     const depth = 2000;
     const deep = `const view = ${"<div>".repeat(depth)}<qui-button />${"</div>".repeat(depth)};`;
     const wide = `const view = <div>${"<qui-card />".repeat(5000)}</div>;`;
 
-    expect(await extractComponents(deep, "/app/deep.tsx")).toEqual(["qui-button"]);
-    expect(await extractComponents(wide, "/app/wide.tsx")).toEqual(["qui-card"]);
+    expect(extractComponents(deep, "/app/deep.tsx")).toEqual(["qui-button"]);
+    expect(extractComponents(wide, "/app/wide.tsx")).toEqual(["qui-card"]);
   });
 });
 
@@ -493,6 +493,26 @@ describe("ensureStylesheetLinks", () => {
     ]);
 
     expect(result).toBe('<link rel="stylesheet" href="/a.css" data-qui-styles>');
+  });
+
+  it("removes stale managed links", () => {
+    const result = ensureStylesheetLinks(
+      '<html><head><link rel="stylesheet" href="/old.css" data-qui-styles><link rel="stylesheet" href="/a.css"></head></html>',
+      "/a.css",
+    );
+
+    expect(result).not.toContain("/old.css");
+    expect(result).toContain('href="/a.css" data-qui-styles');
+  });
+
+  it("inserts before the implicit head close", () => {
+    const result = ensureStylesheetLinks(
+      '<html><head><link rel="stylesheet" href="/a.css"><body></body></html>',
+      ["/a.css", "/b.css"],
+    );
+
+    expect(result).toContain('href="/a.css" data-qui-styles');
+    expect(result).toContain('<link rel="stylesheet" href="/b.css" data-qui-styles><body>');
   });
 });
 

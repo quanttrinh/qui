@@ -30,6 +30,7 @@ export interface Config {
   };
   file: {
     packageJson: string;
+    lockfile: string;
     pandaConfig: string;
     tsconfig: string;
     themeEntry: string;
@@ -84,6 +85,7 @@ export function createConfig(root: string): Config {
     },
     file: {
       packageJson: join(root, "package.json"),
+      lockfile: join(root, "..", "..", "bun.lock"),
       pandaConfig: join(root, "panda.config.ts"),
       tsconfig: join(root, "tsconfig.build.json"),
       themeEntry: join(root, "src", "utilities", "theme", "index.ts"),

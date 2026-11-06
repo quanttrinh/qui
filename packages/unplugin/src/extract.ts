@@ -1,4 +1,4 @@
-import { parse, Visitor, type Node } from "oxc-parser";
+import { parseSync, Visitor, type Node } from "oxc-parser";
 import { parseFragment, type DefaultTreeAdapterTypes } from "parse5";
 import { extname } from "pathe";
 
@@ -66,11 +66,14 @@ function languageFor(filename: string): "js" | "jsx" | "ts" | "tsx" {
   return "js";
 }
 
-export async function extractComponentsFromJavaScript(
+export function extractComponentsFromJavaScript(
   code: string,
   filename: string,
-): Promise<string[] | undefined> {
-  const result = await parse(filename, code, {
+): string[] | undefined {
+  // Oxc's async parser deserializes synchronously and adds threadpool overhead.
+  // Per-module transforms intentionally stay synchronous.
+  // oxlint-disable-next-line node/no-sync
+  const result = parseSync(filename, code, {
     lang: languageFor(filename),
     sourceType: "unambiguous",
   });

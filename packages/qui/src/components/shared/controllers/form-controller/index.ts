@@ -96,6 +96,7 @@ function formSignature({
 export class FormController extends ReactiveControllerBase {
   private readonly options: FormControllerOptions;
   private field?: FieldApi;
+  private loaded = false;
   private control?: FieldControlHandle;
   private unregisterControl?: () => void;
   private unsubscribe?: () => void;
@@ -188,7 +189,10 @@ export class FormController extends ReactiveControllerBase {
 
   hostConnected(): void {
     this.listenForField();
-    this.attach();
+    const attached = this.attach();
+    if (attached && this.loaded) {
+      this.requestUpdate();
+    }
   }
 
   hostWillLoad(): void {
@@ -197,6 +201,7 @@ export class FormController extends ReactiveControllerBase {
   }
 
   hostDidLoad(): void {
+    this.loaded = true;
     this.attach();
     this.sync();
   }

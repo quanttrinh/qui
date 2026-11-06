@@ -82,7 +82,9 @@ describe("server SSR helpers", () => {
     expect(result.components).toEqual(["qui-button"]);
     expect(result.html).toContain("<!doctype html>");
     expect(result.html).toContain("<title>Settings &amp; profile</title>");
-    expect(result.html).toContain('<link rel="stylesheet" href="/assets/theme.css">');
+    expect(result.html).toContain(
+      '<link rel="stylesheet" href="/assets/theme.css" nonce="page-nonce">',
+    );
     expect(result.html).toContain(
       '<link rel="stylesheet" href="/assets/qui.css" nonce="page-nonce" data-qui-styles>',
     );
@@ -90,6 +92,16 @@ describe("server SSR helpers", () => {
     expect(result.html).toContain('<body class="page">');
     expect(result.html).toContain('<template shadowrootmode="open">');
     expect(result.html).toContain("</body></html>");
+  });
+
+  it("resolves a CSP nonce from custom head markup", async () => {
+    const result = await renderPage('<qui-button variant="filled">Save</qui-button>', {
+      themeHref: "/assets/theme.css",
+      styles: { href: "/assets/qui.css" },
+      head: '<meta name="csp-nonce" content="head-nonce">',
+    });
+
+    expect([...result.html.matchAll(/nonce="head-nonce"/gu)]).toHaveLength(3);
   });
 
   it("renderToStream emits the shell before the rendered body", async () => {

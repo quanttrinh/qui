@@ -31,6 +31,7 @@ export class ListWindowController extends ReactiveControllerBase {
   private offset = 0;
   private viewport?: HTMLElement;
   private viewportObserver?: ResizeObserver;
+  private viewportHeight = 0;
 
   constructor(host: ReactiveControllerHost, options: ListWindowControllerOptions) {
     super(host);
@@ -49,7 +50,7 @@ export class ListWindowController extends ReactiveControllerBase {
     { mode = "virtualize", reserveSize = 0, viewportSize = 0 }: ListWindowOverrides = {},
   ): ListWindow<TItem> {
     this.metrics.setEstimate(this.options.getEstimateSize());
-    const measuredViewport = viewportSize > 0 ? viewportSize : (this.viewport?.clientHeight ?? 0);
+    const measuredViewport = viewportSize > 0 ? viewportSize : this.viewportHeight;
     if (mode === "overflow") {
       return this.metrics.window({
         mode: "overflow",
@@ -76,11 +77,29 @@ export class ListWindowController extends ReactiveControllerBase {
     this.viewportObserver?.disconnect();
     this.viewportObserver = undefined;
     this.viewport = element;
-    if (element !== undefined && typeof ResizeObserver === "function") {
+    this.viewportHeight = element?.clientHeight ?? 0;
+    this.observeViewport();
+  }
+
+  hostConnected(): void {
+    if (this.viewport !== undefined) {
+      this.offset = this.viewport.scrollTop;
+      this.observeViewport();
+      this.requestUpdate();
+    }
+  }
+
+  private observeViewport(): void {
+    const { viewport } = this;
+    if (viewport === undefined || this.viewportObserver !== undefined) {
+      return;
+    }
+    if (typeof ResizeObserver === "function") {
       this.viewportObserver = new ResizeObserver(() => {
+        this.viewportHeight = viewport.clientHeight;
         this.requestUpdate();
       });
-      this.viewportObserver.observe(element);
+      this.viewportObserver.observe(viewport);
     }
   }
 
@@ -119,6 +138,13 @@ export class ListWindowController extends ReactiveControllerBase {
   }
 
   hostDidRender(): void {
+    if (this.viewport !== undefined) {
+      const height = this.viewport.clientHeight;
+      if (height !== this.viewportHeight) {
+        this.viewportHeight = height;
+        this.requestUpdate();
+      }
+    }
     if (this.sizeObserver.sync(this.renderedRows())) {
       this.requestUpdate();
     }
@@ -128,8 +154,6 @@ export class ListWindowController extends ReactiveControllerBase {
     this.sizeObserver.disconnect();
     this.viewportObserver?.disconnect();
     this.viewportObserver = undefined;
-    this.viewport = undefined;
-    this.offset = 0;
   }
 
   private renderedRows(): { element: Element; index: number }[] {

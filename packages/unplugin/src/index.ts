@@ -1,6 +1,7 @@
 import { normalizeComponentTags } from "@quanttrinh/qui/internal";
 import { MagicString } from "magic-string";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createUnplugin, type TransformResult, type UnpluginInstance } from "unplugin";
 
@@ -92,17 +93,44 @@ async function readRegistrationManifest(
   }
 }
 
-/** Writes a registration manifest that `virtual:qui/registration-manifest` reads. */
+export interface WriteRegistrationManifestOptions {
+  /** Base directory for relative paths. Defaults to `process.cwd()`. */
+  root?: string;
+}
+
+/**
+ * Writes a registration manifest that `virtual:qui/registration-manifest` reads.
+ *
+ * Intended for a build/SSG pass after rendering all pages, not for every SSR
+ * request: concurrent writers would overwrite each other's component sets.
+ * Writes are atomic and skipped when the contents are unchanged.
+ */
 export async function writeRegistrationManifest(
   file: string,
   components: Iterable<string>,
+  options: WriteRegistrationManifestOptions = {},
 ): Promise<string> {
-  await mkdir(path.dirname(file), { recursive: true });
-  await writeFile(
-    file,
-    `${JSON.stringify({ components: normalizeComponentTags(components) }, null, 2)}\n`,
-  );
-  return file;
+  const target = path.resolve(options.root ?? process.cwd(), file);
+  const contents = `${JSON.stringify({ components: normalizeComponentTags(components) }, null, 2)}\n`;
+
+  try {
+    if ((await readFile(target, "utf8")) === contents) {
+      return target;
+    }
+  } catch {
+    // The manifest does not exist yet.
+  }
+
+  await mkdir(path.dirname(target), { recursive: true });
+  const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporary, contents);
+    await rename(temporary, target);
+  } catch (error) {
+    await rm(temporary, { force: true });
+    throw error;
+  }
+  return target;
 }
 
 function validateRegistration(registration: QuiRegistrationOptions | undefined): void {
@@ -112,6 +140,10 @@ function validateRegistration(registration: QuiRegistrationOptions | undefined):
     (!Array.isArray(components) || !components.every((component) => typeof component === "string"))
   ) {
     throw new Error("qui registration components must be an array of component tags.");
+  }
+  const manifest: unknown = registration?.manifest;
+  if (manifest !== undefined && (typeof manifest !== "string" || manifest.length === 0)) {
+    throw new Error("qui registration manifest must be a non-empty string path.");
   }
 }
 
@@ -147,26 +179,10 @@ function validateStylesOptions(styles: QuiPluginOptions["styles"], framework: st
   }
 }
 
-const stylesheetTextCache = new Map<string, Promise<string>>();
-
 /** Reads the shared stylesheet when the virtual styles module is loaded. */
 async function getStylesheetText(): Promise<string> {
-  const file = resolveStylesheetPath();
-  const cached = stylesheetTextCache.get(file);
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  const promise = readFile(file, "utf8");
-  stylesheetTextCache.set(file, promise);
-  try {
-    return await promise;
-  } catch (error) {
-    if (stylesheetTextCache.get(file) === promise) {
-      stylesheetTextCache.delete(file);
-    }
-    throw error;
-  }
+  const contents = await readFile(resolveStylesheetPath(), "utf8");
+  return contents;
 }
 
 /**
@@ -216,7 +232,6 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
   validateStylesOptions(pluginOptions.styles, meta.framework);
   validateRegistration(pluginOptions.registration);
   const componentCache = new Map<string, { code: string; components: string[] }>();
-  const pendingComponents = new Map<string, { code: string; promise: Promise<string[]> }>();
   const externalStyles = isExternalStyles(pluginOptions.styles) ? pluginOptions.styles : undefined;
   let viteBase = "/";
   let viteCommand: "serve" | "build" = "build";
@@ -224,7 +239,7 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
   let viteIsSsrBuild = false;
   let viteRoot = process.cwd();
 
-  async function extractComponentsCached(code: string, id: string): Promise<string[]> {
+  function extractComponentsCached(code: string, id: string): string[] {
     const cached = componentCache.get(id);
     if (cached?.code === code) {
       return cached.components;
@@ -232,32 +247,18 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
 
     if (!mayContainComponents(code)) {
       componentCache.delete(id);
-      pendingComponents.delete(id);
       return [];
     }
 
-    const pending = pendingComponents.get(id);
-    if (pending?.code === code) {
-      return pending.promise;
-    }
-
-    const promise = extractComponents(code, id);
-    pendingComponents.set(id, { code, promise });
-    try {
-      const components = await promise;
-      if (componentCache.size >= COMPONENT_CACHE_LIMIT) {
-        const oldest = componentCache.keys().next().value;
-        if (oldest !== undefined) {
-          componentCache.delete(oldest);
-        }
-      }
-      componentCache.set(id, { code, components });
-      return components;
-    } finally {
-      if (pendingComponents.get(id)?.promise === promise) {
-        pendingComponents.delete(id);
+    const components = extractComponents(code, id);
+    if (componentCache.size >= COMPONENT_CACHE_LIMIT) {
+      const oldest = componentCache.keys().next().value;
+      if (oldest !== undefined) {
+        componentCache.delete(oldest);
       }
     }
+    componentCache.set(id, { code, components });
+    return components;
   }
 
   return {
@@ -359,11 +360,11 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
     },
     transform: {
       filter: { code: { include: [...COMPONENT_SOURCE] } },
-      async handler(code: string, id: string): Promise<TransformResult> {
+      handler(code: string, id: string): TransformResult | undefined {
         if (!isTransformableId(id)) {
           return undefined;
         }
-        const components = await extractComponentsCached(code, id);
+        const components = extractComponentsCached(code, id);
         if (components.length === 0) {
           return undefined;
         }

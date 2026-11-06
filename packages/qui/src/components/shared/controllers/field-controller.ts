@@ -26,6 +26,7 @@ export class FieldController extends ReactiveControllerBase {
   private readonly registry = new FieldPartRegistry();
   private readonly listeners = createListenerStore();
   private field?: FieldApi;
+  private baseId?: string;
 
   constructor(host: ReactiveControllerHost, options: FieldControllerOptions) {
     super(host);
@@ -42,6 +43,9 @@ export class FieldController extends ReactiveControllerBase {
   }
 
   hostWillLoad(): void {
+    // Capture the authored id before rendering overwrites it with the root id.
+    // Generated part ids then stay stable across renders.
+    this.baseId = this.hostElement.id || undefined;
     this.field = this.createFieldApi();
     provideField(this.hostElement, this.field);
   }
@@ -54,11 +58,10 @@ export class FieldController extends ReactiveControllerBase {
 
   hostDisconnected(): void {
     clearField(this.hostElement);
-    this.listeners.clear();
   }
 
   private resolveIds(): FieldIds {
-    const base = this.options.getFieldId() ?? (this.hostElement.id || this.generatedId);
+    const base = this.options.getFieldId() ?? this.baseId ?? this.generatedId;
     const overrides = this.options.getElementIds();
     return {
       root: overrides?.root ?? base,

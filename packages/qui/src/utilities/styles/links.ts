@@ -112,26 +112,55 @@ export function reconcileDocumentStylesheetLinks(
   const managed = [...document.querySelectorAll<HTMLLinkElement>(STYLESHEET_SELECTOR)];
   documentNonces.delete(document);
 
-  for (const [index, href] of hrefs.entries()) {
-    let link = managed.at(index);
-    if (link === undefined && markExisting) {
+  const managedByHref = new Map<string, HTMLLinkElement>();
+  for (const link of managed) {
+    const href = link.getAttribute("href");
+    if (href !== null && !managedByHref.has(href)) {
+      managedByHref.set(href, link);
+    }
+  }
+  const claimed = new Set<HTMLLinkElement>();
+  const reusable = [...managed];
+
+  const takeReusable = (): HTMLLinkElement | undefined => {
+    while (reusable.length > 0) {
+      const link = reusable.shift();
+      if (link !== undefined && !claimed.has(link)) {
+        return link;
+      }
+    }
+    return undefined;
+  };
+
+  for (const href of hrefs) {
+    let link = managedByHref.get(href);
+    if (link !== undefined) {
+      managedByHref.delete(href);
+    } else if (markExisting) {
       link = findMatchingStylesheetLink(document, href);
     }
+    link ??= takeReusable();
+
     if (link === undefined) {
-      if (!create) {
-        break;
+      if (create) {
+        link = createStylesheetLink(document, href, nonce);
+        document.head.append(link);
       }
-      link = createStylesheetLink(document, href, nonce);
-      document.head.append(link);
     } else if (link.getAttribute("href") !== href) {
       link.setAttribute("href", href);
     }
-    link.setAttribute(STYLESHEET_ATTRIBUTE, "");
-    applyStylesheetNonce(link, nonce);
+
+    if (link !== undefined) {
+      claimed.add(link);
+      link.setAttribute(STYLESHEET_ATTRIBUTE, "");
+      applyStylesheetNonce(link, nonce);
+    }
   }
 
-  for (const link of managed.slice(hrefs.length)) {
-    link.remove();
+  for (const link of managed) {
+    if (!claimed.has(link)) {
+      link.remove();
+    }
   }
 }
 

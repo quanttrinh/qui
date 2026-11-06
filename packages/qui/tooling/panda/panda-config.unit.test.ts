@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { quiPreset } from "../../panda.config";
 import { createConfig } from "../config";
+import { componentDeclarationsFromSource } from "./component-tags";
 import { undefinedContentSelector, undefinedContentTags } from "./undefined-content";
 
 const build = createConfig(process.cwd());
@@ -24,5 +25,28 @@ describe("quiPreset global CSS", () => {
 
     const tags = [...UNDEFINED_CONTENT_SELECTOR.matchAll(/qui-[a-z-]+/gu)].map((match) => match[0]);
     expect(tags).toEqual([...UNDEFINED_CONTENT_TAGS]);
+  });
+});
+
+describe("component declarations", () => {
+  it("scopes the undefined-content marker to the documented component", () => {
+    const declarations = componentDeclarationsFromSource(`
+      /** @undefinedContent */
+      @Component({ tag: "qui-one" })
+      export class One {}
+
+      /** Regular content. */
+      @Component({ tag: "qui-two" })
+      export class Two {}
+
+      @Component({ tag: "qui-three" })
+      export class Three {}
+    `);
+
+    expect(declarations).toEqual([
+      { tag: "qui-one", undefinedContent: true },
+      { tag: "qui-two", undefinedContent: false },
+      { tag: "qui-three", undefinedContent: false },
+    ]);
   });
 });

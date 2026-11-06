@@ -52,6 +52,10 @@ const { registration } = await renderToString(markup, {
 await writeRegistrationManifest("./.qui/components.json", registration.components);
 ```
 
+Write the manifest once after rendering all pages (build/SSG), not per request.
+Relative paths resolve from `process.cwd()`; the unplugin resolves from the Vite
+root, so keep both roots aligned or use an absolute path.
+
 Then configure the unplugin and import the virtual module from the client entry:
 
 ```ts

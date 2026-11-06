@@ -49,7 +49,7 @@ export class OptionSelectionController<TItem extends OptionItem> extends Control
   select(value: string): TItem | undefined {
     const items = this.options.getItems();
     const item = items.find((entry) => entry.value === value);
-    if (item?.disabled || this.options.isReadOnly()) {
+    if (item === undefined || item.disabled || this.options.isReadOnly()) {
       return undefined;
     }
     this.apply(this.nextValues(value));
