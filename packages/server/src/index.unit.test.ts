@@ -69,6 +69,18 @@ describe("server SSR helpers", () => {
     expect(result.html).toMatch(/<head[\s\S]*data-qui-styles/u);
   });
 
+  it("hydrates an HTML string without a cached template window", async () => {
+    const result = await hydrateDocument(
+      '<!doctype html><html><head></head><body><qui-button variant="filled">Save</qui-button></body></html>',
+      { styles: { href: "/assets/qui.css" } },
+    );
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.components).toEqual(["qui-button"]);
+    expect(result.html).toContain('<template shadowrootmode="open">');
+    expect(result.html).toMatch(/<head[\s\S]*data-qui-styles/u);
+  });
+
   it("renderPage generates the document shell", async () => {
     const result = await renderPage('<qui-button variant="filled">Save</qui-button>', {
       title: "Settings & profile",

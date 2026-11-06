@@ -49,14 +49,29 @@ const { html } = await renderToString(markup, {
 
 ## Hydrate an existing document
 
-`hydrateDocument()` always returns serialized HTML, unlike Stencil's raw helper:
+`hydrateDocument()` accepts either a `Document` or an HTML string and always
+returns serialized HTML, unlike Stencil's raw helper.
+
+For request-specific HTML, pass the string directly. Stencil creates and
+destroys a temporary window for the call, so nothing is cached between requests:
+
+```ts
+import { hydrateDocument } from "@quanttrinh/qui-server";
+
+const { html, diagnostics } = await hydrateDocument(template, {
+    styles: { href: "/assets/qui.css" },
+});
+```
+
+If you need a `Document` before hydration, `createWindowFromHtml()` builds one.
+Stencil retains one parsed template per distinct content for the process
+lifetime, so only use it with stable template HTML — never with per-request
+rendered markup:
 
 ```ts
 import { createWindowFromHtml, hydrateDocument } from "@quanttrinh/qui-server";
 
-// Pass a stable template name, not a per-request id. Stencil caches parsed
-// templates by id; the helper combines the id with a content hash.
-const window = createWindowFromHtml(template, "email-page");
+const window = createWindowFromHtml(shellTemplate, "email-page");
 const { html, diagnostics } = await hydrateDocument(window.document, {
     styles: { href: "/assets/qui.css" },
 });

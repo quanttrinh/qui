@@ -83,7 +83,10 @@ export interface QuiRenderer {
   render: (markup: string, options?: ServerRenderOptions) => Promise<ServerRenderResult>;
   renderPage: (markup: string, options?: PageRenderOptions) => Promise<ServerRenderResult>;
   stream: (markup: string, options?: StreamRenderOptions) => AsyncGenerator<string>;
-  hydrate: (document: Document, options?: ServerRenderOptions) => Promise<ServerRenderResult>;
+  hydrate: (
+    document: Document | string,
+    options?: ServerRenderOptions,
+  ) => Promise<ServerRenderResult>;
 }
 
 function isParseNode(value: unknown): value is DefaultTreeAdapterTypes.Node {
@@ -253,12 +256,16 @@ function renderOptions(options: ServerRenderOptions): HydrateRenderOptions {
 }
 
 /**
- * Hydrates an existing document and always returns serialized HTML. This wraps
- * Stencil's `hydrateDocument`, which otherwise returns `html: null` unless a
- * non-public serialization option is supplied.
+ * Hydrates a document or HTML string and always returns serialized HTML. This
+ * wraps Stencil's `hydrateDocument`, which otherwise returns `html: null` unless
+ * a non-public serialization option is supplied.
+ *
+ * Pass a string for request-specific HTML: Stencil creates and destroys a
+ * temporary window, so nothing is cached between calls. Pass a `Document` when
+ * you need to inspect or patch it before hydration.
  */
 export async function hydrateDocument(
-  document: Document,
+  document: Document | string,
   options: ServerRenderOptions = {},
 ): Promise<ServerRenderResult> {
   const hydrateOptions = {
@@ -423,9 +430,10 @@ function isHydrateWindow(value: unknown): value is { document: Document } {
 /**
  * Creates a mock window with a typed document for hydrateDocument().
  *
- * Stencil caches parsed templates by `uniqueId`, so the id is combined with a
- * hash of the HTML. Pass a stable template name, not a per-request identifier:
- * reusing an id with different markup otherwise hydrates the first template.
+ * Stencil caches parsed templates by `uniqueId` for the process lifetime, so
+ * pass stable template HTML (a shell), never per-request rendered markup: the
+ * helper combines the id with a content hash, and each new document is retained.
+ * For request-specific HTML, pass the string directly to hydrateDocument().
  */
 export function createWindowFromHtml(html: string, uniqueId: string): { document: Document } {
   const templateKey = `${uniqueId}:${createHash("sha1").update(html).digest("hex")}`;

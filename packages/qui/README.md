@@ -594,17 +594,22 @@ bun add @quanttrinh/qui-server
 `@quanttrinh/qui-server` normalizes the Stencil hydrate API for server use. See
 [the framework integration guide](https://github.com/quanttrinh/qui/blob/main/packages/server/FRAMEWORKS.md) for Astro, Next.js,
 Remix, Nuxt, Express, and Koa patterns.
-`hydrateDocument()` always returns serialized HTML and accepts the same `styles`
-option as `renderToString()`:
+`hydrateDocument()` accepts a `Document` or HTML string, always returns
+serialized HTML, and accepts the same `styles` option as `renderToString()`.
+Pass request-specific HTML as a string; Stencil creates and destroys a temporary
+window so it is not cached between requests:
 
 ```ts
-import { createWindowFromHtml, hydrateDocument } from "@quanttrinh/qui-server";
+import { hydrateDocument } from "@quanttrinh/qui-server";
 
-const window = createWindowFromHtml(template, requestId);
-const { html, diagnostics } = await hydrateDocument(window.document, {
+const { html, diagnostics } = await hydrateDocument(template, {
     styles: { href: "/assets/qui-components.css" },
 });
 ```
+
+Use `createWindowFromHtml()` only when you need a `Document` before hydration. It
+retains one parsed template per distinct content for the process lifetime, so it
+must receive stable template HTML, never per-request rendered markup.
 
 Use the lower-level `@quanttrinh/qui/hydrate` functions only when you need direct
 control. If you hydrate a document you manage yourself, you can call
