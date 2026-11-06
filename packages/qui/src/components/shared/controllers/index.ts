@@ -1,4 +1,4 @@
-export { ControllerHostMixin } from "../mixins";
+export { ControllerHostMixin } from "../mixins/controller-host";
 export {
   ContextPartController,
   type ContextPartOptions,
