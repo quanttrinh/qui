@@ -209,14 +209,16 @@ function headNonce(head: string | undefined): string | undefined {
   return nonce;
 }
 
-function pageParts(options: PageRenderOptions): { prefix: string; suffix: string } {
+function pageParts(
+  options: PageRenderOptions,
+  nonce = options.styles?.nonce ?? headNonce(options.head),
+): { prefix: string; suffix: string } {
   const htmlAttributes: Record<string, string | undefined> = {
     ...(options.language === undefined ? {} : { lang: options.language }),
     ...(options.direction === undefined ? {} : { dir: options.direction }),
     ...options.htmlAttributes,
   };
   const title = options.title === undefined ? "" : `<title>${escapeText(options.title)}</title>`;
-  const nonce = options.styles?.nonce ?? headNonce(options.head);
   const theme =
     options.themeHref === undefined
       ? ""
@@ -305,8 +307,8 @@ export async function renderPage(
     bodyAttributes: _bodyAttributes,
     ...render
   } = options;
-  const { prefix, suffix } = pageParts(options);
   const shellNonce = options.styles?.nonce ?? headNonce(options.head);
+  const { prefix, suffix } = pageParts(options, shellNonce);
   const styles =
     render.styles === undefined
       ? undefined
@@ -349,15 +351,24 @@ export async function* renderToStream(
     bodyAttributes: _bodyAttributes,
     ...render
   } = options;
+  const shellNonce = options.styles?.nonce ?? headNonce(options.head);
   let generated: { prefix: string; suffix: string } | undefined;
-  const documentPrefix = prefix ?? (generated ??= pageParts(options)).prefix;
-  const documentSuffix = suffix ?? (generated ?? pageParts(options)).suffix;
+  const documentPrefix = prefix ?? (generated ??= pageParts(options, shellNonce)).prefix;
+  const documentSuffix = suffix ?? (generated ?? pageParts(options, shellNonce)).suffix;
+  const styles =
+    render.styles === undefined
+      ? undefined
+      : { ...render.styles, nonce: render.styles.nonce ?? shellNonce };
 
   if (documentPrefix.length > 0) {
     yield documentPrefix;
   }
 
-  const result = await renderToString(markup, { ...render, fullDocument: false });
+  const result = await renderToString(markup, {
+    ...render,
+    ...(styles === undefined ? {} : { styles }),
+    fullDocument: false,
+  });
   onDiagnostics?.(result.diagnostics);
   onComponents?.(result.components);
 

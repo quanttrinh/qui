@@ -38,7 +38,9 @@ function undefinedContentTags(config: Config): string[] {
  * server-rendered hosts visible through Stencil's `hydrated` marker.
  */
 function undefinedContentSelector(config: Config): string {
-  return `:where(${undefinedContentTags(config).join(", ")}):not(:defined):not(.hydrated)`;
+  const tags = undefinedContentTags(config);
+  const selector = tags.length === 0 ? ":where(:not(*))" : `:where(${tags.join(", ")})`;
+  return `${selector}:not(:defined):not(.hydrated)`;
 }
 
 export { undefinedContentSelector, undefinedContentTags };

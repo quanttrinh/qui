@@ -28,14 +28,10 @@ function parentElement(node: Element): Element | undefined {
 }
 
 /** Whether `node` is `ancestor` or lives inside its subtree, across shadow roots. */
-function isDescendant(node: Element, ancestor: Element): boolean {
-  const contains = Reflect.get(ancestor, "contains");
-  if (typeof contains === "function" && Reflect.apply(contains, ancestor, [node])) {
-    return true;
-  }
+function hasChangedProvider(node: Element, providers: Set<Element | undefined>): boolean {
   let current: Element | undefined = node;
   while (current !== undefined) {
-    if (current === ancestor) {
+    if (providers.has(current)) {
       return true;
     }
     current = parentElement(current);
@@ -48,20 +44,20 @@ interface NotificationState {
   notified: Set<ContextListener>;
 }
 
-function notifyProvider(
+function notifyKey(
   key: ContextPartKey,
-  provider: Element | undefined,
+  providers: Set<Element | undefined>,
   state: NotificationState,
 ): void {
   const listeners = contextChangedListeners.get(key);
   if (listeners === undefined) {
     return;
   }
+  // Walk each listener's ancestor chain once, rather than testing every
+  // Provider against every listener (providers x listeners).
+  const notifyAll = providers.has(undefined);
   for (const entry of listeners) {
-    if (
-      !state.notified.has(entry) &&
-      (provider === undefined || isDescendant(entry.host, provider))
-    ) {
+    if (!state.notified.has(entry) && (notifyAll || hasChangedProvider(entry.host, providers))) {
       state.notified.add(entry);
       try {
         entry.notify();
@@ -80,9 +76,7 @@ function flushNotifications(): void {
       const providers = [...pendingProviders];
       pendingProviders.clear();
       for (const [key, hosts] of providers) {
-        for (const host of hosts) {
-          notifyProvider(key, host, state);
-        }
+        notifyKey(key, hosts, state);
       }
     }
   } finally {

@@ -104,6 +104,19 @@ describe("server SSR helpers", () => {
     expect([...result.html.matchAll(/nonce="head-nonce"/gu)]).toHaveLength(3);
   });
 
+  it("applies a head nonce to streamed shadow links", async () => {
+    const chunks: string[] = [];
+    for await (const chunk of renderToStream('<qui-button variant="filled">Save</qui-button>', {
+      themeHref: "/assets/theme.css",
+      styles: { href: "/assets/qui.css" },
+      head: '<meta name="csp-nonce" content="head-nonce">',
+    })) {
+      chunks.push(chunk);
+    }
+
+    expect([...chunks.join("").matchAll(/nonce="head-nonce"/gu)]).toHaveLength(3);
+  });
+
   it("renderToStream emits the shell before the rendered body", async () => {
     const chunks: string[] = [];
     let diagnostics: unknown[] | undefined;

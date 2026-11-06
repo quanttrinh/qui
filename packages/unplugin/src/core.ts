@@ -429,9 +429,10 @@ export function ensureStylesheetLinks(
     if (isElementNode(node)) {
       if (node.tagName === "head") {
         const endTag = node.sourceCodeLocation?.endTag;
+        const startTag = node.sourceCodeLocation?.startTag;
         headEndOffset =
           endTag?.startOffset ??
-          (node.sourceCodeLocation?.startTag === undefined ? undefined : lastChildEnd(node));
+          (startTag === undefined ? undefined : (lastChildEnd(node) ?? startTag.endOffset));
       }
       collectStylesheetLink(node, scan);
     }

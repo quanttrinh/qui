@@ -64,11 +64,12 @@ export function utilitiesOutputTarget(config: Config, logger?: StencilLogger): O
       const source = relative(config.root, config.source.utilities).split("\\").join("/");
       const output = relative(config.root, config.output.utilities).split("\\").join("/");
       const hash = await utilitySourceHash(config.source.utilities);
+      // `h.ts` is a fixed utility entry, so a successful build always emits it.
+      const built = existsSync(join(config.output.utilities, "h.js"));
 
-      if (hash === lastSourceHash && existsSync(config.output.utilities)) {
+      if (hash === lastSourceHash && built) {
         return;
       }
-      lastSourceHash = hash;
 
       await build({
         cwd: config.root,
@@ -89,6 +90,7 @@ export function utilitiesOutputTarget(config: Config, logger?: StencilLogger): O
         treeshake: false,
         ...(logger === undefined ? {} : { customLogger: createTsdownLogger(logger) }),
       });
+      lastSourceHash = hash;
     },
   };
 }
