@@ -18,6 +18,7 @@ export const listStyles = {
     minHeight: "0",
     overflow: "hidden",
     width: "full",
+    paddingBlock: "1.5",
     backgroundColor: "surface",
     borderWidth: "1px",
     borderColor: "outlineVariant",
