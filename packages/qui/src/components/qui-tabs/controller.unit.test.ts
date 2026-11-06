@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { createTestControllerHost } from "../../../tests/test-utils/controller-host";
 import { TabsController } from "./controller";
 
 function createEnvironment(values: string[], activationMode: "manual" | "automatic" = "automatic") {
@@ -12,7 +13,7 @@ function createEnvironment(values: string[], activationMode: "manual" | "automat
     disabled: false,
     focus: vi.fn(),
   }));
-  const controller = new TabsController({
+  const controller = new TabsController(createTestControllerHost(), {
     getValue: () => selected,
     getDefaultValue: () => undefined,
     getActivationMode: () => activationMode,
@@ -21,12 +22,10 @@ function createEnvironment(values: string[], activationMode: "manual" | "automat
     onChange: (value) => {
       changes.push(value);
     },
-    requestUpdate: () => undefined,
   });
   controller.hostWillLoad();
   for (const [index, value] of values.entries()) {
     const trigger = triggers[index];
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     const button = trigger as unknown as HTMLButtonElement;
     controller.registerTrigger(value, button, button);
     controller.registerPanel(value, button);
@@ -148,7 +147,6 @@ describe("TabsController", () => {
       disabled: false,
       focus: vi.fn(),
     };
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     const button = replacement as unknown as HTMLButtonElement;
     controller.registerTrigger("one", button, button);
 
@@ -162,14 +160,12 @@ describe("TabsController", () => {
 
   it("ignores stale teardown after a trigger is replaced", () => {
     const { controller, triggers } = createEnvironment(["one", "two"]);
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     const first = triggers[0] as unknown as HTMLButtonElement;
     const unregisterFirst = controller.registerTrigger("one", first, first);
     const replacement = {
       disabled: false,
       focus: vi.fn(),
     };
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     const replacementButton = replacement as unknown as HTMLButtonElement;
     controller.registerTrigger("one", replacementButton, replacementButton);
 

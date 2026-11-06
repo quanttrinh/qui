@@ -1,12 +1,12 @@
-import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { isElement } from "../../helpers/dom";
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
-import { consumeField, type FieldApi } from "../shared/field/context";
+import { FieldPartController } from "../shared/controllers";
+import { isElement } from "../shared/helpers/dom/dom";
+import { type FieldApi } from "../shared/helpers/field";
+import { ControllerHostMixin } from "../shared/mixins";
 import { fieldStyles } from "./styles";
 
 const styles = {
@@ -26,26 +26,18 @@ const INTERACTIVE_DESCENDANT =
   styleUrl: resolveVar(styleUrls.quiFieldLabel),
   shadow: true,
 })
-export class QuiFieldLabel extends ContextPartElement<FieldApi> {
+export class QuiFieldLabel extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiFieldLabelElement;
 
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
-    key: "field",
-    consume: consumeField,
-    setup: (field): (() => void) => {
-      this.host.id = field.getLabelProps().id;
-      return field.registerLabel(this.host);
-    },
-  });
+  protected readonly fieldPart = new FieldPartController(this, { part: "label" });
 
   private get field(): FieldApi | undefined {
-    return this.contextPart.context;
+    return this.fieldPart.field;
   }
 
   private readonly handleClick = (event: MouseEvent): void => {
     const { field } = this;
-    if (field === undefined || field.disabled()) {
+    if (!field || field.disabled()) {
       return;
     }
 
@@ -61,7 +53,7 @@ export class QuiFieldLabel extends ContextPartElement<FieldApi> {
     field.clickControl();
   };
 
-  public render(): VNode {
+  render(): VNode {
     const props = this.field?.getLabelProps();
 
     return (

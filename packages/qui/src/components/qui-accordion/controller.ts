@@ -1,11 +1,13 @@
-import { FocusState } from "../shared/focus-state";
-import { KeyedHostRegistry } from "../shared/keyed-host-registry";
-import { type ReactiveController } from "../shared/reactive-control/controller";
 import {
+  ControlledControllerBase,
+  FocusState,
+  KeyedHostRegistry,
+  moveIndex,
   RovingFocusRegistry,
   sameTriggerRegistration,
+  type ReactiveControllerHost,
   type TriggerRegistration,
-} from "../shared/roving-focus";
+} from "../shared/controllers";
 
 interface AccordionControllerOptions {
   getValue: () => string[] | undefined;
@@ -13,68 +15,69 @@ interface AccordionControllerOptions {
   getMultiple: () => boolean;
   getCollapsible: () => boolean;
   onChange: (value: string[]) => void;
-  requestUpdate: () => void;
 }
 
 /** A trigger button registered with the accordion. */
 export type AccordionTriggerRegistration = TriggerRegistration;
 
 /** Expanded and focused state for `qui-accordion`. */
-export class AccordionController implements ReactiveController {
+export class AccordionController extends ControlledControllerBase<string[]> {
   private readonly options: AccordionControllerOptions;
   private readonly contents: KeyedHostRegistry<HTMLElement>;
   private readonly triggers: RovingFocusRegistry<AccordionTriggerRegistration>;
   private readonly focusState = new FocusState();
-  private current: string[] = [];
 
-  constructor(options: AccordionControllerOptions) {
+  constructor(host: ReactiveControllerHost, options: AccordionControllerOptions) {
+    super(host, {
+      getValue: options.getValue,
+      getDefaultValue: options.getDefaultValue,
+      getFallback: () => [],
+      onChange: options.onChange,
+      copy: (value: string[]) => [...value],
+    });
     this.options = options;
     const onChange = (): void => {
-      options.requestUpdate();
+      this.requestUpdate();
     };
     this.contents = new KeyedHostRegistry({ onChange });
     this.triggers = new RovingFocusRegistry({ onChange });
   }
 
-  public get value(): string[] {
-    return this.options.getValue() ?? this.current;
-  }
-
-  public get focusedValue(): string | undefined {
+  get focusedValue(): string | undefined {
     return this.focusState.focusedValue;
   }
 
-  public hostWillLoad(): void {
-    const initial = this.options.getDefaultValue() ?? this.options.getValue() ?? [];
-    this.current = [...initial];
-  }
-
   /** Registers a trigger host and its internal button. Returns an unregister function. */
-  public registerTrigger(value: string, host: HTMLElement, trigger: HTMLButtonElement): () => void {
+  registerTrigger(value: string, host: HTMLElement, trigger: HTMLButtonElement): () => void {
     return this.triggers.register(value, { value, host, trigger }, sameTriggerRegistration);
   }
 
   /** Registers a content host. Returns an unregister function. */
-  public registerContent(value: string, host: HTMLElement): () => void {
+  registerContent(value: string, host: HTMLElement): () => void {
     return this.contents.register(value, host);
   }
 
   /** The registered trigger for `value`. */
-  public getTrigger(value: string): AccordionTriggerRegistration | undefined {
+  getTrigger(value: string): AccordionTriggerRegistration | undefined {
     return this.triggers.get(value);
   }
 
   /** The registered content host for `value`. */
-  public getContent(value: string): HTMLElement | undefined {
+  getContent(value: string): HTMLElement | undefined {
     return this.contents.get(value);
   }
 
   /** Moves DOM focus to the internal trigger button for `value`. */
-  public focusTrigger(value: string): void {
+  focusTrigger(value: string): void {
     this.triggers.focusTrigger(value);
   }
 
-  public toggle(value: string): void {
+  /** Clears cached trigger state after a trigger's disabled state changes. */
+  invalidateTriggers(): void {
+    this.triggers.invalidate();
+  }
+
+  toggle(value: string): void {
     const expanded = this.value.includes(value);
     if (expanded && !this.options.getMultiple() && !this.options.getCollapsible()) {
       return;
@@ -86,34 +89,31 @@ export class AccordionController implements ReactiveController {
     this.commit(this.options.getMultiple() ? [...this.value, value] : [value]);
   }
 
-  public focus(value: string): void {
+  focus(value: string): void {
     if (this.focusState.focus(value)) {
-      this.options.requestUpdate();
+      this.requestUpdate();
     }
   }
 
-  public blur(): void {
+  blur(): void {
     if (this.focusState.blur()) {
-      this.options.requestUpdate();
+      this.requestUpdate();
     }
   }
 
-  public move(fromValue: string, delta: 1 | -1): void {
+  move(fromValue: string, delta: 1 | -1): void {
     const triggers = this.triggers.enabled();
     const index = triggers.findIndex((trigger) => trigger.value === fromValue);
     if (index === -1) {
       return;
     }
-    triggers.at(index + delta)?.trigger.focus();
+    const next = moveIndex(triggers, index, { delta });
+    if (next !== undefined) {
+      triggers[next]?.trigger.focus();
+    }
   }
 
-  public edge(edge: "first" | "last"): void {
+  edge(edge: "first" | "last"): void {
     this.triggers.edge(edge)?.trigger.focus();
-  }
-
-  private commit(value: string[]): void {
-    this.current = value;
-    this.options.onChange(value);
-    this.options.requestUpdate();
   }
 }

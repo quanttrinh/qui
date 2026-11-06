@@ -1,0 +1,76 @@
+import { type MixedInCtor, Prop } from "@stencil/core";
+
+import { type OptionItem, type OptionRender } from "../../helpers/option/option";
+
+export interface OptionControlMixinInstance {
+  items?: OptionItem[];
+  optionRender?: OptionRender;
+  value?: string[];
+  defaultValue?: string[];
+  name?: string;
+  disabled: boolean;
+  invalid: boolean;
+  readOnly: boolean;
+  required: boolean;
+  multiple: boolean;
+  closeOnSelect?: boolean;
+  open?: boolean;
+  defaultOpen: boolean;
+  textDirection?: "ltr" | "rtl";
+  overscan: number;
+  estimateSize: number;
+}
+
+/**
+ * Props shared by form-associated option controls (`qui-select` and
+ * `qui-combobox`).
+ *
+ * The decorated class is declared with a name because TypeScript does not
+ * allow decorators on members of an anonymous class expression.
+ */
+const OptionControlMixin = (Base: MixedInCtor): MixedInCtor<OptionControlMixinInstance> => {
+  class WithOptionProps extends Base {
+    /** Options supplied as data. Property-only; overrides `qui-option` children. */
+    @Prop({ attribute: null }) items?: OptionItem[];
+    /**
+     * Replaces the entire content of each option row, including the selected
+     * indicator. Property-only. State and selection styling remain on the row
+     * wrapper.
+     */
+    @Prop({ attribute: null }) optionRender?: OptionRender;
+    /** The controlled selected values. Property-only. */
+    @Prop({ attribute: null }) value?: string[];
+    /** The initial selected values. Property-only. */
+    @Prop({ attribute: null }) defaultValue?: string[];
+    /** The form field name. */
+    @Prop() name?: string;
+    /** Disables the control. */
+    @Prop() disabled = false;
+    /** Marks the control invalid. */
+    @Prop() invalid = false;
+    /** Makes the control read-only. */
+    @Prop() readOnly = false;
+    /** Marks the control required. */
+    @Prop() required = false;
+    /** Allows multiple selected values. */
+    @Prop() multiple = false;
+    /** Whether selecting an item closes the list. Defaults to `true`. */
+    @Prop() closeOnSelect?: boolean;
+    /** The controlled open state. */
+    @Prop() open?: boolean;
+    /** The initial open state. */
+    @Prop() defaultOpen = false;
+    /** Text direction. */
+    @Prop() textDirection?: "ltr" | "rtl";
+    /** Extra rows rendered above and below the visible window. */
+    @Prop() overscan = 6;
+    /**
+     * Initial row height estimate in pixels. Rendered rows are measured and
+     * override this value.
+     */
+    @Prop() estimateSize = 40;
+  }
+  return WithOptionProps;
+};
+
+export { OptionControlMixin };

@@ -449,12 +449,13 @@ roots always use their final URLs. The marked link must exist when components
 connect; add it in the initial document head.
 
 For SSR pages, rendered HTML does not pass through Vite's HTML transform. Resolve
-the final URL(s) with `resolveStylesheetHrefs` first, render them into the
-document, then mark them with `markStylesheetLinks` from
-`@quanttrinh/qui-unplugin`. `resolveStylesheetHrefs` applies the Vite base, so
-pass the same resolved URL(s) to `withShadowStylesheet()`. `markExternalStylesheetLinks`
-is a convenience for static `href` values or resolver-based contexts where
-calling the resolver twice is acceptable.
+the final URL(s) with `resolveStylesheetHrefs` from `@quanttrinh/qui/ssr`, then
+ensure they are marked with `ensureStylesheetLinks` from
+`@quanttrinh/qui-unplugin`. It marks existing links and inserts missing ones into
+the document head. `resolveStylesheetHrefs` applies the Vite base, so pass the
+same resolved URL(s) to `withShadowStylesheet()`. `ensureExternalStylesheetLinks`
+combines resolution and insertion for base-relative hrefs, and
+`markStylesheetLinks` remains available when the link is guaranteed to exist.
 
 External `href` mode is Vite-only for automatic document marking because it
 relies on `transformIndexHtml`. Other adapters throw; use `styles: false` and
@@ -520,7 +521,8 @@ esbuild entries.
 ## SSR / SSG
 
 The package ships a Node-compatible Stencil hydrate module and a small SSR helper
-that injects the component stylesheet into each declarative shadow root.
+that manages the component stylesheet link in the document and in each
+declarative shadow root.
 
 ```ts
 import { renderToString } from "@quanttrinh/qui/hydrate";
@@ -532,12 +534,26 @@ const { html, diagnostics } = await renderToString(
 );
 ```
 
-This renders real Declarative Shadow DOM and puts one external
-`<link rel="stylesheet" href="/assets/qui-components.css" data-qui-styles>` into every
-styled `qui-*` shadow root. Data-only and host-only roots such as `qui-option`,
-`qui-dialog`, and the field helper/error/required parts receive no link because
-those components do not request shadow styles. The same stylesheet is loaded in
-the document for host and app styling; the browser fetches the URL once.
+For a full document, the helper adds or marks the document-level
+`<link rel="stylesheet" href="/assets/qui-components.css" data-qui-styles>` before
+hydration begins. Adding the link before hydration means components can inject
+their own shadow-root links through `ensureShadowStylesheet()`, and the client
+runtime can discover the same URL for dynamically created components later.
+
+Fragment output (`fullDocument: false`) does not include a document head. Add and
+mark the document link yourself, as the Astro example below does.
+
+The helper also puts one external stylesheet link into every styled `qui-*`
+shadow root. Data-only and host-only roots such as `qui-option`, `qui-dialog`,
+and the field helper/error/required parts receive no link because those
+components do not request shadow styles. The browser fetches the URL once.
+
+Both generated link types use the `nonce` option when one is provided. When it is
+omitted, the helper reads `meta[name="csp-nonce"]` from the document:
+
+```ts
+withShadowStylesheet({ href: "/assets/qui-components.css", nonce: cspNonce });
+```
 
 `markup` should contain the complete component composition. Render nested parts
 together so field, tabs, dialog and option context works during SSR.
@@ -562,17 +578,102 @@ import { setQuiStylesHref } from "@quanttrinh/qui/runtime";
 setQuiStylesHref("/assets/qui-components.css");
 ```
 
+`setQuiStylesHref()` is a browser-runtime API. The hydrate bundle renders inside
+its own mock window, so calling the runtime setter on the server does not
+configure SSR. Use `withShadowStylesheet()` or `injectShadowStylesheet()` on the
+server instead.
+
+### Server entry point
+
+Install the server package alongside the components:
+
+```sh
+bun add @quanttrinh/qui-server
+```
+
+`@quanttrinh/qui-server` normalizes the Stencil hydrate API for server use. See
+[the framework integration guide](https://github.com/quanttrinh/qui/blob/main/packages/server/FRAMEWORKS.md) for Astro, Next.js,
+Remix, Nuxt, Express, and Koa patterns.
+`hydrateDocument()` accepts a `Document` or HTML string, always returns
+serialized HTML, and accepts the same `styles` option as `renderToString()`.
+Pass request-specific HTML as a string; Stencil creates and destroys a temporary
+window so it is not cached between requests:
+
+```ts
+import { hydrateDocument } from "@quanttrinh/qui-server";
+
+const { html, diagnostics } = await hydrateDocument(template, {
+    styles: { href: "/assets/qui-components.css" },
+});
+```
+
+Use `createWindowFromHtml()` only when you need a `Document` before hydration. It
+retains one parsed template per distinct content for the process lifetime, so it
+must receive stable template HTML, never per-request rendered markup.
+
+Use the lower-level `@quanttrinh/qui/hydrate` functions only when you need direct
+control. If you hydrate a document you manage yourself, you can call
+`injectShadowStylesheet(document, options)` and `injectDocumentStylesheet(document,
+options)` directly after hydration.
+
+### Output-aware registration
+
+Server-rendered components are not always visible to source scanners. The server
+package returns `registration.components`, `registration.module`, and
+`registration.manifest` for pages rendered from CMS data, Markdown, or HTML
+strings:
+
+```ts
+import { renderPage, writeRegistrationManifest } from "@quanttrinh/qui-server";
+
+const { registration } = await renderPage(markup, {
+    styles: { href: "/assets/qui-components.css" },
+});
+
+await writeRegistrationManifest("./.qui/components.json", registration.components);
+```
+
+Configure `@quanttrinh/qui-unplugin` with the manifest and import
+`virtual:qui/registration-manifest` from the client entry to register those
+components alongside source-scanned tags.
+
+### Static components
+
+Stencil's `staticComponents` and `clientHydrateAnnotations` options are passed
+through unchanged. Use `staticComponents` only for genuinely static content:
+those hosts render on the server but are not hydrated on the client. Rendering
+still emits the `hydrated` class, so `@undefinedContent` styles do not hide them.
+
 ### Streaming
 
-Stencil also exposes `streamToString()` from the hydrate bundle. It currently
-fully renders and buffers the document before yielding a single chunk, so it is
-not progressive streaming. `withShadowStylesheet()` works with it, but
-`renderToString()` is the better default when diagnostics are needed.
+Stencil's `streamToString()` fully renders and buffers the document before
+yielding one chunk. For a shell-first response, use `renderToStream()` from
+`@quanttrinh/qui-server`:
+
+```ts
+import { renderToStream } from "@quanttrinh/qui-server";
+
+for await (const chunk of renderToStream(markup, {
+    prefix: `<!doctype html><html><head>
+        <link rel="stylesheet" href="/assets/qui-components.css" data-qui-styles>
+        </head><body>`,
+    suffix: "</body></html>",
+    styles: { href: "/assets/qui-components.css" },
+})) {
+    response.write(chunk);
+}
+```
+
+The prefix is yielded before component rendering starts, so the document head can
+flush while the component tree renders. Stencil still buffers the component body,
+so this is not progressive component streaming.
 
 ### CSS for SSR
 
-Load `theme.css` and the component/app stylesheet in the document. Shadow roots
-receive the same stylesheet through the SSR helper.
+Load `theme.css` in the document. The component/app stylesheet is added to full
+documents by `withShadowStylesheet()`, and shadow roots receive the same
+stylesheet through the helper. SSR serialization supports only declarative
+shadow DOM, or `serializeShadowRoot: false` to defer rendering to the client.
 
 The custom elements build uses `externalRuntime: false`. Stencil's external
 client runtime is compiled with `hydrateClientSide: false`; inlining the runtime
@@ -587,13 +688,12 @@ Astro can render the hydrate output with `set:html`:
 ---
 import stylesUrl from "../styled-system/styles.css?url";
 import "@quanttrinh/qui/theme.css";
-import { renderToString } from "@quanttrinh/qui/hydrate";
-import { withShadowStylesheet } from "@quanttrinh/qui/ssr";
+import { renderToString } from "@quanttrinh/qui-server";
 
-const { html } = await renderToString(
-  `<qui-button variant="filled">Save</qui-button>`,
-  withShadowStylesheet({ href: stylesUrl }, { fullDocument: false }),
-);
+const { html } = await renderToString(`<qui-button variant="filled">Save</qui-button>`, {
+  fullDocument: false,
+  styles: { href: stylesUrl },
+});
 ---
 
 <link rel="stylesheet" href={stylesUrl} data-qui-styles />
@@ -729,7 +829,7 @@ Published entry points:
 | `@quanttrinh/qui/types/preact` | Generated Preact JSX declarations     |
 | `@quanttrinh/qui-unplugin`     | Auto-registration bundler plugin      |
 | `@quanttrinh/qui/hydrate`      | SSR/SSG renderer                      |
-| `@quanttrinh/qui/ssr`          | Shadow stylesheet SSR helper          |
+| `@quanttrinh/qui/ssr`          | Document and shadow stylesheet helper |
 | `@quanttrinh/qui/runtime`      | Client stylesheet configuration       |
 | `@quanttrinh/qui/theme.css`    | Theme custom properties               |
 | `@quanttrinh/qui/styles.css`   | Component CSS                         |
@@ -747,17 +847,16 @@ Run workspace-wide commands from the repository root. Inside this package:
 
 ```sh
 bun run dev              # styles + Stencil dev server
-bun run build            # production build + utilities
+bun run build            # production build
 bun run build:release    # release build with Panda artifacts
-bun run build:utilities  # compile src/utilities -> dist/utilities
 bun run test:unit
 ```
 
 Stencil generates `src/components.d.ts` during a build. On a fresh checkout, run
 `bun run build` once before type-checking.
 
-`dev` compiles utilities once before starting the Stencil watch. Re-run
-`bun run build:utilities` after editing `src/utilities/**`.
+`dev` compiles utilities as part of the Stencil build. Rebuild after editing
+`src/utilities/**`.
 
 Type-check the package:
 
@@ -772,7 +871,7 @@ Tests use `@stencil/vitest` with four projects:
 - `*.unit.test.ts` / `*.unit.test.tsx` — Node tests for controllers and helpers
 - `*.integration.test.ts` — SSR and hydration tests in real browsers
 - `*.browser.test.tsx` — full Chromium DOM, forms, focus and popover suite
-- `*.smoke.browser.test.tsx` — Chromium, Firefox and WebKit smoke suite
+- `test/**/*.smoke.browser.test.tsx` — Chromium, Firefox and WebKit smoke suite
 
 ```sh
 bun run test:unit
@@ -792,6 +891,29 @@ test lazy loader into `.stencil-test` instead of the `www` demo output. Direct
 `stencil-test` invocations need that environment variable set as well.
 `vitest.setup.ts` loads that loader and the generated theme/shared styles for
 browser tests.
+
+## Reactive controllers
+
+Controllers share a Lit-style lifecycle contract. A controller receives its
+host in the constructor and registers itself, so components only declare the
+fields:
+
+```ts
+export class QuiExample extends ReactiveControlBase {
+    @Element() host!: HTMLQuiExampleElement;
+
+    private readonly form = new FormController(this, {
+        getInternals: () => this.internals,
+        // ...
+    });
+}
+```
+
+`ReactiveControllerBase` provides `hostElement` and `requestUpdate()`.
+`ReactiveControlBase` forwards the Stencil lifecycle hooks, implements
+`addController()` / `removeController()`, and schedules renders with
+`forceUpdate()`. Override `requestUpdate()` in a component when a controller
+change also needs to notify context subscribers.
 
 ## Implementation notes
 

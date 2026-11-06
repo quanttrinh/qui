@@ -1,4 +1,4 @@
-import { createContextStore } from "../shared/context-store";
+import { createContextStore } from "../shared/context";
 import { type DialogHostRegistration } from "./dialog-aria";
 
 export interface DialogIds {
@@ -31,19 +31,10 @@ export interface DialogContext extends DialogHostRegistration {
   subscribe: (listener: () => void) => () => void;
 }
 
-// oxlint-disable-next-line stencil/ban-side-effects -- Allocating a context map has no side effects.
-const dialogs = createContextStore<DialogContext>("dialog");
-
-function provideDialog(host: HTMLElement, context: DialogContext): void {
-  dialogs.provide(host, context);
-}
-
-function clearDialog(host: HTMLElement): void {
-  dialogs.clear(host);
-}
-
-function consumeDialog(host: HTMLElement): DialogContext | undefined {
-  return dialogs.consume(host);
-}
+const {
+  provide: provideDialog,
+  clear: clearDialog,
+  consume: consumeDialog,
+} = createContextStore<DialogContext>("dialog");
 
 export { clearDialog, consumeDialog, provideDialog };

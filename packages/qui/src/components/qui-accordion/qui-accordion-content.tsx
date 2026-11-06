@@ -1,14 +1,13 @@
-import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { dataAttr } from "../../helpers/attr";
-import { setAriaControls, setAriaLabelledBy } from "../shared/aria";
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
-import { RegistrationReconciler } from "../shared/registration-reconciler";
-import { consumeAccordionItem, type AccordionItemContext } from "./accordion-context";
+import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
+import { setAriaControls, setAriaLabelledBy } from "../shared/helpers/aria/aria";
+import { dataAttr } from "../shared/helpers/aria/attr";
+import { ControllerHostMixin } from "../shared/mixins";
+import { consumeAccordionItem } from "./accordion-context";
 
 const styles = {
   host: css({ display: "block" }),
@@ -24,15 +23,15 @@ const styles = {
   }),
   body: css({
     overflow: "hidden",
-    minHeight: "0",
+    minH: "0",
     // Skips layout/paint for collapsed or off-screen bodies. The intrinsic size
     // Reuses the last rendered height to keep the placeholder stable.
     contentVisibility: "auto",
     containIntrinsicSize: "auto 100px",
   }),
   padding: css({
-    paddingX: "4",
-    paddingY: "3",
+    px: "4",
+    py: "3",
     fontSize: "sm",
     color: "onSurfaceVariant",
   }),
@@ -42,30 +41,30 @@ const styles = {
  * The collapsible content for a `qui-accordion-item`.
  *
  * @slot - Accordion body content.
+ * @undefinedContent
  */
 @Component({
   tag: "qui-accordion-content",
   styleUrl: resolveVar(styleUrls.quiAccordionContent),
   shadow: true,
 })
-export class QuiAccordionContent extends ContextPartElement<AccordionItemContext> {
+export class QuiAccordionContent extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiAccordionContentElement;
 
   private contentEl?: HTMLElement;
   private readonly registration = new RegistrationReconciler();
 
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
+  protected readonly contextPart = new ContextPartController(this, {
     key: "accordion-item",
     consume: consumeAccordionItem,
   });
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     this.syncRegistration();
     this.syncAria();
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     this.registration.clear();
     super.disconnectedCallback();
   }
@@ -82,7 +81,7 @@ export class QuiAccordionContent extends ContextPartElement<AccordionItemContext
   private syncAria(): void {
     const item = this.contextPart.context;
     const { contentEl } = this;
-    if (item === undefined || contentEl === undefined) {
+    if (!item || !contentEl) {
       return;
     }
     const trigger = item.getTrigger(item.item().value);
@@ -93,7 +92,7 @@ export class QuiAccordionContent extends ContextPartElement<AccordionItemContext
     }
   }
 
-  public render(): VNode {
+  render(): VNode {
     const item = this.contextPart.context;
     const value = item?.item().value ?? "";
     const expanded = item?.isExpanded(value) ?? false;

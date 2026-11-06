@@ -2,83 +2,84 @@
 import type { Config } from "@stencil/core";
 
 import { createNodeLogger } from "@stencil/core/sys/node";
-import { createRequire } from "node:module";
-import { join } from "node:path";
 
-import { frameworkTypesOutputTarget } from "./build/framework-types-output-target";
-import { createPandaDriver } from "./build/panda-driver";
-import { stylesPlugin } from "./styles.stencil.plugin";
+import { createConfig } from "./tooling/config";
+import { createPandaDriver } from "./tooling/panda/panda-driver";
+import { pandacssTransform } from "./tooling/plugins/rollup/pandacss";
+import { stylesPlugin } from "./tooling/plugins/stencil/styles";
+import { frameworkTypesOutputTarget } from "./tooling/stencil/framework-types-output-target";
+import { utilitiesOutputTarget } from "./tooling/stencil/utilities-output-target";
 
-const packageRoot = __dirname;
-const requireFromConfig = createRequire(join(packageRoot, "package.json"));
-const pandaTransformer = requireFromConfig(
-  "@pandacss/transformer",
-) as typeof import("@pandacss/transformer");
+/** Test, spec, and e2e source files are not part of the Stencil build. */
+const testSourceFilePattern = /\.(?:test|spec|e2e)\.(?:ts|tsx)$/;
+
+/** Test support files are not part of the Stencil build. */
+const testSupportPathPattern = /(?:^|\/)(?:test-utils|vitest\.(?:config|setup)\.ts)(?:\/|$)/;
+
+const build = createConfig(__dirname);
 const logger = createNodeLogger();
-const pandaDriver = createPandaDriver(packageRoot);
-const globalCss = join(packageRoot, "styled-system/styles.css");
-const outputDirectory = join(packageRoot, "dist", "shared");
+const pandaDriver = createPandaDriver(build);
+const isTest = process.env.NODE_ENV === "test";
+const isDev = process.argv.some((argument) => argument === "--dev" || argument === "--watch");
+const testProject = process.env.STENCIL_TEST_PROJECT;
+const needsHydrate =
+  !isTest ||
+  testProject === undefined ||
+  testProject === "all" ||
+  testProject === "unit" ||
+  testProject === "integration";
 
-const testSourceFile = /\.(?:test|spec|e2e)\.(?:ts|tsx)$/;
-const testSupportPath = /(?:^|\/)(?:test-utils|vitest\.(?:config|setup)\.ts)(?:\/|$)/;
-const isTestBuild = process.env.NODE_ENV === "test";
-
-/**
- * Runs only Panda's source transformer. `stylesPlugin` owns codegen and CSS
- * generation; both use the same shared compiler driver.
- */
-function pandacssTransform(driver: ReturnType<typeof createPandaDriver>) {
-  const transformer = pandaTransformer.rollup({ getCompiler: () => driver.getCompiler() });
-  const transformerPlugins = Array.isArray(transformer) ? transformer : [transformer];
-
-  return [
-    {
-      name: "qui-panda-transform",
-      async buildStart(): Promise<void> {
-        await driver.ensureMain();
+const outputTargets: NonNullable<Config["outputTargets"]> = [
+  isTest
+    ? {
+        type: "www" as const,
+        dir: build.output.test,
+        serviceWorker: null,
+      }
+    : {
+        type: "www" as const,
+        serviceWorker: null,
+        copy: [
+          { src: build.file.sharedCss, dest: "styles.css" },
+          { src: build.file.themeCss, dest: "theme.css" },
+        ],
       },
-    },
-    ...(transformerPlugins as unknown[]),
-  ];
+];
+
+if (!isTest) {
+  outputTargets.push({
+    type: "dist-custom-elements",
+    dir: build.output.shared,
+    generateTypeDeclarations: true,
+    customElementsExportBehavior: "single-export-module",
+    externalRuntime: false,
+  });
+}
+
+if (needsHydrate) {
+  outputTargets.push({
+    type: "dist-hydrate-script",
+    dir: build.output.hydrate,
+    minify: !isTest && !isDev,
+  });
+}
+
+if (!isTest) {
+  outputTargets.push(utilitiesOutputTarget(build, logger));
+}
+
+if (!isTest && !isDev) {
+  outputTargets.push(frameworkTypesOutputTarget({ config: build }));
 }
 
 export const config: Config = {
   namespace: "qui",
-  rootDir: packageRoot,
   logger,
-  plugins: [stylesPlugin({ root: packageRoot, driver: pandaDriver, logger })],
-  tsconfig: "./tsconfig.build.json",
-  // Tests and Vitest setup are not part of the component build.
-  watchIgnoredRegex: [testSourceFile, testSupportPath],
-  outputTargets: [
-    isTestBuild
-      ? {
-          type: "www" as const,
-          dir: join(packageRoot, ".stencil-test"),
-          serviceWorker: null,
-        }
-      : {
-          type: "www" as const,
-          serviceWorker: null,
-          copy: [
-            { src: globalCss, dest: "styles.css" },
-            { src: join(packageRoot, "styled-system/theme.css"), dest: "theme.css" },
-          ],
-        },
-    {
-      type: "dist-custom-elements",
-      dir: outputDirectory,
-      generateTypeDeclarations: true,
-      customElementsExportBehavior: "single-export-module",
-      externalRuntime: false,
-    },
-    {
-      type: "dist-hydrate-script",
-      dir: join(packageRoot, "dist", "hydrate"),
-    },
-    frameworkTypesOutputTarget({ rootDir: packageRoot }),
-  ],
+  plugins: [stylesPlugin({ config: build, driver: pandaDriver, logger })],
   rollupPlugins: {
-    before: pandacssTransform(pandaDriver),
+    before: pandacssTransform({ config: build, driver: pandaDriver, logger }),
   },
+  tsconfig: build.file.tsconfig,
+  watchIgnoredRegex: [testSourceFilePattern, testSupportPathPattern],
+  outputTargets,
 };

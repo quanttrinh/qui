@@ -1,11 +1,10 @@
-// oxlint-disable max-dependencies, max-lines -- the input component is the integration point for its helpers.
 import {
+  Mixin,
   resolveVar,
   AttachInternals,
   Component,
   Element,
   Event as StencilEvent,
-  forceUpdate,
   h,
   Host,
   Method,
@@ -19,21 +18,21 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { cx } from "#styled-system/css";
 
-import { ariaAttr, dataAttr } from "../../helpers/attr";
-import { applyTextCase, type TextCase } from "../../helpers/case";
-import { isHTMLInputElement } from "../../helpers/dom";
-import { nextId } from "../../helpers/id";
-import { applyMask, formatMask, rawFromMasked, unmask } from "../../helpers/mask";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { AddIcon, RemoveIcon, VisibilityIcon, VisibilityOffIcon } from "../qui-icon/icons";
-import { applyFieldAria } from "../shared/field/aria";
-import { createFieldControl, focusElement } from "../shared/field/control";
-import { FormControlBase } from "../shared/form-control/component-base";
-import { FormController, type FormValidity } from "../shared/form-control/controller";
+import { FormController, type FormValidity } from "../shared/controllers";
+import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
+import { isHTMLInputElement, isHTMLSlotElement } from "../shared/helpers/dom/dom";
+import { focusElement } from "../shared/helpers/dom/focus";
+import { nextId } from "../shared/helpers/dom/id";
+import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
+import { ControllerHostMixin, FormControlMixin } from "../shared/mixins";
+import { applyTextCase, type TextCase } from "./case";
 import {
   appendAcceptedNumericOrDecimalCharacter,
   filterNumericOrDecimalInput,
 } from "./input-filter";
+import { applyMask, formatMask, rawFromMasked, unmask } from "./mask";
 import { styles } from "./styles";
 
 /** The input types `qui-input` can render. */
@@ -83,7 +82,7 @@ export interface InputValueDetails {
   shadow: true,
   formAssociated: true,
 })
-export class QuiInput extends FormControlBase {
+export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   @Element() host!: HTMLQuiInputElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -149,6 +148,8 @@ export class QuiInput extends FormControlBase {
 
   @State() private passwordVisible = false;
   @State() private currentValue = "";
+  @State() private hasPrefix = false;
+  @State() private hasSuffix = false;
 
   private inputEl?: HTMLInputElement;
   private holdDelay?: ReturnType<typeof setTimeout>;
@@ -157,8 +158,7 @@ export class QuiInput extends FormControlBase {
   private rawValue = "";
   private readonly generatedId = nextId("qui-input");
   private readonly fieldControl = createFieldControl(() => this.inputEl);
-  private readonly form = new FormController({
-    getHost: (): HTMLElement => this.host,
+  protected readonly form = new FormController(this, {
     getInternals: (): ElementInternals => this.internals,
     getName: (): string | undefined => this.name,
     getMultiple: (): boolean => false,
@@ -183,46 +183,38 @@ export class QuiInput extends FormControlBase {
       this.value = value;
       this.applyValue(value);
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
 
   constructor() {
     super();
-    this.addController(this.form);
     this.form.setControl(this.fieldControl);
   }
 
-  protected get formController(): FormController {
-    return this.form;
-  }
-
-  public connectedCallback(): void {
+  connectedCallback(): void {
     super.connectedCallback();
     ensureShadowStylesheet(this.host);
   }
 
-  public componentWillLoad(): void {
+  componentWillLoad(): void {
     super.componentWillLoad();
     this.normalizeStep();
     this.initialValue = String(this.defaultValue ?? this.value ?? "");
     this.syncInitialValue();
   }
 
-  public componentDidLoad(): void {
+  componentDidLoad(): void {
     super.componentDidLoad();
     // Applies the initial value to the native input; state is already seeded.
     this.syncInitialValue();
     this.form.sync();
   }
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     super.componentDidRender();
     applyFieldAria(this.inputEl, this.form.fieldApi);
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     super.disconnectedCallback();
     this.inputEl?.removeEventListener("beforeinput", this.handleBeforeInput);
     this.clearHold();
@@ -230,7 +222,7 @@ export class QuiInput extends FormControlBase {
 
   /** Moves focus to the internal native input. */
   @Method()
-  public async focusControl(options?: FocusOptions): Promise<void> {
+  async focusControl(options?: FocusOptions): Promise<void> {
     await focusElement(this.inputEl, options);
   }
 
@@ -334,7 +326,7 @@ export class QuiInput extends FormControlBase {
   }
 
   private get inputProps(): Record<string, string | number | boolean | undefined> {
-    const props: Record<string, unknown> =
+    const props: Record<string, string | number | boolean | undefined> =
       this.form.fieldApi === undefined
         ? {
             id: this.inputId ?? (this.host.id || this.generatedId),
@@ -349,8 +341,7 @@ export class QuiInput extends FormControlBase {
           }
         : { ...this.form.fieldApi.getInputProps() };
     delete props.required;
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-    return props as Record<string, string | number | boolean | undefined>;
+    return props;
   }
 
   private syncInitialValue(): void {
@@ -362,7 +353,7 @@ export class QuiInput extends FormControlBase {
   }
 
   private get allowNegative(): boolean {
-    return this.min === undefined || this.min < 0;
+    return this.min == null || this.min < 0;
   }
 
   private normalizeInputValue(raw: string): string {
@@ -436,7 +427,7 @@ export class QuiInput extends FormControlBase {
     const element = this.inputEl;
     return `${element?.value ?? ""}\u0001${this.form.isRequired ? 1 : 0}\u0001${
       this.form.isInvalid ? 1 : 0
-    }\u0001${element?.validity.valid === true ? 1 : 0}\u0001${element?.validationMessage ?? ""}`;
+    }\u0001${element?.validity.valid ? 1 : 0}\u0001${element?.validationMessage ?? ""}`;
   }
 
   private caseAtCaret(value: string, caret: number): { caret: number; value: string } {
@@ -523,7 +514,7 @@ export class QuiInput extends FormControlBase {
   /** Whether the value can still move one `step` in the given direction. */
   private canStep(direction: 1 | -1): boolean {
     const parsed = this.inputEl?.valueAsNumber;
-    if (parsed === undefined || !Number.isFinite(parsed)) {
+    if (parsed == null || !Number.isFinite(parsed)) {
       return true;
     }
     const limit = direction > 0 ? this.max : this.min;
@@ -600,7 +591,23 @@ export class QuiInput extends FormControlBase {
     this.passwordVisible = !this.passwordVisible;
   };
 
-  public render(): VNode {
+  /** Slot contents are invisible to `:empty`, so track them for affix padding. */
+  private readonly handleSlotChange = (event: Event): void => {
+    const slot = event.target;
+    if (!isHTMLSlotElement(slot)) {
+      return;
+    }
+    const filled = slot
+      .assignedNodes()
+      .some((node) => node.nodeType === 1 || (node.textContent ?? "").trim() !== "");
+    if (slot.name === "prefix") {
+      this.hasPrefix = filled;
+    } else if (slot.name === "suffix") {
+      this.hasSuffix = filled;
+    }
+  };
+
+  render(): VNode {
     return (
       <Host class={styles.host}>
         <div data-scope="input" data-part="root" part="root" class={styles.root}>
@@ -610,11 +617,12 @@ export class QuiInput extends FormControlBase {
             data-invalid={dataAttr(this.form.isInvalid)}
             data-disabled={dataAttr(this.form.isDisabled)}
             data-readonly={dataAttr(this.form.isReadOnly)}
+            data-number={dataAttr(this.isNumber)}
             class={styles.control}
             part="control"
           >
-            <span data-part="prefix" class={cx(styles.affix, styles.affixStart)}>
-              <slot name="prefix" />
+            <span data-part="prefix" class={cx(styles.affix, this.hasPrefix && styles.affixStart)}>
+              <slot name="prefix" onSlotchange={this.handleSlotChange} />
             </span>
 
             <input
@@ -646,8 +654,8 @@ export class QuiInput extends FormControlBase {
               onInput={this.handleInput}
             />
 
-            <span data-part="suffix" class={cx(styles.affix, styles.affixEnd)}>
-              <slot name="suffix" />
+            <span data-part="suffix" class={cx(styles.affix, this.hasSuffix && styles.affixEnd)}>
+              <slot name="suffix" onSlotchange={this.handleSlotChange} />
             </span>
 
             {this.isNumber ? (
@@ -679,7 +687,7 @@ export class QuiInput extends FormControlBase {
                     }
                   }}
                 >
-                  <AddIcon />
+                  <AddIcon class={styles.stepperIcon} />
                 </button>
                 <button
                   type="button"
@@ -708,7 +716,7 @@ export class QuiInput extends FormControlBase {
                     }
                   }}
                 >
-                  <RemoveIcon />
+                  <RemoveIcon class={styles.stepperIcon} />
                 </button>
               </div>
             ) : undefined}
@@ -726,7 +734,11 @@ export class QuiInput extends FormControlBase {
                 }}
                 onClick={this.handleTogglePassword}
               >
-                {this.passwordVisible ? <VisibilityIcon /> : <VisibilityOffIcon />}
+                {this.passwordVisible ? (
+                  <VisibilityIcon class={styles.triggerIcon} />
+                ) : (
+                  <VisibilityOffIcon class={styles.triggerIcon} />
+                )}
               </button>
             ) : undefined}
           </div>

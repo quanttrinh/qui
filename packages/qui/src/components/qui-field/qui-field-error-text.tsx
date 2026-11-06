@@ -1,11 +1,11 @@
-import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
-import { consumeField, type FieldApi } from "../shared/field/context";
+import { FieldPartController } from "../shared/controllers";
+import { type FieldApi } from "../shared/helpers/field";
+import { ControllerHostMixin } from "../shared/mixins";
 import { fieldStyles } from "./styles";
 
 const styles = {
@@ -22,26 +22,16 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiFieldErrorText),
   shadow: true,
 })
-export class QuiFieldErrorText extends ContextPartElement<FieldApi> {
+export class QuiFieldErrorText extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiFieldErrorTextElement;
 
-  protected readonly needsShadowStyles = false;
-
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
-    key: "field",
-    consume: consumeField,
-    setup: (field): (() => void) => {
-      this.host.id = field.getErrorTextProps().id;
-      return field.registerErrorText(this.host);
-    },
-  });
+  protected readonly fieldPart = new FieldPartController(this, { part: "error-text" });
 
   private get field(): FieldApi | undefined {
-    return this.contextPart.context;
+    return this.fieldPart.field;
   }
 
-  public render(): VNode {
+  render(): VNode {
     const invalid = this.field?.invalid() ?? false;
     const props = this.field?.getErrorTextProps();
 

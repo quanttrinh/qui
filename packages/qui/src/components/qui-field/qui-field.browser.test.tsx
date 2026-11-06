@@ -1,10 +1,10 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { expectAriaElements } from "../../test-utils/aria";
-import { queryHost, queryPartIn } from "../../test-utils/component";
-import { waitForShadowStyles } from "../../test-utils/dom-ready";
-import { expectFocusedDeep } from "../../test-utils/interactions";
-import { isDeepActiveElement, shadowOf } from "../../test-utils/shadow";
+import { expectAriaElements } from "../../../tests/test-utils/aria";
+import { queryHost, queryPartIn } from "../../../tests/test-utils/component";
+import { waitForShadowStyles } from "../../../tests/test-utils/dom-ready";
+import { expectFocusedDeep } from "../../../tests/test-utils/interactions";
+import { isDeepActiveElement, shadowOf } from "../../../tests/test-utils/shadow";
 
 function queryParts(root: HTMLElement): {
   labelHost: HTMLElement;
@@ -23,7 +23,6 @@ function queryParts(root: HTMLElement): {
   };
 }
 
-// oxlint-disable-next-line eslint/max-lines-per-function -- Integration-style browser coverage.
 describe("qui-field", () => {
   it("wires ids and ARIA across label, helper text, and error text", async () => {
     const { root, waitForChanges } = await render(
@@ -56,6 +55,34 @@ describe("qui-field", () => {
     });
     expect(helperHost.id).toBe("email::helper-text");
     expect(errorHost.id).toBe("email::error-text");
+  });
+
+  it("accepts individual id overrides", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-field
+        fieldId="account"
+        rootId="account-root"
+        controlId="account-control"
+        labelId="account-label"
+        errorTextId="account-error"
+        helperTextId="account-helper"
+      >
+        <qui-field-label>Account</qui-field-label>
+        <qui-input />
+        <qui-field-helper-text>Helper</qui-field-helper-text>
+        <qui-field-error-text>Error</qui-field-error-text>
+      </qui-field>,
+    );
+
+    await waitForChanges();
+
+    const { labelHost, helperHost, errorHost, input } = queryParts(root);
+
+    expect(root.id).toBe("account-root");
+    expect(input.id).toBe("account-control");
+    expect(labelHost.id).toBe("account-label");
+    expect(helperHost.id).toBe("account-helper");
+    expect(errorHost.id).toBe("account-error");
   });
 
   it("keeps host layout minimal and styles the inner root", async () => {

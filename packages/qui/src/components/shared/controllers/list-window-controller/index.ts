@@ -1,0 +1,167 @@
+import {
+  ListMetrics,
+  scrollIndexIntoView,
+  type ListMode,
+  type ListWindow,
+} from "../../helpers/list-window/model";
+import { ListSizeObserver } from "../../helpers/list-window/size-observer";
+import { ReactiveControllerBase, type ReactiveControllerHost } from "../reactive-controller";
+
+interface ListWindowControllerOptions {
+  getEstimateSize: () => number;
+  fallbackViewportSize: number;
+  getOverscan: () => number;
+}
+
+interface ListWindowOverrides {
+  mode?: ListMode;
+  reserveSize?: number;
+  /** Available height for overflow mode, or to override the measured viewport. */
+  viewportSize?: number;
+}
+
+/**
+ * Owns list windowing: measured offsets, scroll offset, viewport, reveal, and
+ * both virtualization and overflow window computation.
+ */
+export class ListWindowController extends ReactiveControllerBase {
+  private readonly options: ListWindowControllerOptions;
+  private readonly metrics: ListMetrics;
+  private readonly sizeObserver: ListSizeObserver;
+  private offset = 0;
+  private viewport?: HTMLElement;
+  private viewportObserver?: ResizeObserver;
+  private viewportHeight = 0;
+
+  constructor(host: ReactiveControllerHost, options: ListWindowControllerOptions) {
+    super(host);
+    this.options = options;
+    this.metrics = new ListMetrics({ estimate: options.getEstimateSize() });
+    this.sizeObserver = new ListSizeObserver({
+      onMeasured: (index: number, size: number) => this.metrics.setSize(index, size),
+      onResize: () => {
+        this.requestUpdate();
+      },
+    });
+  }
+
+  getList<TItem>(
+    items: readonly TItem[],
+    { mode = "virtualize", reserveSize = 0, viewportSize = 0 }: ListWindowOverrides = {},
+  ): ListWindow<TItem> {
+    this.metrics.setEstimate(this.options.getEstimateSize());
+    const measuredViewport = viewportSize > 0 ? viewportSize : this.viewportHeight;
+    if (mode === "overflow") {
+      return this.metrics.window({
+        mode: "overflow",
+        items,
+        viewportSize: measuredViewport,
+        fallbackViewportSize: this.options.fallbackViewportSize,
+        reserveSize,
+      });
+    }
+    return this.metrics.window({
+      mode: "virtualize",
+      items,
+      viewportSize: measuredViewport,
+      fallbackViewportSize: this.options.fallbackViewportSize,
+      scrollOffset: this.offset,
+      overscan: this.options.getOverscan(),
+    });
+  }
+
+  setViewport(element: HTMLElement | undefined): void {
+    if (element === this.viewport) {
+      return;
+    }
+    this.viewportObserver?.disconnect();
+    this.viewportObserver = undefined;
+    this.viewport = element;
+    this.viewportHeight = element?.clientHeight ?? 0;
+    this.observeViewport();
+  }
+
+  hostConnected(): void {
+    if (this.viewport !== undefined) {
+      this.offset = this.viewport.scrollTop;
+      this.observeViewport();
+      this.requestUpdate();
+    }
+  }
+
+  private observeViewport(): void {
+    const { viewport } = this;
+    if (viewport === undefined || this.viewportObserver !== undefined) {
+      return;
+    }
+    if (typeof ResizeObserver === "function") {
+      this.viewportObserver = new ResizeObserver(() => {
+        this.viewportHeight = viewport.clientHeight;
+        this.requestUpdate();
+      });
+      this.viewportObserver.observe(viewport);
+    }
+  }
+
+  scrollToStart(): void {
+    const changed = this.offset !== 0 || (this.viewport?.scrollTop ?? 0) !== 0;
+    this.offset = 0;
+    if (this.viewport !== undefined) {
+      this.viewport.scrollTop = 0;
+    }
+    if (changed) {
+      this.requestUpdate();
+    }
+  }
+
+  revealIndex(index: number): void {
+    if (index < 0) {
+      return;
+    }
+    scrollIndexIntoView({
+      viewport: this.viewport,
+      index,
+      metrics: this.metrics,
+      onScrollTo: (top) => {
+        this.offset = top;
+        this.requestUpdate();
+      },
+    });
+  }
+
+  handleScroll(): void {
+    const { viewport } = this;
+    if (viewport !== undefined && viewport.scrollTop !== this.offset) {
+      this.offset = viewport.scrollTop;
+      this.requestUpdate();
+    }
+  }
+
+  hostDidRender(): void {
+    if (this.viewport !== undefined) {
+      const height = this.viewport.clientHeight;
+      if (height !== this.viewportHeight) {
+        this.viewportHeight = height;
+        this.requestUpdate();
+      }
+    }
+    if (this.sizeObserver.sync(this.renderedRows())) {
+      this.requestUpdate();
+    }
+  }
+
+  hostDisconnected(): void {
+    this.sizeObserver.disconnect();
+    this.viewportObserver?.disconnect();
+    this.viewportObserver = undefined;
+  }
+
+  private renderedRows(): { element: Element; index: number }[] {
+    if (this.viewport === undefined) {
+      return [];
+    }
+    return [...this.viewport.querySelectorAll<HTMLElement>('[role="option"][data-index]')]
+      .map((element) => ({ element, index: Number(element.dataset.index) }))
+      .filter(({ index }) => Number.isInteger(index) && index >= 0);
+  }
+}

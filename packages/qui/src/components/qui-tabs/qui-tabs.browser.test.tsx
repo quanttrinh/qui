@@ -1,9 +1,9 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { expectLinked } from "../../test-utils/aria";
-import { queryHost, queryPartIn } from "../../test-utils/component";
-import { nextFrame } from "../../test-utils/dom-ready";
-import { expectFocusedDeep, pressKey } from "../../test-utils/interactions";
+import { expectLinked } from "../../../tests/test-utils/aria";
+import { queryHost, queryPartIn } from "../../../tests/test-utils/component";
+import { nextFrame } from "../../../tests/test-utils/dom-ready";
+import { expectFocusedDeep, pressKey } from "../../../tests/test-utils/interactions";
 
 interface TabParts {
   triggerHost: HTMLElement;
@@ -45,7 +45,6 @@ function expectTabLinked(tab: TabParts): void {
   expectLinked(tab.panel, tab.triggerHost, "labelledby");
 }
 
-// oxlint-disable-next-line eslint/max-lines-per-function -- Integration-style browser coverage.
 describe("qui-tabs", () => {
   it("selects a tab and shows the matching panel", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(

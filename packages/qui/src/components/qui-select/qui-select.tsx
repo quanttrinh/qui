@@ -1,9 +1,9 @@
 import {
+  Mixin,
   AttachInternals,
   Component,
   Element,
   Event,
-  forceUpdate,
   h,
   Host,
   Method,
@@ -16,8 +16,6 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 
-import { ariaAttr, dataAttr } from "../../helpers/attr";
-import { nextId } from "../../helpers/id";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { UnfoldMoreIcon } from "../qui-icon/icons";
 import { quiOptionSource } from "../qui-option/option-source";
@@ -28,16 +26,19 @@ import {
   OptionSourceController,
   SelectionController,
 } from "../shared/controllers";
-import { applyFieldAria } from "../shared/field/aria";
-import { createFieldControl, focusElement } from "../shared/field/control";
-import { OptionControlBase } from "../shared/option/component-base";
-import { labelForValue, type OptionItem } from "../shared/option/option";
+import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
+import { focusElement } from "../shared/helpers/dom/focus";
+import { nextId } from "../shared/helpers/dom/id";
+import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
 import {
   PANEL_MAX_HEIGHT,
+  labelForValue,
   listStyles,
   renderOptionList,
   renderOptionRow,
-} from "../shared/option/option-list";
+  type OptionItem,
+} from "../shared/helpers/option";
+import { ControllerHostMixin, FormControlMixin, OptionControlMixin } from "../shared/mixins";
 import { selectStyles as styles } from "./styles";
 
 /** A select option. */
@@ -66,6 +67,7 @@ function labelsForValues(
 /**
  * MD3 select. Provide options with `qui-option` children or an `items`
  * property. The list and popover are shared with `qui-combobox`.
+ * @undefinedContent
  */
 @Component({
   tag: "qui-select",
@@ -73,7 +75,7 @@ function labelsForValues(
   shadow: true,
   formAssociated: true,
 })
-export class QuiSelect extends OptionControlBase {
+export class QuiSelect extends Mixin(ControllerHostMixin, FormControlMixin, OptionControlMixin) {
   @Element() host!: HTMLQuiSelectElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -101,8 +103,7 @@ export class QuiSelect extends OptionControlBase {
   private readonly generatedId = nextId("qui-select");
   private readonly listId = `${this.generatedId}-listbox`;
   private readonly fieldControl = createFieldControl(() => this.triggerEl);
-  private readonly form = new FormController({
-    getHost: (): HTMLElement => this.host,
+  protected readonly form = new FormController(this, {
     getInternals: (): ElementInternals => this.internals,
     getName: (): string | undefined => this.name,
     getMultiple: (): boolean => this.multiple,
@@ -120,24 +121,14 @@ export class QuiSelect extends OptionControlBase {
     onRestore: (values: string[]): void => {
       this.selection.restore(values);
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
 
-  protected get formController(): FormController {
-    return this.form;
-  }
-  private readonly source = new OptionSourceController({
+  private readonly source = new OptionSourceController(this, {
     adapter: quiOptionSource,
-    getHost: (): HTMLElement => this.host,
     getItems: (): readonly SelectOption[] | undefined => this.items,
     getRenderedRoot: (): HTMLElement | undefined => this.rootEl,
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
-  private readonly selection = new SelectionController({
+  private readonly selection = new SelectionController(this, {
     getValue: (): string[] | undefined => this.value,
     getDefaultValue: (): string[] | undefined => this.defaultValue,
     getItems: (): readonly SelectOption[] => this.source.items,
@@ -148,19 +139,13 @@ export class QuiSelect extends OptionControlBase {
       this.valueChange.emit({ value, items });
       this.form.sync();
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
-  private readonly window = new ListWindowController({
+  private readonly window = new ListWindowController(this, {
     getEstimateSize: (): number => this.estimateSize,
     fallbackViewportSize: PANEL_MAX_HEIGHT,
     getOverscan: (): number => this.overscan,
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
-  private readonly navigation = new OptionListNavigationController<SelectOption>({
+  private readonly navigation = new OptionListNavigationController<SelectOption>(this, {
     getItems: (): readonly SelectOption[] => this.source.items,
     getInitialActive: (): string | undefined => {
       const { items } = this.source;
@@ -170,6 +155,8 @@ export class QuiSelect extends OptionControlBase {
         items.find((item) => !item.disabled)?.value
       );
     },
+    getOpen: (): boolean | undefined => this.open,
+    getDefaultOpen: (): boolean => this.defaultOpen,
     isDisabled: (): boolean => this.form.isDisabled,
     isReadOnly: (): boolean => this.form.isReadOnly,
     isLooping: (): boolean => this.loopFocus,
@@ -179,39 +166,24 @@ export class QuiSelect extends OptionControlBase {
     onReveal: (index: number): void => {
       this.window.revealIndex(index);
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
 
   constructor() {
     super();
-    this.addController(this.form);
-    this.addController(this.source);
-    this.addController(this.selection);
-    this.addController(this.window);
-    this.addController(this.navigation);
     this.form.setControl(this.fieldControl);
   }
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     super.connectedCallback();
     ensureShadowStylesheet(this.host);
   }
 
-  public componentWillLoad(): void {
-    super.componentWillLoad();
-    if (this.open ?? this.defaultOpen) {
-      this.navigation.openMenu("initial");
-    }
-  }
-
-  public componentDidRender(): void {
+  componentDidRender(): void {
     super.componentDidRender();
     applyFieldAria(this.triggerEl, this.form.fieldApi);
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this.typeaheadTimer !== undefined) {
       clearTimeout(this.typeaheadTimer);
@@ -221,7 +193,7 @@ export class QuiSelect extends OptionControlBase {
 
   /** Moves focus to the internal trigger button. */
   @Method()
-  public async focusControl(options?: FocusOptions): Promise<void> {
+  async focusControl(options?: FocusOptions): Promise<void> {
     await focusElement(this.triggerEl, options);
   }
 
@@ -232,7 +204,7 @@ export class QuiSelect extends OptionControlBase {
 
   @Watch("open")
   private syncControlledOpen(value?: boolean): void {
-    if (value === undefined || value === this.navigation.open) {
+    if (value == null || value === this.navigation.open) {
       return;
     }
     if (value) {
@@ -344,7 +316,7 @@ export class QuiSelect extends OptionControlBase {
     return index === -1 ? undefined : `${this.listId}-${index}`;
   }
 
-  public render(): VNode {
+  render(): VNode {
     const list = this.window.getList(this.source.items);
     const { selected } = this.selection;
     const selectedValues = new Set(selected);

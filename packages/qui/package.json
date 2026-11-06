@@ -35,21 +35,26 @@
       "default": "./dist/shared/index.js"
     },
     "./register": {
-      "types": "./dist/utilities/register.d.ts",
-      "default": "./dist/utilities/register.js"
+      "types": "./dist/utilities/register/index.d.ts",
+      "default": "./dist/utilities/register/index.js"
     },
     "./hydrate": {
       "types": "./dist/hydrate/index.d.ts",
       "import": "./dist/hydrate/index.mjs",
-      "require": "./dist/hydrate/index.js"
+      "require": "./dist/hydrate/index.js",
+      "default": "./dist/hydrate/index.js"
     },
     "./ssr": {
-      "types": "./dist/utilities/ssr.d.ts",
-      "default": "./dist/utilities/ssr.js"
+      "types": "./dist/utilities/ssr/index.d.ts",
+      "default": "./dist/utilities/ssr/index.js"
+    },
+    "./internal": {
+      "types": "./dist/utilities/internal/index.d.ts",
+      "default": "./dist/utilities/internal/index.js"
     },
     "./runtime": {
-      "types": "./dist/utilities/styles.d.ts",
-      "default": "./dist/utilities/styles.js"
+      "types": "./dist/utilities/styles/index.d.ts",
+      "default": "./dist/utilities/styles/index.js"
     },
     "./shared/*": {
       "types": "./dist/shared/*.d.ts",
@@ -112,49 +117,52 @@
     "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
-    "dev": "bun run build:utilities && stencil build --dev --watch --serve",
-    "build": "stencil build && bun run build:utilities && bun run build:types",
-    "build:utilities": "bun build/build-utilities.ts",
-    "build:types": "bun build/finalize-types.ts",
-    "test:framework-types": "bun build/require-built-types.ts && tsc -p test/fixtures/framework-types/react/tsconfig.json && tsc -p test/fixtures/framework-types/solid/tsconfig.json && tsc -p test/fixtures/framework-types/preact/tsconfig.json",
-    "codegen": "panda codegen",
-    "test": "NODE_ENV=test stencil-test",
-    "test:unit": "NODE_ENV=test stencil-test --project unit",
-    "test:integration": "NODE_ENV=test stencil-test --project integration",
-    "test:browser": "NODE_ENV=test stencil-test --project browser",
-    "test:smoke": "NODE_ENV=test stencil-test --project smoke",
-    "test:watch": "NODE_ENV=test stencil-test --watch",
-    "build:release": "bun run build && bun run build:lib",
-    "prepublishOnly": "bun run build:release",
+    "dev": "stencil build --dev --watch --serve",
+    "build": "stencil build",
+    "postbuild": "bun tooling/scripts/finalize-types.ts && publint",
     "build:lib": "panda lib --files './**/*.{js,mjs}'",
-    "typecheck": "tsc --noEmit -p tsconfig.build.json"
+    "build:release": "bun run build && bun run build:lib",
+    "codegen": "panda codegen",
+    "test": "bun tooling/scripts/stencil-test.ts && bun run test:framework-types",
+    "test:unit": "bun tooling/scripts/stencil-test.ts --project unit",
+    "test:integration": "bun tooling/scripts/stencil-test.ts --project integration",
+    "test:browser": "bun tooling/scripts/stencil-test.ts --project browser",
+    "test:smoke": "bun tooling/scripts/stencil-test.ts --project smoke",
+    "test:watch": "bun tooling/scripts/stencil-test.ts --watch",
+    "test:framework-types": "bun tooling/scripts/require-built-types.ts && tsc -p tests/fixtures/framework-types/react/tsconfig.json && tsc -p tests/fixtures/framework-types/solid/tsconfig.json && tsc -p tests/fixtures/framework-types/preact/tsconfig.json",
+    "prepublishOnly": "bun run build:release"
   },
   "dependencies": {
     "@material/material-color-utilities": "^0.4.0",
     "@stencil/core": "^4.45.2"
   },
   "devDependencies": {
+    "@babel/parser": "^8.1.0",
+    "@oxlint/plugins": "^1.91.0",
     "@pandacss/compiler": "2.5.0",
-    "@pandacss/dev": "^2.4.0",
-    "@pandacss/preset-base": "^2.4.0",
-    "@pandacss/preset-panda": "^2.4.0",
+    "@pandacss/dev": "^2.5.0",
+    "@pandacss/eslint-plugin": "^2.5.0",
+    "@pandacss/preset-base": "^2.5.0",
+    "@pandacss/preset-panda": "^2.5.0",
     "@pandacss/transformer": "2.5.0",
+    "@stencil/eslint-plugin": "^1.4.0",
     "@stencil/types-output-target": "^1.0.2",
     "@stencil/vitest": "^1.16.1",
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "@types/react": "^19",
     "@typescript/native": "npm:typescript@^7.0.2",
-    "@vitest/browser-playwright": "^5.0.5",
+    "@vitest/browser-playwright": "^5.1.0",
     "jiti": "^2.7.0",
-    "playwright": "^1.64.1",
-    "postcss": "^8.5.30",
+    "playwright": "^1.65.0",
+    "postcss": "^8.5.32",
     "preact": "^11.0.0",
+    "rollup": "^4.67.5",
     "solid-js": "^1",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.0"
   },
   "peerDependencies": {
-    "@pandacss/dev": "^2.4.0",
+    "@pandacss/dev": "^2.5.0",
     "@types/react": ">=19",
     "preact": ">=10.28.0",
     "solid-js": ">=1"

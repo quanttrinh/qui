@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createTestControllerHost } from "../../../tests/test-utils/controller-host";
 import { RadioGroupController } from "./controller";
 
 function createController(options?: { value?: string; defaultValue?: string }) {
@@ -7,7 +8,7 @@ function createController(options?: { value?: string; defaultValue?: string }) {
   let disabled = false;
   let readOnly = false;
   let value = options?.value;
-  const controller = new RadioGroupController({
+  const controller = new RadioGroupController(createTestControllerHost(), {
     getValue: () => value,
     getDefaultValue: () => options?.defaultValue,
     isDisabled: () => disabled,
@@ -15,7 +16,6 @@ function createController(options?: { value?: string; defaultValue?: string }) {
     onChange: (next) => {
       changes.push(next);
     },
-    requestUpdate: () => undefined,
   });
   controller.hostWillLoad();
   return {

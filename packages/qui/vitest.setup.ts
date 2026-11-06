@@ -1,6 +1,6 @@
 import { afterAll, beforeAll } from "vitest";
 
-import { setQuiStylesHref } from "./src/utilities/styles.js";
+import { setQuiStylesHref } from "./src/utilities/styles/index.js";
 import componentCss from "./styled-system/styles.css?inline";
 import themeCss from "./styled-system/theme.css?inline";
 

@@ -25,11 +25,11 @@ const styles = {
 export class QuiDialogClose {
   @Element() host!: HTMLQuiDialogCloseElement;
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     ensureShadowStylesheet(this.host);
   }
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host class={styles.host}>
         {/* The label is provided by the slotted button content. */}

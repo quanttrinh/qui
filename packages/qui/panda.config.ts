@@ -1,9 +1,17 @@
-import type { Preset } from "@pandacss/types";
+import { defineConfig, type Preset } from "@pandacss/dev";
+import { dirname } from "node:path";
 
-import { defineConfig } from "@pandacss/dev";
-
-import { UNDEFINED_CONTENT_SELECTOR } from "./build/undefined-content";
 import { colorRoles, cssVariableNames } from "./src/utilities/theme/color-roles";
+import { createConfig } from "./tooling/config";
+import { undefinedContentSelector } from "./tooling/panda/undefined-content";
+
+// Panda bundles the config before evaluating it, so `__dirname` points at the
+// bundle. Prefer the explicit config path when the lint plugin supplies one.
+const root =
+  process.env.PANDA_CONFIG_PATH === undefined
+    ? process.cwd()
+    : dirname(process.env.PANDA_CONFIG_PATH);
+const config = createConfig(root);
 
 const colorTokens = Object.fromEntries(
   colorRoles.map((role) => [role, { value: `var(${cssVariableNames[role]})` }]),
@@ -25,7 +33,7 @@ export const quiPreset: Preset = {
     // covers the gap before that runtime boots. SSR hosts already carry
     // `.hydrated`, so server-rendered content stays visible until the client
     // takes over.
-    [UNDEFINED_CONTENT_SELECTOR]: {
+    [undefinedContentSelector(config)]: {
       display: "none !important",
     },
     body: {
@@ -58,9 +66,9 @@ export const quiPreset: Preset = {
 export default defineConfig({
   presets: ["@pandacss/preset-base", "@pandacss/preset-panda", quiPreset],
   preflight: true,
-  include: ["./src/**/*.{ts,tsx}"],
+  include: [config.source.include],
   exclude: [],
-  outdir: "styled-system",
+  outdir: config.output.styledSystemName,
   jsxFramework: "react",
   jsxStyleProps: "none",
   optimize: {

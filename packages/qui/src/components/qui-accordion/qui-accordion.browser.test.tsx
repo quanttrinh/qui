@@ -1,8 +1,8 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { expectLinked } from "../../test-utils/aria";
-import { queryHost, queryPartIn } from "../../test-utils/component";
-import { expectFocusedDeep, pressKey } from "../../test-utils/interactions";
+import { expectLinked } from "../../../tests/test-utils/aria";
+import { queryHost, queryPartIn } from "../../../tests/test-utils/component";
+import { expectFocusedDeep, pressKey } from "../../../tests/test-utils/interactions";
 
 interface AccordionItemParts {
   triggerHost: HTMLElement;
@@ -150,6 +150,26 @@ describe("qui-accordion", () => {
 
     expect(spy).toHaveReceivedEventTimes(0);
     expect(parts[1].trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("updates a trigger when its item becomes disabled", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-accordion>
+        <qui-accordion-item value="one">
+          <qui-accordion-trigger>One</qui-accordion-trigger>
+          <qui-accordion-content>One content</qui-accordion-content>
+        </qui-accordion-item>
+      </qui-accordion>,
+    );
+    const item = root.querySelector("qui-accordion-item") as HTMLElement & { disabled: boolean };
+    const [{ trigger }] = items(root);
+
+    expect(trigger.disabled).toBe(false);
+
+    item.disabled = true;
+    await waitForChanges();
+
+    expect(trigger.disabled).toBe(true);
   });
 
   it("moves focus with arrow, Home, and End keyboard navigation", async () => {

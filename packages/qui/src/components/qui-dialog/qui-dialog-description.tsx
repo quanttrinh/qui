@@ -1,10 +1,10 @@
-import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
+import { ContextPartController } from "../shared/controllers";
+import { ControllerHostMixin } from "../shared/mixins";
 import { consumeDialog, type DialogContext } from "./context";
 
 const styles = {
@@ -25,11 +25,10 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiDialogDescription),
   shadow: true,
 })
-export class QuiDialogDescription extends ContextPartElement<DialogContext> {
+export class QuiDialogDescription extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiDialogDescriptionElement;
 
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
+  protected readonly contextPart = new ContextPartController(this, {
     key: "dialog",
     consume: consumeDialog,
     setup: (dialog): (() => void) => dialog.registerDescription(this.host),
@@ -40,7 +39,7 @@ export class QuiDialogDescription extends ContextPartElement<DialogContext> {
     return this.contextPart.context;
   }
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host id={this.dialog?.ids.description} class={styles.host}>
         <p class={styles.description} part="description">

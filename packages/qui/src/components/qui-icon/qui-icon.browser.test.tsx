@@ -1,7 +1,7 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryControl, queryPartIn } from "../../test-utils/component";
-import { nextFrame, waitForShadowStyles } from "../../test-utils/dom-ready";
+import { queryControl, queryPartIn } from "../../../tests/test-utils/component";
+import { nextFrame, waitForShadowStyles } from "../../../tests/test-utils/dom-ready";
 
 const ADD_PATH = "M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5z";
 

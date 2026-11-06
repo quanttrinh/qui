@@ -1,3 +1,5 @@
+import { buildRecord } from "./record";
+
 /**
  * Material Design 3 color roles and their CSS variable names. Kept free of the
  * Material color utilities so consumers such as the published Panda preset can
@@ -27,6 +29,13 @@ export const colorRoles = [
   "onSurface",
   "surfaceVariant",
   "onSurfaceVariant",
+  "surfaceTint",
+  "inverseSurface",
+  "inverseOnSurface",
+  "outline",
+  "outlineVariant",
+  "scrim",
+  "shadow",
   "surfaceDim",
   "surfaceBright",
   "surfaceContainerLowest",
@@ -34,13 +43,6 @@ export const colorRoles = [
   "surfaceContainer",
   "surfaceContainerHigh",
   "surfaceContainerHighest",
-  "inverseSurface",
-  "inverseOnSurface",
-  "outline",
-  "outlineVariant",
-  "shadow",
-  "scrim",
-  "surfaceTint",
   "primaryFixed",
   "primaryFixedDim",
   "onPrimaryFixed",
@@ -64,14 +66,10 @@ function toKebabCase(value: string): string {
   return value.replaceAll(UPPERCASE, (character) => `-${character.toLowerCase()}`);
 }
 
-/** MD3 role -> CSS custom property name, computed once. */
-function createCssVariableNames(): Record<ColorRole, `--${string}`> {
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-  const names = {} as Record<ColorRole, `--${string}`>;
-  for (const role of colorRoles) {
-    names[role] = `--md-sys-color-${toKebabCase(role)}`;
-  }
-  return names;
+/** MD3 role -> CSS custom property name. */
+export function cssVariableName(role: ColorRole): `--${string}` {
+  return `--md-sys-color-${toKebabCase(role)}`;
 }
 
-export const cssVariableNames = createCssVariableNames();
+/** MD3 role -> CSS custom property name. */
+export const cssVariableNames = buildRecord(colorRoles, cssVariableName);

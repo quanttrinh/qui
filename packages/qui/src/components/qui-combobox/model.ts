@@ -1,4 +1,4 @@
-import { type OptionItem } from "../shared/option/option";
+import { type OptionItem } from "../shared/helpers/option";
 
 const WHITESPACE = /\s+/u;
 
@@ -24,12 +24,12 @@ export class OptionFilter {
   private key = "";
   private readonly searchCache = new WeakMap<ComboboxOption, string>();
 
-  public invalidate(): void {
+  invalidate(): void {
     this.filtered = undefined;
     this.key = "";
   }
 
-  public apply(
+  apply(
     items: readonly ComboboxOption[],
     { query, mode, revision, filter }: FilterOptions,
   ): readonly ComboboxOption[] {

@@ -12,7 +12,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "flex-end",
     gap: "2",
-    marginBlockStart: "2",
+    paddingBlockStart: "2",
   }),
 };
 
@@ -29,11 +29,11 @@ const styles = {
 export class QuiDialogActions {
   @Element() host!: HTMLElement;
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     ensureShadowStylesheet(this.host);
   }
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host class={styles.host}>
         <div class={styles.actions} part="actions">

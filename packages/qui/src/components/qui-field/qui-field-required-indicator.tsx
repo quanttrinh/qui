@@ -1,12 +1,12 @@
-import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
-import { consumeField, type FieldApi } from "../shared/field/context";
-import { requiredIndicatorStyle } from "../shared/required-indicator";
+import { FieldPartController } from "../shared/controllers";
+import { type FieldApi } from "../shared/helpers/field";
+import { ControllerHostMixin } from "../shared/mixins";
+import { requiredIndicatorStyle } from "../shared/styles";
 
 const styles = {
   host: css({ display: "inline" }),
@@ -22,23 +22,17 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiFieldRequiredIndicator),
   shadow: true,
 })
-export class QuiFieldRequiredIndicator extends ContextPartElement<FieldApi> {
+export class QuiFieldRequiredIndicator extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiFieldRequiredIndicatorElement;
 
-  protected readonly needsShadowStyles = false;
-
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
-    key: "field",
-    consume: consumeField,
-  });
+  protected readonly fieldPart = new FieldPartController(this, { part: "required-indicator" });
   private readonly defaultMarker = "*";
 
   private get field(): FieldApi | undefined {
-    return this.contextPart.context;
+    return this.fieldPart.field;
   }
 
-  public render(): VNode {
+  render(): VNode {
     const required = this.field?.required() ?? false;
 
     return (

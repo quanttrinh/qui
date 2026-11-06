@@ -1,13 +1,21 @@
-import { resolveVar, Component, Element, h, Host, Prop, Watch, type VNode } from "@stencil/core";
+import {
+  Mixin,
+  resolveVar,
+  Component,
+  Element,
+  h,
+  Host,
+  Prop,
+  Watch,
+  type VNode,
+} from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 
-import { dataAttr } from "../../helpers/attr";
-import { nextId } from "../../helpers/id";
 import { ensureShadowStylesheet } from "../../utilities/styles";
-import { clearField, provideField, type FieldApi, type FieldIds } from "../shared/field/context";
-import { FieldPartRegistry } from "../shared/field/registry";
-import { createListenerStore } from "../shared/listener-store";
+import { FieldController } from "../shared/controllers";
+import { dataAttr } from "../shared/helpers/aria/attr";
+import { ControllerHostMixin } from "../shared/mixins";
 import { fieldStyles } from "./styles";
 
 /**
@@ -24,13 +32,21 @@ import { fieldStyles } from "./styles";
   styleUrl: resolveVar(styleUrls.quiField),
   shadow: true,
 })
-export class QuiField {
+export class QuiField extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiFieldElement;
 
   /** Base id used to derive the field part ids. Defaults to the host id. */
   @Prop() fieldId?: string;
-  /** Overrides for any of the generated part ids. Property-only. */
-  @Prop() elementIds?: Partial<FieldIds>;
+  /** Overrides the generated root id. */
+  @Prop() rootId?: string;
+  /** Overrides the generated control id. */
+  @Prop() controlId?: string;
+  /** Overrides the generated label id. */
+  @Prop() labelId?: string;
+  /** Overrides the generated error-text id. */
+  @Prop() errorTextId?: string;
+  /** Overrides the generated helper-text id. */
+  @Prop() helperTextId?: string;
   /** Marks the field invalid. */
   @Prop() invalid = false;
   /** Disables the field and its controls. */
@@ -40,129 +56,45 @@ export class QuiField {
   /** Marks the field required. */
   @Prop() required = false;
 
-  private readonly generatedId = nextId("qui-field");
-  private readonly registry = new FieldPartRegistry();
-  private readonly listeners = createListenerStore();
-  private field?: FieldApi;
+  private readonly field = new FieldController(this, {
+    getFieldId: () => this.fieldId,
+    getElementIds: () => ({
+      root: this.rootId,
+      control: this.controlId,
+      label: this.labelId,
+      errorText: this.errorTextId,
+      helperText: this.helperTextId,
+    }),
+    isInvalid: () => this.invalid,
+    isDisabled: () => this.disabled,
+    isReadOnly: () => this.readOnly,
+    isRequired: () => this.required,
+  });
 
-  public componentWillLoad(): void {
-    this.field = this.createFieldApi();
-    provideField(this.host, this.field);
-  }
-
-  public connectedCallback(): void {
-    if (this.field !== undefined) {
-      provideField(this.host, this.field);
-    }
+  connectedCallback(): void {
+    super.connectedCallback();
     ensureShadowStylesheet(this.host);
   }
 
-  public disconnectedCallback(): void {
-    clearField(this.host);
-    this.listeners.clear();
-  }
-
   @Watch("fieldId")
-  @Watch("elementIds")
+  @Watch("rootId")
+  @Watch("controlId")
+  @Watch("labelId")
+  @Watch("errorTextId")
+  @Watch("helperTextId")
   @Watch("invalid")
   @Watch("disabled")
   @Watch("readOnly")
   @Watch("required")
   private notify(): void {
-    this.listeners.notify();
+    this.field.notify();
   }
 
-  private get ids(): FieldIds {
-    const base = this.fieldId ?? (this.host.id || this.generatedId);
-    return {
-      root: this.elementIds?.root ?? base,
-      control: this.elementIds?.control ?? `${base}::control`,
-      label: this.elementIds?.label ?? `${base}::label`,
-      errorText: this.elementIds?.errorText ?? `${base}::error-text`,
-      helperText: this.elementIds?.helperText ?? `${base}::helper-text`,
-    };
-  }
-
-  private createFieldApi(): FieldApi {
-    const getIds = (): FieldIds => this.ids;
-    return {
-      get ids() {
-        return getIds();
-      },
-      invalid: () => this.invalid,
-      disabled: () => this.disabled,
-      readOnly: () => this.readOnly,
-      required: () => this.required,
-      getInputProps: () => {
-        const ids = getIds();
-        return {
-          id: ids.control,
-          disabled: this.disabled,
-          required: this.required,
-          readOnly: this.readOnly || undefined,
-          "aria-invalid": this.invalid ? "true" : undefined,
-          "data-scope": "field" as const,
-          "data-part": "input" as const,
-          "data-invalid": dataAttr(this.invalid),
-          "data-required": dataAttr(this.required),
-          "data-readonly": dataAttr(this.readOnly),
-        };
-      },
-      getLabelProps: () => {
-        const ids = getIds();
-        return {
-          id: ids.label,
-          htmlFor: ids.control,
-          "data-scope": "field" as const,
-          "data-part": "label" as const,
-          "data-disabled": dataAttr(this.disabled),
-          "data-invalid": dataAttr(this.invalid),
-          "data-readonly": dataAttr(this.readOnly),
-          "data-required": dataAttr(this.required),
-        };
-      },
-      getHelperTextProps: () => ({
-        id: getIds().helperText,
-        "data-scope": "field" as const,
-        "data-part": "helper-text" as const,
-        "data-disabled": dataAttr(this.disabled),
-      }),
-      getErrorTextProps: () => ({
-        id: getIds().errorText,
-        "data-scope": "field" as const,
-        "data-part": "error-text" as const,
-        "aria-live": "polite" as const,
-      }),
-      getLabelHost: () => this.registry.labelHost,
-      getHelperTextHosts: () => this.registry.helperTextHosts,
-      getErrorTextHosts: () => this.registry.errorTextHosts,
-      registerLabel: (host) => this.registerPart(() => this.registry.registerLabel(host)),
-      registerHelperText: (host) => this.registerPart(() => this.registry.registerHelperText(host)),
-      registerErrorText: (host) => this.registerPart(() => this.registry.registerErrorText(host)),
-      registerControl: (control) => this.registry.registerControl(control),
-      focusControl: (options) => {
-        this.registry.focusControl(options);
-      },
-      clickControl: () => {
-        this.registry.clickControl();
-      },
-      subscribe: this.listeners.subscribe,
-    };
-  }
-
-  private registerPart(register: () => () => void): () => void {
-    const teardown = register();
-    this.notify();
-    return () => {
-      teardown();
-      this.notify();
-    };
-  }
-
-  public render(): VNode {
+  render(): VNode {
+    const { ids } = this.field;
     return (
       <Host
-        id={this.ids.root}
+        id={ids.root}
         data-scope="field"
         data-part="root"
         data-disabled={dataAttr(this.disabled)}

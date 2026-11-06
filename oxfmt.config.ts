@@ -2,17 +2,12 @@ import { defineConfig } from "oxfmt";
 
 export default defineConfig({
   ignorePatterns: [
-    "CHANGELOG.md",
-    "styled-system/",
-    "dist/",
-    "www/",
-    ".stencil/",
     "node_modules/",
-    "docs/",
     ".github/",
     ".changeset/",
     ".husky/",
     ".devcontainer/",
+    "CHANGELOG.md",
     "bun.lock",
   ],
   sortImports: {

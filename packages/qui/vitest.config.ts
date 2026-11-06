@@ -1,19 +1,29 @@
 import { defineVitestConfig } from "@stencil/vitest/config";
 import { playwright } from "@vitest/browser-playwright";
 
+const testDefaults = {
+  testTimeout: 15_000,
+  hookTimeout: 30_000,
+};
+
 export default defineVitestConfig({
   stencilConfig: "./stencil.config.ts",
+  optimizeDeps: {
+    include: ["@stencil/vitest"],
+  },
   test: {
     projects: [
       {
         test: {
+          ...testDefaults,
           name: "unit",
-          include: ["src/**/*.unit.test.{ts,tsx}", "build/**/*.unit.test.{ts,tsx}"],
+          include: ["src/**/*.unit.test.{ts,tsx}", "tooling/**/*.unit.test.{ts,tsx}"],
           environment: "node",
         },
       },
       {
         test: {
+          ...testDefaults,
           name: "integration",
           include: ["src/**/*.integration.test.ts"],
           environment: "node",
@@ -21,9 +31,10 @@ export default defineVitestConfig({
       },
       {
         test: {
+          ...testDefaults,
           name: "browser",
-          include: ["src/**/*.browser.test.{ts,tsx}", "test/**/*.browser.test.{ts,tsx}"],
-          exclude: ["src/**/*.smoke.browser.test.{ts,tsx}"],
+          include: ["src/**/*.browser.test.{ts,tsx}", "tests/**/*.browser.test.{ts,tsx}"],
+          exclude: ["**/*.smoke.browser.test.{ts,tsx}"],
           setupFiles: ["./vitest.setup.ts"],
           browser: {
             enabled: true,
@@ -35,8 +46,9 @@ export default defineVitestConfig({
       },
       {
         test: {
+          ...testDefaults,
           name: "smoke",
-          include: ["src/**/*.smoke.browser.test.{ts,tsx}"],
+          include: ["tests/**/*.smoke.browser.test.{ts,tsx}"],
           setupFiles: ["./vitest.setup.ts"],
           browser: {
             enabled: true,

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createReflectionElement, fakeTarget } from "../../test-utils/fake-aria";
+import { createReflectionElement, fakeTarget } from "../../../tests/test-utils/fake-aria";
 import { applyDialogAria, createDialogHostRegistry } from "./dialog-aria";
 
 function createDialog(supported: boolean) {

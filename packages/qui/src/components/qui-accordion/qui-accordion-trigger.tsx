@@ -1,37 +1,36 @@
-import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { dataAttr } from "../../helpers/attr";
-import { isHTMLElement } from "../../helpers/dom";
 import { ExpandMoreIcon } from "../qui-icon/icons";
-import { setAriaControls } from "../shared/aria";
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
-import { arrowDelta, edgeKey } from "../shared/keyboard";
-import { RegistrationReconciler } from "../shared/registration-reconciler";
+import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
+import { setAriaControls } from "../shared/helpers/aria/aria";
+import { dataAttr } from "../shared/helpers/aria/attr";
+import { isHTMLElement } from "../shared/helpers/dom/dom";
+import { arrowDelta, edgeKey } from "../shared/helpers/dom/keyboard";
+import { ControllerHostMixin } from "../shared/mixins";
 import { focusRingInset } from "../shared/styles";
 import { consumeAccordionItem, type AccordionItemContext } from "./accordion-context";
 
 const styles = {
   host: css({ display: "block" }),
-  heading: css({ margin: "0" }),
+  heading: css({ m: "0" }), // oxlint-disable-line @pandacss/no-margin-properties -- Resets the default heading margin.
   trigger: css({
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    width: "full",
-    paddingX: "4",
-    paddingY: "3",
+    w: "full",
+    px: "4",
+    py: "3",
     borderWidth: "0",
-    backgroundColor: "transparent",
-    fontSize: "sm",
+    bgColor: "transparent",
+    textStyle: "sm",
     fontWeight: "medium",
     color: "onSurface",
     textAlign: "start",
     cursor: "pointer",
-    "&:hover": { backgroundColor: "surfaceContainerHigh" },
+    "&:hover": { bgColor: "surfaceContainerHigh" },
     "&:focus-visible": focusRingInset,
     "&:disabled": { cursor: "not-allowed" },
   }),
@@ -40,13 +39,12 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
-    width: "6",
-    height: "6",
+    w: "6",
+    h: "6",
     color: "onSurfaceVariant",
     fontSize: "md",
     transition: "transform 200ms ease",
     "&[data-state=open]": { transform: "rotate(180deg)" },
-    "& svg": { width: "1em", height: "1em" },
   }),
 };
 
@@ -60,14 +58,13 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiAccordionTrigger),
   shadow: true,
 })
-export class QuiAccordionTrigger extends ContextPartElement<AccordionItemContext> {
+export class QuiAccordionTrigger extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiAccordionTriggerElement;
 
   private triggerEl?: HTMLButtonElement;
   private readonly registration = new RegistrationReconciler();
 
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
+  protected readonly contextPart = new ContextPartController(this, {
     key: "accordion-item",
     consume: consumeAccordionItem,
   });
@@ -76,19 +73,20 @@ export class QuiAccordionTrigger extends ContextPartElement<AccordionItemContext
     return this.contextPart.context;
   }
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     this.syncRegistration();
     this.syncAria();
+    this.item?.invalidateTriggers();
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     this.registration.clear();
     super.disconnectedCallback();
   }
 
   private syncRegistration(): void {
     const { item, triggerEl } = this;
-    if (item === undefined || triggerEl === undefined) {
+    if (!item || !triggerEl) {
       return;
     }
     const { value } = item.item();
@@ -99,7 +97,7 @@ export class QuiAccordionTrigger extends ContextPartElement<AccordionItemContext
 
   private syncAria(): void {
     const { item, triggerEl } = this;
-    if (item === undefined || triggerEl === undefined) {
+    if (!item || !triggerEl) {
       return;
     }
     const content = item.getContent(item.item().value);
@@ -134,7 +132,7 @@ export class QuiAccordionTrigger extends ContextPartElement<AccordionItemContext
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
     const { item } = this;
-    if (item === undefined || this.disabled() || event.defaultPrevented) {
+    if (!item || this.disabled() || event.defaultPrevented) {
       return;
     }
     const orientation = item.orientation();
@@ -153,7 +151,7 @@ export class QuiAccordionTrigger extends ContextPartElement<AccordionItemContext
     }
   };
 
-  public render(): VNode {
+  render(): VNode {
     const { item } = this;
     const value = item?.item().value ?? "";
     const expanded = item?.isExpanded(value) ?? false;

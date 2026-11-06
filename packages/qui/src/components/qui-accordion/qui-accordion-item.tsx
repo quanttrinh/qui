@@ -1,11 +1,21 @@
-import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
+import {
+  Mixin,
+  resolveVar,
+  Component,
+  Element,
+  h,
+  Host,
+  Prop,
+  Watch,
+  type VNode,
+} from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { dataAttr } from "../../helpers/attr";
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
+import { ContextPartController, createListenerStore } from "../shared/controllers";
+import { dataAttr } from "../shared/helpers/aria/attr";
+import { ControllerHostMixin } from "../shared/mixins";
 import {
   clearAccordionItem,
   consumeAccordion,
@@ -18,9 +28,9 @@ import {
 const styles = {
   host: css({ display: "block" }),
   item: css({
-    borderBottomWidth: "1px",
+    borderBlockEndWidth: "1px",
     borderColor: "outlineVariant",
-    "&:last-child": { borderBottomWidth: "0" },
+    "&:last-child": { borderBlockEndWidth: "0" },
     "&[data-disabled]": { opacity: 0.38, cursor: "not-allowed" },
   }),
 };
@@ -35,7 +45,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiAccordionItem),
   shadow: true,
 })
-export class QuiAccordionItem extends ContextPartElement<AccordionContext> {
+export class QuiAccordionItem extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiAccordionItemElement;
 
   /** The value that identifies this item. */
@@ -43,17 +53,24 @@ export class QuiAccordionItem extends ContextPartElement<AccordionContext> {
   /** Disables this item. */
   @Prop() disabled = false;
 
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
+  private readonly listeners = createListenerStore();
+
+  protected readonly contextPart = new ContextPartController(this, {
     key: "accordion",
     consume: consumeAccordion,
     setup: (accordion): (() => void) => {
       provideAccordionItem(this.host, this.context(accordion));
-      return (): void => {
+      return () => {
         clearAccordionItem(this.host);
       };
     },
   });
+
+  @Watch("disabled")
+  @Watch("value")
+  private notifyItem(): void {
+    this.listeners.notify();
+  }
 
   private isDisabled(accordion: AccordionContext): boolean {
     return this.disabled || accordion.isDisabled();
@@ -69,12 +86,20 @@ export class QuiAccordionItem extends ContextPartElement<AccordionContext> {
   private context(accordion: AccordionContext): AccordionItemContext {
     return {
       ...accordion,
-      item: (): AccordionItem => this.item(),
-      isItemDisabled: (): boolean => this.isDisabled(accordion),
+      item: () => this.item(),
+      isItemDisabled: () => this.isDisabled(accordion),
+      subscribe: (listener: () => void) => {
+        const stopItem = this.listeners.subscribe(listener);
+        const stopAccordion = accordion.subscribe(listener);
+        return () => {
+          stopItem();
+          stopAccordion();
+        };
+      },
     };
   }
 
-  public render(): VNode {
+  render(): VNode {
     const accordion = this.contextPart.context;
     const expanded = accordion?.isExpanded(this.value) ?? false;
     const focused = accordion?.isFocused(this.value) ?? false;

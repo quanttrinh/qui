@@ -29,7 +29,7 @@ export class QuiOption {
   /** Extra text matched by the combobox filter, e.g. synonyms or aliases. */
   @Prop({ reflect: true }) keywords?: string;
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host class={styles.host}>
         <slot />

@@ -1,10 +1,10 @@
 import {
+  Mixin,
   resolveVar,
   AttachInternals,
   Component,
   Element,
   Event,
-  forceUpdate,
   h,
   Host,
   Method,
@@ -17,16 +17,19 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { dataAttr } from "../../helpers/attr";
-import { nextId } from "../../helpers/id";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { CheckIcon } from "../qui-icon/icons";
-import { normalizeBoolean, type CheckedState } from "../shared/checkable/checked-state";
-import { CheckableController } from "../shared/checkable/controller";
-import { applyFieldAria } from "../shared/field/aria";
-import { createFieldControl, focusElement } from "../shared/field/control";
-import { FormControlBase } from "../shared/form-control/component-base";
-import { FormController, type FormValidity } from "../shared/form-control/controller";
+import {
+  CheckableController,
+  FormController,
+  type CheckedState,
+  type FormValidity,
+} from "../shared/controllers";
+import { dataAttr } from "../shared/helpers/aria/attr";
+import { focusElement } from "../shared/helpers/dom/focus";
+import { nextId } from "../shared/helpers/dom/id";
+import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
+import { ControllerHostMixin, FormControlMixin } from "../shared/mixins";
 import { focusRing } from "../shared/styles";
 
 const styles = {
@@ -40,64 +43,64 @@ const styles = {
     "&[data-disabled]": { cursor: "not-allowed", opacity: 0.38 },
   }),
   control: css({
-    position: "relative",
+    pos: "relative",
     display: "inline-flex",
     flexShrink: 0,
-    width: "12",
-    height: "8",
+    w: "12",
+    h: "8",
     rounded: "full",
-    borderWidth: "2px",
+    borderWidth: "0.5",
     borderStyle: "solid",
     borderColor: "outline",
-    backgroundColor: "surfaceContainerHighest",
+    bgColor: "surfaceContainerHighest",
     transition: "background-color 150ms ease, border-color 150ms ease",
     "&[data-state=checked]": {
-      backgroundColor: "primary",
+      bgColor: "primary",
       borderColor: "primary",
     },
     "&[data-invalid]": { borderColor: "error" },
     "&[data-focus-visible]": focusRing,
   }),
   thumb: css({
-    position: "absolute",
-    top: "50%",
-    insetInlineStart: "1.5",
+    pos: "absolute",
+    insetBlockStart: "50%",
+    start: "1.5",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: "4",
-    height: "4",
+    w: "4",
+    h: "4",
     rounded: "full",
     overflow: "hidden",
     color: "primary",
-    backgroundColor: "outline",
+    bgColor: "outline",
     transform: "translateY(-50%)",
     transition:
       "inset-inline-start 150ms ease, width 150ms ease, height 150ms ease, background-color 150ms ease",
-    "& svg": {
-      opacity: 0,
-      transition: "opacity 150ms ease",
-    },
+    "--thumb-icon-opacity": "0",
     "&[data-state=checked]": {
-      insetInlineStart: "calc(100% - 1.65rem)",
-      width: "6",
-      height: "6",
-      backgroundColor: "onPrimary",
-      "& svg": { opacity: 1 },
+      start: "calc(100% - 1.65rem)",
+      w: "6",
+      h: "6",
+      bgColor: "onPrimary",
+      "--thumb-icon-opacity": "1",
     },
+  }),
+  thumbIcon: css({
+    opacity: "var(--thumb-icon-opacity)",
+    transition: "opacity 150ms ease",
   }),
   label: css({
     cursor: "pointer",
-    fontSize: "sm",
+    textStyle: "sm",
     fontWeight: "medium",
     color: "onSurface",
   }),
   input: css({
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: "0",
-    margin: "-1px",
+    pos: "absolute",
+    w: "1px",
+    h: "1px",
+    p: "0",
     overflow: "hidden",
     clip: "rect(0, 0, 0, 0)",
     whiteSpace: "nowrap",
@@ -116,7 +119,7 @@ const styles = {
   shadow: true,
   formAssociated: true,
 })
-export class QuiSwitch extends FormControlBase {
+export class QuiSwitch extends Mixin(ControllerHostMixin, FormControlMixin) {
   @Element() host!: HTMLQuiSwitchElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -149,21 +152,18 @@ export class QuiSwitch extends FormControlBase {
   private readonly fieldControl = createFieldControl(() => this.inputEl, {
     activateOnLabel: true,
   });
-  private readonly checkable = new CheckableController({
-    getChecked: (): boolean | undefined => normalizeBoolean(this.checked),
-    getDefaultChecked: (): boolean | undefined => normalizeBoolean(this.defaultChecked),
+  private readonly checkable = new CheckableController(this, {
+    getChecked: (): boolean | undefined => this.checked,
+    getDefaultChecked: (): boolean | undefined => this.defaultChecked,
+    supportsIndeterminate: false,
     isDisabled: (): boolean => this.form.isDisabled,
     isReadOnly: (): boolean => this.form.isReadOnly,
     onChange: (checked: CheckedState): void => {
       this.checkedChange.emit({ checked: checked === true });
       this.form.sync();
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
-  private readonly form = new FormController({
-    getHost: (): HTMLElement => this.host,
+  protected readonly form = new FormController(this, {
     getInternals: (): ElementInternals => this.internals,
     getName: (): string | undefined => this.name,
     getMultiple: (): boolean => false,
@@ -173,9 +173,7 @@ export class QuiSwitch extends FormControlBase {
     getRequired: (): boolean => this.required,
     getInvalid: (): boolean => this.invalid,
     getValidationElement: (): HTMLElement | undefined => this.inputEl,
-    getFormValue: (): string | null =>
-      // oxlint-disable-next-line unicorn/no-null
-      this.checkable.isChecked ? (this.value ?? "on") : null,
+    getFormValue: (): string | null => (this.checkable.isChecked ? (this.value ?? "on") : null),
     getValidity: (): FormValidity => this.validity(),
     getSignature: (): string => this.signature(),
     onReset: (): void => {
@@ -183,33 +181,24 @@ export class QuiSwitch extends FormControlBase {
       this.checkable.reset();
     },
     onRestore: (values: string[]): void => {
-      const checked = normalizeBoolean(values.at(0)) ?? false;
+      const checked = this.checkable.normalize(values.at(0)) === true;
       this.checked = checked;
       this.checkable.restore(checked);
-    },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
     },
   });
 
   constructor() {
     super();
-    this.addController(this.checkable);
-    this.addController(this.form);
     this.form.setControl(this.fieldControl);
   }
 
-  protected get formController(): FormController {
-    return this.form;
-  }
-
-  public connectedCallback(): void {
+  connectedCallback(): void {
     super.connectedCallback();
     this.checkable.setInput(this.inputEl);
     ensureShadowStylesheet(this.host);
   }
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     super.componentDidRender();
     applyFieldAria(this.inputEl, this.form.fieldApi, {
       labelledBy: this.labelEl === undefined ? [] : [this.labelEl],
@@ -218,7 +207,7 @@ export class QuiSwitch extends FormControlBase {
 
   /** Moves focus to the internal native input. */
   @Method()
-  public async focusControl(options?: FocusOptions): Promise<void> {
+  async focusControl(options?: FocusOptions): Promise<void> {
     await focusElement(this.inputEl, options);
   }
 
@@ -255,7 +244,7 @@ export class QuiSwitch extends FormControlBase {
 
   private get inputProps(): Record<string, string | number | boolean | undefined> {
     const field = this.form.fieldApi;
-    const props: Record<string, unknown> =
+    const props: Record<string, string | number | boolean | undefined> =
       field === undefined
         ? {
             id: this.inputId,
@@ -269,8 +258,7 @@ export class QuiSwitch extends FormControlBase {
           }
         : { ...field.getInputProps() };
     delete props.required;
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-    return props as Record<string, string | number | boolean | undefined>;
+    return props;
   }
 
   private validity(): FormValidity {
@@ -297,7 +285,7 @@ export class QuiSwitch extends FormControlBase {
     }\u0001${this.form.isRequired ? 1 : 0}\u0001${this.form.isInvalid ? 1 : 0}`;
   }
 
-  public render(): VNode {
+  render(): VNode {
     const { state, hasFocus, hasFocusVisible } = this.checkable;
     const stateAttrs = {
       "data-state": state,
@@ -350,7 +338,9 @@ export class QuiSwitch extends FormControlBase {
               class={styles.thumb}
               part="thumb"
             >
-              <CheckIcon />
+              <span class={styles.thumbIcon}>
+                <CheckIcon />
+              </span>
             </span>
           </span>
           <span

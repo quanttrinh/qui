@@ -1,10 +1,10 @@
 import {
+  Mixin,
   resolveVar,
   AttachInternals,
   Component,
   Element,
   Event,
-  forceUpdate,
   h,
   Host,
   Method,
@@ -17,14 +17,12 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { dataAttr } from "../../helpers/attr";
-import { nextId } from "../../helpers/id";
 import { ensureShadowStylesheet } from "../../utilities/styles";
-import { applyFieldAria } from "../shared/field/aria";
-import { type FieldControlHandle } from "../shared/field/registry";
-import { FormControlBase } from "../shared/form-control/component-base";
-import { FormController, type FormValidity } from "../shared/form-control/controller";
-import { createListenerStore } from "../shared/listener-store";
+import { createListenerStore, FormController, type FormValidity } from "../shared/controllers";
+import { dataAttr } from "../shared/helpers/aria/attr";
+import { nextId } from "../shared/helpers/dom/id";
+import { applyFieldAria, type FieldControlHandle } from "../shared/helpers/field";
+import { ControllerHostMixin, FormControlMixin } from "../shared/mixins";
 import {
   clearRadioGroup,
   provideRadioGroup,
@@ -37,12 +35,12 @@ import { RadioGroupController } from "./controller";
 const styles = {
   host: css({ display: "block" }),
   root: css({
-    position: "relative",
+    pos: "relative",
     display: "flex",
-    flexDirection: "column",
+    flexDir: "column",
     gap: "2",
   }),
-  horizontal: css({ flexDirection: "row" }),
+  horizontal: css({ flexDir: "row" }),
 };
 
 /**
@@ -56,7 +54,7 @@ const styles = {
   shadow: true,
   formAssociated: true,
 })
-export class QuiRadioGroup extends FormControlBase {
+export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin) {
   @Element() host!: HTMLQuiRadioGroupElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -92,7 +90,7 @@ export class QuiRadioGroup extends FormControlBase {
       this.controller.focusInput(options);
     },
   };
-  private readonly controller = new RadioGroupController({
+  private readonly controller = new RadioGroupController(this, {
     getValue: (): string | undefined => this.value,
     getDefaultValue: (): string | undefined => this.defaultValue,
     isDisabled: (): boolean => this.form.isDisabled,
@@ -101,19 +99,17 @@ export class QuiRadioGroup extends FormControlBase {
       this.valueChange.emit({ value });
       this.form.sync();
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-      this.listeners.notify();
-    },
   });
-  private readonly form = new FormController({
-    getHost: (): HTMLElement => this.host,
+  protected readonly form = new FormController(this, {
     getInternals: (): ElementInternals => this.internals,
     getName: (): string | undefined => this.name,
     getMultiple: (): boolean => false,
     getValue: (): readonly string[] => {
       const { value } = this.controller;
-      return value === undefined || value === "" ? [] : [value];
+      if (value) {
+        return [value];
+      }
+      return [];
     },
     getDisabled: (): boolean => this.disabled,
     getReadOnly: (): boolean => this.readOnly,
@@ -122,8 +118,10 @@ export class QuiRadioGroup extends FormControlBase {
     getValidationElement: (): HTMLElement | undefined => this.rootEl,
     getFormValue: (): string | null => {
       const { value } = this.controller;
-      // oxlint-disable-next-line unicorn/no-null
-      return value === undefined || value === "" ? null : value;
+      if (value) {
+        return value;
+      }
+      return null;
     },
     getValidity: (): FormValidity => this.validity(),
     getSignature: (): string => this.signature(),
@@ -136,9 +134,6 @@ export class QuiRadioGroup extends FormControlBase {
       const value = restored === "" ? undefined : restored;
       this.value = value;
       this.controller.restore(value);
-    },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
     },
     onChange: (): void => {
       this.listeners.notify();
@@ -174,16 +169,14 @@ export class QuiRadioGroup extends FormControlBase {
 
   constructor() {
     super();
-    this.addController(this.controller);
-    this.addController(this.form);
     this.form.setControl(this.fieldControl);
   }
 
-  protected get formController(): FormController {
-    return this.form;
+  protected onRequestUpdate(): void {
+    this.listeners.notify();
   }
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     super.connectedCallback();
     if (this.idBase === "") {
       this.idBase = this.host.id || this.generatedId;
@@ -192,22 +185,18 @@ export class QuiRadioGroup extends FormControlBase {
     ensureShadowStylesheet(this.host);
   }
 
-  public componentWillLoad(): void {
+  componentWillLoad(): void {
     super.componentWillLoad();
     this.idBase = this.host.id || this.generatedId;
     provideRadioGroup(this.host, this.context);
   }
 
-  public componentDidLoad(): void {
-    super.componentDidLoad();
-  }
-
-  public componentDidRender(): void {
+  componentDidRender(): void {
     super.componentDidRender();
     applyFieldAria(this.rootEl, this.form.fieldApi);
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     super.disconnectedCallback();
     clearRadioGroup(this.host);
     this.listeners.clear();
@@ -215,7 +204,7 @@ export class QuiRadioGroup extends FormControlBase {
 
   /** Focuses the selected radio, or the first enabled radio as a fallback. */
   @Method()
-  public async focusControl(options?: FocusOptions): Promise<void> {
+  async focusControl(options?: FocusOptions): Promise<void> {
     await Promise.resolve();
     this.controller.focusInput(options);
   }
@@ -288,7 +277,7 @@ export class QuiRadioGroup extends FormControlBase {
     }\u0001${this.form.isInvalid ? 1 : 0}\u0001${this.form.isDisabled ? 1 : 0}`;
   }
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host class={styles.host}>
         <div

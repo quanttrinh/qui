@@ -1,9 +1,9 @@
 import {
+  Mixin,
   AttachInternals,
   Component,
   Element,
   Event,
-  forceUpdate,
   h,
   Host,
   Method,
@@ -16,9 +16,6 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 
-import { ariaAttr, dataAttr } from "../../helpers/attr";
-import { isHTMLInputElement, isNode } from "../../helpers/dom";
-import { nextId } from "../../helpers/id";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { UnfoldMoreIcon } from "../qui-icon/icons";
 import { quiOptionSource } from "../qui-option/option-source";
@@ -30,16 +27,20 @@ import {
   OptionSourceController,
   SelectionController,
 } from "../shared/controllers";
-import { applyFieldAria } from "../shared/field/aria";
-import { createFieldControl, focusElement } from "../shared/field/control";
-import { OptionControlBase } from "../shared/option/component-base";
-import { labelForValue, type OptionItem } from "../shared/option/option";
+import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
+import { isHTMLInputElement } from "../shared/helpers/dom/dom";
+import { focusElement } from "../shared/helpers/dom/focus";
+import { nextId } from "../shared/helpers/dom/id";
+import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
 import {
   PANEL_MAX_HEIGHT,
+  labelForValue,
   listStyles,
   renderOptionList,
   renderOptionRow,
-} from "../shared/option/option-list";
+  type OptionItem,
+} from "../shared/helpers/option";
+import { ControllerHostMixin, FormControlMixin, OptionControlMixin } from "../shared/mixins";
 import { ComboboxInputController } from "./input-controller";
 import { type ComboboxFilter, type ComboboxFilterMode, type ComboboxOption } from "./model";
 import { comboboxStyles as styles } from "./styles";
@@ -80,6 +81,7 @@ function displayValueFor(
  *
  * The list renders in the top layer with `popover="manual"` and is positioned
  * with JavaScript, so it does not depend on CSS anchor positioning.
+ * @undefinedContent
  */
 @Component({
   tag: "qui-combobox",
@@ -87,7 +89,7 @@ function displayValueFor(
   shadow: true,
   formAssociated: true,
 })
-export class QuiCombobox extends OptionControlBase {
+export class QuiCombobox extends Mixin(ControllerHostMixin, FormControlMixin, OptionControlMixin) {
   @Element() host!: HTMLQuiComboboxElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -109,7 +111,7 @@ export class QuiCombobox extends OptionControlBase {
    * Custom matcher for the visible options. Property-only. Receives each item
    * and the trimmed input value, and returns whether the item should be shown.
    */
-  @Prop() filter?: ComboboxFilter;
+  @Prop({ attribute: null }) filter?: ComboboxFilter;
   /**
    * Built-in matching strategy used when `filter` is not set. Set to `none`
    * when `items` is already filtered (for example by a server).
@@ -140,8 +142,7 @@ export class QuiCombobox extends OptionControlBase {
   private readonly generatedId = nextId("qui-combobox");
   private readonly listId = `${this.generatedId}-listbox`;
   private readonly fieldControl = createFieldControl(() => this.inputEl);
-  private readonly form = new FormController({
-    getHost: (): HTMLElement => this.host,
+  protected readonly form = new FormController(this, {
     getInternals: (): ElementInternals => this.internals,
     getName: (): string | undefined => this.name,
     getMultiple: (): boolean => this.multiple,
@@ -165,27 +166,17 @@ export class QuiCombobox extends OptionControlBase {
         displayValueFor(this.source.items, this.selection.selected, this.multiple),
       );
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
 
-  protected get formController(): FormController {
-    return this.form;
-  }
-  private readonly source = new OptionSourceController({
+  private readonly source = new OptionSourceController(this, {
     adapter: quiOptionSource,
-    getHost: (): HTMLElement => this.host,
     getItems: (): readonly ComboboxOption[] | undefined => this.items,
     getRenderedRoot: (): HTMLElement | undefined => this.rootEl,
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
     onInvalidate: (): void => {
       this.invalidateFilter();
     },
   });
-  private readonly selection = new SelectionController({
+  private readonly selection = new SelectionController(this, {
     getValue: (): string[] | undefined => this.value,
     getDefaultValue: (): string[] | undefined => this.defaultValue,
     getItems: (): readonly ComboboxOption[] => this.source.items,
@@ -196,19 +187,13 @@ export class QuiCombobox extends OptionControlBase {
       this.valueChange.emit({ value, items });
       this.form.sync();
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
-  private readonly window = new ListWindowController({
+  private readonly window = new ListWindowController(this, {
     getEstimateSize: (): number => this.estimateSize,
     fallbackViewportSize: PANEL_MAX_HEIGHT,
     getOverscan: (): number => this.overscan,
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
-  private readonly navigation = new OptionListNavigationController<ComboboxOption>({
+  private readonly navigation = new OptionListNavigationController<ComboboxOption>(this, {
     getItems: (): readonly ComboboxOption[] => this.visibleItems(this.source.items),
     getInitialActive: (): string | undefined => {
       const items = this.visibleItems(this.source.items);
@@ -218,6 +203,8 @@ export class QuiCombobox extends OptionControlBase {
         items.find((item) => !item.disabled)?.value
       );
     },
+    getOpen: (): boolean | undefined => this.open,
+    getDefaultOpen: (): boolean => this.defaultOpen,
     isDisabled: (): boolean => this.form.isDisabled,
     isReadOnly: (): boolean => this.form.isReadOnly,
     isLooping: (): boolean => this.loopFocus !== false,
@@ -227,12 +214,9 @@ export class QuiCombobox extends OptionControlBase {
     onReveal: (index: number): void => {
       this.window.revealIndex(index);
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
 
-  private readonly input = new ComboboxInputController({
+  private readonly input = new ComboboxInputController(this, {
     getControlledValue: (): string | undefined => this.inputValue,
     getFilter: (): ComboboxFilter | undefined => this.filter,
     getFilterMode: (): ComboboxFilterMode => this.filterMode,
@@ -246,53 +230,39 @@ export class QuiCombobox extends OptionControlBase {
         this.navigation.edge("first");
       }
     },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-    },
   });
 
   constructor() {
     super();
-    this.addController(this.form);
-    this.addController(this.source);
-    this.addController(this.selection);
-    this.addController(this.window);
-    this.addController(this.navigation);
     this.form.setControl(this.fieldControl);
   }
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     super.connectedCallback();
     ensureShadowStylesheet(this.host);
   }
 
-  public componentWillLoad(): void {
-    super.componentWillLoad();
+  componentWillLoad(): void {
+    // Seed the query before controllers initialize.
+    // A default-open list resolves its active item against the filtered set.
     this.input.initialize(this.defaultInputValue);
-    if (this.open ?? this.defaultOpen) {
-      this.navigation.openMenu("initial");
-    }
+    super.componentWillLoad();
   }
 
-  public componentDidLoad(): void {
+  componentDidLoad(): void {
     super.componentDidLoad();
     this.syncInitialInput();
     this.form.sync();
   }
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     super.componentDidRender();
     applyFieldAria(this.inputEl, this.form.fieldApi);
   }
 
-  public disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.input.dispose();
-  }
-
   /** Moves focus to the internal input. */
   @Method()
-  public async focusControl(options?: FocusOptions): Promise<void> {
+  async focusControl(options?: FocusOptions): Promise<void> {
     await focusElement(this.inputEl, options);
   }
 
@@ -313,7 +283,7 @@ export class QuiCombobox extends OptionControlBase {
 
   @Watch("open")
   private syncControlledOpen(value?: boolean): void {
-    if (value === undefined || value === this.navigation.open) {
+    if (value == null || value === this.navigation.open) {
       return;
     }
     if (value) {
@@ -389,7 +359,10 @@ export class QuiCombobox extends OptionControlBase {
     const next = event.relatedTarget;
     // Focus moves within the combobox (input → trigger or listbox) are internal.
     // Check the shadow root: host.contains() cannot see internal elements.
-    if (isNode(next) && (this.host.contains(next) || (this.rootEl?.contains(next) ?? false))) {
+    if (
+      next instanceof Node &&
+      (this.host.contains(next) || (this.rootEl?.contains(next) ?? false))
+    ) {
       return;
     }
     if (!this.navigation.open) {
@@ -513,7 +486,7 @@ export class QuiCombobox extends OptionControlBase {
     return `${total} ${total === 1 ? "result" : "results"}`;
   }
 
-  public render(): VNode {
+  render(): VNode {
     const items = this.visibleItems(this.source.items);
     const list = this.window.getList(items);
     const { total } = list;

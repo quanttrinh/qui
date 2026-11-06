@@ -56,15 +56,14 @@ may return a string, a string array, or `undefined`. Resolver and static hrefs
 should be base-relative; Vite applies `base` unconditionally to root-relative
 URLs, so including the base in `href` would prefix it twice.
 
-SSR pages do not pass through Vite's HTML transform. Resolve the final URL(s)
-first, render them into the document, then mark the matching links:
+SSR pages do not pass through Vite's HTML transform. Resolve the final URL(s),
+then ensure the document has a marked stylesheet link. Missing links are
+inserted before `</head>`, matching the main package's SSR helper:
 
 ```ts
-import {
-    markStylesheetLinks,
-    resolveStylesheetHrefs,
-    type QuiStylesOptions,
-} from "@quanttrinh/qui-unplugin";
+import { renderPage } from "@quanttrinh/qui-server";
+import { ensureStylesheetLinks, type QuiStylesOptions } from "@quanttrinh/qui-unplugin";
+import { resolveStylesheetHrefs } from "@quanttrinh/qui/ssr";
 
 const styles = {
     href: ({ command, bundle }) => {
@@ -86,19 +85,70 @@ const context = {
     bundle: viteBuildBundle,
 };
 
-// Includes the Vite base. Render these URLs into the document and pass the
-// same values to withShadowStylesheet().
+// Includes the Vite base. Pass the same values to withShadowStylesheet().
 const hrefs = await resolveStylesheetHrefs(styles.href, context);
-const renderedHtml = await renderPage({ stylesheets: hrefs });
+const { html: renderedHtml } = await renderPage(markup, {
+    fullDocument: false,
+    styles: { href: hrefs },
+});
 
-const html = markStylesheetLinks(renderedHtml, hrefs);
+const html = ensureStylesheetLinks(renderedHtml, hrefs);
 ```
+
+Use `markStylesheetLinks()` when the document link is guaranteed to exist and
+you only need to add the marker. `ensureStylesheetLinks()` marks existing links
+and inserts missing ones. `ensureExternalStylesheetLinks()` combines URL
+resolution and insertion for base-relative hrefs.
+
+### Output-aware registration
+
+Source scanning cannot see components rendered from CMS data, Markdown, HTML
+strings, or other runtime output. Write a registration manifest from the
+rendered page metadata, then import the manifest virtual module from the client
+entry:
+
+```ts
+import { renderPage } from "@quanttrinh/qui-server";
+import { writeRegistrationManifest } from "@quanttrinh/qui-unplugin";
+
+const { registration } = await renderPage(markup, {
+    styles: { href: "/assets/qui-app.css" },
+});
+
+await writeRegistrationManifest("./.qui/components.json", registration.components);
+```
+
+Write the manifest once after rendering all pages (build/SSG), not per request.
+Relative paths resolve from `process.cwd()`; the plugin reads them from the Vite
+root, so keep both roots aligned or use an absolute path.
+
+```ts
+// vite.config.ts
+Qui.vite({
+    registration: { manifest: "./.qui/components.json" },
+});
+```
+
+```ts
+// client entry
+import "virtual:qui/registration-manifest";
+```
+
+The manifest module is generated at build time with static imports for every
+rendered tag. Tags found in authored source are still registered by the normal
+per-file transform, so the two paths combine without runtime tag scanning.
+Additional tags can be supplied with `registration.components`.
+
+`@quanttrinh/qui-server` also returns `registration.module` and
+`registration.manifest` directly when a build pipeline needs to write its own
+module or manifest.
 
 `bundle` is the Rollup/Vite output bundle (`type`, `fileName`), not
 `.vite/manifest.json`. Map manifest entries to that shape if the server only has
-a manifest. If `markExternalStylesheetLinks()` is imported by a production SSR
-server, install `@quanttrinh/qui-unplugin` as a runtime dependency; the
-development dependency above is enough for build-time/SSG usage.
+a manifest. If `ensureStylesheetLinks()`, `ensureExternalStylesheetLinks()`, or
+`markExternalStylesheetLinks()` is imported by a production SSR server, install
+`@quanttrinh/qui-unplugin` as a runtime dependency; the development dependency
+above is enough for build-time/SSG usage.
 
 Pass the same resolved URL to the main package's `withShadowStylesheet()` helper
 so declarative shadow roots use the same emitted asset.

@@ -5,6 +5,7 @@ import {
   createExternalStylesModule,
   createRegistrationModule,
   createStylesModule,
+  ensureStylesheetLinks,
   extractComponents,
   importInjectionOffset,
   isExternalStyles,
@@ -445,6 +446,73 @@ describe("markStylesheetLinks", () => {
 
     expect(marked.match(MARKER)).toHaveLength(1);
     expect(marked.endsWith('<link rel="stylesheet" href="/app.css" data-qui-styles>')).toBe(true);
+  });
+});
+
+describe("ensureStylesheetLinks", () => {
+  it("marks existing links and inserts missing links before the head close", () => {
+    const result = ensureStylesheetLinks(
+      '<html><head><link rel="stylesheet" href="/a.css"></head><body></body></html>',
+      ["/a.css", "/b.css"],
+    );
+
+    expect(result).toContain('href="/a.css" data-qui-styles>');
+    expect(result).toContain('<link rel="stylesheet" href="/b.css" data-qui-styles></head>');
+  });
+
+  it("does not duplicate an existing marked link", () => {
+    const source =
+      '<html><head><link rel="stylesheet" href="/a.css" data-qui-styles></head></html>';
+
+    expect(ensureStylesheetLinks(source, "/a.css")).toBe(source);
+  });
+
+  it("applies a nonce to inserted links and escapes attribute values", () => {
+    const result = ensureStylesheetLinks("<html><head></head></html>", '/a"&.css', {
+      nonce: 'n"1',
+    });
+
+    expect(result).toContain('href="/a&quot;&amp;.css"');
+    expect(result).toContain('nonce="n&quot;1"');
+  });
+
+  it("marks a body link after inserting into the head", () => {
+    const result = ensureStylesheetLinks(
+      '<html><head></head><body><link rel="stylesheet" href="/a.css"></body></html>',
+      ["/a.css", "/b.css"],
+    );
+
+    expect(result).toContain('<link rel="stylesheet" href="/b.css" data-qui-styles></head>');
+    expect(result).toContain('<link rel="stylesheet" href="/a.css" data-qui-styles>');
+  });
+
+  it("marks existing links but does not create a link without a head", () => {
+    const result = ensureStylesheetLinks('<link rel="stylesheet" href="/a.css">', [
+      "/a.css",
+      "/b.css",
+    ]);
+
+    expect(result).toBe('<link rel="stylesheet" href="/a.css" data-qui-styles>');
+  });
+
+  it("removes stale managed links", () => {
+    const result = ensureStylesheetLinks(
+      '<html><head><link rel="stylesheet" href="/old.css" data-qui-styles><link rel="stylesheet" href="/a.css"></head></html>',
+      "/a.css",
+    );
+
+    expect(result).not.toContain("/old.css");
+    expect(result).toContain('href="/a.css" data-qui-styles');
+  });
+
+  it("inserts before the implicit head close", () => {
+    const result = ensureStylesheetLinks(
+      '<html><head><link rel="stylesheet" href="/a.css"><body></body></html>',
+      ["/a.css", "/b.css"],
+    );
+
+    expect(result).toContain('href="/a.css" data-qui-styles');
+    expect(result).toContain('<link rel="stylesheet" href="/b.css" data-qui-styles><body>');
   });
 });
 

@@ -1,4 +1,4 @@
-import { createContextStore } from "../shared/context-store";
+import { createContextStore } from "../shared/context";
 import { type TabsTriggerRegistration } from "./controller";
 
 export type TabsVariant = "primary" | "secondary";
@@ -30,6 +30,8 @@ export interface TabsContext {
   getPanel: (value: string) => HTMLElement | undefined;
   /** Moves DOM focus to the internal tab button for a value. */
   focusTrigger: (value: string) => void;
+  /** Clears cached trigger state after a trigger's disabled state changes. */
+  invalidateTriggers: () => void;
   variant: () => TabsVariant;
   orientation: () => TabsOrientation;
   textDirection: () => "ltr" | "rtl";
@@ -40,19 +42,10 @@ export interface TabsContext {
   subscribe: (listener: () => void) => () => void;
 }
 
-// oxlint-disable-next-line stencil/ban-side-effects -- Allocating a context map has no side effects.
-const tabs = createContextStore<TabsContext>("tabs");
-
-function provideTabs(host: HTMLElement, context: TabsContext): void {
-  tabs.provide(host, context);
-}
-
-function clearTabs(host: HTMLElement): void {
-  tabs.clear(host);
-}
-
-function consumeTabs(host: HTMLElement): TabsContext | undefined {
-  return tabs.consume(host);
-}
+const {
+  provide: provideTabs,
+  clear: clearTabs,
+  consume: consumeTabs,
+} = createContextStore<TabsContext>("tabs");
 
 export { clearTabs, consumeTabs, provideTabs };

@@ -1,8 +1,8 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryControl, queryPartIn, resolveHost } from "../../test-utils/component";
-import { waitForShadowStyles } from "../../test-utils/dom-ready";
-import { expectFocusedDeep } from "../../test-utils/interactions";
+import { queryControl, queryPartIn, resolveHost } from "../../../tests/test-utils/component";
+import { waitForShadowStyles } from "../../../tests/test-utils/dom-ready";
+import { expectFocusedDeep } from "../../../tests/test-utils/interactions";
 
 function queryRequiredIndicator(root: HTMLElement): HTMLElement {
   return queryPartIn(

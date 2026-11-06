@@ -1,22 +1,31 @@
-import { resolveVar, Component, Element, h, Host, Prop, State, type VNode } from "@stencil/core";
+import {
+  Mixin,
+  resolveVar,
+  Component,
+  Element,
+  h,
+  Host,
+  Prop,
+  State,
+  type VNode,
+} from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { dataAttr } from "../../helpers/attr";
-import { hasFocusableDescendant } from "../../helpers/dom";
-import { setAriaControls, setAriaLabelledBy } from "../shared/aria";
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
-import { RegistrationReconciler } from "../shared/registration-reconciler";
+import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
+import { setAriaControls, setAriaLabelledBy } from "../shared/helpers/aria/aria";
+import { dataAttr } from "../shared/helpers/aria/attr";
+import { ControllerHostMixin } from "../shared/mixins";
 import { focusRing } from "../shared/styles";
 import { consumeTabs, type TabsContext } from "./context";
+import { hasFocusableDescendant } from "./focusable";
 
 const styles = {
   host: css({ display: "contents" }),
   panel: css({
     flex: "1",
-    paddingY: "3",
+    py: "3",
     outlineStyle: "none",
     fontSize: "sm",
     color: "onSurfaceVariant",
@@ -24,7 +33,7 @@ const styles = {
     // So this mainly helps long, active panels below the fold.
     contentVisibility: "auto",
     containIntrinsicSize: "auto 100px",
-    "&[data-orientation=vertical]": { paddingY: "0", paddingInlineStart: "4" },
+    "&[data-orientation=vertical]": { py: "0", ps: "4" },
     "&:focus-visible": focusRing,
   }),
 };
@@ -33,13 +42,14 @@ const styles = {
  * A tab panel. Must be inside `qui-tabs`.
  *
  * @slot - Panel content.
+ * @undefinedContent
  */
 @Component({
   tag: "qui-tab-panel",
   styleUrl: resolveVar(styleUrls.quiTabPanel),
   shadow: true,
 })
-export class QuiTabPanel extends ContextPartElement<TabsContext> {
+export class QuiTabPanel extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiTabPanelElement;
 
   /** The value linking this panel to its trigger. */
@@ -52,8 +62,7 @@ export class QuiTabPanel extends ContextPartElement<TabsContext> {
   private contentObserver?: MutationObserver;
   private readonly registration = new RegistrationReconciler();
 
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
+  protected readonly contextPart = new ContextPartController(this, {
     key: "tabs",
     consume: consumeTabs,
   });
@@ -62,7 +71,7 @@ export class QuiTabPanel extends ContextPartElement<TabsContext> {
     return this.contextPart.context;
   }
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     super.connectedCallback();
     if (typeof MutationObserver !== "undefined") {
       this.contentObserver = new MutationObserver(() => {
@@ -77,13 +86,13 @@ export class QuiTabPanel extends ContextPartElement<TabsContext> {
     }
   }
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     this.syncRegistration();
     this.syncAria();
     this.scheduleTabIndex();
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     this.contentObserver?.disconnect();
     this.contentObserver = undefined;
     this.registration.clear();
@@ -102,7 +111,7 @@ export class QuiTabPanel extends ContextPartElement<TabsContext> {
 
   private syncAria(): void {
     const { tabs, panelEl } = this;
-    if (tabs === undefined || panelEl === undefined) {
+    if (!tabs || !panelEl) {
       return;
     }
     const trigger = tabs.getTrigger(this.value);
@@ -145,7 +154,7 @@ export class QuiTabPanel extends ContextPartElement<TabsContext> {
     }
   }
 
-  public render(): VNode {
+  render(): VNode {
     const selected = this.tabs?.isSelected(this.value) ?? false;
     const orientation = this.tabs?.orientation() ?? "horizontal";
     const textDirection = this.tabs?.textDirection() ?? "ltr";

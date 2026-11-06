@@ -1,10 +1,10 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryPartIn, resolveHost } from "../../test-utils/component";
-import { settle } from "../../test-utils/dom-ready";
-import { expectFocusedDeep, pointerDown } from "../../test-utils/interactions";
-import { queryParts } from "../../test-utils/shadow";
-import { type OptionItem } from "../shared/option/option";
+import { queryPartIn, resolveHost } from "../../../tests/test-utils/component";
+import { settle } from "../../../tests/test-utils/dom-ready";
+import { expectFocusedDeep, pointerDown } from "../../../tests/test-utils/interactions";
+import { queryParts } from "../../../tests/test-utils/shadow";
+import { type OptionItem } from "../shared/helpers/option";
 
 const accounts: OptionItem[] = Array.from({ length: 1000 }, (_entry, index) => ({
   value: `account-${index + 1}`,

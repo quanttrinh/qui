@@ -1,4 +1,5 @@
 import {
+  Mixin,
   resolveVar,
   Component,
   Element,
@@ -15,21 +16,21 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { nextId } from "../../helpers/id";
 import { ensureShadowStylesheet } from "../../utilities/styles";
-import { createListenerStore } from "../shared/listener-store";
-import { ReactiveControlBase } from "../shared/reactive-control/component-base";
+import { createListenerStore } from "../shared/controllers";
+import { nextId } from "../shared/helpers/dom/id";
+import { ControllerHostMixin } from "../shared/mixins";
 import { clearAccordion, provideAccordion, type AccordionContext } from "./accordion-context";
 import { AccordionController } from "./controller";
 
 const styles = {
   host: css({ display: "block" }),
   root: css({
-    width: "full",
+    w: "full",
     borderWidth: "1px",
     borderColor: "outlineVariant",
     rounded: "xl",
-    backgroundColor: "surface",
+    bgColor: "surface",
     overflow: "hidden",
   }),
 };
@@ -50,7 +51,7 @@ export interface AccordionValueChangeDetails {
   styleUrl: resolveVar(styleUrls.quiAccordion),
   shadow: true,
 })
-export class QuiAccordion extends ReactiveControlBase {
+export class QuiAccordion extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiAccordionElement;
 
   /** Whether multiple items may be expanded at once. */
@@ -58,9 +59,9 @@ export class QuiAccordion extends ReactiveControlBase {
   /** Whether an expanded item may be collapsed. */
   @Prop() collapsible = false;
   /** The controlled expanded values. Property-only. */
-  @Prop() value?: string[];
+  @Prop({ attribute: null }) value?: string[];
   /** The initial expanded values. Property-only. */
-  @Prop() defaultValue?: string[];
+  @Prop({ attribute: null }) defaultValue?: string[];
   /** Disables every item. */
   @Prop() disabled = false;
   /** Layout orientation. */
@@ -75,17 +76,13 @@ export class QuiAccordion extends ReactiveControlBase {
   private idBase = "";
   private readonly listeners = createListenerStore();
   private readonly generatedId = nextId("qui-accordion");
-  private readonly controller = new AccordionController({
+  private readonly controller = new AccordionController(this, {
     getValue: (): string[] | undefined => this.value,
     getDefaultValue: (): string[] | undefined => this.defaultValue,
     getMultiple: (): boolean => this.multiple,
     getCollapsible: (): boolean => this.collapsible,
     onChange: (value: string[]): void => {
       this.valueChange.emit({ value });
-    },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-      this.listeners.notify();
     },
   });
   private readonly context: AccordionContext = {
@@ -118,6 +115,9 @@ export class QuiAccordion extends ReactiveControlBase {
     focusTrigger: (value: string): void => {
       this.controller.focusTrigger(value);
     },
+    invalidateTriggers: (): void => {
+      this.controller.invalidateTriggers();
+    },
     rootId: (): string => this.rootId,
     itemId: (value: string): string => this.itemId(value),
     triggerId: (value: string): string => this.triggerId(value),
@@ -125,12 +125,11 @@ export class QuiAccordion extends ReactiveControlBase {
     subscribe: this.listeners.subscribe,
   };
 
-  constructor() {
-    super();
-    this.addController(this.controller);
+  protected onRequestUpdate(): void {
+    this.listeners.notify();
   }
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     super.connectedCallback();
     if (this.idBase === "") {
       this.idBase = this.host.id || this.generatedId;
@@ -139,13 +138,13 @@ export class QuiAccordion extends ReactiveControlBase {
     ensureShadowStylesheet(this.host);
   }
 
-  public componentWillLoad(): void {
+  componentWillLoad(): void {
     super.componentWillLoad();
     this.idBase = this.host.id || this.generatedId;
     provideAccordion(this.host, this.context);
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     super.disconnectedCallback();
     clearAccordion(this.host);
     this.listeners.clear();
@@ -178,7 +177,7 @@ export class QuiAccordion extends ReactiveControlBase {
     return `${this.rootId}:content:${value}`;
   }
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host class={styles.host}>
         <div

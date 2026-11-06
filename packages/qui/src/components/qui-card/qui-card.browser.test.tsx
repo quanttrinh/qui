@@ -1,7 +1,7 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryPartIn } from "../../test-utils/component";
-import { queryInside } from "../../test-utils/shadow";
+import { queryPartIn } from "../../../tests/test-utils/component";
+import { queryInside } from "../../../tests/test-utils/shadow";
 
 function assignedText(slot: HTMLSlotElement | null): string {
   if (slot === null) {

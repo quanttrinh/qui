@@ -1,4 +1,5 @@
 import {
+  Mixin,
   resolveVar,
   Component,
   Element,
@@ -15,11 +16,11 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { dataAttr } from "../../helpers/attr";
-import { nextId } from "../../helpers/id";
 import { ensureShadowStylesheet } from "../../utilities/styles";
-import { createListenerStore } from "../shared/listener-store";
-import { ReactiveControlBase } from "../shared/reactive-control/component-base";
+import { createListenerStore } from "../shared/controllers";
+import { dataAttr } from "../shared/helpers/aria/attr";
+import { nextId } from "../shared/helpers/dom/id";
+import { ControllerHostMixin } from "../shared/mixins";
 import { clearTabs, provideTabs, type TabsContext, type TabsVariant } from "./context";
 import { TabsController } from "./controller";
 
@@ -27,11 +28,11 @@ const styles = {
   host: css({ display: "block" }),
   root: css({
     display: "flex",
-    flexDirection: "column",
-    width: "full",
+    flexDir: "column",
+    w: "full",
     color: "onSurface",
     "&[data-orientation=vertical]": {
-      flexDirection: "row",
+      flexDir: "row",
       alignItems: "flex-start",
     },
   }),
@@ -52,7 +53,7 @@ export interface TabsValueChangeDetails {
   styleUrl: resolveVar(styleUrls.quiTabs),
   shadow: true,
 })
-export class QuiTabs extends ReactiveControlBase {
+export class QuiTabs extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiTabsElement;
 
   /** The controlled selected tab value. */
@@ -79,7 +80,7 @@ export class QuiTabs extends ReactiveControlBase {
   private readonly listeners = createListenerStore();
   private readonly generatedId = nextId("qui-tabs");
   private idBase = "";
-  private readonly controller = new TabsController({
+  private readonly controller = new TabsController(this, {
     getValue: (): string | undefined => this.value,
     getDefaultValue: (): string | undefined => this.defaultValue,
     getActivationMode: (): "manual" | "automatic" => this.activationMode,
@@ -87,10 +88,6 @@ export class QuiTabs extends ReactiveControlBase {
     getDeselectable: (): boolean => this.deselectable,
     onChange: (value: string | undefined): void => {
       this.valueChange.emit({ value });
-    },
-    requestUpdate: (): void => {
-      forceUpdate(this.host);
-      this.listeners.notify();
     },
   });
   private readonly context: TabsContext = {
@@ -125,6 +122,9 @@ export class QuiTabs extends ReactiveControlBase {
     focusTrigger: (value: string): void => {
       this.controller.focusTrigger(value);
     },
+    invalidateTriggers: (): void => {
+      this.controller.invalidateTriggers();
+    },
     variant: (): TabsVariant => this.variant,
     orientation: (): "horizontal" | "vertical" => this.orientation,
     textDirection: (): "ltr" | "rtl" => this.textDirection ?? "ltr",
@@ -135,12 +135,11 @@ export class QuiTabs extends ReactiveControlBase {
     subscribe: this.listeners.subscribe,
   };
 
-  constructor() {
-    super();
-    this.addController(this.controller);
+  protected onRequestUpdate(): void {
+    this.listeners.notify();
   }
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     super.connectedCallback();
     if (this.idBase === "") {
       this.idBase = this.host.id || this.generatedId;
@@ -149,13 +148,13 @@ export class QuiTabs extends ReactiveControlBase {
     ensureShadowStylesheet(this.host);
   }
 
-  public componentWillLoad(): void {
+  componentWillLoad(): void {
     super.componentWillLoad();
     this.idBase = this.host.id || this.generatedId;
     provideTabs(this.host, this.context);
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTabs(this.host);
     this.listeners.clear();
@@ -189,7 +188,7 @@ export class QuiTabs extends ReactiveControlBase {
     return `${this.rootId}:content-${value}`;
   }
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host class={styles.host}>
         <div

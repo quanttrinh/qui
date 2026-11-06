@@ -1,4 +1,4 @@
-import { parseSync, visitorKeys, type Node } from "oxc-parser";
+import { parseSync, Visitor, type Node } from "oxc-parser";
 import { parseFragment, type DefaultTreeAdapterTypes } from "parse5";
 import { extname } from "pathe";
 
@@ -9,32 +9,6 @@ function isNode(value: unknown): value is Node {
   return (
     typeof value === "object" && value !== null && typeof Reflect.get(value, "type") === "string"
   );
-}
-
-function pushChildNodes(node: Node, stack: Node[]): void {
-  for (const key of visitorKeys[node.type] ?? []) {
-    const value: unknown = Reflect.get(node, key);
-    if (Array.isArray(value)) {
-      for (const child of value as unknown[]) {
-        if (isNode(child)) {
-          stack.push(child);
-        }
-      }
-    } else if (isNode(value)) {
-      stack.push(value);
-    }
-  }
-}
-
-function walk(node: Node, visit: (node: Node) => void): void {
-  const stack: Node[] = [node];
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (current !== undefined) {
-      visit(current);
-      pushChildNodes(current, stack);
-    }
-  }
 }
 
 function tagName(value: unknown): string | undefined {
@@ -61,7 +35,7 @@ function isComponentCall(node: Node): boolean {
 }
 
 function addTag(tag: string | undefined, components: Set<string>): void {
-  if (tag?.startsWith("qui-") === true) {
+  if (tag?.startsWith("qui-")) {
     components.add(tag);
   }
 }
@@ -96,6 +70,9 @@ export function extractComponentsFromJavaScript(
   code: string,
   filename: string,
 ): string[] | undefined {
+  // Oxc's async parser deserializes synchronously and adds threadpool overhead.
+  // Per-module transforms intentionally stay synchronous.
+  // oxlint-disable-next-line node/no-sync
   const result = parseSync(filename, code, {
     lang: languageFor(filename),
     sourceType: "unambiguous",
@@ -105,10 +82,16 @@ export function extractComponentsFromJavaScript(
   }
 
   const components = new Set<string>();
-  walk(result.program, (node) => {
-    collect(node, components);
+  const visitor = new Visitor({
+    JSXOpeningElement(node) {
+      collect(node, components);
+    },
+    CallExpression(node) {
+      collect(node, components);
+    },
   });
-  return [...components].sort();
+  visitor.visit(result.program);
+  return [...components].toSorted();
 }
 
 function collectMarkupComponents(
@@ -131,5 +114,5 @@ function collectMarkupComponents(
 export function extractComponentsFromText(code: string): string[] {
   const components = new Set<string>();
   collectMarkupComponents(parseFragment(code), components);
-  return [...components].sort();
+  return [...components].toSorted();
 }

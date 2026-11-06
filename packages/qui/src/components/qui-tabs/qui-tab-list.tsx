@@ -1,27 +1,26 @@
-import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { dataAttr } from "../../helpers/attr";
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
-import { arrowDelta, edgeKey } from "../shared/keyboard";
-import { RegistrationReconciler } from "../shared/registration-reconciler";
+import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
+import { dataAttr } from "../shared/helpers/aria/attr";
+import { arrowDelta, edgeKey } from "../shared/helpers/dom/keyboard";
+import { ControllerHostMixin } from "../shared/mixins";
 import { consumeTabs, type TabsContext } from "./context";
 
 const styles = {
   host: css({ display: "block" }),
   list: css({
-    position: "relative",
+    pos: "relative",
     display: "flex",
     flexShrink: 0,
     borderBlockEndWidth: "1px",
     borderColor: "outlineVariant",
     "&[data-orientation=vertical]": {
-      flexDirection: "column",
+      flexDir: "column",
       borderBlockEndWidth: "0",
-      borderInlineEndWidth: "1px",
+      borderEndWidth: "1px",
     },
   }),
 };
@@ -36,11 +35,10 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiTabList),
   shadow: true,
 })
-export class QuiTabList extends ContextPartElement<TabsContext> {
+export class QuiTabList extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiTabListElement;
 
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
+  protected readonly contextPart = new ContextPartController(this, {
     key: "tabs",
     consume: consumeTabs,
   });
@@ -51,11 +49,11 @@ export class QuiTabList extends ContextPartElement<TabsContext> {
     return this.contextPart.context;
   }
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     this.syncRegistration();
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     this.registration.clear();
     super.disconnectedCallback();
   }
@@ -70,7 +68,7 @@ export class QuiTabList extends ContextPartElement<TabsContext> {
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
     const { tabs, listEl } = this;
-    if (tabs === undefined || listEl === undefined || event.defaultPrevented || event.isComposing) {
+    if (!tabs || !listEl || event.defaultPrevented || event.isComposing) {
       return;
     }
     // Tab triggers are slotted into the list rather than owned by it, so the
@@ -92,7 +90,7 @@ export class QuiTabList extends ContextPartElement<TabsContext> {
     }
   };
 
-  public render(): VNode {
+  render(): VNode {
     const variant = this.tabs?.variant() ?? "primary";
     const orientation = this.tabs?.orientation() ?? "horizontal";
     const textDirection = this.tabs?.textDirection() ?? "ltr";

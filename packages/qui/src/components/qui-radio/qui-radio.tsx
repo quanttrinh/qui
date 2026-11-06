@@ -1,13 +1,23 @@
-import { resolveVar, Component, Element, h, Host, Method, Prop, type VNode } from "@stencil/core";
+import {
+  Mixin,
+  resolveVar,
+  Component,
+  Element,
+  h,
+  Host,
+  Method,
+  Prop,
+  type VNode,
+} from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { ariaAttr, dataAttr } from "../../helpers/attr";
-import { isHTMLInputElement } from "../../helpers/dom";
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
-import { focusElement } from "../shared/field/control";
+import { ContextPartController } from "../shared/controllers";
+import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
+import { isHTMLInputElement } from "../shared/helpers/dom/dom";
+import { focusElement } from "../shared/helpers/dom/focus";
+import { ControllerHostMixin } from "../shared/mixins";
 import { focusRing } from "../shared/styles";
 import {
   consumeRadioGroup,
@@ -31,10 +41,10 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
-    width: "5",
-    height: "5",
+    w: "5",
+    h: "5",
     rounded: "full",
-    borderWidth: "2px",
+    borderWidth: "0.5",
     borderStyle: "solid",
     borderColor: "outline",
     transition: "border-color 150ms",
@@ -42,26 +52,25 @@ const styles = {
       borderColor: "primary",
       "&::after": {
         content: '""',
-        width: "2.5",
-        height: "2.5",
+        w: "2.5",
+        h: "2.5",
         rounded: "full",
-        backgroundColor: "primary",
+        bgColor: "primary",
       },
     },
     "&[data-invalid]": { borderColor: "error" },
     "&[data-focus-visible]": focusRing,
   }),
   label: css({
-    fontSize: "sm",
+    textStyle: "sm",
     fontWeight: "medium",
     color: "onSurface",
   }),
   input: css({
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: "0",
-    margin: "-1px",
+    pos: "absolute",
+    w: "1px",
+    h: "1px",
+    p: "0",
     overflow: "hidden",
     clip: "rect(0, 0, 0, 0)",
     whiteSpace: "nowrap",
@@ -79,7 +88,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiRadio),
   shadow: true,
 })
-export class QuiRadio extends ContextPartElement<RadioGroupContext> {
+export class QuiRadio extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiRadioElement;
 
   /** The value submitted when this item is selected. */
@@ -91,8 +100,7 @@ export class QuiRadio extends ContextPartElement<RadioGroupContext> {
   /** Plain-text label fallback when no slot content is supplied. */
   @Prop() label?: string;
 
-  protected readonly contextPart = consumeContextPart({
-    host: (): HTMLElement => this.host,
+  protected readonly contextPart = new ContextPartController(this, {
     key: "radio-group",
     consume: consumeRadioGroup,
   });
@@ -105,7 +113,7 @@ export class QuiRadio extends ContextPartElement<RadioGroupContext> {
     return this.contextPart.context;
   }
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     const checked = this.group?.itemState(this.item()).checked ?? false;
     if (this.inputEl !== undefined && this.inputEl.checked !== checked) {
       this.inputEl.checked = checked;
@@ -123,7 +131,7 @@ export class QuiRadio extends ContextPartElement<RadioGroupContext> {
     }
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     super.disconnectedCallback();
     this.unregisterInput?.();
     this.unregisterInput = undefined;
@@ -133,7 +141,7 @@ export class QuiRadio extends ContextPartElement<RadioGroupContext> {
 
   /** Moves focus to the internal native radio input. */
   @Method()
-  public async focusControl(options?: FocusOptions): Promise<void> {
+  async focusControl(options?: FocusOptions): Promise<void> {
     await focusElement(this.inputEl, options);
   }
 
@@ -167,7 +175,7 @@ export class QuiRadio extends ContextPartElement<RadioGroupContext> {
     this.group?.blur();
   };
 
-  public render(): VNode {
+  render(): VNode {
     const { group } = this;
     const item = this.item();
     const state: RadioItemState = group?.itemState(item) ?? {
@@ -235,6 +243,7 @@ export class QuiRadio extends ContextPartElement<RadioGroupContext> {
             data-ownedby={group?.rootId()}
             class={styles.input}
             onClick={this.handleClick}
+            onChange={this.handleClick}
             onFocus={this.handleFocus}
             onBlur={this.handleBlur}
           />

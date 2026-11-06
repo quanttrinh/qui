@@ -1,7 +1,7 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryPartIn, resolveHost } from "../../test-utils/component";
-import { settle } from "../../test-utils/dom-ready";
+import { queryPartIn, resolveHost } from "../../../tests/test-utils/component";
+import { settle } from "../../../tests/test-utils/dom-ready";
 
 describe("qui-popover", () => {
   it("shows next to its sibling anchor and dismisses on Escape", async () => {
@@ -33,6 +33,32 @@ describe("qui-popover", () => {
     popover.open = false;
     await waitForChanges();
     expect(panel.matches(":popover-open")).toBe(false);
+  });
+
+  it("accepts an explicit anchor element", async () => {
+    const { root, waitForChanges } = await render(
+      <div>
+        <button type="button">Anchor</button>
+        <section>
+          <qui-popover>Popover content</qui-popover>
+        </section>
+      </div>,
+    );
+    const anchor = root.querySelector("button");
+    const popover = resolveHost<HTMLQuiPopoverElement>(root, "qui-popover");
+    const panel = queryPartIn(popover, "content");
+    if (!(anchor instanceof HTMLButtonElement)) {
+      throw new TypeError("Expected a button anchor");
+    }
+
+    popover.anchor = anchor;
+    popover.open = true;
+    await waitForChanges();
+    await settle(30);
+
+    expect(panel.matches(":popover-open")).toBe(true);
+    expect(panel.style.top).not.toBe("");
+    expect(panel.style.left).not.toBe("");
   });
 
   it("dismisses when the pointer goes outside", async () => {

@@ -1,16 +1,31 @@
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { describe, expect, it, vi } from "vitest";
 
-import { markExternalStylesheetLinks, resolveStylesheetHrefs, rollup, vite } from "./index";
+import {
+  ensureExternalStylesheetLinks,
+  markExternalStylesheetLinks,
+  resolveStylesheetHrefs,
+  rollup,
+  vite,
+  writeRegistrationManifest,
+} from "./index";
 
 vi.mock("node:module", () => ({
   createRequire: () => ({ resolve: () => "/virtual/qui/styles.css" }),
 }));
 
 vi.mock("node:fs/promises", () => ({
+  mkdir: vi.fn().mockResolvedValue(undefined),
   readFile: vi.fn().mockResolvedValue(":host{display:block;--font-fallback:test;}"),
+  rename: vi.fn().mockResolvedValue(undefined),
+  rm: vi.fn().mockResolvedValue(undefined),
+  writeFile: vi.fn().mockResolvedValue(undefined),
 }));
 
-type TransformHandler = (code: string, id: string) => { code: string; map: unknown } | undefined;
+type TransformHandler = (
+  code: string,
+  id: string,
+) => Promise<{ code: string; map: unknown } | undefined>;
 type IdHandler = (id: string) => string | undefined;
 type LoadHandler = (id: string) => string | undefined | Promise<string | undefined>;
 type ConfigResolved = (config: {
@@ -26,7 +41,7 @@ const EMPTY_HREF_ERROR = /non-empty href/u;
 const MALFORMED_HREF_ERROR = /resolver function/u;
 
 describe("vite adapter", () => {
-  it("injects the virtual registration import", () => {
+  it("injects the virtual registration import", async () => {
     const plugin = vite();
     const transform = plugin.transform as unknown as {
       filter: unknown;
@@ -35,7 +50,7 @@ describe("vite adapter", () => {
 
     expect(transform.filter).toBeDefined();
 
-    const result = transform.handler("<qui-button />", "/app/view.tsx");
+    const result = await transform.handler("<qui-button />", "/app/view.tsx");
     expect(result?.code).toContain('import "virtual:qui/register?components=qui-button";');
     expect(result?.map).toMatchObject({ version: 3, sources: ["/app/view.tsx"] });
     expect(JSON.stringify(result?.map)).not.toContain("sourcesContent");
@@ -57,6 +72,43 @@ describe("vite adapter", () => {
     expect(code).toContain('import "virtual:qui/styles";');
     expect(code).toContain('from "@quanttrinh/qui/shared/qui-button"');
     expect(code).toContain("defineComponents(__qui_0);");
+  });
+
+  it("loads output-aware components from a registration manifest", async () => {
+    vi.mocked(readFile).mockResolvedValueOnce(
+      JSON.stringify({ components: ["qui-card", "not-a-component"] }),
+    );
+    const plugin = vite({
+      registration: {
+        manifest: "./.qui/components.json",
+        components: ["qui-button"],
+      },
+    });
+    const resolveId = plugin.resolveId as unknown as { handler: IdHandler };
+    const load = plugin.load as unknown as { handler: LoadHandler };
+    const resolved = resolveId.handler("virtual:qui/registration-manifest");
+
+    expect(resolved).toBe("\0virtual:qui/registration-manifest");
+    if (resolved === undefined) {
+      throw new Error("Expected the registration manifest module to resolve");
+    }
+
+    const code = await load.handler(resolved);
+    expect(code).toContain('from "@quanttrinh/qui/shared/qui-button"');
+    expect(code).toContain('from "@quanttrinh/qui/shared/qui-card"');
+    expect(code).not.toContain("not-a-component");
+  });
+
+  it("writes registration manifests atomically", async () => {
+    await writeRegistrationManifest("/tmp/qui/components.json", ["qui-card", "qui-button"]);
+
+    expect(mkdir).toHaveBeenCalledWith("/tmp/qui", { recursive: true });
+    const temporary = vi.mocked(writeFile).mock.calls[0]?.[0];
+    expect(temporary).toMatch(/^\/tmp\/qui\/components\.json\.\d+\..+\.tmp$/u);
+    expect(vi.mocked(writeFile).mock.calls[0]?.[1]).toBe(
+      '{\n  "components": [\n    "qui-button",\n    "qui-card"\n  ]\n}\n',
+    );
+    expect(rename).toHaveBeenCalledWith(temporary, "/tmp/qui/components.json");
   });
 
   it("resolves and loads the shadow styles module", async () => {
@@ -137,15 +189,24 @@ describe("vite adapter", () => {
     expect(() => vite({ styles: { href: ["", "/app.css"] } })).not.toThrow();
   });
 
-  it("injects after MDX frontmatter and skips Astro pages", () => {
+  it("injects after MDX frontmatter and skips Astro pages", async () => {
     const plugin = vite();
     const transform = plugin.transform as unknown as { handler: TransformHandler };
-    const mdx = transform.handler("---\ntitle: Example\n---\n<qui-button />", "/app/page.mdx");
-    const emptyMdx = transform.handler("---\n---\n<qui-button />", "/app/page.mdx");
-    const eofMdx = transform.handler("---\ntitle: <qui-button />\n---", "/app/page.mdx");
-    const crlfEofMdx = transform.handler("---\r\ntitle: <qui-button />\r\n---", "/app/page.mdx");
-    const trailingFenceMdx = transform.handler("---\n---   \n<qui-button />", "/app/page.mdx");
-    const astro = transform.handler("---\n---\n<qui-button />", "/app/page.astro");
+    const mdx = await transform.handler(
+      "---\ntitle: Example\n---\n<qui-button />",
+      "/app/page.mdx",
+    );
+    const emptyMdx = await transform.handler("---\n---\n<qui-button />", "/app/page.mdx");
+    const eofMdx = await transform.handler("---\ntitle: <qui-button />\n---", "/app/page.mdx");
+    const crlfEofMdx = await transform.handler(
+      "---\r\ntitle: <qui-button />\r\n---",
+      "/app/page.mdx",
+    );
+    const trailingFenceMdx = await transform.handler(
+      "---\n---   \n<qui-button />",
+      "/app/page.mdx",
+    );
+    const astro = await transform.handler("---\n---\n<qui-button />", "/app/page.astro");
 
     expect(mdx?.code.startsWith("---\ntitle: Example\n---\nimport ")).toBe(true);
     expect(emptyMdx?.code.startsWith("---\n---\nimport ")).toBe(true);
@@ -155,11 +216,11 @@ describe("vite adapter", () => {
     expect(astro).toBeUndefined();
   });
 
-  it("ignores modules without components", () => {
+  it("ignores modules without components", async () => {
     const plugin = vite();
     const transform = plugin.transform as unknown as { handler: TransformHandler };
 
-    expect(transform.handler("export const value = 1;", "/app/value.ts")).toBeUndefined();
+    expect(await transform.handler("export const value = 1;", "/app/value.ts")).toBeUndefined();
   });
 });
 
@@ -248,6 +309,16 @@ describe("stylesheet resolvers", () => {
     );
 
     expect(html).toContain("data-qui-styles");
+  });
+
+  it("ensures an external stylesheet link for SSR HTML", async () => {
+    const html = await ensureExternalStylesheetLinks(
+      "<html><head></head><body></body></html>",
+      { href: "/assets/app.css" },
+      BUILD_CONTEXT,
+    );
+
+    expect(html).toContain('<link rel="stylesheet" href="/assets/app.css" data-qui-styles></head>');
   });
 
   it("applies a non-root base to an array of resolved URLs", async () => {

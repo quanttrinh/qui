@@ -1,5 +1,5 @@
-import { type OptionItem } from "../shared/option/option";
-import { type OptionSourceAdapter } from "../shared/option/source-controller";
+import { type OptionSourceAdapter } from "../shared/controllers/option";
+import { type OptionItem } from "../shared/helpers/option";
 
 /** A `qui-option` element as read by Select and Combobox. */
 interface OptionElement extends HTMLElement {
@@ -15,9 +15,8 @@ function optionLabel(option: OptionElement): string {
   if (label !== "") {
     return label;
   }
-  // TypeScript types textContent as nullable; oxlint resolves it as string.
-  // oxlint-disable-next-line typescript/no-unnecessary-condition
-  const text = (option.textContent ?? "").trim();
+  const textContent: unknown = Reflect.get(option, "textContent");
+  const text = typeof textContent === "string" ? textContent.trim() : "";
   if (text !== "") {
     return text;
   }
@@ -31,7 +30,7 @@ function readOptionItems(host: HTMLElement): OptionItem[] {
     return {
       value: option.value ?? option.getAttribute("value") ?? "",
       label: optionLabel(option),
-      disabled: option.disabled === true || option.hasAttribute("disabled"),
+      disabled: Boolean(option.disabled) || option.hasAttribute("disabled"),
       keywords: keywords === "" ? undefined : keywords,
     };
   });
