@@ -65,7 +65,7 @@ if (needsHydrate) {
 }
 
 if (!isTest) {
-  outputTargets.push(utilitiesOutputTarget(build));
+  outputTargets.push(utilitiesOutputTarget(build, logger));
 }
 
 if (!isTest && !isDev) {

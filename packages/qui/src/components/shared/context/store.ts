@@ -30,7 +30,7 @@ function parentElement(node: Element): Element | undefined {
 /** Whether `node` is `ancestor` or lives inside its subtree, across shadow roots. */
 function isDescendant(node: Element, ancestor: Element): boolean {
   const contains = Reflect.get(ancestor, "contains");
-  if (typeof contains === "function" && Reflect.apply(contains, ancestor, [node]) === true) {
+  if (typeof contains === "function" && Reflect.apply(contains, ancestor, [node])) {
     return true;
   }
   let current: Element | undefined = node;
