@@ -17,10 +17,8 @@ describe("qui-input text case", () => {
     expect(spy).toHaveReceivedEventDetail({ value: "AB-12", unmaskedValue: "AB-12" });
   });
 
-  it("normalizes email values without using the unsupported selection API", async () => {
-    const { root, spyOnEvent, waitForChanges } = await render(
-      <qui-input inputType="email" textCase="lowercase" />,
-    );
+  it("normalizes typed values to lowercase", async () => {
+    const { root, spyOnEvent, waitForChanges } = await render(<qui-input textCase="lowercase" />);
     const spy = spyOnEvent("valuechange");
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");

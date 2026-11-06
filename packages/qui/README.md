@@ -153,7 +153,7 @@ defineComponents(defineButton, defineInput);
 ```
 
 ```html
-<qui-input placeholder="Email" input-type="email"></qui-input>
+<qui-input placeholder="Email" autocomplete="email"></qui-input>
 <qui-button variant="filled">Save</qui-button>
 ```
 
@@ -170,7 +170,7 @@ or per-tag network waterfall.
 - `<qui-switch>` — checked, disabled, required, `checkedchange`
 - `<qui-radio-group>` + `<qui-radio>` — orientation, disabled, required, `valuechange`
 - `<qui-field>` + label, helper text, error text and required indicator parts
-- `<qui-input>` — text/email/tel/search/password/url/number, masks, text case,
+- `<qui-input>` — text/tel/search/password/url/number, masks, text case,
   prefix/suffix slots, number stepping, password visibility, `valuechange`
 - `<qui-textarea>` — multi-line text, auto-growth, character counter, native
   resize modes, `valuechange`
@@ -213,7 +213,7 @@ Descendant controls consume the field through a DOM context.
 ```html
 <qui-field id="email" required>
     <qui-field-label>Email</qui-field-label>
-    <qui-input input-type="email" placeholder="you@example.com"></qui-input>
+    <qui-input autocomplete="email" placeholder="you@example.com"></qui-input>
     <qui-field-helper-text>We never share it.</qui-field-helper-text>
 </qui-field>
 ```
@@ -257,7 +257,7 @@ Use `text-case` to normalize the value itself, not just its appearance:
 
 ```html
 <qui-input text-case="uppercase"></qui-input>
-<qui-input text-case="lowercase" input-type="email"></qui-input>
+<qui-input text-case="lowercase"></qui-input>
 <qui-input text-case="uppercase" mask="[a-zA-Z]{2}-\d{4}"></qui-input>
 ```
 
@@ -304,12 +304,9 @@ Additional native hints are forwarded when they apply to the selected input
 type:
 
 ```html
-<qui-input input-type="email" multiple></qui-input>
-<qui-input input-type="url" keyboard-hint="go"></qui-input>
-<qui-input spellcheck-hint></qui-input>
+<qui-input input-type="url" keyboard-hint="go"></qui-input> <qui-input spellcheck-hint></qui-input>
 ```
 
-- `multiple` applies only to `email`.
 - `keyboard-hint` is forwarded for every input type, but is most useful for
   text-like inputs and virtual keyboards.
 - `spellcheck-hint` applies to `text` and `search`.

@@ -43,22 +43,6 @@ describe("qui-input", () => {
     expect(input.value).toBe("2");
   });
 
-  it("forwards multiple for email inputs", async () => {
-    const { root } = await render(<qui-input inputType="email" multiple />);
-    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
-    const input = queryControl<HTMLInputElement>(host, "input");
-
-    expect(input.multiple).toBe(true);
-  });
-
-  it("does not forward multiple to non-email inputs", async () => {
-    const { root } = await render(<qui-input multiple />);
-    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
-    const input = queryControl<HTMLInputElement>(host, "input");
-
-    expect(input.multiple).toBe(false);
-  });
-
   it("renders url inputs with keyboard hints", async () => {
     const { root } = await render(<qui-input inputType="url" keyboardHint="go" />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
@@ -85,14 +69,6 @@ describe("qui-input", () => {
     const input = queryControl<HTMLInputElement>(host, "input");
 
     expect(input.spellcheck).toBe(false);
-  });
-
-  it("does not forward spellcheck to email", async () => {
-    const { root } = await render(<qui-input inputType="email" spellcheckHint={false} />);
-    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
-    const input = queryControl<HTMLInputElement>(host, "input");
-
-    expect(input.hasAttribute("spellcheck")).toBe(false);
   });
 
   it("does not forward spellcheck to unsupported inputs", async () => {

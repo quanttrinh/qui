@@ -45,7 +45,7 @@ import { compileMask } from "./mask";
 import { styles } from "./styles";
 
 /** The input types `qui-input` can render. */
-export type InputType = "text" | "email" | "tel" | "search" | "password" | "number" | "url";
+export type InputType = "text" | "tel" | "search" | "password" | "number" | "url";
 
 /** The `inputmode` hints supported by the native input. */
 export type InputMode =
@@ -129,8 +129,6 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   @Prop() placeholder?: string;
   /** Autocomplete hint. */
   @Prop() autocomplete?: string;
-  /** Allows multiple comma-separated values. Only applies to `email` inputs. */
-  @Prop() multiple = false;
   /** Native `enterkeyhint` hint for the virtual keyboard. */
   @Prop() keyboardHint: InputEnterKeyHint | "" = "";
   /** Native `spellcheck` hint for text and search inputs. */
@@ -745,7 +743,6 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
               type={this.resolvedType}
               placeholder={this.placeholder}
               autocomplete={this.autocomplete}
-              multiple={this.inputType === "email" && this.multiple ? true : undefined}
               enterKeyHint={this.keyboardHint === "" ? undefined : this.keyboardHint}
               spellcheck={this.supportsSpellcheck ? this.spellcheckHint : undefined}
               autocapitalize={this.resolvedAutocapitalize}

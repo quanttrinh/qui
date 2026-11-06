@@ -46,17 +46,6 @@ describe("qui-input numeric", () => {
     expect(host.value).toBe("12");
   });
 
-  it("filters email inputs when the hint is set", async () => {
-    const { root } = await render(
-      <qui-input inputType="email" inputModeHint="numeric" value="a1b2" />,
-    );
-    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
-    const input = queryControl<HTMLInputElement>(host, "input");
-
-    expect(input.value).toBe("12");
-    expect(host.value).toBe("12");
-  });
-
   it("filters url inputs when the hint is set", async () => {
     const { root } = await render(
       <qui-input inputType="url" inputModeHint="numeric" value="a1b2" />,
