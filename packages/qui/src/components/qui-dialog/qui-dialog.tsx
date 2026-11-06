@@ -16,9 +16,9 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { nextId } from "../../helpers/id";
-import { createListenerStore } from "../shared/listener-store";
-import { lockDocumentScroll } from "../shared/scroll-lock";
+import { createListenerStore } from "../shared/controllers/listener-store";
+import { nextId } from "../shared/dom/id";
+import { lockDocumentScroll } from "../shared/dom/scroll-lock";
 import {
   clearDialog,
   provideDialog,
@@ -87,16 +87,16 @@ export class QuiDialog {
     description: `${this.baseId}::description`,
   };
 
-  public componentWillLoad(): void {
+  componentWillLoad(): void {
     provideDialog(this.host, this.context);
   }
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     provideDialog(this.host, this.context);
     this.syncScrollLock();
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     clearDialog(this.host);
     this.hosts.clear();
     this.releaseScrollLock?.();
@@ -106,7 +106,7 @@ export class QuiDialog {
 
   @Watch("open")
   private onOpenPropChange(): void {
-    if (this.open === true) {
+    if (this.open) {
       this.requestOpen();
     } else if (this.open === false) {
       this.requestClose();
@@ -130,21 +130,21 @@ export class QuiDialog {
 
   /** Opens the dialog. */
   @Method()
-  public async show(): Promise<void> {
+  async show(): Promise<void> {
     await Promise.resolve();
     this.requestOpen();
   }
 
   /** Closes the dialog. */
   @Method()
-  public async close(returnValue = ""): Promise<void> {
+  async close(returnValue = ""): Promise<void> {
     await Promise.resolve();
     this.requestClose(returnValue);
   }
 
   /** Whether the dialog is currently open. */
   @Method()
-  public async isDialogOpen(): Promise<boolean> {
+  async isDialogOpen(): Promise<boolean> {
     await Promise.resolve();
     return this.isOpen;
   }
@@ -186,7 +186,7 @@ export class QuiDialog {
     register: (control) => {
       this.control = control;
       this.applyControlSettings();
-      if (this.open === true || (this.open === undefined && this.defaultOpen)) {
+      if (this.open ?? this.defaultOpen) {
         control.show(this.isModal());
       }
       return () => {
@@ -259,7 +259,7 @@ export class QuiDialog {
     this.releaseScrollLock = undefined;
   }
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host class={styles.host}>
         <slot />

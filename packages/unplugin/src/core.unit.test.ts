@@ -19,7 +19,7 @@ import {
 } from "./core";
 
 describe("extractComponents", () => {
-  it("finds opening component tags, ignores closing tags, and deduplicates", () => {
+  it("finds opening component tags, ignores closing tags, and deduplicates", async () => {
     const code = `
       export const Form = () => (
         <qui-field>
@@ -30,68 +30,68 @@ describe("extractComponents", () => {
       );
     `;
 
-    expect(extractComponents(code, "/app/Form.tsx")).toEqual([
+    expect(await extractComponents(code, "/app/Form.tsx")).toEqual([
       "qui-button",
       "qui-field",
       "qui-input",
     ]);
   });
 
-  it("ignores tags inside strings and comments", () => {
+  it("ignores tags inside strings and comments", async () => {
     const code = `
       const example = "<qui-button>";
       // <qui-input>
       export const Form = () => <qui-card />;
     `;
 
-    expect(extractComponents(code, "/app/Form.tsx")).toEqual(["qui-card"]);
+    expect(await extractComponents(code, "/app/Form.tsx")).toEqual(["qui-card"]);
   });
 
-  it("finds component calls", () => {
+  it("finds component calls", async () => {
     const code = `
       h("qui-button", null);
       React.createElement("qui-input");
       jsx("div", null);
     `;
 
-    expect(extractComponents(code, "/app/render.ts")).toEqual(["qui-button", "qui-input"]);
+    expect(await extractComponents(code, "/app/render.ts")).toEqual(["qui-button", "qui-input"]);
   });
 
-  it("uses lexical extraction for Astro and MDX", () => {
+  it("uses lexical extraction for Astro and MDX", async () => {
     const astro = '$$render`<qui-select><qui-option value="a">A</qui-option></qui-select>`;';
     const mdx = "# Example\n\n<qui-button>Save</qui-button>";
 
-    expect(extractComponents(astro, "/app/page.astro")).toEqual(["qui-option", "qui-select"]);
-    expect(extractComponents(mdx, "/app/page.mdx")).toEqual(["qui-button"]);
+    expect(await extractComponents(astro, "/app/page.astro")).toEqual(["qui-option", "qui-select"]);
+    expect(await extractComponents(mdx, "/app/page.mdx")).toEqual(["qui-button"]);
   });
 
-  it("ignores unterminated tags in malformed source", () => {
-    expect(extractComponents("export const x = <qui-button", "/app/broken.tsx")).toEqual([]);
+  it("ignores unterminated tags in malformed source", async () => {
+    expect(await extractComponents("export const x = <qui-button", "/app/broken.tsx")).toEqual([]);
   });
 
-  it("skips source that cannot contain a component tag", () => {
-    expect(extractComponents("export const value = 1;", "/app/value.ts")).toEqual([]);
+  it("skips source that cannot contain a component tag", async () => {
+    expect(await extractComponents("export const value = 1;", "/app/value.ts")).toEqual([]);
   });
 
-  it("drops malformed component tags", () => {
-    expect(extractComponents("const value = <qui- />;", "/app/value.tsx")).toEqual([]);
+  it("drops malformed component tags", async () => {
+    expect(await extractComponents("const value = <qui- />;", "/app/value.tsx")).toEqual([]);
   });
 
-  it("resolves escaped static tag names", () => {
+  it("resolves escaped static tag names", async () => {
     const stringTag = String.raw`h("qui\u002Dbutton");`;
     const templateTag = ["h(`", String.raw`\u0071ui-button`, "`);"].join("");
 
-    expect(extractComponents(stringTag, "/app/render.ts")).toEqual(["qui-button"]);
-    expect(extractComponents(templateTag, "/app/render.ts")).toEqual(["qui-button"]);
+    expect(await extractComponents(stringTag, "/app/render.ts")).toEqual(["qui-button"]);
+    expect(await extractComponents(templateTag, "/app/render.ts")).toEqual(["qui-button"]);
   });
 
-  it("walks deeply nested and wide JSX trees", () => {
+  it("walks deeply nested and wide JSX trees", async () => {
     const depth = 2000;
     const deep = `const view = ${"<div>".repeat(depth)}<qui-button />${"</div>".repeat(depth)};`;
     const wide = `const view = <div>${"<qui-card />".repeat(5000)}</div>;`;
 
-    expect(extractComponents(deep, "/app/deep.tsx")).toEqual(["qui-button"]);
-    expect(extractComponents(wide, "/app/wide.tsx")).toEqual(["qui-card"]);
+    expect(await extractComponents(deep, "/app/deep.tsx")).toEqual(["qui-button"]);
+    expect(await extractComponents(wide, "/app/wide.tsx")).toEqual(["qui-card"]);
   });
 });
 

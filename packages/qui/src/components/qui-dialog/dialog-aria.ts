@@ -1,4 +1,4 @@
-import { setAriaDescribedBy, setAriaLabelledBy } from "../shared/aria";
+import { setAriaDescribedBy, setAriaLabelledBy } from "../shared/aria/aria";
 
 /** Lazily resolves the mounted dialog title and description host elements. */
 export interface DialogHostRefs {
@@ -25,15 +25,15 @@ export interface DialogHostRegistry extends DialogHostRegistration {
  * `onChange` fires whenever the registered title or description changes.
  */
 function createDialogHostRegistry(onChange: () => void): DialogHostRegistry {
-  let titleHost: HTMLElement | undefined = undefined;
-  let descriptionHost: HTMLElement | undefined = undefined;
+  let titleHost: HTMLElement | undefined;
+  let descriptionHost: HTMLElement | undefined;
 
   const registerTitle = (host: HTMLElement): (() => void) => {
     if (titleHost !== host) {
       titleHost = host;
       onChange();
     }
-    return (): void => {
+    return () => {
       // Ignore stale unregisters after a newer title replaced this one.
       if (titleHost === host) {
         titleHost = undefined;
@@ -47,7 +47,7 @@ function createDialogHostRegistry(onChange: () => void): DialogHostRegistry {
       descriptionHost = host;
       onChange();
     }
-    return (): void => {
+    return () => {
       if (descriptionHost === host) {
         descriptionHost = undefined;
         onChange();

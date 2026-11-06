@@ -1,4 +1,4 @@
-import { createContextStore } from "../shared/context-store";
+import { createContextStore } from "../shared/context/context-store";
 import { type TabsTriggerRegistration } from "./controller";
 
 export type TabsVariant = "primary" | "secondary";
@@ -40,7 +40,6 @@ export interface TabsContext {
   subscribe: (listener: () => void) => () => void;
 }
 
-// oxlint-disable-next-line stencil/ban-side-effects -- Allocating a context map has no side effects.
 const tabs = createContextStore<TabsContext>("tabs");
 
 function provideTabs(host: HTMLElement, context: TabsContext): void {

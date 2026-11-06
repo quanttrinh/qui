@@ -1,13 +1,12 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { isHTMLFormElement } from "../../helpers/dom";
-import { queryControl, queryPartIn, resolveHost } from "../../test-utils/component";
-import { nextFrame, waitForShadowStyles } from "../../test-utils/dom-ready";
-import { expectFocusedDeep, typeInto } from "../../test-utils/interactions";
-import { deepQuery, queryInside } from "../../test-utils/shadow";
+import { queryControl, queryPartIn, resolveHost } from "../../../tests/test-utils/component";
+import { nextFrame, waitForShadowStyles } from "../../../tests/test-utils/dom-ready";
+import { expectFocusedDeep, typeInto } from "../../../tests/test-utils/interactions";
+import { deepQuery, queryInside } from "../../../tests/test-utils/shadow";
+import { isHTMLFormElement } from "../shared/dom/dom";
 
-// oxlint-disable-next-line unicorn/prefer-number-coercion
-const pixels = (value: string): number => Number.parseFloat(value);
+const pixels = (value: string): number => Number(value.replace(/px$/u, ""));
 
 const PIXELS = /px$/u;
 
@@ -325,7 +324,6 @@ describe("qui-textarea form state", () => {
       "textarea",
     );
     const host = resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea");
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     const restore = Reflect.get(host, "formStateRestoreCallback") as (state: string) => void;
 
     restore.call(host, JSON.stringify(["restored"]));

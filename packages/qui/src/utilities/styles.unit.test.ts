@@ -6,7 +6,7 @@ import {
   FakeNode,
   type FakeDocument,
   linkHrefs,
-} from "../test-utils/fake-dom";
+} from "../../tests/test-utils/fake-dom";
 
 interface StylesModule {
   SHADOW_STYLES_MARKER: string;
@@ -50,18 +50,16 @@ class FakeMutationObserver {
     FakeMutationObserver.instances.push(this);
   }
 
-  public trigger(records: MutationRecord[]): void {
+  trigger(records: MutationRecord[]): void {
     this.callback(records);
   }
 }
 
 function attributeRecord(target: FakeNode, attributeName: string): MutationRecord {
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- The mutation callback reads only these fields.
   return { type: "attributes", target, attributeName } as unknown as MutationRecord;
 }
 
 function childListRecord(added: FakeNode[], removed: FakeNode[]): MutationRecord {
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- The mutation callback reads only these fields.
   return {
     type: "childList",
     addedNodes: added,

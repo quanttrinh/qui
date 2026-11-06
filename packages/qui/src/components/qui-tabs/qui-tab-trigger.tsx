@@ -3,13 +3,13 @@ import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@sten
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { dataAttr } from "../../helpers/attr";
-import { isHTMLElement } from "../../helpers/dom";
-import { setAriaControls } from "../shared/aria";
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
-import { RegistrationReconciler } from "../shared/registration-reconciler";
-import { focusRingInset } from "../shared/styles";
+import { setAriaControls } from "../shared/aria/aria";
+import { dataAttr } from "../shared/aria/attr";
+import { consumeContextPart } from "../shared/context/context-part";
+import { ContextPartElement } from "../shared/context/context-part-element";
+import { RegistrationReconciler } from "../shared/controllers/registration-reconciler";
+import { isHTMLElement } from "../shared/dom/dom";
+import { focusRingInset } from "../shared/styles/styles";
 import { consumeTabs, type TabsContext, type TabsVariant } from "./context";
 
 const styles = {
@@ -144,19 +144,19 @@ export class QuiTabTrigger extends ContextPartElement<TabsContext> {
     return this.contextPart.context;
   }
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     this.syncRegistration();
     this.syncAria();
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     this.registration.clear();
     super.disconnectedCallback();
   }
 
   private syncRegistration(): void {
     const { tabs, triggerEl } = this;
-    if (tabs === undefined || triggerEl === undefined) {
+    if (!tabs || !triggerEl) {
       return;
     }
     this.registration.reconcile([tabs, this.value, triggerEl], () =>
@@ -166,7 +166,7 @@ export class QuiTabTrigger extends ContextPartElement<TabsContext> {
 
   private syncAria(): void {
     const { tabs, triggerEl } = this;
-    if (tabs === undefined || triggerEl === undefined) {
+    if (!tabs || !triggerEl) {
       return;
     }
     const panel = tabs.getPanel(this.value);
@@ -192,7 +192,7 @@ export class QuiTabTrigger extends ContextPartElement<TabsContext> {
     this.tabs?.blur();
   };
 
-  public render(): VNode {
+  render(): VNode {
     const variant = this.tabs?.variant() ?? "primary";
     const orientation = this.tabs?.orientation() ?? "horizontal";
     const textDirection = this.tabs?.textDirection() ?? "ltr";

@@ -1,8 +1,8 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { expectAriaElements } from "../../test-utils/aria";
-import { queryHost, queryPartIn } from "../../test-utils/component";
-import { shadowOf } from "../../test-utils/shadow";
+import { expectAriaElements } from "../../../tests/test-utils/aria";
+import { queryHost, queryPartIn } from "../../../tests/test-utils/component";
+import { shadowOf } from "../../../tests/test-utils/shadow";
 
 function queryDialog(root: HTMLElement): HTMLDialogElement {
   return queryPartIn<HTMLDialogElement>(queryHost(root, "qui-dialog-content"), "dialog");
@@ -66,7 +66,6 @@ function expectDialogAria(
   });
 }
 
-// oxlint-disable-next-line eslint/max-lines-per-function -- Integration-style browser coverage.
 describe("qui-dialog", () => {
   it("opens modally from its trigger and closes from its close button", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(

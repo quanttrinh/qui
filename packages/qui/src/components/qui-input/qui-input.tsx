@@ -1,4 +1,3 @@
-// oxlint-disable max-dependencies, max-lines -- the input component is the integration point for its helpers.
 import {
   resolveVar,
   AttachInternals,
@@ -18,21 +17,21 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { cx } from "#styled-system/css";
 
-import { ariaAttr, dataAttr } from "../../helpers/attr";
-import { applyTextCase, type TextCase } from "../../helpers/case";
-import { isHTMLInputElement } from "../../helpers/dom";
-import { nextId } from "../../helpers/id";
-import { applyMask, formatMask, rawFromMasked, unmask } from "../../helpers/mask";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { AddIcon, RemoveIcon, VisibilityIcon, VisibilityOffIcon } from "../qui-icon/icons";
-import { applyFieldAria } from "../shared/field/aria";
-import { createFieldControl, focusElement } from "../shared/field/control";
-import { FormControlBase } from "../shared/form-control/component-base";
-import { FormController, type FormValidity } from "../shared/form-control/controller";
+import { ariaAttr, dataAttr } from "../shared/aria/attr";
+import { isHTMLInputElement } from "../shared/dom/dom";
+import { nextId } from "../shared/dom/id";
+import { applyFieldAria } from "../shared/forms/field/aria";
+import { createFieldControl, focusElement } from "../shared/forms/field/control";
+import { FormControlBase } from "../shared/forms/form-control/component-base";
+import { FormController, type FormValidity } from "../shared/forms/form-control/controller";
+import { applyTextCase, type TextCase } from "./case";
 import {
   appendAcceptedNumericOrDecimalCharacter,
   filterNumericOrDecimalInput,
 } from "./input-filter";
+import { applyMask, formatMask, rawFromMasked, unmask } from "./mask";
 import { styles } from "./styles";
 
 /** The input types `qui-input` can render. */
@@ -192,31 +191,31 @@ export class QuiInput extends FormControlBase {
     return this.form;
   }
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     super.connectedCallback();
     ensureShadowStylesheet(this.host);
   }
 
-  public componentWillLoad(): void {
+  componentWillLoad(): void {
     super.componentWillLoad();
     this.normalizeStep();
     this.initialValue = String(this.defaultValue ?? this.value ?? "");
     this.syncInitialValue();
   }
 
-  public componentDidLoad(): void {
+  componentDidLoad(): void {
     super.componentDidLoad();
     // Applies the initial value to the native input; state is already seeded.
     this.syncInitialValue();
     this.form.sync();
   }
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     super.componentDidRender();
     applyFieldAria(this.inputEl, this.form.fieldApi);
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     super.disconnectedCallback();
     this.inputEl?.removeEventListener("beforeinput", this.handleBeforeInput);
     this.clearHold();
@@ -224,7 +223,7 @@ export class QuiInput extends FormControlBase {
 
   /** Moves focus to the internal native input. */
   @Method()
-  public async focusControl(options?: FocusOptions): Promise<void> {
+  async focusControl(options?: FocusOptions): Promise<void> {
     await focusElement(this.inputEl, options);
   }
 
@@ -328,7 +327,7 @@ export class QuiInput extends FormControlBase {
   }
 
   private get inputProps(): Record<string, string | number | boolean | undefined> {
-    const props: Record<string, unknown> =
+    const props: Record<string, string | number | boolean | undefined> =
       this.form.fieldApi === undefined
         ? {
             id: this.inputId ?? (this.host.id || this.generatedId),
@@ -343,8 +342,7 @@ export class QuiInput extends FormControlBase {
           }
         : { ...this.form.fieldApi.getInputProps() };
     delete props.required;
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-    return props as Record<string, string | number | boolean | undefined>;
+    return props;
   }
 
   private syncInitialValue(): void {
@@ -356,7 +354,7 @@ export class QuiInput extends FormControlBase {
   }
 
   private get allowNegative(): boolean {
-    return this.min === undefined || this.min < 0;
+    return this.min == null || this.min < 0;
   }
 
   private normalizeInputValue(raw: string): string {
@@ -430,7 +428,7 @@ export class QuiInput extends FormControlBase {
     const element = this.inputEl;
     return `${element?.value ?? ""}\u0001${this.form.isRequired ? 1 : 0}\u0001${
       this.form.isInvalid ? 1 : 0
-    }\u0001${element?.validity.valid === true ? 1 : 0}\u0001${element?.validationMessage ?? ""}`;
+    }\u0001${element?.validity.valid ? 1 : 0}\u0001${element?.validationMessage ?? ""}`;
   }
 
   private caseAtCaret(value: string, caret: number): { caret: number; value: string } {
@@ -517,7 +515,7 @@ export class QuiInput extends FormControlBase {
   /** Whether the value can still move one `step` in the given direction. */
   private canStep(direction: 1 | -1): boolean {
     const parsed = this.inputEl?.valueAsNumber;
-    if (parsed === undefined || !Number.isFinite(parsed)) {
+    if (parsed == null || !Number.isFinite(parsed)) {
       return true;
     }
     const limit = direction > 0 ? this.max : this.min;
@@ -594,7 +592,7 @@ export class QuiInput extends FormControlBase {
     this.passwordVisible = !this.passwordVisible;
   };
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host class={styles.host}>
         <div data-scope="input" data-part="root" part="root" class={styles.root}>

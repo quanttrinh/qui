@@ -3,14 +3,14 @@ import { resolveVar, Component, Element, h, Host, Prop, State, type VNode } from
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { dataAttr } from "../../helpers/attr";
-import { hasFocusableDescendant } from "../../helpers/dom";
-import { setAriaControls, setAriaLabelledBy } from "../shared/aria";
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
-import { RegistrationReconciler } from "../shared/registration-reconciler";
-import { focusRing } from "../shared/styles";
+import { setAriaControls, setAriaLabelledBy } from "../shared/aria/aria";
+import { dataAttr } from "../shared/aria/attr";
+import { consumeContextPart } from "../shared/context/context-part";
+import { ContextPartElement } from "../shared/context/context-part-element";
+import { RegistrationReconciler } from "../shared/controllers/registration-reconciler";
+import { focusRing } from "../shared/styles/styles";
 import { consumeTabs, type TabsContext } from "./context";
+import { hasFocusableDescendant } from "./focusable";
 
 const styles = {
   host: css({ display: "contents" }),
@@ -62,7 +62,7 @@ export class QuiTabPanel extends ContextPartElement<TabsContext> {
     return this.contextPart.context;
   }
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     super.connectedCallback();
     if (typeof MutationObserver !== "undefined") {
       this.contentObserver = new MutationObserver(() => {
@@ -77,13 +77,13 @@ export class QuiTabPanel extends ContextPartElement<TabsContext> {
     }
   }
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     this.syncRegistration();
     this.syncAria();
     this.scheduleTabIndex();
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     this.contentObserver?.disconnect();
     this.contentObserver = undefined;
     this.registration.clear();
@@ -102,7 +102,7 @@ export class QuiTabPanel extends ContextPartElement<TabsContext> {
 
   private syncAria(): void {
     const { tabs, panelEl } = this;
-    if (tabs === undefined || panelEl === undefined) {
+    if (!tabs || !panelEl) {
       return;
     }
     const trigger = tabs.getTrigger(this.value);
@@ -145,7 +145,7 @@ export class QuiTabPanel extends ContextPartElement<TabsContext> {
     }
   }
 
-  public render(): VNode {
+  render(): VNode {
     const selected = this.tabs?.isSelected(this.value) ?? false;
     const orientation = this.tabs?.orientation() ?? "horizontal";
     const textDirection = this.tabs?.textDirection() ?? "ltr";

@@ -1,10 +1,10 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { expectAriaElements } from "../../test-utils/aria";
-import { queryHost, queryPartIn } from "../../test-utils/component";
-import { waitForShadowStyles } from "../../test-utils/dom-ready";
-import { expectFocusedDeep } from "../../test-utils/interactions";
-import { isDeepActiveElement, shadowOf } from "../../test-utils/shadow";
+import { expectAriaElements } from "../../../tests/test-utils/aria";
+import { queryHost, queryPartIn } from "../../../tests/test-utils/component";
+import { waitForShadowStyles } from "../../../tests/test-utils/dom-ready";
+import { expectFocusedDeep } from "../../../tests/test-utils/interactions";
+import { isDeepActiveElement, shadowOf } from "../../../tests/test-utils/shadow";
 
 function queryParts(root: HTMLElement): {
   labelHost: HTMLElement;
@@ -23,7 +23,6 @@ function queryParts(root: HTMLElement): {
   };
 }
 
-// oxlint-disable-next-line eslint/max-lines-per-function -- Integration-style browser coverage.
 describe("qui-field", () => {
   it("wires ids and ARIA across label, helper text, and error text", async () => {
     const { root, waitForChanges } = await render(

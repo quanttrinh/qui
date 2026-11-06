@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createTestControllerHost } from "../../test-utils/controller-host";
+import { createTestControllerHost } from "../../../tests/test-utils/controller-host";
 import { AccordionController } from "./controller";
 
 function createEnvironment(options?: {
@@ -26,7 +26,6 @@ function createEnvironment(options?: {
   controller.hostWillLoad();
   for (const [index, value] of ["one", "two", "three"].entries()) {
     const trigger = triggers[index];
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     const button = trigger as unknown as HTMLButtonElement;
     controller.registerTrigger(value, button, button);
   }
@@ -104,7 +103,6 @@ describe("AccordionController", () => {
       disabled: false,
       focus: vi.fn(),
     };
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     const button = replacement as unknown as HTMLButtonElement;
     controller.registerTrigger("one", button, button);
 
@@ -118,14 +116,12 @@ describe("AccordionController", () => {
 
   it("ignores stale teardown after a trigger is replaced", () => {
     const { controller, triggers } = createEnvironment();
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     const first = triggers[0] as unknown as HTMLButtonElement;
     const unregisterFirst = controller.registerTrigger("one", first, first);
     const replacement = {
       disabled: false,
       focus: vi.fn(),
     };
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     const replacementButton = replacement as unknown as HTMLButtonElement;
     controller.registerTrigger("one", replacementButton, replacementButton);
 
@@ -137,9 +133,7 @@ describe("AccordionController", () => {
 
   it("tracks content hosts by value", () => {
     const { controller } = createEnvironment();
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     const first = { id: "first" } as HTMLElement;
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     const second = { id: "second" } as HTMLElement;
     const unregisterFirst = controller.registerContent("one", first);
     controller.registerContent("two", second);

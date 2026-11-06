@@ -72,11 +72,11 @@ export class QuiCard {
   /** The visual style. */
   @Prop() variant: CardVariant = "elevated";
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     ensureShadowStylesheet(this.host);
   }
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host class={styles.host}>
         <div

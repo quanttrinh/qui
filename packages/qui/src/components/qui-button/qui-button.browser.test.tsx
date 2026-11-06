@@ -1,6 +1,6 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryPartIn } from "../../test-utils/component";
+import { queryPartIn } from "../../../tests/test-utils/component";
 
 describe("qui-button", () => {
   it("renders variant, size, and icon-only state", async () => {

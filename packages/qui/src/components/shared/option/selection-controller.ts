@@ -1,7 +1,5 @@
-import {
-  ReactiveControllerBase,
-  type ReactiveControllerHost,
-} from "../reactive-control/controller";
+import { ControlledControllerBase } from "../controllers/controlled-controller";
+import { type ReactiveControllerHost } from "../controllers/reactive-control/controller";
 import { type OptionItem } from "./option";
 
 interface OptionSelectionChangeDetails<TItem extends OptionItem> {
@@ -20,32 +18,38 @@ interface OptionSelectionControllerOptions<TItem extends OptionItem> {
 }
 
 /** Selection state shared by select and combobox. */
-export class OptionSelectionController<
-  TItem extends OptionItem,
-> extends ReactiveControllerBase<ReactiveControllerHost> {
+export class OptionSelectionController<TItem extends OptionItem> extends ControlledControllerBase<
+  string[]
+> {
   private readonly options: OptionSelectionControllerOptions<TItem>;
-  private state: string[] = [];
-  private initial: string[] = [];
 
   constructor(host: ReactiveControllerHost, options: OptionSelectionControllerOptions<TItem>) {
-    super(host);
+    super(host, {
+      getValue: options.getValue,
+      getDefaultValue: () => {
+        const value = options.getDefaultValue();
+        return value === undefined ? undefined : [...value];
+      },
+      getFallback: () => [],
+      onChange: (value: string[]) => {
+        const items = value
+          .map((entry) => options.getItems().find((item) => item.value === entry))
+          .filter((item): item is TItem => item !== undefined);
+        options.onChange({ value: [...value], items });
+      },
+      copy: (value: string[]) => [...value],
+    });
     this.options = options;
   }
 
-  public get selected(): string[] {
-    return this.options.getValue() ?? this.state;
+  get selected(): string[] {
+    return this.value;
   }
 
-  public hostWillLoad(): void {
-    const initial = this.options.getDefaultValue() ?? this.options.getValue() ?? [];
-    this.initial = [...initial];
-    this.state = [...initial];
-  }
-
-  public select(value: string): TItem | undefined {
+  select(value: string): TItem | undefined {
     const items = this.options.getItems();
     const item = items.find((entry) => entry.value === value);
-    if (item?.disabled === true || this.options.isReadOnly()) {
+    if (item?.disabled || this.options.isReadOnly()) {
       return undefined;
     }
     this.apply(this.nextValues(value));
@@ -53,23 +57,8 @@ export class OptionSelectionController<
   }
 
   /** Applies raw values, e.g. from a custom combobox value. */
-  public apply(next: readonly string[]): void {
-    this.state = [...next];
-    const items = next
-      .map((value) => this.options.getItems().find((item) => item.value === value))
-      .filter((item): item is TItem => item !== undefined);
-    this.options.onChange({ value: [...next], items });
-    this.requestUpdate();
-  }
-
-  public reset(): void {
-    this.state = [...this.initial];
-    this.requestUpdate();
-  }
-
-  public restore(values: readonly string[]): void {
-    this.state = [...values];
-    this.requestUpdate();
+  apply(next: readonly string[]): void {
+    this.commit([...next]);
   }
 
   private nextValues(value: string): string[] {

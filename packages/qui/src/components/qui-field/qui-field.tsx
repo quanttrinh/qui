@@ -2,12 +2,17 @@ import { resolveVar, Component, Element, h, Host, Prop, Watch, type VNode } from
 
 import { styleUrls } from "#qui-style-url";
 
-import { dataAttr } from "../../helpers/attr";
-import { nextId } from "../../helpers/id";
 import { ensureShadowStylesheet } from "../../utilities/styles";
-import { clearField, provideField, type FieldApi, type FieldIds } from "../shared/field/context";
-import { FieldPartRegistry } from "../shared/field/registry";
-import { createListenerStore } from "../shared/listener-store";
+import { dataAttr } from "../shared/aria/attr";
+import { createListenerStore } from "../shared/controllers/listener-store";
+import { nextId } from "../shared/dom/id";
+import {
+  clearField,
+  provideField,
+  type FieldApi,
+  type FieldIds,
+} from "../shared/forms/field/context";
+import { FieldPartRegistry } from "../shared/forms/field/registry";
 import { fieldStyles } from "./styles";
 
 /**
@@ -45,19 +50,19 @@ export class QuiField {
   private readonly listeners = createListenerStore();
   private field?: FieldApi;
 
-  public componentWillLoad(): void {
+  componentWillLoad(): void {
     this.field = this.createFieldApi();
     provideField(this.host, this.field);
   }
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     if (this.field !== undefined) {
       provideField(this.host, this.field);
     }
     ensureShadowStylesheet(this.host);
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     clearField(this.host);
     this.listeners.clear();
   }
@@ -159,7 +164,7 @@ export class QuiField {
     };
   }
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host
         id={this.ids.root}

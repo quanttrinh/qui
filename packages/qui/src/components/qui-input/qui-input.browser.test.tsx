@@ -1,7 +1,7 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryControl, resolveHost } from "../../test-utils/component";
-import { expectFocusedDeep, typeInto } from "../../test-utils/interactions";
+import { queryControl, resolveHost } from "../../../tests/test-utils/component";
+import { expectFocusedDeep, typeInto } from "../../../tests/test-utils/interactions";
 
 function queryVisibilityTrigger(host: Element): HTMLButtonElement {
   return queryControl<HTMLButtonElement>(host, "[data-part=visibility-trigger]");

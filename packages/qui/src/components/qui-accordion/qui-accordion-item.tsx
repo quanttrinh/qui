@@ -3,9 +3,9 @@ import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@sten
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { dataAttr } from "../../helpers/attr";
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
+import { dataAttr } from "../shared/aria/attr";
+import { consumeContextPart } from "../shared/context/context-part";
+import { ContextPartElement } from "../shared/context/context-part-element";
 import {
   clearAccordionItem,
   consumeAccordion,
@@ -49,7 +49,7 @@ export class QuiAccordionItem extends ContextPartElement<AccordionContext> {
     consume: consumeAccordion,
     setup: (accordion): (() => void) => {
       provideAccordionItem(this.host, this.context(accordion));
-      return (): void => {
+      return () => {
         clearAccordionItem(this.host);
       };
     },
@@ -69,12 +69,12 @@ export class QuiAccordionItem extends ContextPartElement<AccordionContext> {
   private context(accordion: AccordionContext): AccordionItemContext {
     return {
       ...accordion,
-      item: (): AccordionItem => this.item(),
-      isItemDisabled: (): boolean => this.isDisabled(accordion),
+      item: () => this.item(),
+      isItemDisabled: () => this.isDisabled(accordion),
     };
   }
 
-  public render(): VNode {
+  render(): VNode {
     const accordion = this.contextPart.context;
     const expanded = accordion?.isExpanded(this.value) ?? false;
     const focused = accordion?.isFocused(this.value) ?? false;

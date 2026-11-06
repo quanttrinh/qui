@@ -4,7 +4,7 @@ import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
 import { ensureShadowStylesheet } from "../../utilities/styles";
-import { focusRing } from "../shared/styles";
+import { focusRing } from "../shared/styles/styles";
 
 export type ButtonVariant = "filled" | "tonal" | "elevated" | "outlined" | "text";
 export type ButtonSize = "sm" | "md" | "lg";
@@ -112,7 +112,7 @@ export class QuiButton {
   /** Native button type. */
   @Prop() type: "button" | "submit" | "reset" = "button";
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     ensureShadowStylesheet(this.host);
   }
 
@@ -126,10 +126,10 @@ export class QuiButton {
     };
   }
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host class={styles.host}>
-        {this.href !== undefined && this.href !== "" ? (
+        {this.href ? (
           <a
             {...this.dataProps}
             part="button"
@@ -139,7 +139,7 @@ export class QuiButton {
             rel={this.rel}
             download={this.download}
             tabIndex={this.disabled ? -1 : undefined}
-            aria-label={this.label === undefined || this.label === "" ? undefined : this.label}
+            aria-label={this.label === "" ? undefined : this.label}
             aria-disabled={this.disabled ? "true" : undefined}
             onClick={(event) => {
               if (this.disabled) {
@@ -156,7 +156,7 @@ export class QuiButton {
             class={styles.root}
             type={this.type}
             disabled={this.disabled}
-            aria-label={this.label === undefined || this.label === "" ? undefined : this.label}
+            aria-label={this.label === "" ? undefined : this.label}
           >
             <slot />
           </button>

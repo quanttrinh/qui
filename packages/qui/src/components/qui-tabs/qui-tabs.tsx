@@ -15,11 +15,11 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { dataAttr } from "../../helpers/attr";
-import { nextId } from "../../helpers/id";
 import { ensureShadowStylesheet } from "../../utilities/styles";
-import { createListenerStore } from "../shared/listener-store";
-import { ReactiveControlBase } from "../shared/reactive-control/component-base";
+import { dataAttr } from "../shared/aria/attr";
+import { createListenerStore } from "../shared/controllers/listener-store";
+import { ReactiveControlBase } from "../shared/controllers/reactive-control/component-base";
+import { nextId } from "../shared/dom/id";
 import { clearTabs, provideTabs, type TabsContext, type TabsVariant } from "./context";
 import { TabsController } from "./controller";
 
@@ -131,12 +131,11 @@ export class QuiTabs extends ReactiveControlBase {
     subscribe: this.listeners.subscribe,
   };
 
-  public requestUpdate(): void {
-    super.requestUpdate();
+  protected onRequestUpdate(): void {
     this.listeners.notify();
   }
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     super.connectedCallback();
     if (this.idBase === "") {
       this.idBase = this.host.id || this.generatedId;
@@ -145,13 +144,13 @@ export class QuiTabs extends ReactiveControlBase {
     ensureShadowStylesheet(this.host);
   }
 
-  public componentWillLoad(): void {
+  componentWillLoad(): void {
     super.componentWillLoad();
     this.idBase = this.host.id || this.generatedId;
     provideTabs(this.host, this.context);
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTabs(this.host);
     this.listeners.clear();
@@ -185,7 +184,7 @@ export class QuiTabs extends ReactiveControlBase {
     return `${this.rootId}:content-${value}`;
   }
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host class={styles.host}>
         <div

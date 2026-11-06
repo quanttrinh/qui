@@ -772,7 +772,7 @@ Tests use `@stencil/vitest` with four projects:
 - `*.unit.test.ts` / `*.unit.test.tsx` — Node tests for controllers and helpers
 - `*.integration.test.ts` — SSR and hydration tests in real browsers
 - `*.browser.test.tsx` — full Chromium DOM, forms, focus and popover suite
-- `*.smoke.browser.test.tsx` — Chromium, Firefox and WebKit smoke suite
+- `test/**/*.smoke.browser.test.tsx` — Chromium, Firefox and WebKit smoke suite
 
 ```sh
 bun run test:unit
@@ -801,12 +801,12 @@ fields:
 
 ```ts
 export class QuiExample extends ReactiveControlBase {
-  @Element() host!: HTMLQuiExampleElement;
+    @Element() host!: HTMLQuiExampleElement;
 
-  private readonly form = new FormController(this, {
-    getInternals: () => this.internals,
-    // ...
-  });
+    private readonly form = new FormController(this, {
+        getInternals: () => this.internals,
+        // ...
+    });
 }
 ```
 

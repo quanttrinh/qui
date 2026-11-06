@@ -3,8 +3,8 @@ import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/co
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
+import { consumeContextPart } from "../shared/context/context-part";
+import { ContextPartElement } from "../shared/context/context-part-element";
 import { consumeDialog, type DialogContext } from "./context";
 
 const styles = {
@@ -42,7 +42,7 @@ export class QuiDialogTitle extends ContextPartElement<DialogContext> {
     return this.contextPart.context;
   }
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host id={this.dialog?.ids.title} class={styles.host}>
         <h2 class={styles.title} part="title">

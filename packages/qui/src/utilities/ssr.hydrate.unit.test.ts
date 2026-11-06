@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { UNDEFINED_CONTENT_TAGS } from "../../build/undefined-content";
-import { loadHydrate } from "../test-utils/hydrate";
+import { loadHydrate } from "../../tests/test-utils/hydrate";
 import { withShadowStylesheet } from "./ssr";
 
 const SHADOW_LINK = /<link[^>]*data-qui-styles[^>]*>/gu;

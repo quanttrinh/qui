@@ -3,10 +3,10 @@ import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/co
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { isElement } from "../../helpers/dom";
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
-import { consumeField, type FieldApi } from "../shared/field/context";
+import { consumeContextPart } from "../shared/context/context-part";
+import { ContextPartElement } from "../shared/context/context-part-element";
+import { isElement } from "../shared/dom/dom";
+import { consumeField, type FieldApi } from "../shared/forms/field/context";
 import { fieldStyles } from "./styles";
 
 const styles = {
@@ -45,7 +45,7 @@ export class QuiFieldLabel extends ContextPartElement<FieldApi> {
 
   private readonly handleClick = (event: MouseEvent): void => {
     const { field } = this;
-    if (field === undefined || field.disabled()) {
+    if (!field || field.disabled()) {
       return;
     }
 
@@ -61,7 +61,7 @@ export class QuiFieldLabel extends ContextPartElement<FieldApi> {
     field.clickControl();
   };
 
-  public render(): VNode {
+  render(): VNode {
     const props = this.field?.getLabelProps();
 
     return (

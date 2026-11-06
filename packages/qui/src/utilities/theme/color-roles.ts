@@ -66,7 +66,6 @@ function toKebabCase(value: string): string {
 
 /** MD3 role -> CSS custom property name, computed once. */
 function createCssVariableNames(): Record<ColorRole, `--${string}`> {
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   const names = {} as Record<ColorRole, `--${string}`>;
   for (const role of colorRoles) {
     names[role] = `--md-sys-color-${toKebabCase(role)}`;

@@ -1,4 +1,4 @@
-import { parseSync, visitorKeys, type Node } from "oxc-parser";
+import { parse, visitorKeys, type Node } from "oxc-parser";
 import { parseFragment, type DefaultTreeAdapterTypes } from "parse5";
 import { extname } from "pathe";
 
@@ -15,7 +15,7 @@ function pushChildNodes(node: Node, stack: Node[]): void {
   for (const key of visitorKeys[node.type] ?? []) {
     const value: unknown = Reflect.get(node, key);
     if (Array.isArray(value)) {
-      for (const child of value as unknown[]) {
+      for (const child of value) {
         if (isNode(child)) {
           stack.push(child);
         }
@@ -61,7 +61,7 @@ function isComponentCall(node: Node): boolean {
 }
 
 function addTag(tag: string | undefined, components: Set<string>): void {
-  if (tag?.startsWith("qui-") === true) {
+  if (tag?.startsWith("qui-")) {
     components.add(tag);
   }
 }
@@ -92,11 +92,11 @@ function languageFor(filename: string): "js" | "jsx" | "ts" | "tsx" {
   return "js";
 }
 
-export function extractComponentsFromJavaScript(
+export async function extractComponentsFromJavaScript(
   code: string,
   filename: string,
-): string[] | undefined {
-  const result = parseSync(filename, code, {
+): Promise<string[] | undefined> {
+  const result = await parse(filename, code, {
     lang: languageFor(filename),
     sourceType: "unambiguous",
   });
@@ -108,7 +108,7 @@ export function extractComponentsFromJavaScript(
   walk(result.program, (node) => {
     collect(node, components);
   });
-  return [...components].sort();
+  return [...components].toSorted();
 }
 
 function collectMarkupComponents(
@@ -131,5 +131,5 @@ function collectMarkupComponents(
 export function extractComponentsFromText(code: string): string[] {
   const components = new Set<string>();
   collectMarkupComponents(parseFragment(code), components);
-  return [...components].sort();
+  return [...components].toSorted();
 }

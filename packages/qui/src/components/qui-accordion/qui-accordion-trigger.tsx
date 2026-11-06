@@ -3,15 +3,15 @@ import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/co
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { dataAttr } from "../../helpers/attr";
-import { isHTMLElement } from "../../helpers/dom";
 import { ExpandMoreIcon } from "../qui-icon/icons";
-import { setAriaControls } from "../shared/aria";
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
-import { arrowDelta, edgeKey } from "../shared/keyboard";
-import { RegistrationReconciler } from "../shared/registration-reconciler";
-import { focusRingInset } from "../shared/styles";
+import { setAriaControls } from "../shared/aria/aria";
+import { dataAttr } from "../shared/aria/attr";
+import { consumeContextPart } from "../shared/context/context-part";
+import { ContextPartElement } from "../shared/context/context-part-element";
+import { RegistrationReconciler } from "../shared/controllers/registration-reconciler";
+import { isHTMLElement } from "../shared/dom/dom";
+import { arrowDelta, edgeKey } from "../shared/dom/keyboard";
+import { focusRingInset } from "../shared/styles/styles";
 import { consumeAccordionItem, type AccordionItemContext } from "./accordion-context";
 
 const styles = {
@@ -76,19 +76,19 @@ export class QuiAccordionTrigger extends ContextPartElement<AccordionItemContext
     return this.contextPart.context;
   }
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     this.syncRegistration();
     this.syncAria();
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     this.registration.clear();
     super.disconnectedCallback();
   }
 
   private syncRegistration(): void {
     const { item, triggerEl } = this;
-    if (item === undefined || triggerEl === undefined) {
+    if (!item || !triggerEl) {
       return;
     }
     const { value } = item.item();
@@ -99,7 +99,7 @@ export class QuiAccordionTrigger extends ContextPartElement<AccordionItemContext
 
   private syncAria(): void {
     const { item, triggerEl } = this;
-    if (item === undefined || triggerEl === undefined) {
+    if (!item || !triggerEl) {
       return;
     }
     const content = item.getContent(item.item().value);
@@ -134,7 +134,7 @@ export class QuiAccordionTrigger extends ContextPartElement<AccordionItemContext
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
     const { item } = this;
-    if (item === undefined || this.disabled() || event.defaultPrevented) {
+    if (!item || this.disabled() || event.defaultPrevented) {
       return;
     }
     const orientation = item.orientation();
@@ -153,7 +153,7 @@ export class QuiAccordionTrigger extends ContextPartElement<AccordionItemContext
     }
   };
 
-  public render(): VNode {
+  render(): VNode {
     const { item } = this;
     const value = item?.item().value ?? "";
     const expanded = item?.isExpanded(value) ?? false;

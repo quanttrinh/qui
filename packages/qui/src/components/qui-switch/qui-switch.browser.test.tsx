@@ -1,7 +1,7 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryControl, queryPartIn, resolveHost } from "../../test-utils/component";
-import { expectFocusedDeep } from "../../test-utils/interactions";
+import { queryControl, queryPartIn, resolveHost } from "../../../tests/test-utils/component";
+import { expectFocusedDeep } from "../../../tests/test-utils/interactions";
 
 describe("qui-switch", () => {
   it("toggles and emits a boolean", async () => {

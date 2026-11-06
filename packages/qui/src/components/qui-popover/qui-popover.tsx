@@ -16,8 +16,8 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { isHTMLElement } from "../../helpers/dom";
 import { ensureShadowStylesheet } from "../../utilities/styles";
+import { isHTMLElement } from "../shared/dom/dom";
 
 /** Emitted when the popover asks its owner to close it. */
 export interface PopoverDismissEvent {
@@ -177,11 +177,11 @@ export class QuiPopover {
   private frame?: number;
   private sizeObserver?: ResizeObserver;
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     ensureShadowStylesheet(this.host);
   }
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     this.sync();
   }
 
@@ -198,13 +198,13 @@ export class QuiPopover {
     }
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     this.destroy();
   }
 
   /** Repositions the open popover, e.g. after its content changed. */
   @Method()
-  public async reposition(): Promise<void> {
+  async reposition(): Promise<void> {
     await Promise.resolve();
     this.position();
   }
@@ -214,7 +214,7 @@ export class QuiPopover {
       return;
     }
     const panel = this.panelEl;
-    if (panel === undefined || !panel.isConnected) {
+    if (!panel || !panel.isConnected) {
       return;
     }
     if (this.open) {
@@ -234,7 +234,7 @@ export class QuiPopover {
   private position(): void {
     const anchor = this.resolveAnchor();
     const panel = this.panelEl;
-    if (anchor === undefined || panel === undefined || !this.visible) {
+    if (!anchor || !panel || !this.visible) {
       return;
     }
     const viewport = { width: window.innerWidth, height: window.innerHeight };
@@ -371,7 +371,7 @@ export class QuiPopover {
     this.dismiss.emit({ reason: "escape" });
   };
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host>
         <div

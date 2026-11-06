@@ -17,19 +17,18 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 
-import { ariaAttr, dataAttr } from "../../helpers/attr";
-import { isHTMLTextAreaElement } from "../../helpers/dom";
-import { nextId } from "../../helpers/id";
 import { ensureShadowStylesheet } from "../../utilities/styles";
-import { applyFieldAria } from "../shared/field/aria";
-import { createFieldControl, focusElement } from "../shared/field/control";
-import { FormControlBase } from "../shared/form-control/component-base";
-import { FormController, type FormValidity } from "../shared/form-control/controller";
+import { ariaAttr, dataAttr } from "../shared/aria/attr";
+import { isHTMLTextAreaElement } from "../shared/dom/dom";
+import { nextId } from "../shared/dom/id";
+import { applyFieldAria } from "../shared/forms/field/aria";
+import { createFieldControl, focusElement } from "../shared/forms/field/control";
+import { FormControlBase } from "../shared/forms/form-control/component-base";
+import { FormController, type FormValidity } from "../shared/forms/form-control/controller";
 import { styles } from "./styles";
 
 function pixels(value: string): number {
-  // oxlint-disable-next-line unicorn/prefer-number-coercion
-  const parsed = Number.parseFloat(value);
+  const parsed = Number(value.replace(/px$/u, ""));
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
@@ -143,27 +142,27 @@ export class QuiTextarea extends FormControlBase {
     return this.form;
   }
 
-  public componentWillLoad(): void {
+  componentWillLoad(): void {
     super.componentWillLoad();
     this.initialValue = this.defaultValue ?? this.value ?? "";
     this.currentValue = this.initialValue;
     this.syncInitialValue();
   }
 
-  public componentDidLoad(): void {
+  componentDidLoad(): void {
     super.componentDidLoad();
     this.syncInitialValue();
     this.syncAutoResize();
     this.form.sync();
   }
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     super.connectedCallback();
     this.syncAutoResize();
     ensureShadowStylesheet(this.host);
   }
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     super.componentDidRender();
     applyFieldAria(this.textareaEl, this.form.fieldApi, {
       describedBy: this.counterEl === undefined ? [] : [this.counterEl],
@@ -171,14 +170,14 @@ export class QuiTextarea extends FormControlBase {
     this.scheduleAutoResize();
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     super.disconnectedCallback();
     this.stopAutoResize();
   }
 
   /** Moves focus to the internal native textarea. */
   @Method()
-  public async focusControl(options?: FocusOptions): Promise<void> {
+  async focusControl(options?: FocusOptions): Promise<void> {
     await focusElement(this.textareaEl, options);
   }
 
@@ -212,7 +211,7 @@ export class QuiTextarea extends FormControlBase {
   }
 
   private get controlProps(): Record<string, string | number | boolean | undefined> {
-    const props: Record<string, unknown> =
+    const props: Record<string, string | number | boolean | undefined> =
       this.form.fieldApi === undefined
         ? {
             id: this.inputId ?? (this.host.id || this.generatedId),
@@ -230,8 +229,7 @@ export class QuiTextarea extends FormControlBase {
     if (this.form.isRequired) {
       props["aria-required"] = "true";
     }
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-    return props as Record<string, string | number | boolean | undefined>;
+    return props;
   }
 
   private get counterText(): string {
@@ -299,7 +297,7 @@ export class QuiTextarea extends FormControlBase {
     const element = this.textareaEl;
     return `${element?.value ?? ""}\u0001${this.form.isRequired ? 1 : 0}\u0001${
       this.form.isInvalid ? 1 : 0
-    }\u0001${element?.validity.valid === true ? 1 : 0}\u0001${element?.validationMessage ?? ""}`;
+    }\u0001${element?.validity.valid ? 1 : 0}\u0001${element?.validationMessage ?? ""}`;
   }
 
   private readonly handleInput = (event: Event): void => {
@@ -382,7 +380,7 @@ export class QuiTextarea extends FormControlBase {
 
   private autoResizeNow(): void {
     const el = this.textareaEl;
-    if (el === undefined || !this.autoResize) {
+    if (!el || !this.autoResize) {
       return;
     }
     el.style.height = "auto";
@@ -401,7 +399,7 @@ export class QuiTextarea extends FormControlBase {
     el.style.overflowY = requiredHeight > maxHeight ? "auto" : "hidden";
   }
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host class={styles.host}>
         <div data-scope="textarea" data-part="root" part="root" class={styles.root}>

@@ -120,14 +120,14 @@ export function normalizeComponents(components: Iterable<string>): string[] {
       normalized.add(component);
     }
   }
-  return [...normalized].sort();
+  return [...normalized].toSorted();
 }
 
 /**
  * Finds opening component tags in JavaScript-family source using Oxc's AST,
  * with a lexical fallback for MDX and files the parser rejects.
  */
-export function extractComponents(code: string, id = "component.tsx"): string[] {
+export async function extractComponents(code: string, id = "component.tsx"): Promise<string[]> {
   // Every detectable tag either contains this prefix or an escaped character.
   // Oxc resolves escaped characters in static tag names.
   if (!mayContainComponents(code)) {
@@ -135,7 +135,7 @@ export function extractComponents(code: string, id = "component.tsx"): string[] 
   }
   const file = fileFromId(id);
   const components = JAVASCRIPT_EXTENSIONS.has(extname(file))
-    ? (extractComponentsFromJavaScript(code, file) ?? extractComponentsFromText(code))
+    ? ((await extractComponentsFromJavaScript(code, file)) ?? extractComponentsFromText(code))
     : extractComponentsFromText(code);
   return normalizeComponents(components);
 }
@@ -410,7 +410,7 @@ export function markStylesheetLinks(html: string, href: string | string[]): stri
   visit(document);
 
   let result = html;
-  for (const offset of offsets.sort((left, right) => right - left)) {
+  for (const offset of offsets.toSorted((left, right) => right - left)) {
     result = `${result.slice(0, offset)} ${STYLESHEET_ATTRIBUTE}${result.slice(offset)}`;
   }
   return result;

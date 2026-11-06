@@ -1,4 +1,4 @@
-import { createContextStore } from "../shared/context-store";
+import { createContextStore } from "../shared/context/context-store";
 import { type AccordionTriggerRegistration } from "./controller";
 
 export interface AccordionItem {
@@ -41,9 +41,7 @@ export interface AccordionItemContext extends AccordionContext {
   isItemDisabled: () => boolean;
 }
 
-// oxlint-disable-next-line stencil/ban-side-effects -- Allocating a context map has no side effects.
 const accordions = createContextStore<AccordionContext>("accordion");
-// oxlint-disable-next-line stencil/ban-side-effects -- Allocating a context map has no side effects.
 const accordionItems = createContextStore<AccordionItemContext>("accordion-item");
 
 function provideAccordion(host: HTMLElement, context: AccordionContext): void {

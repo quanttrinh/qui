@@ -1,7 +1,7 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryControl, resolveHost } from "../../test-utils/component";
-import { typeInto } from "../../test-utils/interactions";
+import { queryControl, resolveHost } from "../../../tests/test-utils/component";
+import { typeInto } from "../../../tests/test-utils/interactions";
 
 describe("qui-input text case", () => {
   it("normalizes typed values to uppercase", async () => {

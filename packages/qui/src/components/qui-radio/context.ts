@@ -1,4 +1,4 @@
-import { createContextStore } from "../shared/context-store";
+import { createContextStore } from "../shared/context/context-store";
 
 /** A radio item's component-owned props. */
 export interface RadioItem {
@@ -38,7 +38,6 @@ export interface RadioGroupContext {
   subscribe: (listener: () => void) => () => void;
 }
 
-// oxlint-disable-next-line stencil/ban-side-effects -- Allocating a context map has no side effects.
 const groups = createContextStore<RadioGroupContext>("radio-group");
 
 function provideRadioGroup(host: HTMLElement, group: RadioGroupContext): void {

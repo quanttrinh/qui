@@ -1,3 +1,4 @@
+import { insertBefore } from "./insert-before";
 import { SHADOW_STYLES_MARKER, STYLESHEET_ATTRIBUTE, STYLESHEET_SELECTOR } from "./styles";
 
 export interface ShadowStylesheetOptions {
@@ -39,9 +40,7 @@ function injectStylesheetLinks(context: InjectionContext, root: StylesheetRoot):
       link.setAttribute("href", href);
       link.setAttribute(STYLESHEET_ATTRIBUTE, "");
       if (reference) {
-        // Stencil's mock document does not implement Element.before().
-        // oxlint-disable-next-line unicorn/prefer-modern-dom-apis
-        root.insertBefore(link, reference);
+        insertBefore(root, link, reference);
       } else {
         root.append(link);
       }

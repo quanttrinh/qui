@@ -3,9 +3,9 @@ import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@sten
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
-import { dialogButtonBase } from "../shared/styles";
+import { consumeContextPart } from "../shared/context/context-part";
+import { ContextPartElement } from "../shared/context/context-part-element";
+import { dialogButtonBase } from "../shared/styles/styles";
 import { consumeDialog, type DialogContext } from "./context";
 
 const styles = {
@@ -42,7 +42,7 @@ export class QuiDialogTrigger extends ContextPartElement<DialogContext> {
     return this.contextPart.context;
   }
 
-  public render(): VNode {
+  render(): VNode {
     const open = this.dialog?.open() ?? false;
 
     return (

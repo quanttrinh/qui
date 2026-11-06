@@ -29,11 +29,11 @@ const styles = {
 export class QuiDialogActions {
   @Element() host!: HTMLElement;
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     ensureShadowStylesheet(this.host);
   }
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host class={styles.host}>
         <div class={styles.actions} part="actions">

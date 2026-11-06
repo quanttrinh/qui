@@ -1,3 +1,5 @@
+import { insertBefore } from "./insert-before";
+
 /** Attribute that marks a document or shadow-root stylesheet managed by qui. */
 export const STYLESHEET_ATTRIBUTE = "data-qui-styles";
 /** Selector for stylesheet links managed by qui. */
@@ -23,8 +25,11 @@ const configuredHrefCache: { entry?: { value: string | string[]; hrefs: string[]
 function isElement(value: unknown): value is Element {
   return value instanceof Element;
 }
-// oxlint-disable-next-line stencil/ban-side-effects -- Symbol.for is a pure global registry lookup.
-const GLOBAL_HREF_KEY = Symbol.for("@quanttrinh/qui/styles-href");
+function createGlobalHrefKey(): symbol {
+  return Symbol.for("@quanttrinh/qui/styles-href");
+}
+
+const GLOBAL_HREF_KEY = createGlobalHrefKey();
 
 function isHref(value: unknown): value is string | string[] {
   return (
@@ -222,9 +227,7 @@ function reconcileStylesheetLinks(root: ShadowRoot, document: Document, hrefs: s
       const reference = managed.length > 0 ? managed.at(-1)?.nextSibling : root.firstChild;
 
       if (reference) {
-        // Stencil's mock document does not implement Element.before().
-        // oxlint-disable-next-line unicorn/prefer-modern-dom-apis
-        root.insertBefore(created, reference);
+        insertBefore(root, created, reference);
       } else {
         root.append(created);
       }

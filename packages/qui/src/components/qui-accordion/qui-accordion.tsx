@@ -15,10 +15,10 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { nextId } from "../../helpers/id";
 import { ensureShadowStylesheet } from "../../utilities/styles";
-import { createListenerStore } from "../shared/listener-store";
-import { ReactiveControlBase } from "../shared/reactive-control/component-base";
+import { createListenerStore } from "../shared/controllers/listener-store";
+import { ReactiveControlBase } from "../shared/controllers/reactive-control/component-base";
+import { nextId } from "../shared/dom/id";
 import { clearAccordion, provideAccordion, type AccordionContext } from "./accordion-context";
 import { AccordionController } from "./controller";
 
@@ -121,12 +121,11 @@ export class QuiAccordion extends ReactiveControlBase {
     subscribe: this.listeners.subscribe,
   };
 
-  public requestUpdate(): void {
-    super.requestUpdate();
+  protected onRequestUpdate(): void {
     this.listeners.notify();
   }
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     super.connectedCallback();
     if (this.idBase === "") {
       this.idBase = this.host.id || this.generatedId;
@@ -135,13 +134,13 @@ export class QuiAccordion extends ReactiveControlBase {
     ensureShadowStylesheet(this.host);
   }
 
-  public componentWillLoad(): void {
+  componentWillLoad(): void {
     super.componentWillLoad();
     this.idBase = this.host.id || this.generatedId;
     provideAccordion(this.host, this.context);
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     super.disconnectedCallback();
     clearAccordion(this.host);
     this.listeners.clear();
@@ -174,7 +173,7 @@ export class QuiAccordion extends ReactiveControlBase {
     return `${this.rootId}:content:${value}`;
   }
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host class={styles.host}>
         <div

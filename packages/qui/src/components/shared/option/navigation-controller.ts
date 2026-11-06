@@ -1,12 +1,17 @@
 import {
   ReactiveControllerBase,
   type ReactiveControllerHost,
-} from "../reactive-control/controller";
+} from "../controllers/reactive-control/controller";
+import { moveIndex } from "../controllers/roving-focus";
 import { type OptionItem } from "./option";
 
 interface OptionListNavigationControllerOptions<TItem extends OptionItem> {
   getItems: () => readonly TItem[];
   getInitialActive: () => string | undefined;
+  /** The controlled open state. */
+  getOpen?: () => boolean | undefined;
+  /** The initial open state for an uncontrolled list. */
+  getDefaultOpen?: () => boolean;
   isDisabled: () => boolean;
   isReadOnly: () => boolean;
   isLooping: () => boolean;
@@ -22,7 +27,7 @@ interface ListCommandOptions {
 /** Open state, active item, and keyboard navigation for a OptionList. */
 export class OptionListNavigationController<
   TItem extends OptionItem,
-> extends ReactiveControllerBase<ReactiveControllerHost> {
+> extends ReactiveControllerBase {
   private readonly options: OptionListNavigationControllerOptions<TItem>;
   private openState = false;
   private active?: string;
@@ -33,15 +38,26 @@ export class OptionListNavigationController<
     this.options = options;
   }
 
-  public get open(): boolean {
+  get open(): boolean {
     return this.openState;
   }
 
-  public get activeValue(): string | undefined {
+  get activeValue(): string | undefined {
     return this.active;
   }
 
-  public setActive(value: string | undefined): void {
+  hostWillLoad(): void {
+    const open = this.options.getOpen?.() ?? this.options.getDefaultOpen?.() ?? false;
+    if (!open || this.options.isDisabled() || this.options.isReadOnly()) {
+      return;
+    }
+    this.openState = true;
+    this.options.onOpenChange?.(true, "initial");
+    this.active = this.options.getInitialActive();
+    this.requestUpdate();
+  }
+
+  setActive(value: string | undefined): void {
     if (this.active === value) {
       return;
     }
@@ -49,7 +65,7 @@ export class OptionListNavigationController<
     this.requestUpdate();
   }
 
-  public openMenu(reason: string): void {
+  openMenu(reason: string): void {
     if (this.openState || this.options.isDisabled() || this.options.isReadOnly()) {
       return;
     }
@@ -59,7 +75,7 @@ export class OptionListNavigationController<
     this.requestUpdate();
   }
 
-  public closeMenu(reason: string): void {
+  closeMenu(reason: string): void {
     if (!this.openState) {
       return;
     }
@@ -70,7 +86,7 @@ export class OptionListNavigationController<
     this.requestUpdate();
   }
 
-  public toggleMenu(reason: string): void {
+  toggleMenu(reason: string): void {
     if (this.openState) {
       this.closeMenu(reason);
       return;
@@ -78,40 +94,37 @@ export class OptionListNavigationController<
     this.openMenu(reason);
   }
 
-  public move(delta: 1 | -1): void {
+  move(delta: 1 | -1): void {
     const enabled = this.options.getItems().filter((item) => !item.disabled);
     if (enabled.length === 0) {
       this.setActive(undefined);
       return;
     }
     const current = enabled.findIndex((item) => item.value === this.active);
-    let index = current + delta;
-    if (current === -1) {
-      index = delta > 0 ? 0 : enabled.length - 1;
-    }
-    if (index < 0 || index >= enabled.length) {
-      if (!this.options.isLooping()) {
-        return;
-      }
-      index = (index + enabled.length) % enabled.length;
+    const index = moveIndex(enabled, current, {
+      delta,
+      loop: this.options.isLooping(),
+    });
+    if (index === undefined) {
+      return;
     }
     this.setActive(enabled[index]?.value);
   }
 
-  public edge(edge: "first" | "last"): void {
+  edge(edge: "first" | "last"): void {
     const enabled = this.options.getItems().filter((item) => !item.disabled);
     const item = edge === "first" ? enabled[0] : enabled.at(-1);
     this.setActive(item?.value);
   }
 
-  public findByPrefix(prefix: string): TItem | undefined {
+  findByPrefix(prefix: string): TItem | undefined {
     return this.options
       .getItems()
       .find((item) => !item.disabled && item.label.toLowerCase().startsWith(prefix));
   }
 
   /** Handles the navigation keys shared by select and combobox. */
-  public handleNavigationKey({ event }: ListCommandOptions): boolean {
+  handleNavigationKey({ event }: ListCommandOptions): boolean {
     switch (event.key) {
       case "ArrowDown": {
         event.preventDefault();
@@ -151,7 +164,7 @@ export class OptionListNavigationController<
     }
   }
 
-  public hostDidRender(): void {
+  hostDidRender(): void {
     if (!this.openState || this.active === this.revealed) {
       return;
     }

@@ -15,13 +15,11 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 
-import { ariaAttr, dataAttr } from "../../helpers/attr";
-import { isHTMLInputElement, isNode } from "../../helpers/dom";
-import { nextId } from "../../helpers/id";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { UnfoldMoreIcon } from "../qui-icon/icons";
 import { quiOptionSource } from "../qui-option/option-source";
 import { type PopoverDismissEvent } from "../qui-popover/qui-popover";
+import { ariaAttr, dataAttr } from "../shared/aria/attr";
 import {
   FormController,
   OptionListNavigationController,
@@ -29,8 +27,10 @@ import {
   OptionSourceController,
   SelectionController,
 } from "../shared/controllers";
-import { applyFieldAria } from "../shared/field/aria";
-import { createFieldControl, focusElement } from "../shared/field/control";
+import { isHTMLInputElement } from "../shared/dom/dom";
+import { nextId } from "../shared/dom/id";
+import { applyFieldAria } from "../shared/forms/field/aria";
+import { createFieldControl, focusElement } from "../shared/forms/field/control";
 import { OptionControlBase } from "../shared/option/component-base";
 import { labelForValue, type OptionItem } from "../shared/option/option";
 import {
@@ -203,6 +203,8 @@ export class QuiCombobox extends OptionControlBase {
         items.find((item) => !item.disabled)?.value
       );
     },
+    getOpen: (): boolean | undefined => this.open,
+    getDefaultOpen: (): boolean => this.defaultOpen,
     isDisabled: (): boolean => this.form.isDisabled,
     isReadOnly: (): boolean => this.form.isReadOnly,
     isLooping: (): boolean => this.loopFocus !== false,
@@ -235,33 +237,32 @@ export class QuiCombobox extends OptionControlBase {
     this.form.setControl(this.fieldControl);
   }
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     super.connectedCallback();
     ensureShadowStylesheet(this.host);
   }
 
-  public componentWillLoad(): void {
-    super.componentWillLoad();
+  componentWillLoad(): void {
+    // Seed the query before controllers initialize.
+    // A default-open list resolves its active item against the filtered set.
     this.input.initialize(this.defaultInputValue);
-    if (this.open ?? this.defaultOpen) {
-      this.navigation.openMenu("initial");
-    }
+    super.componentWillLoad();
   }
 
-  public componentDidLoad(): void {
+  componentDidLoad(): void {
     super.componentDidLoad();
     this.syncInitialInput();
     this.form.sync();
   }
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     super.componentDidRender();
     applyFieldAria(this.inputEl, this.form.fieldApi);
   }
 
   /** Moves focus to the internal input. */
   @Method()
-  public async focusControl(options?: FocusOptions): Promise<void> {
+  async focusControl(options?: FocusOptions): Promise<void> {
     await focusElement(this.inputEl, options);
   }
 
@@ -282,7 +283,7 @@ export class QuiCombobox extends OptionControlBase {
 
   @Watch("open")
   private syncControlledOpen(value?: boolean): void {
-    if (value === undefined || value === this.navigation.open) {
+    if (value == null || value === this.navigation.open) {
       return;
     }
     if (value) {
@@ -358,7 +359,10 @@ export class QuiCombobox extends OptionControlBase {
     const next = event.relatedTarget;
     // Focus moves within the combobox (input → trigger or listbox) are internal.
     // Check the shadow root: host.contains() cannot see internal elements.
-    if (isNode(next) && (this.host.contains(next) || (this.rootEl?.contains(next) ?? false))) {
+    if (
+      next instanceof Node &&
+      (this.host.contains(next) || (this.rootEl?.contains(next) ?? false))
+    ) {
       return;
     }
     if (!this.navigation.open) {
@@ -482,7 +486,7 @@ export class QuiCombobox extends OptionControlBase {
     return `${total} ${total === 1 ? "result" : "results"}`;
   }
 
-  public render(): VNode {
+  render(): VNode {
     const items = this.visibleItems(this.source.items);
     const list = this.window.getList(items);
     const { total } = list;

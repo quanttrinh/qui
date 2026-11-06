@@ -3,7 +3,7 @@ import { Build } from "@stencil/core";
 import {
   ReactiveControllerBase,
   type ReactiveControllerHost,
-} from "../reactive-control/controller";
+} from "../controllers/reactive-control/controller";
 import { type OptionItem } from "./option";
 
 /** DOM-specific half of an option source. Kept outside shared code. */
@@ -26,7 +26,7 @@ interface OptionSourceControllerOptions {
  * source in sync with a MutationObserver. The adapter owns all knowledge of the
  * concrete option element.
  */
-export class OptionSourceController extends ReactiveControllerBase<ReactiveControllerHost> {
+export class OptionSourceController extends ReactiveControllerBase {
   private readonly options: OptionSourceControllerOptions;
   private dirty = true;
   private cached: OptionItem[] = [];
@@ -37,7 +37,7 @@ export class OptionSourceController extends ReactiveControllerBase<ReactiveContr
     this.options = options;
   }
 
-  public get items(): readonly OptionItem[] {
+  get items(): readonly OptionItem[] {
     const items = this.options.getItems();
     if (items !== undefined) {
       return items;
@@ -49,20 +49,20 @@ export class OptionSourceController extends ReactiveControllerBase<ReactiveContr
     return this.cached;
   }
 
-  public invalidate(): void {
+  invalidate(): void {
     this.dirty = true;
   }
 
-  public hostConnected(): void {
+  hostConnected(): void {
     this.dirty = true;
     this.observe();
   }
 
-  public hostDidLoad(): void {
+  hostDidLoad(): void {
     this.observe();
   }
 
-  public hostDisconnected(): void {
+  hostDisconnected(): void {
     this.observer?.disconnect();
     this.observer = undefined;
   }
@@ -78,7 +78,7 @@ export class OptionSourceController extends ReactiveControllerBase<ReactiveContr
       if (
         records.every(
           (record) =>
-            root?.contains(record.target) === true ||
+            Boolean(root?.contains(record.target)) ||
             (record.type === "attributes" && record.target === host),
         )
       ) {

@@ -4,7 +4,7 @@ import { css } from "#styled-system/css";
 
 import { CheckIcon } from "../../qui-icon/icons";
 import { type PopoverDismissEvent } from "../../qui-popover/qui-popover";
-import { type ListEntry, type ListWindow } from "../list-window/model";
+import { type ListEntry, type ListWindow } from "./list-window/model";
 import { type OptionItem, type OptionRender, type OptionRenderState } from "./option";
 
 /** Maximum height of the list panel. */

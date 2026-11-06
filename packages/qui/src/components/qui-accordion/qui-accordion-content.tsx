@@ -3,11 +3,11 @@ import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/co
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { dataAttr } from "../../helpers/attr";
-import { setAriaControls, setAriaLabelledBy } from "../shared/aria";
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
-import { RegistrationReconciler } from "../shared/registration-reconciler";
+import { setAriaControls, setAriaLabelledBy } from "../shared/aria/aria";
+import { dataAttr } from "../shared/aria/attr";
+import { consumeContextPart } from "../shared/context/context-part";
+import { ContextPartElement } from "../shared/context/context-part-element";
+import { RegistrationReconciler } from "../shared/controllers/registration-reconciler";
 import { consumeAccordionItem, type AccordionItemContext } from "./accordion-context";
 
 const styles = {
@@ -60,12 +60,12 @@ export class QuiAccordionContent extends ContextPartElement<AccordionItemContext
     consume: consumeAccordionItem,
   });
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     this.syncRegistration();
     this.syncAria();
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     this.registration.clear();
     super.disconnectedCallback();
   }
@@ -82,7 +82,7 @@ export class QuiAccordionContent extends ContextPartElement<AccordionItemContext
   private syncAria(): void {
     const item = this.contextPart.context;
     const { contentEl } = this;
-    if (item === undefined || contentEl === undefined) {
+    if (!item || !contentEl) {
       return;
     }
     const trigger = item.getTrigger(item.item().value);
@@ -93,7 +93,7 @@ export class QuiAccordionContent extends ContextPartElement<AccordionItemContext
     }
   }
 
-  public render(): VNode {
+  render(): VNode {
     const item = this.contextPart.context;
     const value = item?.item().value ?? "";
     const expanded = item?.isExpanded(value) ?? false;

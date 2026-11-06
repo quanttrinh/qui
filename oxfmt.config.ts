@@ -1,20 +1,9 @@
 import { defineConfig } from "oxfmt";
 
+import { toolIgnorePatterns } from "./tooling/ignore";
+
 export default defineConfig({
-  ignorePatterns: [
-    "CHANGELOG.md",
-    "styled-system/",
-    "dist/",
-    "www/",
-    ".stencil/",
-    "node_modules/",
-    "docs/",
-    ".github/",
-    ".changeset/",
-    ".husky/",
-    ".devcontainer/",
-    "bun.lock",
-  ],
+  ignorePatterns: [...toolIgnorePatterns],
   sortImports: {
     groups: [
       "type-import",

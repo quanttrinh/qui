@@ -1,7 +1,7 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryControl, queryPartIn, resolveHost } from "../../test-utils/component";
-import { shadowOf } from "../../test-utils/shadow";
+import { queryControl, queryPartIn, resolveHost } from "../../../tests/test-utils/component";
+import { shadowOf } from "../../../tests/test-utils/shadow";
 
 function radioItems(root: HTMLElement): HTMLElement[] {
   return [

@@ -1,8 +1,8 @@
-import { type OptionItem } from "../shared/option/option";
 import {
   ReactiveControllerBase,
   type ReactiveControllerHost,
-} from "../shared/reactive-control/controller";
+} from "../shared/controllers/reactive-control/controller";
+import { type OptionItem } from "../shared/option/option";
 import { type ComboboxFilter, type ComboboxFilterMode, OptionFilter } from "./model";
 
 export interface ComboboxInputOptions {
@@ -18,7 +18,7 @@ export interface ComboboxInputOptions {
  * Combobox text/query state: controlled input value, debounced filtering, and
  * the filtered-item cache. Unique to combobox; select has no query.
  */
-export class ComboboxInputController extends ReactiveControllerBase<ReactiveControllerHost> {
+export class ComboboxInputController extends ReactiveControllerBase {
   private readonly options: ComboboxInputOptions;
   private text = "";
   private query = "";
@@ -31,16 +31,16 @@ export class ComboboxInputController extends ReactiveControllerBase<ReactiveCont
     this.options = options;
   }
 
-  public get value(): string {
+  get value(): string {
     return this.options.getControlledValue() ?? this.text;
   }
 
-  public initialize(text: string): void {
+  initialize(text: string): void {
     this.text = text;
     this.query = text;
   }
 
-  public filter(items: readonly OptionItem[]): readonly OptionItem[] {
+  filter(items: readonly OptionItem[]): readonly OptionItem[] {
     return this.optionFilter.apply(items, {
       query: this.query,
       mode: this.options.getFilterMode(),
@@ -49,14 +49,14 @@ export class ComboboxInputController extends ReactiveControllerBase<ReactiveCont
     });
   }
 
-  public handleInput(value: string): void {
+  handleInput(value: string): void {
     this.text = value;
     this.updateQuery(value);
     this.options.onInputValueChange(value, "input");
     this.requestUpdate();
   }
 
-  public setText(value: string, reason?: string): void {
+  setText(value: string, reason?: string): void {
     this.text = value;
     this.updateQuery(value);
     if (reason !== undefined) {
@@ -65,31 +65,31 @@ export class ComboboxInputController extends ReactiveControllerBase<ReactiveCont
     this.requestUpdate();
   }
 
-  public setTextSilently(value: string): void {
+  setTextSilently(value: string): void {
     this.text = value;
     this.updateQuery(value);
     this.requestUpdate();
   }
 
-  public syncControlled(value: string): void {
+  syncControlled(value: string): void {
     this.updateQuery(value);
   }
 
-  public resetQuery(): void {
+  resetQuery(): void {
     this.clearTimer();
     this.applyQuery("");
   }
 
-  public invalidate(): void {
+  invalidate(): void {
     this.revision += 1;
     this.optionFilter.invalidate();
   }
 
-  public dispose(): void {
+  dispose(): void {
     this.clearTimer();
   }
 
-  public hostDisconnected(): void {
+  hostDisconnected(): void {
     this.dispose();
   }
 

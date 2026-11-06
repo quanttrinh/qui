@@ -3,12 +3,12 @@ import { resolveVar, Component, Element, h, Host, Method, Prop, type VNode } fro
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { ariaAttr, dataAttr } from "../../helpers/attr";
-import { isHTMLInputElement } from "../../helpers/dom";
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
-import { focusElement } from "../shared/field/control";
-import { focusRing } from "../shared/styles";
+import { ariaAttr, dataAttr } from "../shared/aria/attr";
+import { consumeContextPart } from "../shared/context/context-part";
+import { ContextPartElement } from "../shared/context/context-part-element";
+import { isHTMLInputElement } from "../shared/dom/dom";
+import { focusElement } from "../shared/forms/field/control";
+import { focusRing } from "../shared/styles/styles";
 import {
   consumeRadioGroup,
   type RadioGroupContext,
@@ -105,7 +105,7 @@ export class QuiRadio extends ContextPartElement<RadioGroupContext> {
     return this.contextPart.context;
   }
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     const checked = this.group?.itemState(this.item()).checked ?? false;
     if (this.inputEl !== undefined && this.inputEl.checked !== checked) {
       this.inputEl.checked = checked;
@@ -123,7 +123,7 @@ export class QuiRadio extends ContextPartElement<RadioGroupContext> {
     }
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     super.disconnectedCallback();
     this.unregisterInput?.();
     this.unregisterInput = undefined;
@@ -133,7 +133,7 @@ export class QuiRadio extends ContextPartElement<RadioGroupContext> {
 
   /** Moves focus to the internal native radio input. */
   @Method()
-  public async focusControl(options?: FocusOptions): Promise<void> {
+  async focusControl(options?: FocusOptions): Promise<void> {
     await focusElement(this.inputEl, options);
   }
 
@@ -167,7 +167,7 @@ export class QuiRadio extends ContextPartElement<RadioGroupContext> {
     this.group?.blur();
   };
 
-  public render(): VNode {
+  render(): VNode {
     const { group } = this;
     const item = this.item();
     const state: RadioItemState = group?.itemState(item) ?? {
@@ -235,6 +235,7 @@ export class QuiRadio extends ContextPartElement<RadioGroupContext> {
             data-ownedby={group?.rootId()}
             class={styles.input}
             onClick={this.handleClick}
+            onChange={this.handleClick}
             onFocus={this.handleFocus}
             onBlur={this.handleBlur}
           />

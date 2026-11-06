@@ -71,10 +71,26 @@ function validateStylesOptions(styles: QuiPluginOptions["styles"], framework: st
   }
 }
 
+const stylesheetTextCache = new Map<string, Promise<string>>();
+
 /** Reads the shared stylesheet when the virtual styles module is loaded. */
 async function getStylesheetText(): Promise<string> {
-  const text = await readFile(resolveStylesheetPath(), "utf8");
-  return text;
+  const file = resolveStylesheetPath();
+  const cached = stylesheetTextCache.get(file);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const promise = readFile(file, "utf8");
+  stylesheetTextCache.set(file, promise);
+  try {
+    return await promise;
+  } catch (error) {
+    if (stylesheetTextCache.get(file) === promise) {
+      stylesheetTextCache.delete(file);
+    }
+    throw error;
+  }
 }
 
 /**
@@ -104,13 +120,14 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
   const pluginOptions = options ?? {};
   validateStylesOptions(pluginOptions.styles, meta.framework);
   const componentCache = new Map<string, { code: string; components: string[] }>();
+  const pendingComponents = new Map<string, { code: string; promise: Promise<string[]> }>();
   const externalStyles = isExternalStyles(pluginOptions.styles) ? pluginOptions.styles : undefined;
   let viteBase = "/";
   let viteCommand: "serve" | "build" = "build";
   let viteMode = "production";
   let viteIsSsrBuild = false;
 
-  function extractComponentsCached(code: string, id: string): string[] {
+  async function extractComponentsCached(code: string, id: string): Promise<string[]> {
     const cached = componentCache.get(id);
     if (cached?.code === code) {
       return cached.components;
@@ -118,18 +135,32 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
 
     if (!mayContainComponents(code)) {
       componentCache.delete(id);
+      pendingComponents.delete(id);
       return [];
     }
 
-    const components = extractComponents(code, id);
-    if (componentCache.size >= COMPONENT_CACHE_LIMIT) {
-      const oldest = componentCache.keys().next().value;
-      if (oldest !== undefined) {
-        componentCache.delete(oldest);
+    const pending = pendingComponents.get(id);
+    if (pending?.code === code) {
+      return pending.promise;
+    }
+
+    const promise = extractComponents(code, id);
+    pendingComponents.set(id, { code, promise });
+    try {
+      const components = await promise;
+      if (componentCache.size >= COMPONENT_CACHE_LIMIT) {
+        const oldest = componentCache.keys().next().value;
+        if (oldest !== undefined) {
+          componentCache.delete(oldest);
+        }
+      }
+      componentCache.set(id, { code, components });
+      return components;
+    } finally {
+      if (pendingComponents.get(id)?.promise === promise) {
+        pendingComponents.delete(id);
       }
     }
-    componentCache.set(id, { code, components });
-    return components;
   }
 
   return {
@@ -199,7 +230,7 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
           return createStylesModule(await getStylesheetText(), pluginOptions.styles);
         }
         const components = componentsFromVirtualModuleId(id.slice(1));
-        if (components === undefined || components.length === 0) {
+        if (!components?.length) {
           return undefined;
         }
         return createRegistrationModule(components, pluginOptions);
@@ -207,11 +238,11 @@ const unplugin: UnpluginInstance<QuiPluginOptions | undefined, false> = createUn
     },
     transform: {
       filter: { code: { include: [...COMPONENT_SOURCE] } },
-      handler(code: string, id: string): TransformResult {
+      async handler(code: string, id: string): Promise<TransformResult> {
         if (!isTransformableId(id)) {
           return undefined;
         }
-        const components = extractComponentsCached(code, id);
+        const components = await extractComponentsCached(code, id);
         if (components.length === 0) {
           return undefined;
         }

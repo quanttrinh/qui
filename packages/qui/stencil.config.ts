@@ -5,6 +5,7 @@ import { createNodeLogger } from "@stencil/core/sys/node";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 
+import { watchIgnoredPatterns } from "../../tooling/ignore";
 import { frameworkTypesOutputTarget } from "./build/framework-types-output-target";
 import { createPandaDriver } from "./build/panda-driver";
 import { stylesPlugin } from "./styles.stencil.plugin";
@@ -18,10 +19,6 @@ const logger = createNodeLogger();
 const pandaDriver = createPandaDriver(packageRoot);
 const globalCss = join(packageRoot, "styled-system/styles.css");
 const outputDirectory = join(packageRoot, "dist", "shared");
-
-const testSourceFile = /\.(?:test|spec|e2e)\.(?:ts|tsx)$/;
-const testSupportPath = /(?:^|\/)(?:test-utils|vitest\.(?:config|setup)\.ts)(?:\/|$)/;
-const isTestBuild = process.env.NODE_ENV === "test";
 
 /**
  * Runs only Panda's source transformer. `stylesPlugin` owns codegen and CSS
@@ -44,14 +41,13 @@ function pandacssTransform(driver: ReturnType<typeof createPandaDriver>) {
 
 export const config: Config = {
   namespace: "qui",
-  rootDir: packageRoot,
   logger,
   plugins: [stylesPlugin({ root: packageRoot, driver: pandaDriver, logger })],
   tsconfig: "./tsconfig.build.json",
   // Tests and Vitest setup are not part of the component build.
-  watchIgnoredRegex: [testSourceFile, testSupportPath],
+  watchIgnoredRegex: watchIgnoredPatterns,
   outputTargets: [
-    isTestBuild
+    process.env.NODE_ENV === "test"
       ? {
           type: "www" as const,
           dir: join(packageRoot, ".stencil-test"),

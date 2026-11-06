@@ -1,6 +1,6 @@
 import { Prop } from "@stencil/core";
 
-import { FormControlBase } from "../form-control/component-base";
+import { FormControlBase } from "../forms/form-control/component-base";
 import { type OptionItem, type OptionRender } from "./option";
 
 /**

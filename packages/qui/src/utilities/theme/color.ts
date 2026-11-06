@@ -148,7 +148,6 @@ export function schemeToColors(scheme: DynamicScheme): Record<ColorRole, string>
     return cached;
   }
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   const colors = {} as Record<ColorRole, string>;
 
   const dynamicColors = getRoleDynamicColors();

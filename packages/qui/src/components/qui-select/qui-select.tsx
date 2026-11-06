@@ -15,11 +15,10 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 
-import { ariaAttr, dataAttr } from "../../helpers/attr";
-import { nextId } from "../../helpers/id";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { UnfoldMoreIcon } from "../qui-icon/icons";
 import { quiOptionSource } from "../qui-option/option-source";
+import { ariaAttr, dataAttr } from "../shared/aria/attr";
 import {
   FormController,
   OptionListNavigationController,
@@ -27,8 +26,9 @@ import {
   OptionSourceController,
   SelectionController,
 } from "../shared/controllers";
-import { applyFieldAria } from "../shared/field/aria";
-import { createFieldControl, focusElement } from "../shared/field/control";
+import { nextId } from "../shared/dom/id";
+import { applyFieldAria } from "../shared/forms/field/aria";
+import { createFieldControl, focusElement } from "../shared/forms/field/control";
 import { OptionControlBase } from "../shared/option/component-base";
 import { labelForValue, type OptionItem } from "../shared/option/option";
 import {
@@ -155,6 +155,8 @@ export class QuiSelect extends OptionControlBase {
         items.find((item) => !item.disabled)?.value
       );
     },
+    getOpen: (): boolean | undefined => this.open,
+    getDefaultOpen: (): boolean => this.defaultOpen,
     isDisabled: (): boolean => this.form.isDisabled,
     isReadOnly: (): boolean => this.form.isReadOnly,
     isLooping: (): boolean => this.loopFocus,
@@ -171,24 +173,17 @@ export class QuiSelect extends OptionControlBase {
     this.form.setControl(this.fieldControl);
   }
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     super.connectedCallback();
     ensureShadowStylesheet(this.host);
   }
 
-  public componentWillLoad(): void {
-    super.componentWillLoad();
-    if (this.open ?? this.defaultOpen) {
-      this.navigation.openMenu("initial");
-    }
-  }
-
-  public componentDidRender(): void {
+  componentDidRender(): void {
     super.componentDidRender();
     applyFieldAria(this.triggerEl, this.form.fieldApi);
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this.typeaheadTimer !== undefined) {
       clearTimeout(this.typeaheadTimer);
@@ -198,7 +193,7 @@ export class QuiSelect extends OptionControlBase {
 
   /** Moves focus to the internal trigger button. */
   @Method()
-  public async focusControl(options?: FocusOptions): Promise<void> {
+  async focusControl(options?: FocusOptions): Promise<void> {
     await focusElement(this.triggerEl, options);
   }
 
@@ -209,7 +204,7 @@ export class QuiSelect extends OptionControlBase {
 
   @Watch("open")
   private syncControlledOpen(value?: boolean): void {
-    if (value === undefined || value === this.navigation.open) {
+    if (value == null || value === this.navigation.open) {
       return;
     }
     if (value) {
@@ -321,7 +316,7 @@ export class QuiSelect extends OptionControlBase {
     return index === -1 ? undefined : `${this.listId}-${index}`;
   }
 
-  public render(): VNode {
+  render(): VNode {
     const list = this.window.getList(this.source.items);
     const { selected } = this.selection;
     const selectedValues = new Set(selected);

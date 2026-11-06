@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createTestControllerHost } from "../../test-utils/controller-host";
+import { createTestControllerHost } from "../../../tests/test-utils/controller-host";
 import { RadioGroupController } from "./controller";
 
 function createController(options?: { value?: string; defaultValue?: string }) {

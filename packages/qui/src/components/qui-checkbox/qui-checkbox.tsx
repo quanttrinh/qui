@@ -16,17 +16,17 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { dataAttr } from "../../helpers/attr";
-import { nextId } from "../../helpers/id";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { CheckIcon, RemoveIcon } from "../qui-icon/icons";
-import { normalizeChecked, type CheckedState } from "../shared/checkable/checked-state";
-import { CheckableController } from "../shared/checkable/controller";
-import { applyFieldAria } from "../shared/field/aria";
-import { createFieldControl, focusElement } from "../shared/field/control";
-import { FormControlBase } from "../shared/form-control/component-base";
-import { FormController, type FormValidity } from "../shared/form-control/controller";
-import { focusRing, requiredIndicatorStyle } from "../shared/styles";
+import { dataAttr } from "../shared/aria/attr";
+import { nextId } from "../shared/dom/id";
+import { normalizeChecked, type CheckedState } from "../shared/forms/checkable/checked-state";
+import { CheckableController } from "../shared/forms/checkable/controller";
+import { applyFieldAria } from "../shared/forms/field/aria";
+import { createFieldControl, focusElement } from "../shared/forms/field/control";
+import { FormControlBase } from "../shared/forms/form-control/component-base";
+import { FormController, type FormValidity } from "../shared/forms/form-control/controller";
+import { focusRing, requiredIndicatorStyle } from "../shared/styles/styles";
 
 const styles = {
   host: css({ display: "inline-flex" }),
@@ -157,9 +157,7 @@ export class QuiCheckbox extends FormControlBase {
     getRequired: (): boolean => this.required,
     getInvalid: (): boolean => this.invalid,
     getValidationElement: (): HTMLElement | undefined => this.inputEl,
-    getFormValue: (): string | null =>
-      // oxlint-disable-next-line unicorn/no-null
-      this.checkable.isChecked ? (this.value ?? "on") : null,
+    getFormValue: (): string | null => (this.checkable.isChecked ? (this.value ?? "on") : null),
     getValidity: (): FormValidity => this.validity(),
     getSignature: (): string => this.signature(),
     onReset: (): void => {
@@ -182,13 +180,13 @@ export class QuiCheckbox extends FormControlBase {
     return this.form;
   }
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     super.connectedCallback();
     this.checkable.setInput(this.inputEl);
     ensureShadowStylesheet(this.host);
   }
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     super.componentDidRender();
     applyFieldAria(this.inputEl, this.form.fieldApi, {
       labelledBy: this.labelEl === undefined ? [] : [this.labelEl],
@@ -197,7 +195,7 @@ export class QuiCheckbox extends FormControlBase {
 
   /** Moves focus to the internal native input. */
   @Method()
-  public async focusControl(options?: FocusOptions): Promise<void> {
+  async focusControl(options?: FocusOptions): Promise<void> {
     await focusElement(this.inputEl, options);
   }
 
@@ -231,7 +229,7 @@ export class QuiCheckbox extends FormControlBase {
 
   private get inputProps(): Record<string, string | number | boolean | undefined> {
     const field = this.form.fieldApi;
-    const props: Record<string, unknown> =
+    const props: Record<string, string | number | boolean | undefined> =
       field === undefined
         ? {
             id: this.inputId,
@@ -248,8 +246,7 @@ export class QuiCheckbox extends FormControlBase {
     if (this.form.isRequired) {
       props["aria-required"] = "true";
     }
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-    return props as Record<string, string | number | boolean | undefined>;
+    return props;
   }
 
   private validity(): FormValidity {
@@ -276,7 +273,7 @@ export class QuiCheckbox extends FormControlBase {
     }\u0001${this.form.isRequired ? 1 : 0}\u0001${this.form.isInvalid ? 1 : 0}`;
   }
 
-  public render(): VNode {
+  render(): VNode {
     const {
       state,
       isChecked: checked,

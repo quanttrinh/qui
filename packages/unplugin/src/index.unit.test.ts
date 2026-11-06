@@ -10,7 +10,10 @@ vi.mock("node:fs/promises", () => ({
   readFile: vi.fn().mockResolvedValue(":host{display:block;--font-fallback:test;}"),
 }));
 
-type TransformHandler = (code: string, id: string) => { code: string; map: unknown } | undefined;
+type TransformHandler = (
+  code: string,
+  id: string,
+) => Promise<{ code: string; map: unknown } | undefined>;
 type IdHandler = (id: string) => string | undefined;
 type LoadHandler = (id: string) => string | undefined | Promise<string | undefined>;
 type ConfigResolved = (config: {
@@ -26,7 +29,7 @@ const EMPTY_HREF_ERROR = /non-empty href/u;
 const MALFORMED_HREF_ERROR = /resolver function/u;
 
 describe("vite adapter", () => {
-  it("injects the virtual registration import", () => {
+  it("injects the virtual registration import", async () => {
     const plugin = vite();
     const transform = plugin.transform as unknown as {
       filter: unknown;
@@ -35,7 +38,7 @@ describe("vite adapter", () => {
 
     expect(transform.filter).toBeDefined();
 
-    const result = transform.handler("<qui-button />", "/app/view.tsx");
+    const result = await transform.handler("<qui-button />", "/app/view.tsx");
     expect(result?.code).toContain('import "virtual:qui/register?components=qui-button";');
     expect(result?.map).toMatchObject({ version: 3, sources: ["/app/view.tsx"] });
     expect(JSON.stringify(result?.map)).not.toContain("sourcesContent");
@@ -137,15 +140,24 @@ describe("vite adapter", () => {
     expect(() => vite({ styles: { href: ["", "/app.css"] } })).not.toThrow();
   });
 
-  it("injects after MDX frontmatter and skips Astro pages", () => {
+  it("injects after MDX frontmatter and skips Astro pages", async () => {
     const plugin = vite();
     const transform = plugin.transform as unknown as { handler: TransformHandler };
-    const mdx = transform.handler("---\ntitle: Example\n---\n<qui-button />", "/app/page.mdx");
-    const emptyMdx = transform.handler("---\n---\n<qui-button />", "/app/page.mdx");
-    const eofMdx = transform.handler("---\ntitle: <qui-button />\n---", "/app/page.mdx");
-    const crlfEofMdx = transform.handler("---\r\ntitle: <qui-button />\r\n---", "/app/page.mdx");
-    const trailingFenceMdx = transform.handler("---\n---   \n<qui-button />", "/app/page.mdx");
-    const astro = transform.handler("---\n---\n<qui-button />", "/app/page.astro");
+    const mdx = await transform.handler(
+      "---\ntitle: Example\n---\n<qui-button />",
+      "/app/page.mdx",
+    );
+    const emptyMdx = await transform.handler("---\n---\n<qui-button />", "/app/page.mdx");
+    const eofMdx = await transform.handler("---\ntitle: <qui-button />\n---", "/app/page.mdx");
+    const crlfEofMdx = await transform.handler(
+      "---\r\ntitle: <qui-button />\r\n---",
+      "/app/page.mdx",
+    );
+    const trailingFenceMdx = await transform.handler(
+      "---\n---   \n<qui-button />",
+      "/app/page.mdx",
+    );
+    const astro = await transform.handler("---\n---\n<qui-button />", "/app/page.astro");
 
     expect(mdx?.code.startsWith("---\ntitle: Example\n---\nimport ")).toBe(true);
     expect(emptyMdx?.code.startsWith("---\n---\nimport ")).toBe(true);
@@ -155,11 +167,11 @@ describe("vite adapter", () => {
     expect(astro).toBeUndefined();
   });
 
-  it("ignores modules without components", () => {
+  it("ignores modules without components", async () => {
     const plugin = vite();
     const transform = plugin.transform as unknown as { handler: TransformHandler };
 
-    expect(transform.handler("export const value = 1;", "/app/value.ts")).toBeUndefined();
+    expect(await transform.handler("export const value = 1;", "/app/value.ts")).toBeUndefined();
   });
 });
 

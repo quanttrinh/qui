@@ -3,11 +3,11 @@ import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/co
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { dataAttr } from "../../helpers/attr";
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
-import { arrowDelta, edgeKey } from "../shared/keyboard";
-import { RegistrationReconciler } from "../shared/registration-reconciler";
+import { dataAttr } from "../shared/aria/attr";
+import { consumeContextPart } from "../shared/context/context-part";
+import { ContextPartElement } from "../shared/context/context-part-element";
+import { RegistrationReconciler } from "../shared/controllers/registration-reconciler";
+import { arrowDelta, edgeKey } from "../shared/dom/keyboard";
 import { consumeTabs, type TabsContext } from "./context";
 
 const styles = {
@@ -51,11 +51,11 @@ export class QuiTabList extends ContextPartElement<TabsContext> {
     return this.contextPart.context;
   }
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     this.syncRegistration();
   }
 
-  public disconnectedCallback(): void {
+  disconnectedCallback(): void {
     this.registration.clear();
     super.disconnectedCallback();
   }
@@ -70,7 +70,7 @@ export class QuiTabList extends ContextPartElement<TabsContext> {
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
     const { tabs, listEl } = this;
-    if (tabs === undefined || listEl === undefined || event.defaultPrevented || event.isComposing) {
+    if (!tabs || !listEl || event.defaultPrevented || event.isComposing) {
       return;
     }
     // Tab triggers are slotted into the list rather than owned by it, so the
@@ -92,7 +92,7 @@ export class QuiTabList extends ContextPartElement<TabsContext> {
     }
   };
 
-  public render(): VNode {
+  render(): VNode {
     const variant = this.tabs?.variant() ?? "primary";
     const orientation = this.tabs?.orientation() ?? "horizontal";
     const textDirection = this.tabs?.textDirection() ?? "ltr";

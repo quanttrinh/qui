@@ -1,7 +1,7 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryPartIn, resolveHost } from "../../test-utils/component";
-import { settle } from "../../test-utils/dom-ready";
+import { queryPartIn, resolveHost } from "../../../tests/test-utils/component";
+import { settle } from "../../../tests/test-utils/dom-ready";
 
 describe("qui-popover", () => {
   it("shows next to its sibling anchor and dismisses on Escape", async () => {

@@ -1,8 +1,8 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { expectLinked } from "../../test-utils/aria";
-import { queryHost, queryPartIn } from "../../test-utils/component";
-import { expectFocusedDeep, pressKey } from "../../test-utils/interactions";
+import { expectLinked } from "../../../tests/test-utils/aria";
+import { queryHost, queryPartIn } from "../../../tests/test-utils/component";
+import { expectFocusedDeep, pressKey } from "../../../tests/test-utils/interactions";
 
 interface AccordionItemParts {
   triggerHost: HTMLElement;

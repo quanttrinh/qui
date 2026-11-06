@@ -52,12 +52,12 @@ export class QuiIcon {
   /** Accessible label. Omit for a decorative icon. */
   @Prop() label?: string;
 
-  public connectedCallback(): void {
+  connectedCallback(): void {
     ensureShadowStylesheet(this.host);
   }
 
-  public render(): VNode {
-    const labelled = this.label !== undefined && this.label !== "";
+  render(): VNode {
+    const labelled = Boolean(this.label);
     return (
       <Host class={styles.host} aria-hidden={labelled ? undefined : "true"}>
         <span

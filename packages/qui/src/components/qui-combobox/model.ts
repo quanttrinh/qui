@@ -24,12 +24,12 @@ export class OptionFilter {
   private key = "";
   private readonly searchCache = new WeakMap<ComboboxOption, string>();
 
-  public invalidate(): void {
+  invalidate(): void {
     this.filtered = undefined;
     this.key = "";
   }
 
-  public apply(
+  apply(
     items: readonly ComboboxOption[],
     { query, mode, revision, filter }: FilterOptions,
   ): readonly ComboboxOption[] {

@@ -1,15 +1,16 @@
 /// <reference types="node" />
-import { readFileSync } from "node:fs";
+import { once } from "node:events";
+import { readdir, readFile } from "node:fs/promises";
 import http from "node:http";
 import path from "node:path";
 import { chromium, firefox, webkit, type Browser, type BrowserType, type Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { UNDEFINED_CONTENT_TAGS } from "../../build/undefined-content";
-import { loadHydrate } from "../test-utils/hydrate";
+import { loadHydrate } from "../../tests/test-utils/hydrate";
 import { withShadowStylesheet } from "./ssr";
 
-const { extname, join } = path;
+const { join } = path;
 const repoRoot = join(import.meta.dirname, "../..");
 const styledSystemRoot = join(repoRoot, "styled-system");
 const testBuildRoot = join(repoRoot, ".stencil-test");
@@ -21,6 +22,7 @@ const serverFiles = new Map<string, { contentType: string; file: string }>([
     { contentType: "text/javascript", file: join(testBuildRoot, "build/qui.esm.js") },
   ],
 ]);
+const serverFileContents = new Map<string, Buffer>();
 
 const engines: { name: string; type: BrowserType }[] = [
   { name: "chromium", type: chromium },
@@ -59,7 +61,7 @@ const undefinedCompositeMarkup = `${compositeMarkup}
   <style>qui-select { display: block; }</style>
 `;
 
-let server: http.Server;
+let server: http.Server | undefined;
 let origin: string;
 let buttonHtml: string;
 let fieldHtml: string;
@@ -83,8 +85,14 @@ function serveHtml(response: http.ServerResponse, hydrate: boolean, content = bu
 }
 
 function serveFile(response: http.ServerResponse, file: string, contentType: string): void {
+  const data = serverFileContents.get(file);
+  if (data === undefined) {
+    response.writeHead(404);
+    response.end("not found");
+    return;
+  }
   response.writeHead(200, { "content-type": contentType });
-  response.end(readFileSync(file));
+  response.end(data);
 }
 
 function serveStatic(response: http.ServerResponse, url: string | undefined): boolean {
@@ -94,12 +102,9 @@ function serveStatic(response: http.ServerResponse, url: string | undefined): bo
     return true;
   }
 
-  if (url?.startsWith("/build/")) {
-    const file = join(testBuildRoot, url.slice(1));
-    if (extname(file) === ".js") {
-      serveFile(response, file, "text/javascript");
-      return true;
-    }
+  if (url?.startsWith("/build/") && url.endsWith(".js")) {
+    serveFile(response, join(testBuildRoot, url.slice(1)), "text/javascript");
+    return true;
   }
 
   return false;
@@ -149,30 +154,50 @@ function handleRequest(request: http.IncomingMessage, response: http.ServerRespo
   response.end("not found");
 }
 
-async function startServer(): Promise<void> {
-  server = http.createServer(handleRequest);
-  await new Promise<void>((resolve) => {
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      if (address === null || typeof address === "string") {
-        throw new Error("Expected a TCP server address");
+async function preloadBuildFiles(directory: string): Promise<void> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  await Promise.all(
+    entries.map(async (entry) => {
+      const file = join(directory, entry.name);
+      if (entry.isDirectory()) {
+        await preloadBuildFiles(file);
+        return;
       }
-      origin = `http://127.0.0.1:${address.port}`;
-      resolve();
-    });
-  });
+      if (entry.name.endsWith(".js")) {
+        serverFileContents.set(file, await readFile(file));
+      }
+    }),
+  );
+}
+
+async function startServer(): Promise<void> {
+  await Promise.all([
+    ...[...serverFiles.values()].map(async (entry) => {
+      serverFileContents.set(entry.file, await readFile(entry.file));
+    }),
+    preloadBuildFiles(join(testBuildRoot, "build")),
+  ]);
+  server = http.createServer(handleRequest);
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  if (address === null || typeof address === "string") {
+    throw new Error("Expected a TCP server address");
+  }
+  origin = `http://127.0.0.1:${address.port}`;
 }
 
 async function buttonMetrics(page: Page): Promise<{ background: string; height: string }> {
-  return page.evaluate(() => {
+  const metrics = await page.evaluate(() => {
     const button = document.querySelector("qui-button");
     const internal = button?.shadowRoot?.querySelector("button");
-    if (internal === null || internal === undefined) {
+    if (internal == null) {
       throw new Error("Expected the shadow button");
     }
     const styles = getComputedStyle(internal);
     return { background: styles.backgroundColor, height: styles.height };
   });
+  return metrics;
 }
 
 async function waitForShadowStylesheet(page: Page, tagName: string): Promise<void> {
@@ -190,7 +215,7 @@ async function waitForFieldAria(page: Page): Promise<void> {
       .querySelector("qui-field")
       ?.querySelector("qui-input")
       ?.shadowRoot?.querySelector("input");
-    if (input === null || input === undefined) {
+    if (input == null) {
       return false;
     }
     const reflected: unknown = Reflect.get(input, "ariaLabelledByElements");
@@ -201,7 +226,7 @@ async function waitForFieldAria(page: Page): Promise<void> {
 }
 
 async function hostDisplays(page: Page, tags: readonly string[]): Promise<Record<string, string>> {
-  return page.evaluate(
+  const displays = await page.evaluate(
     (names) =>
       Object.fromEntries(
         names.map((tag) => {
@@ -214,6 +239,7 @@ async function hostDisplays(page: Page, tags: readonly string[]): Promise<Record
       ),
     tags,
   );
+  return displays;
 }
 
 interface AxNode {
@@ -227,7 +253,6 @@ interface AxNode {
 async function accessibilityTree(page: Page): Promise<AxNode[]> {
   const client = await page.context().newCDPSession(page);
   try {
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- CDP protocol results are untyped at this boundary.
     const result = (await client.send("Accessibility.getFullAXTree")) as { nodes?: AxNode[] };
     return result.nodes ?? [];
   } finally {
@@ -278,9 +303,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (server !== undefined) {
-    await new Promise<void>((resolve, reject) => {
-      server.close((error) => (error === undefined ? resolve() : reject(error)));
-    });
+    server.close();
+    await once(server, "close");
+    server = undefined;
   }
 });
 
@@ -292,7 +317,7 @@ describe.each(engines)("shadow DOM hydration in $name", ({ type }) => {
   }, 30_000);
 
   afterAll(async () => {
-    await browser?.close();
+    await browser.close();
   });
 
   it("styles DSD content before custom elements are defined", async () => {
@@ -430,7 +455,7 @@ describe("Chromium accessibility tree", () => {
   }, 15_000);
 
   afterAll(async () => {
-    await browser?.close();
+    await browser.close();
   });
 
   it("exposes the hydrated button by role and name", async () => {

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { createFakeDocument, createHost, type FakeNode, linkHrefs } from "../test-utils/fake-dom";
+import {
+  createFakeDocument,
+  createHost,
+  type FakeNode,
+  linkHrefs,
+} from "../../tests/test-utils/fake-dom";
 import { injectShadowStylesheet, withShadowStylesheet } from "./ssr";
 import { SHADOW_STYLES_MARKER } from "./styles";
 

@@ -3,9 +3,9 @@ import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/co
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
-import { consumeField, type FieldApi } from "../shared/field/context";
+import { consumeContextPart } from "../shared/context/context-part";
+import { ContextPartElement } from "../shared/context/context-part-element";
+import { consumeField, type FieldApi } from "../shared/forms/field/context";
 import { fieldStyles } from "./styles";
 
 const styles = {
@@ -42,7 +42,7 @@ export class QuiFieldHelperText extends ContextPartElement<FieldApi> {
     return this.contextPart.context;
   }
 
-  public render(): VNode {
+  render(): VNode {
     const props = this.field?.getHelperTextProps();
 
     return (

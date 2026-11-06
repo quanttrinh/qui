@@ -3,8 +3,8 @@ import { Build, resolveVar, Component, Element, h, Host, State, type VNode } fro
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { consumeContextPart } from "../shared/context-part";
-import { ContextPartElement } from "../shared/context-part-element";
+import { consumeContextPart } from "../shared/context/context-part";
+import { ContextPartElement } from "../shared/context/context-part-element";
 import { consumeDialog, type DialogContext, type DialogControl } from "./context";
 import { applyDialogAria } from "./dialog-aria";
 
@@ -71,7 +71,7 @@ export class QuiDialogContent extends ContextPartElement<DialogContext> {
     },
     setup: () => {
       this.registerControl();
-      return (): void => {
+      return () => {
         this.detachDocumentListeners();
         this.unregister?.();
         this.unregister = undefined;
@@ -89,7 +89,7 @@ export class QuiDialogContent extends ContextPartElement<DialogContext> {
     return this.contextPart.context;
   }
 
-  public componentDidLoad(): void {
+  componentDidLoad(): void {
     super.componentDidLoad();
     // The native <dialog> ref does not exist during componentWillLoad.
     // The first registration therefore waits until after the initial render.
@@ -97,13 +97,13 @@ export class QuiDialogContent extends ContextPartElement<DialogContext> {
     this.applyDialogAttributes();
   }
 
-  public componentDidRender(): void {
+  componentDidRender(): void {
     this.applyDialogAttributes();
   }
 
   private registerControl(): void {
     const context = this.dialogContext;
-    if (context === undefined || this.unregister !== undefined || this.dialogEl === undefined) {
+    if (!context || this.unregister || !this.dialogEl) {
       return;
     }
     this.unregister = context.register(this.control());
@@ -138,7 +138,7 @@ export class QuiDialogContent extends ContextPartElement<DialogContext> {
 
   private showDialog(modal: boolean): void {
     const dialog = this.dialogEl;
-    if (dialog === undefined || dialog.open) {
+    if (!dialog || dialog.open) {
       return;
     }
     this.modalState = modal;
@@ -152,7 +152,7 @@ export class QuiDialogContent extends ContextPartElement<DialogContext> {
 
   private setModal(modal: boolean): void {
     const dialog = this.dialogEl;
-    if (dialog === undefined || !dialog.open || this.modalState === modal) {
+    if (!dialog || !dialog.open || this.modalState === modal) {
       this.modalState = modal;
       return;
     }
@@ -174,7 +174,7 @@ export class QuiDialogContent extends ContextPartElement<DialogContext> {
 
   private applyDialogAttributes(): void {
     const dialog = this.dialogEl;
-    if (dialog === undefined || this.dialogContext === undefined) {
+    if (!dialog || !this.dialogContext) {
       return;
     }
     if ("closedBy" in dialog) {
@@ -198,9 +198,9 @@ export class QuiDialogContent extends ContextPartElement<DialogContext> {
     const nativeModalDismiss =
       context.modal() && this.dialogEl !== undefined && "closedBy" in this.dialogEl;
     if (!nativeModalDismiss) {
-      this.pointerHandler = (event: PointerEvent): void => {
+      this.pointerHandler = (event: PointerEvent) => {
         const dialog = this.dialogEl;
-        if (dialog === undefined || !dialog.open || !context.closeOnInteractOutside()) {
+        if (!dialog || !dialog.open || !context.closeOnInteractOutside()) {
           return;
         }
         if (!event.composedPath().includes(dialog)) {
@@ -213,8 +213,8 @@ export class QuiDialogContent extends ContextPartElement<DialogContext> {
     if (context.modal()) {
       // Modal dialogs handle Escape natively via the cancel event.
     } else {
-      this.keyHandler = (event: KeyboardEvent): void => {
-        if (this.dialogEl?.open === true && event.key === "Escape" && context.closeOnEscape()) {
+      this.keyHandler = (event: KeyboardEvent) => {
+        if (this.dialogEl?.open && event.key === "Escape" && context.closeOnEscape()) {
           this.closeDialog("");
         }
       };
@@ -233,7 +233,7 @@ export class QuiDialogContent extends ContextPartElement<DialogContext> {
     }
   }
 
-  public render(): VNode {
+  render(): VNode {
     return (
       <Host class={styles.host}>
         <dialog
@@ -243,12 +243,10 @@ export class QuiDialogContent extends ContextPartElement<DialogContext> {
           class={styles.dialog}
           part="dialog"
           role={this.dialogRole}
-          aria-label={
-            this.dialogLabel === undefined || this.dialogLabel === "" ? undefined : this.dialogLabel
-          }
+          aria-label={this.dialogLabel === "" ? undefined : this.dialogLabel}
           onClose={() => {
             // Reopening can queue a close event after the dialog is already open again.
-            if (this.dialogEl?.open === true) {
+            if (this.dialogEl?.open) {
               return;
             }
             const returnValue = this.dialogEl?.returnValue ?? "";
