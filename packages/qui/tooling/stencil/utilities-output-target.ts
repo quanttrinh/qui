@@ -1,8 +1,8 @@
 import type { OutputTargetCustom } from "@stencil/core/internal";
 
 import { relative } from "node:path";
+import { build } from "tsdown";
 
-import { buildModules } from "../../../../tooling/module-builder";
 import { type Config } from "../config";
 
 /** Compiles the public utility entry points as standalone ESM modules. */
@@ -11,12 +11,30 @@ export function utilitiesOutputTarget(config: Config): OutputTargetCustom {
     type: "custom",
     name: "qui-utilities",
     async generator() {
-      const count = await buildModules({
-        root: config.root,
-        source: relative(config.root, config.source.utilities),
-        output: relative(config.root, config.output.utilities),
+      const source = relative(config.root, config.source.utilities).split("\\").join("/");
+      const output = relative(config.root, config.output.utilities).split("\\").join("/");
+
+      await build({
+        cwd: config.root,
+        entry: [`${source}/**/*.ts`, `!${source}/**/*.test.ts`],
+        outDir: output,
+        format: "esm",
+        platform: "neutral",
+        target: "es2022",
+        fixedExtension: false,
+        unbundle: true,
+        dts: true,
+        clean: true,
+        publint: { level: "error" },
+        // ATW currently flags generated Panda declaration resolution and
+        // CSS-only export conditions. Keep publint here until those generated
+        // declarations and subpath types are normalized.
+        attw: false,
+        exports: false,
+        minify: false,
+        treeshake: false,
       });
-      console.log(`[qui] compiled ${count} utility module(s)`);
+      console.log("[qui] built utility modules");
     },
   };
 }

@@ -31,7 +31,7 @@
     "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
-    "build": "bun tooling/build.ts",
+    "build": "tsdown",
     "prepublishOnly": "bun run build",
     "test": "vitest run",
     "test:unit": "vitest run",
