@@ -19,8 +19,8 @@
     "test:smoke": "bun run --cwd packages/qui test:smoke",
     "test:watch": "bun run --cwd packages/qui test:watch",
     "test:watch:unplugin": "bun run --cwd packages/unplugin test:watch",
-    "lint": "oxlint --config oxlint.config.ts packages/qui/src packages/unplugin/src",
-    "lint:fix": "oxlint --config oxlint.config.ts --fix packages/qui/src packages/unplugin/src",
+    "lint": "oxlint packages/qui/src packages/unplugin/src",
+    "lint:fix": "oxlint --fix packages/qui/src packages/unplugin/src",
     "fmt": "oxfmt --config oxfmt.config.ts",
     "fmt:check": "oxfmt --config oxfmt.config.ts --check",
     "version": "changeset version",
@@ -28,7 +28,6 @@
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
-    "@stencil/eslint-plugin": "^1.4.0",
     "@types/node": "^26.6.6",
     "husky": "^9.1.7",
     "oxfmt": "^0.76.0",

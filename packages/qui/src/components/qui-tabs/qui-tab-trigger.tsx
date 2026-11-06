@@ -14,28 +14,27 @@ import { consumeTabs, type TabsContext, type TabsVariant } from "./context";
 const styles = {
   host: css({ display: "contents" }),
   trigger: css({
-    position: "relative",
+    pos: "relative",
     isolation: "isolate",
     display: "flex",
     flex: "1",
     alignItems: "center",
     justifyContent: "center",
-    paddingInline: "4",
+    px: "4",
     color: "onSurfaceVariant",
-    fontSize: "sm",
+    textStyle: "sm",
     fontWeight: "medium",
     whiteSpace: "nowrap",
     cursor: "pointer",
     borderWidth: "0",
-    backgroundColor: "transparent",
+    bgColor: "transparent",
     transition: "color 150ms",
-    "& svg": { width: "24px", height: "24px" },
     "&::before": {
       content: '""',
-      position: "absolute",
+      pos: "absolute",
       inset: "0",
       zIndex: "-1",
-      backgroundColor: "currentColor",
+      bgColor: "currentColor",
       opacity: 0,
       pointerEvents: "none",
       transition: "opacity 150ms",
@@ -51,62 +50,66 @@ const styles = {
     "&[data-orientation=vertical]": {
       flex: "none",
       justifyContent: "flex-start",
-      width: "full",
+      w: "full",
     },
   }),
   tabContent: css({
-    position: "relative",
+    pos: "relative",
     display: "inline-flex",
-    flexDirection: "column",
+    flexDir: "column",
     alignItems: "center",
     justifyContent: "center",
     gap: "1",
-    minHeight: "12",
-    paddingBlock: "2",
-    "&[data-variant=secondary]": { flexDirection: "row", gap: "2" },
-    "&[data-orientation=vertical]": { width: "full", justifyContent: "flex-start" },
+    minH: "12",
+    py: "2",
+    "&[data-variant=secondary]": { flexDir: "row", gap: "2" },
+    "&[data-orientation=vertical]": { w: "full", justifyContent: "flex-start" },
   }),
   indicator: css({
-    position: "absolute",
-    backgroundColor: "primary",
+    pos: "absolute",
+    bgColor: "primary",
     opacity: 0,
     transform: "scaleX(0.5)",
     transition: "opacity 150ms, transform 200ms cubic-bezier(0.2, 0, 0, 1)",
-    "[data-selected] &": { opacity: 1, transform: "scaleX(1)" },
+    "&[data-selected]": { opacity: 1, transform: "scaleX(1)" },
     insetBlockEnd: "0",
-    insetInline: "0",
-    marginInline: "0.5",
-    height: "3px",
-    borderTopLeftRadius: "3px",
-    borderTopRightRadius: "3px",
+    insetX: "0.5",
+    h: "3px",
+    roundedStartStart: "3px",
+    roundedStartEnd: "3px",
     "&[data-variant=secondary]": {
-      marginInline: "0",
-      height: "0.5",
-      borderTopLeftRadius: "0",
-      borderTopRightRadius: "0",
+      insetX: "0",
+      h: "0.5",
+      roundedStartStart: "0",
+      roundedStartEnd: "0",
     },
     "&[data-orientation=vertical]": {
-      inset: "0 auto 0 0",
-      marginBlock: "0.5",
-      marginInline: "0",
-      width: "3px",
-      height: "auto",
-      borderRadius: "3px 0 0 3px",
+      insetY: "0.5",
+      start: "0",
+      end: "auto",
+      w: "3px",
+      h: "auto",
+      rounded: "3px 0 0 3px",
     },
     "&[data-orientation=vertical][data-variant=secondary]": {
-      marginBlock: "0",
-      width: "0.5",
-      borderRadius: "0",
+      insetY: "0",
+      w: "0.5",
+      rounded: "0",
     },
   }),
 };
 
-function renderIndicator(variant: TabsVariant, orientation: "horizontal" | "vertical"): VNode {
+function renderIndicator(
+  variant: TabsVariant,
+  orientation: "horizontal" | "vertical",
+  selected: boolean,
+): VNode {
   return (
     <span
       class={styles.indicator}
       data-variant={variant}
       data-orientation={orientation}
+      data-selected={dataAttr(selected)}
       part="indicator"
     />
   );
@@ -228,9 +231,9 @@ export class QuiTabTrigger extends Mixin(ControllerHostMixin) {
         >
           <span class={styles.tabContent} data-variant={variant} data-orientation={orientation}>
             <slot />
-            {variant === "primary" ? renderIndicator(variant, orientation) : undefined}
+            {variant === "primary" ? renderIndicator(variant, orientation, selected) : undefined}
           </span>
-          {variant === "secondary" ? renderIndicator(variant, orientation) : undefined}
+          {variant === "secondary" ? renderIndicator(variant, orientation, selected) : undefined}
         </button>
       </Host>
     );

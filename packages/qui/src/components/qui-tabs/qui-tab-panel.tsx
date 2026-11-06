@@ -25,7 +25,7 @@ const styles = {
   host: css({ display: "contents" }),
   panel: css({
     flex: "1",
-    paddingY: "3",
+    py: "3",
     outlineStyle: "none",
     fontSize: "sm",
     color: "onSurfaceVariant",
@@ -33,7 +33,7 @@ const styles = {
     // So this mainly helps long, active panels below the fold.
     contentVisibility: "auto",
     containIntrinsicSize: "auto 100px",
-    "&[data-orientation=vertical]": { paddingY: "0", paddingInlineStart: "4" },
+    "&[data-orientation=vertical]": { py: "0", ps: "4" },
     "&:focus-visible": focusRing,
   }),
 };

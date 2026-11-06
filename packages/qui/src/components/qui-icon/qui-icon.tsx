@@ -4,6 +4,7 @@ import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
 import { ensureShadowStylesheet } from "../../utilities/styles";
+import { renderIconSvg } from "./render-icon";
 
 const styles = {
   host: css({ display: "contents" }),
@@ -12,16 +13,16 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
-    width: "1em",
-    height: "1em",
-    lineHeight: "1",
+    w: "1em",
+    h: "1em",
+    lineHeight: "none",
     color: "currentColor",
     verticalAlign: "middle",
   }),
   svg: css({
     display: "block",
-    width: "100%",
-    height: "100%",
+    w: "full",
+    h: "full",
   }),
 };
 
@@ -66,15 +67,7 @@ export class QuiIcon {
           role={labelled ? "img" : undefined}
           aria-label={labelled ? this.label : undefined}
         >
-          <svg
-            class={styles.svg}
-            viewBox={this.viewBox}
-            aria-hidden="true"
-            focusable="false"
-            fill="currentColor"
-          >
-            <path fill="currentColor" d={this.path} />
-          </svg>
+          {renderIconSvg({ path: this.path, viewBox: this.viewBox, class: styles.svg })}
         </span>
       </Host>
     );

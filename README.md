@@ -48,6 +48,12 @@ bun run lint
 bun run fmt:check
 ```
 
+`bun run lint` runs the package-level Oxlint configs in `packages/qui` and
+`packages/unplugin`. The Panda rules are loaded through
+`packages/qui/tooling/plugins/pandacss/oxlint.mjs`, which points them at the
+package's `panda.config.ts`, so they lint against its actual tokens and
+recipes.
+
 Package-specific commands:
 
 ```sh

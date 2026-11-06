@@ -23,15 +23,15 @@ const styles = {
   }),
   body: css({
     overflow: "hidden",
-    minHeight: "0",
+    minH: "0",
     // Skips layout/paint for collapsed or off-screen bodies. The intrinsic size
     // Reuses the last rendered height to keep the placeholder stable.
     contentVisibility: "auto",
     containIntrinsicSize: "auto 100px",
   }),
   padding: css({
-    paddingX: "4",
-    paddingY: "3",
+    px: "4",
+    py: "3",
     fontSize: "sm",
     color: "onSurfaceVariant",
   }),

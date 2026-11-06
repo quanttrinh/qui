@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as ts from "typescript";
 
-import { type BuildConfig } from "../config";
+import { type Config } from "../config";
 
 const UNDEFINED_CONTENT_TAG = "undefinedContent";
 
@@ -37,7 +37,7 @@ function componentTag(node: ts.ClassDeclaration, source: ts.SourceFile): string 
  * class documentation. The marker keeps the metadata beside the component
  * instead of duplicating its tag in a build-time list.
  */
-function discoverUndefinedContentTags(config: BuildConfig): string[] {
+function undefinedContentTags(config: Config): string[] {
   const tags = new Set<string>();
 
   for (const file of readdirSync(config.source.components, { encoding: "utf8", recursive: true })) {
@@ -68,16 +68,11 @@ function discoverUndefinedContentTags(config: BuildConfig): string[] {
   return [...tags].sort();
 }
 
-/** Content hosts that have no useful pre-upgrade state. */
-function undefinedContentTags(config: BuildConfig): string[] {
-  return discoverUndefinedContentTags(config);
-}
-
 /**
  * Suppresses content while its custom element is undefined, but keeps
  * server-rendered hosts visible through Stencil's `hydrated` marker.
  */
-function undefinedContentSelector(config: BuildConfig): string {
+function undefinedContentSelector(config: Config): string {
   return `:where(${undefinedContentTags(config).join(", ")}):not(:defined):not(.hydrated)`;
 }
 

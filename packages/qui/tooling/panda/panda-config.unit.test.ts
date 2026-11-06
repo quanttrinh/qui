@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { quiPreset } from "../../panda.config";
-import { createBuildConfig } from "../config";
+import { createConfig } from "../config";
 import { undefinedContentSelector, undefinedContentTags } from "./undefined-content";
 
-const build = createBuildConfig(process.cwd());
+const build = createConfig(process.cwd());
 const UNDEFINED_CONTENT_TAGS = undefinedContentTags(build);
 const UNDEFINED_CONTENT_SELECTOR = undefinedContentSelector(build);
 

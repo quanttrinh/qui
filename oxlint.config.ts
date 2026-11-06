@@ -1,4 +1,3 @@
-import stencil from "@stencil/eslint-plugin";
 import { defineConfig } from "oxlint";
 
 import { toolIgnorePatterns } from "./tooling/ignore";
@@ -24,13 +23,7 @@ export default defineConfig({
     "typescript",
     "unicorn",
   ],
-  env: {
-    builtin: true,
-    browser: true,
-    node: true,
-  },
   ignorePatterns: [...toolIgnorePatterns],
-  jsPlugins: [{ name: "stencil", specifier: "@stencil/eslint-plugin" }],
   options: {
     typeAware: true,
     typeCheck: true,
@@ -42,81 +35,6 @@ export default defineConfig({
         // Test files use compact helpers and intentionally cast fakes.
         "typescript/explicit-function-return-type": "off",
         "typescript/no-unsafe-type-assertion": "off",
-      },
-    },
-    {
-      files: ["packages/qui/src/**/*.{ts,tsx}"],
-      rules: {
-        ...stencil.configs.oxlint,
-
-        // --- JSX A11y ------------------------------------------------------
-        // The ARIA combobox/tab/radio patterns intentionally manage focus and
-        // interactivity on wrapper elements.
-        "jsx-a11y/click-events-have-key-events": "off",
-        "jsx-a11y/interactive-supports-focus": "off",
-        "jsx-a11y/prefer-tag-over-role": "off",
-        "jsx-a11y/role-supports-aria-props": "off",
-
-        // --- React / JSX ---------------------------------------------------
-        // The button type is a constrained dynamic prop; the rule only
-        // recognizes a literal attribute.
-        "react/button-has-type": "off",
-        // Stencil compiles JSX with its own `h` factory, so there is no React
-        // runtime to put in scope and .tsx is the correct extension.
-        "react/jsx-filename-extension": ["error", { extensions: [".tsx"] }],
-        "react/jsx-max-depth": ["error", { max: 8 }],
-        "react/jsx-no-literals": "off",
-        // Form controls spread precomputed Stencil prop and state attributes.
-        "react/jsx-props-no-spreading": "off",
-        // Stencil attributes such as `part` and `data-*` are unknown to React.
-        "react/no-unknown-property": "off",
-        // Stencil components are class-based and use their own JSX factory.
-        "react/prefer-function-component": "off",
-        "react/react-in-jsx-scope": "off",
-
-        // --- Stencil -------------------------------------------------------
-        // Panda's `css()` is a pure build-time helper, and the other entries
-        // are pure factory/lookup helpers.
-        "stencil/ban-side-effects": ["error", ["css", "createContextStore", "createGlobalHrefKey"]],
-        "stencil/decorators-style": [
-          "error",
-          {
-            prop: "inline",
-            state: "inline",
-            element: "inline",
-            event: "multiline",
-            method: "multiline",
-            watch: "multiline",
-            listen: "multiline",
-          },
-        ],
-      },
-    },
-    {
-      files: [
-        "packages/qui/src/components/qui-select/qui-select.tsx",
-        "packages/qui/src/components/qui-combobox/qui-combobox.tsx",
-      ],
-      rules: {
-        // These watches target props supplied by OptionControlMixin, which the
-        // Stencil lint plugin cannot associate with the component class.
-        "stencil/no-unused-watch": "off",
-      },
-    },
-    {
-      files: ["packages/unplugin/src/**/*.ts"],
-      rules: {
-        // `unplugin` plugins need a default export for `Qui.vite(...)`.
-        "import/no-default-export": "off",
-        // The plugin runs in Node and reads package files at build time.
-        "import/no-nodejs-modules": "off",
-      },
-    },
-    {
-      files: ["packages/qui/src/utilities/ssr/ssr.hydration.integration.test.ts"],
-      rules: {
-        // This test starts a local HTTP server and drives real browsers.
-        "import/no-nodejs-modules": "off",
       },
     },
   ],

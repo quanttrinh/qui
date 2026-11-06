@@ -2,7 +2,7 @@
 import { join } from "node:path";
 
 /** Absolute paths and fixed inputs used by the package build. */
-export interface BuildConfig {
+export interface Config {
   root: string;
   frameworks: readonly ["react", "solid", "preact"];
   source: {
@@ -54,7 +54,7 @@ export interface BuildConfig {
   };
 }
 
-export function createBuildConfig(root: string): BuildConfig {
+export function createConfig(root: string): Config {
   const executable = process.platform === "win32" ? "panda.cmd" : "panda";
   const styledSystem = join(root, "styled-system");
   const types = join(root, "dist", "types");
@@ -99,14 +99,14 @@ export function createBuildConfig(root: string): BuildConfig {
     },
     configInputs: [join(root, "panda.config.ts")],
     styleBuildInputs: [
-      join(root, "build", "config.ts"),
-      join(root, "build", "panda", "css.ts"),
-      join(root, "build", "panda", "layer-order.ts"),
-      join(root, "build", "panda", "panda-driver.ts"),
-      join(root, "build", "panda", "theme-css.ts"),
-      join(root, "build", "panda", "undefined-content.ts"),
-      join(root, "build", "plugins", "rollup", "pandacss.ts"),
-      join(root, "build", "plugins", "stencil", "styles.ts"),
+      join(root, "tooling", "config.ts"),
+      join(root, "tooling", "panda", "css.ts"),
+      join(root, "tooling", "panda", "layer-order.ts"),
+      join(root, "tooling", "panda", "panda-driver.ts"),
+      join(root, "tooling", "panda", "theme-css.ts"),
+      join(root, "tooling", "panda", "undefined-content.ts"),
+      join(root, "tooling", "plugins", "rollup", "pandacss.ts"),
+      join(root, "tooling", "plugins", "stencil", "styles.ts"),
     ],
     binary: {
       pandaPackage: join(root, "node_modules", ".bin", executable),

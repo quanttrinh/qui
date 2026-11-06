@@ -4,12 +4,12 @@ export const fieldStyles = {
   host: css({ display: "block" }),
   root: css({
     display: "flex",
-    flexDirection: "column",
+    flexDir: "column",
     gap: "1.5",
     "&[data-disabled]": { cursor: "not-allowed" },
   }),
   label: css({
-    fontSize: "sm",
+    textStyle: "sm",
     fontWeight: "medium",
     color: "onSurface",
     "&[data-disabled]": { opacity: 0.38 },

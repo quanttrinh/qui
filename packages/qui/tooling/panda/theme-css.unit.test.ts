@@ -3,11 +3,11 @@ import postcss from "postcss";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { colorRoles, cssVariableNames } from "../../src/utilities/theme/color-roles";
-import { createBuildConfig } from "../config";
+import { createConfig } from "../config";
 import { generateThemeCss } from "./theme-css";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
-const build = createBuildConfig(ROOT);
+const build = createConfig(ROOT);
 const FULL_LAYER_ORDER = /@layer\s+reset\s*,\s*base[^;]*;/u;
 const INDIVIDUAL_LAYERS = ["reset", "base", "tokens", "recipes", "utilities"] as const;
 const PROPERTY_RULE = /@property/gu;

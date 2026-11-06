@@ -14,7 +14,7 @@ export default defineVitestConfig({
         test: {
           ...testDefaults,
           name: "unit",
-          include: ["src/**/*.unit.test.{ts,tsx}", "build/**/*.unit.test.{ts,tsx}"],
+          include: ["src/**/*.unit.test.{ts,tsx}", "tooling/**/*.unit.test.{ts,tsx}"],
           environment: "node",
         },
       },

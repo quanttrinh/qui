@@ -26,12 +26,11 @@ export interface PopoverDismissEvent {
 
 const layout = {
   display: "flex",
-  flexDirection: "column",
+  flexDir: "column",
   boxSizing: "border-box",
-  position: "fixed",
+  pos: "fixed",
   inset: "auto",
-  margin: "0",
-  padding: "0",
+  p: "0",
   "&[hidden]": { display: "none" },
 } as const;
 
@@ -39,18 +38,18 @@ const styles = {
   host: css({ display: "contents" }),
   surface: css({
     ...layout,
-    padding: "3",
+    p: "3",
     overflowY: "auto",
-    backgroundColor: "surface",
+    bgColor: "surface",
     borderWidth: "1px",
     borderColor: "outlineVariant",
     rounded: "xl",
-    boxShadow: "md",
+    shadow: "md",
   }),
   bare: css({
     ...layout,
     overflow: "visible",
-    backgroundColor: "transparent",
+    bgColor: "transparent",
     borderWidth: "0",
   }),
 };

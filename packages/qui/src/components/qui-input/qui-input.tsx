@@ -617,6 +617,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
             data-invalid={dataAttr(this.form.isInvalid)}
             data-disabled={dataAttr(this.form.isDisabled)}
             data-readonly={dataAttr(this.form.isReadOnly)}
+            data-number={dataAttr(this.isNumber)}
             class={styles.control}
             part="control"
           >
@@ -686,7 +687,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
                     }
                   }}
                 >
-                  <AddIcon />
+                  <AddIcon class={styles.stepperIcon} />
                 </button>
                 <button
                   type="button"
@@ -715,7 +716,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
                     }
                   }}
                 >
-                  <RemoveIcon />
+                  <RemoveIcon class={styles.stepperIcon} />
                 </button>
               </div>
             ) : undefined}
@@ -733,7 +734,11 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
                 }}
                 onClick={this.handleTogglePassword}
               >
-                {this.passwordVisible ? <VisibilityIcon /> : <VisibilityOffIcon />}
+                {this.passwordVisible ? (
+                  <VisibilityIcon class={styles.triggerIcon} />
+                ) : (
+                  <VisibilityOffIcon class={styles.triggerIcon} />
+                )}
               </button>
             ) : undefined}
           </div>

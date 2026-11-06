@@ -8,7 +8,7 @@ import { access, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promise
 import { dirname, join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 
-import { type BuildConfig } from "../../config";
+import { type Config } from "../../config";
 import { type PandaDriver } from "../../panda/panda-driver";
 import { generateThemeCss } from "../../panda/theme-css";
 
@@ -20,7 +20,7 @@ interface ComponentEntry {
 }
 
 interface StylesPluginOptions {
-  config: BuildConfig;
+  config: Config;
   driver: PandaDriver;
   logger: Logger;
 }
@@ -96,7 +96,7 @@ async function writeIfChanged(file: string, contents: string): Promise<void> {
   await writeFile(file, contents);
 }
 
-function fileHashesSync(config: BuildConfig): Map<string, string> {
+function fileHashesSync(config: Config): Map<string, string> {
   const files = [
     ...config.configInputs,
     ...config.styleBuildInputs,
@@ -111,7 +111,7 @@ function fileHashesSync(config: BuildConfig): Map<string, string> {
   );
 }
 
-async function fileHashes(config: BuildConfig): Promise<Map<string, string>> {
+async function fileHashes(config: Config): Promise<Map<string, string>> {
   const files = [
     ...config.configInputs,
     ...config.styleBuildInputs,
@@ -144,7 +144,7 @@ function hashesDigest(hashes: Map<string, string>): string {
 }
 
 /** Theme source files, used to avoid reloading Material on every rebuild. */
-async function themeSourceHash(config: BuildConfig): Promise<string> {
+async function themeSourceHash(config: Config): Promise<string> {
   const files = (await walk(config.source.theme)).filter((file) => file.endsWith(".ts"));
   const entries = await Promise.all(
     files.sort().map(
@@ -160,7 +160,7 @@ async function themeSourceHash(config: BuildConfig): Promise<string> {
   return hashesDigest(new Map(entries));
 }
 
-function manifestHash(config: BuildConfig): string | undefined {
+function manifestHash(config: Config): string | undefined {
   try {
     const value: unknown = JSON.parse(readFileSync(config.file.styleManifest, "utf8"));
     if (typeof value === "object" && value !== null && "hash" in value) {
@@ -197,13 +197,13 @@ async function pathExists(path: string): Promise<boolean> {
   }
 }
 
-function pandaBinary(config: BuildConfig): string {
+function pandaBinary(config: Config): string {
   return existsSync(config.binary.pandaPackage)
     ? config.binary.pandaPackage
     : config.binary.pandaWorkspace;
 }
 
-function panda(config: BuildConfig, args: string[], logger: Logger): void {
+function panda(config: Config, args: string[], logger: Logger): void {
   const binary = pandaBinary(config);
   try {
     execFileSync(binary, args, { cwd: config.root, stdio: "pipe" });
@@ -216,7 +216,7 @@ function panda(config: BuildConfig, args: string[], logger: Logger): void {
   }
 }
 
-async function pandaAsync(config: BuildConfig, args: string[], logger: Logger): Promise<void> {
+async function pandaAsync(config: Config, args: string[], logger: Logger): Promise<void> {
   const binary = (await pathExists(config.binary.pandaPackage))
     ? config.binary.pandaPackage
     : config.binary.pandaWorkspace;
@@ -252,7 +252,7 @@ function componentEntry(
   };
 }
 
-function findComponentsSync(config: BuildConfig): ComponentEntry[] {
+function findComponentsSync(config: Config): ComponentEntry[] {
   const outputDirectory = config.output.components;
   mkdirSync(outputDirectory, { recursive: true });
 
@@ -265,7 +265,7 @@ function findComponentsSync(config: BuildConfig): ComponentEntry[] {
     .sort((a, b) => a.tag.localeCompare(b.tag));
 }
 
-async function findComponents(config: BuildConfig): Promise<ComponentEntry[]> {
+async function findComponents(config: Config): Promise<ComponentEntry[]> {
   const outputDirectory = config.output.components;
   await mkdir(outputDirectory, { recursive: true });
 
@@ -308,17 +308,14 @@ function styleUrlModuleContents(components: ComponentEntry[]): {
   };
 }
 
-function writeStyleUrlModuleSync(config: BuildConfig, components: ComponentEntry[]): void {
+function writeStyleUrlModuleSync(config: Config, components: ComponentEntry[]): void {
   const contents = styleUrlModuleContents(components);
   mkdirSync(config.output.styleUrls, { recursive: true });
   writeIfChangedSync(config.file.styleUrlsModule, contents.module);
   writeIfChangedSync(config.file.styleUrlsDeclaration, contents.declaration);
 }
 
-async function writeStyleUrlModule(
-  config: BuildConfig,
-  components: ComponentEntry[],
-): Promise<void> {
+async function writeStyleUrlModule(config: Config, components: ComponentEntry[]): Promise<void> {
   const contents = styleUrlModuleContents(components);
   await mkdir(config.output.styleUrls, { recursive: true });
   await Promise.all([
@@ -328,7 +325,7 @@ async function writeStyleUrlModule(
 }
 
 class StyleGenerator {
-  private readonly config: BuildConfig;
+  private readonly config: Config;
   private readonly outdir: string;
   private readonly root: string;
   private readonly driver: PandaDriver;
@@ -338,7 +335,7 @@ class StyleGenerator {
   private cssPromise?: Promise<void>;
   private themeCache?: { key: string; css: string };
 
-  constructor(config: BuildConfig, driver: PandaDriver, logger: Logger) {
+  constructor(config: Config, driver: PandaDriver, logger: Logger) {
     this.config = config;
     this.root = config.root;
     this.outdir = config.output.styledSystem;

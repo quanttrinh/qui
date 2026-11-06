@@ -28,11 +28,11 @@ const styles = {
   host: css({ display: "block" }),
   root: css({
     display: "flex",
-    flexDirection: "column",
-    width: "full",
+    flexDir: "column",
+    w: "full",
     color: "onSurface",
     "&[data-orientation=vertical]": {
-      flexDirection: "row",
+      flexDir: "row",
       alignItems: "flex-start",
     },
   }),

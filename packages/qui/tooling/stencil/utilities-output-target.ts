@@ -3,10 +3,10 @@ import type { OutputTargetCustom } from "@stencil/core/internal";
 import { relative } from "node:path";
 
 import { buildModules } from "../../../../tooling/module-builder";
-import { type BuildConfig } from "../config";
+import { type Config } from "../config";
 
 /** Compiles the public utility entry points as standalone ESM modules. */
-export function utilitiesOutputTarget(config: BuildConfig): OutputTargetCustom {
+export function utilitiesOutputTarget(config: Config): OutputTargetCustom {
   return {
     type: "custom",
     name: "qui-utilities",

@@ -12,15 +12,15 @@ import { consumeTabs, type TabsContext } from "./context";
 const styles = {
   host: css({ display: "block" }),
   list: css({
-    position: "relative",
+    pos: "relative",
     display: "flex",
     flexShrink: 0,
     borderBlockEndWidth: "1px",
     borderColor: "outlineVariant",
     "&[data-orientation=vertical]": {
-      flexDirection: "column",
+      flexDir: "column",
       borderBlockEndWidth: "0",
-      borderInlineEndWidth: "1px",
+      borderEndWidth: "1px",
     },
   }),
 };

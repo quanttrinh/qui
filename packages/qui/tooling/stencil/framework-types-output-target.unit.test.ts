@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createBuildConfig } from "../config";
+import { createConfig } from "../config";
 import { frameworkTypesOutputTarget } from "./framework-types-output-target";
 
 const roots: string[] = [];
@@ -57,7 +57,7 @@ async function generate(options: GenerateOptions = {}): Promise<{
   }
 
   const writes = new Map<string, string>();
-  const target = frameworkTypesOutputTarget({ config: createBuildConfig(root) });
+  const target = frameworkTypesOutputTarget({ config: createConfig(root) });
   const generateTypes = target.generator as unknown as (
     config: unknown,
     compilerCtx: unknown,

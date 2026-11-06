@@ -43,64 +43,64 @@ const styles = {
     "&[data-disabled]": { cursor: "not-allowed", opacity: 0.38 },
   }),
   control: css({
-    position: "relative",
+    pos: "relative",
     display: "inline-flex",
     flexShrink: 0,
-    width: "12",
-    height: "8",
+    w: "12",
+    h: "8",
     rounded: "full",
-    borderWidth: "2px",
+    borderWidth: "0.5",
     borderStyle: "solid",
     borderColor: "outline",
-    backgroundColor: "surfaceContainerHighest",
+    bgColor: "surfaceContainerHighest",
     transition: "background-color 150ms ease, border-color 150ms ease",
     "&[data-state=checked]": {
-      backgroundColor: "primary",
+      bgColor: "primary",
       borderColor: "primary",
     },
     "&[data-invalid]": { borderColor: "error" },
     "&[data-focus-visible]": focusRing,
   }),
   thumb: css({
-    position: "absolute",
-    top: "50%",
-    insetInlineStart: "1.5",
+    pos: "absolute",
+    insetBlockStart: "50%",
+    start: "1.5",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: "4",
-    height: "4",
+    w: "4",
+    h: "4",
     rounded: "full",
     overflow: "hidden",
     color: "primary",
-    backgroundColor: "outline",
+    bgColor: "outline",
     transform: "translateY(-50%)",
     transition:
       "inset-inline-start 150ms ease, width 150ms ease, height 150ms ease, background-color 150ms ease",
-    "& svg": {
-      opacity: 0,
-      transition: "opacity 150ms ease",
-    },
+    "--thumb-icon-opacity": "0",
     "&[data-state=checked]": {
-      insetInlineStart: "calc(100% - 1.65rem)",
-      width: "6",
-      height: "6",
-      backgroundColor: "onPrimary",
-      "& svg": { opacity: 1 },
+      start: "calc(100% - 1.65rem)",
+      w: "6",
+      h: "6",
+      bgColor: "onPrimary",
+      "--thumb-icon-opacity": "1",
     },
+  }),
+  thumbIcon: css({
+    opacity: "var(--thumb-icon-opacity)",
+    transition: "opacity 150ms ease",
   }),
   label: css({
     cursor: "pointer",
-    fontSize: "sm",
+    textStyle: "sm",
     fontWeight: "medium",
     color: "onSurface",
   }),
   input: css({
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: "0",
-    margin: "-1px",
+    pos: "absolute",
+    w: "1px",
+    h: "1px",
+    p: "0",
     overflow: "hidden",
     clip: "rect(0, 0, 0, 0)",
     whiteSpace: "nowrap",
@@ -338,7 +338,9 @@ export class QuiSwitch extends Mixin(ControllerHostMixin, FormControlMixin) {
               class={styles.thumb}
               part="thumb"
             >
-              <CheckIcon />
+              <span class={styles.thumbIcon}>
+                <CheckIcon />
+              </span>
             </span>
           </span>
           <span

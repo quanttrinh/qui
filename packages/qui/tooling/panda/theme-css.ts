@@ -7,7 +7,7 @@ import {
   type cssVariableNames,
   type schemeToColors,
 } from "../../src/utilities/theme";
-import { type BuildConfig } from "../config";
+import { type Config } from "../config";
 import { layerOrderDeclarations } from "./layer-order";
 
 interface ThemeModule {
@@ -25,7 +25,7 @@ interface ThemeModule {
  * loader rejects. jiti resolves them the same way Panda's config loader does.
  * `moduleCache` stays disabled so watch rebuilds see theme changes.
  */
-async function loadThemeModule(config: BuildConfig): Promise<ThemeModule> {
+async function loadThemeModule(config: Config): Promise<ThemeModule> {
   const jiti = createJiti(config.file.themeEntry, {
     interopDefault: true,
     moduleCache: false,
@@ -63,7 +63,7 @@ function registrations(
  * order without triggering Panda's full-order expansion, and values stay in the
  * base layer so app token layers override them.
  */
-export async function generateThemeCss(config: BuildConfig): Promise<string> {
+export async function generateThemeCss(config: Config): Promise<string> {
   const theme = await loadThemeModule(config);
   const light = theme.schemeToColors(theme.createScheme({ dark: false }));
   const dark = theme.schemeToColors(theme.createScheme({ dark: true }));

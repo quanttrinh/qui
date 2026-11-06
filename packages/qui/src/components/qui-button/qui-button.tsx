@@ -12,7 +12,7 @@ export type ButtonSize = "sm" | "md" | "lg";
 const styles = {
   host: css({ display: "inline-block" }),
   root: css({
-    position: "relative",
+    pos: "relative",
     isolation: "isolate",
     display: "inline-flex",
     alignItems: "center",
@@ -20,50 +20,47 @@ const styles = {
     flexShrink: 0,
     rounded: "full",
     borderWidth: "0",
-    fontFamily: "inherit",
     fontWeight: "medium",
     whiteSpace: "nowrap",
     cursor: "pointer",
     userSelect: "none",
     overflow: "hidden",
-    textDecoration: "none",
     transition: "box-shadow 200ms, background-color 200ms, color 200ms",
     "&::before": {
       content: '""',
-      position: "absolute",
+      pos: "absolute",
       inset: "0",
       zIndex: "-1",
-      backgroundColor: "currentColor",
+      bgColor: "currentColor",
       opacity: 0,
       pointerEvents: "none",
       transition: "opacity 150ms",
     },
     "&:hover:not(:disabled):not([aria-disabled=true])::before": { opacity: 0.08 },
     "&:active:not(:disabled):not([aria-disabled=true])::before": { opacity: 0.12 },
-    "& svg": { boxSize: "1.25em" },
     _focusVisible: focusRing,
     "&:disabled, &[aria-disabled=true]": { opacity: 0.38, cursor: "not-allowed" },
 
-    "&[data-size=sm]": { height: "8", paddingInline: "3", gap: "1.5", fontSize: "sm" },
-    "&[data-size=md]": { height: "10", paddingInline: "6", gap: "2", fontSize: "sm" },
-    "&[data-size=lg]": { height: "12", paddingInline: "8", gap: "2.5", fontSize: "md" },
+    "&[data-size=sm]": { h: "8", px: "3", gap: "1.5", fontSize: "sm" },
+    "&[data-size=md]": { h: "10", px: "6", gap: "2", fontSize: "sm" },
+    "&[data-size=lg]": { h: "12", px: "8", gap: "2.5", fontSize: "md" },
 
     "&[data-variant=filled]": {
-      backgroundColor: "primary",
+      bgColor: "primary",
       color: "onPrimary",
-      boxShadow: "sm",
+      shadow: "sm",
     },
-    "&[data-variant=filled]:hover:not(:disabled):not([aria-disabled=true])": { boxShadow: "md" },
+    "&[data-variant=filled]:hover:not(:disabled):not([aria-disabled=true])": { shadow: "md" },
     "&[data-variant=tonal]": {
-      backgroundColor: "secondaryContainer",
+      bgColor: "secondaryContainer",
       color: "onSecondaryContainer",
     },
     "&[data-variant=elevated]": {
-      backgroundColor: "surfaceContainerLow",
+      bgColor: "surfaceContainerLow",
       color: "primary",
-      boxShadow: "sm",
+      shadow: "sm",
     },
-    "&[data-variant=elevated]:hover:not(:disabled):not([aria-disabled=true])": { boxShadow: "md" },
+    "&[data-variant=elevated]:hover:not(:disabled):not([aria-disabled=true])": { shadow: "md" },
     "&[data-variant=outlined]": {
       color: "primary",
       borderWidth: "1px",
@@ -71,11 +68,14 @@ const styles = {
     },
     "&[data-variant=text]": { color: "primary" },
 
-    "&[data-icon-only] svg": { boxSize: "1.5em" },
-    "&[data-icon-only][data-size=sm]": { width: "8", paddingInline: "0" },
-    "&[data-icon-only][data-size=md]": { width: "10", paddingInline: "0" },
-    "&[data-icon-only][data-size=lg]": { width: "12", paddingInline: "0" },
+    "&[data-icon-only][data-size=sm]": { w: "8", px: "0" },
+    "&[data-icon-only][data-size=md]": { w: "10", px: "0" },
+    "&[data-icon-only][data-size=lg]": { w: "12", px: "0" },
   }),
+  // Anchors do not inherit the host font or drop the default underline.
+  // Keeping these separate avoids multiple typography properties per object.
+  linkFont: css({ fontFamily: "inherit" }),
+  linkDecoration: css({ textDecoration: "none" }),
 };
 
 /**
@@ -133,7 +133,7 @@ export class QuiButton {
           <a
             {...this.dataProps}
             part="button"
-            class={styles.root}
+            class={`${styles.root} ${styles.linkFont} ${styles.linkDecoration}`}
             href={this.disabled ? undefined : this.href}
             target={this.target}
             rel={this.rel}

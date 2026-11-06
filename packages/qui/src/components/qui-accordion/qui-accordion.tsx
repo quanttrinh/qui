@@ -26,11 +26,11 @@ import { AccordionController } from "./controller";
 const styles = {
   host: css({ display: "block" }),
   root: css({
-    width: "full",
+    w: "full",
     borderWidth: "1px",
     borderColor: "outlineVariant",
     rounded: "xl",
-    backgroundColor: "surface",
+    bgColor: "surface",
     overflow: "hidden",
   }),
 };

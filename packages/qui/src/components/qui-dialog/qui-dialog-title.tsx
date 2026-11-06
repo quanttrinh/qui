@@ -10,8 +10,7 @@ import { consumeDialog, type DialogContext } from "./context";
 const styles = {
   host: css({ display: "block" }),
   title: css({
-    fontSize: "2xl",
-    fontWeight: "normal",
+    textStyle: "2xl",
     lineHeight: "snug",
     color: "onSurface",
   }),

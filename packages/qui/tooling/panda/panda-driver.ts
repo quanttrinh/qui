@@ -3,7 +3,7 @@ import type { Compiler, NodeDriver } from "@pandacss/compiler";
 
 import { createRequire } from "node:module";
 
-import { type BuildConfig } from "../config";
+import { type Config } from "../config";
 import { stripRootLayerOrder } from "./css";
 
 /** Shared Panda compiler and stylesheet generation for the build and transformer. */
@@ -25,7 +25,7 @@ export interface PandaDriver {
  * needs `styled-system/css` and the style-url module before it scans component
  * decorators. The drivers below handle CSS generation and transform work.
  */
-export function createPandaDriver(config: BuildConfig): PandaDriver {
+export function createPandaDriver(config: Config): PandaDriver {
   const requireFromRoot = createRequire(config.file.packageJson);
   const { createNodeDriver } = requireFromRoot(
     "@pandacss/compiler",

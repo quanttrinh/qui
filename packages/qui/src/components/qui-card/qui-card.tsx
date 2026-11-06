@@ -11,26 +11,26 @@ const styles = {
   host: css({ display: "block" }),
   root: css({
     display: "flex",
-    flexDirection: "column",
+    flexDir: "column",
     gap: "3",
-    padding: "4",
+    p: "4",
     rounded: "2xl",
     transition: "box-shadow 200ms, background-color 200ms",
     "&[data-variant=elevated]": {
-      backgroundColor: "surfaceContainerLow",
-      boxShadow: "sm",
+      bgColor: "surfaceContainerLow",
+      shadow: "sm",
     },
     "&[data-variant=filled]": {
-      backgroundColor: "surfaceContainerHighest",
+      bgColor: "surfaceContainerHighest",
     },
     "&[data-variant=outlined]": {
-      backgroundColor: "surface",
+      bgColor: "surface",
       borderWidth: "1px",
       borderColor: "outlineVariant",
     },
   }),
   title: css({
-    fontSize: "md",
+    textStyle: "md",
     fontWeight: "medium",
     color: "onSurface",
     "&:empty": { display: "none" },

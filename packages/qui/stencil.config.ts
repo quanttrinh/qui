@@ -4,14 +4,14 @@ import type { Config } from "@stencil/core";
 import { createNodeLogger } from "@stencil/core/sys/node";
 
 import { watchIgnoredPatterns } from "../../tooling/ignore";
-import { createBuildConfig } from "./build/config";
-import { frameworkTypesOutputTarget } from "./build/output-targets/framework-types-output-target";
-import { utilitiesOutputTarget } from "./build/output-targets/utilities-output-target";
-import { createPandaDriver } from "./build/panda/panda-driver";
-import { pandacssTransform } from "./build/plugins/rollup/pandacss";
-import { stylesPlugin } from "./build/plugins/stencil/styles";
+import { createConfig } from "./tooling/config";
+import { createPandaDriver } from "./tooling/panda/panda-driver";
+import { pandacssTransform } from "./tooling/plugins/rollup/pandacss";
+import { stylesPlugin } from "./tooling/plugins/stencil/styles";
+import { frameworkTypesOutputTarget } from "./tooling/stencil/framework-types-output-target";
+import { utilitiesOutputTarget } from "./tooling/stencil/utilities-output-target";
 
-const build = createBuildConfig(__dirname);
+const build = createConfig(__dirname);
 const logger = createNodeLogger();
 const pandaDriver = createPandaDriver(build);
 const isTest = process.env.NODE_ENV === "test";

@@ -12,7 +12,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "flex-end",
     gap: "2",
-    marginBlockStart: "2",
+    paddingBlockStart: "2",
   }),
 };
 

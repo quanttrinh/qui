@@ -18,9 +18,9 @@ import {
 const styles = {
   host: css({ display: "block" }),
   item: css({
-    borderBottomWidth: "1px",
+    borderBlockEndWidth: "1px",
     borderColor: "outlineVariant",
-    "&:last-child": { borderBottomWidth: "0" },
+    "&:last-child": { borderBlockEndWidth: "0" },
     "&[data-disabled]": { opacity: 0.38, cursor: "not-allowed" },
   }),
 };

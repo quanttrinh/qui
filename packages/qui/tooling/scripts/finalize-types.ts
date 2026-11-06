@@ -3,10 +3,10 @@ import { access, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { createBuildConfig } from "../config";
+import { createConfig } from "../config";
 
 const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
-const build = createBuildConfig(root);
+const build = createConfig(root);
 const COMPONENT_TYPE_REFERENCE = '/// <reference path="./components.d.ts" />\n';
 
 async function pathExists(path: string): Promise<boolean> {

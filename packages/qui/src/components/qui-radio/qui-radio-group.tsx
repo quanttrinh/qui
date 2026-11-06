@@ -35,12 +35,12 @@ import { RadioGroupController } from "./controller";
 const styles = {
   host: css({ display: "block" }),
   root: css({
-    position: "relative",
+    pos: "relative",
     display: "flex",
-    flexDirection: "column",
+    flexDir: "column",
     gap: "2",
   }),
-  horizontal: css({ flexDirection: "row" }),
+  horizontal: css({ flexDir: "row" }),
 };
 
 /**

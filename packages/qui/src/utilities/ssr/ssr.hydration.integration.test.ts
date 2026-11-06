@@ -6,12 +6,12 @@ import path from "node:path";
 import { chromium, firefox, webkit, type Browser, type BrowserType, type Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { createBuildConfig } from "../../../build/config";
-import { undefinedContentTags } from "../../../build/panda/undefined-content";
 import { loadHydrate } from "../../../tests/test-utils/hydrate";
+import { createConfig } from "../../../tooling/config";
+import { undefinedContentTags } from "../../../tooling/panda/undefined-content";
 import { withShadowStylesheet } from "./index";
 
-const build = createBuildConfig(process.cwd());
+const build = createConfig(process.cwd());
 const UNDEFINED_CONTENT_TAGS = undefinedContentTags(build);
 
 const { join } = path;

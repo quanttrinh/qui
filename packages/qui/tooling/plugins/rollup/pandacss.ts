@@ -4,11 +4,11 @@ import type { Plugin } from "rollup";
 import { createNodeLogger } from "@stencil/core/sys/node";
 import { createRequire } from "node:module";
 
-import { type BuildConfig } from "../../config";
+import { type Config } from "../../config";
 import { type PandaDriver } from "../../panda/panda-driver";
 
 type Options = {
-  config: BuildConfig;
+  config: Config;
   driver: PandaDriver;
   logger: ReturnType<typeof createNodeLogger>;
 };

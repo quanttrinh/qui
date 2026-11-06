@@ -21,18 +21,18 @@ import { applyDialogAria } from "./dialog-aria";
 const styles = {
   host: css({ display: "contents" }),
   dialog: css({
-    margin: "auto",
-    padding: 0,
+    m: "auto", // oxlint-disable-line @pandacss/no-margin-properties -- Centers the native dialog.
+    p: 0,
     borderWidth: 0,
-    backgroundColor: "transparent",
-    maxWidth: "none",
-    maxHeight: "none",
+    bgColor: "transparent",
+    maxW: "none",
+    maxH: "none",
     color: "onSurface",
     outlineStyle: "none",
     // Keeps the surface shadow from being clipped; the surface scrolls itself.
     overflow: "visible",
     "&::backdrop": {
-      backgroundColor: "scrim",
+      bgColor: "scrim",
       opacity: 0.32,
     },
     "&:focus-visible": {
@@ -41,17 +41,17 @@ const styles = {
   }),
   surface: css({
     display: "flex",
-    flexDirection: "column",
+    flexDir: "column",
     gap: "4",
-    width: "full",
-    minWidth: "72",
-    maxWidth: "xl",
-    maxHeight: "calc(100dvh - 2rem)",
+    w: "full",
+    minW: "72",
+    maxW: "xl",
+    maxH: "calc(100dvh - 2rem)",
     overflowY: "auto",
-    padding: "6",
+    p: "6",
     rounded: "3xl",
-    backgroundColor: "surfaceContainerHigh",
-    boxShadow: "xl",
+    bgColor: "surfaceContainerHigh",
+    shadow: "xl",
     color: "onSurface",
   }),
 };

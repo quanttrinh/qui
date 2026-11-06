@@ -10,10 +10,10 @@ import { readFile } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import * as ts from "typescript";
 
-import { type BuildConfig } from "../config";
+import { type Config } from "../config";
 
 interface FrameworkTypesOutputTargetOptions {
-  config: BuildConfig;
+  config: Config;
 }
 
 interface FrameworkWriter {
