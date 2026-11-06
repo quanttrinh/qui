@@ -44,7 +44,7 @@ workflow generates a Conventional Commit title.
 bun install
 
 bun run build       # build all packages
-bun run test:unit   # run all unit suites
+bun run test        # run all package tests
 bun run lint
 bun run fmt:check
 ```

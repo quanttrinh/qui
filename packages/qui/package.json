@@ -123,7 +123,7 @@
     "build:lib": "panda lib --files './**/*.{js,mjs}'",
     "build:release": "bun run build && bun run build:lib",
     "codegen": "panda codegen",
-    "test": "bun tooling/scripts/stencil-test.ts",
+    "test": "bun tooling/scripts/stencil-test.ts && bun run test:framework-types",
     "test:unit": "bun tooling/scripts/stencil-test.ts --project unit",
     "test:integration": "bun tooling/scripts/stencil-test.ts --project integration",
     "test:browser": "bun tooling/scripts/stencil-test.ts --project browser",

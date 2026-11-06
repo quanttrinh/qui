@@ -35,7 +35,6 @@
     "build": "tsdown",
     "prepublishOnly": "bun run build",
     "test": "vitest run",
-    "test:unit": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
