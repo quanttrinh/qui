@@ -104,39 +104,9 @@ jobs:
         if: steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true'
         run: echo "version=$(bun x playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
 
-      - name: Determine Playwright system dependencies
-        id: playwright-deps
+      - name: Install Playwright system dependencies
         if: steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true'
-        run: |
-          set -euo pipefail
-          output="$(bun x playwright install-deps --dry-run chromium firefox webkit 2>&1 || true)"
-          packages="$(printf '%s\n' "$output" | awk '/^Missing system dependencies/{found=1; next} found && /^  / { sub(/^  /, ""); printf "%s ", $0 }')"
-          echo "packages=$packages" >> "$GITHUB_OUTPUT"
-          if [ -n "$packages" ]; then
-            echo "Playwright system dependencies: $packages"
-          elif ! printf '%s\n' "$output" | grep -q '^All system dependencies are installed\.$'; then
-            echo "Unable to determine Playwright system dependencies." >&2
-            printf '%s\n' "$output" >&2
-            exit 1
-          else
-            echo "Playwright system dependencies are already installed."
-          fi
-
-      - name: Cache Playwright system dependencies
-        if: (steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true') && steps.playwright-deps.outputs.packages != ''
-        uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1.6.3
-        with:
-          packages: ${{ steps.playwright-deps.outputs.packages }}
-          version: playwright-${{ steps.playwright-version.outputs.version }}
-          execute_install_scripts: true
-
-      - name: Refresh Playwright system libraries
-        if: (steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true') && steps.playwright-deps.outputs.packages != ''
-        run: |
-          sudo ldconfig
-          if command -v fc-cache >/dev/null 2>&1; then
-            sudo fc-cache -f
-          fi
+        run: bun x playwright install-deps chromium firefox webkit
 
       - name: Restore Playwright browsers
         id: playwright-cache
