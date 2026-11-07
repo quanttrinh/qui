@@ -534,10 +534,9 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
     const mask = this.maskConfig ?? this.inputMaskConfig;
     const masked = element.value;
-    this.syncStepperAvailability();
-
     const unmasked = mask.rawFromMasked(masked);
     this.canonicalValue = unmasked;
+    this.syncStepperAvailability();
     this.emitValue(masked, unmasked);
     this.form.sync();
   };
@@ -558,7 +557,9 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
       return;
     }
 
-    const { canIncrement, canDecrement } = this.numberStepper.getAvailability();
+    const { canIncrement, canDecrement } = this.numberStepper.getAvailability(
+      this.inputEl?.value ?? this.canonicalValue,
+    );
     if (this.canIncrement !== canIncrement) {
       this.canIncrement = canIncrement;
     }
