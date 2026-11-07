@@ -30,7 +30,9 @@ jobs:
     if: >-
       ${{
         (github.event_name == 'pull_request_target'
-          && github.actor != 'renovate[bot]')
+          && github.actor != 'renovate[bot]'
+          && (github.event.action != 'labeled'
+            || github.event.label.name == 'ai-review'))
         || (inputs.pr_number != '')
         || (github.event_name == 'issue_comment'
           && github.event.issue.pull_request
