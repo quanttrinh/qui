@@ -1,6 +1,6 @@
 {
   "name": "@quanttrinh/qui-server",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Server-first SSR/SSG helpers for @quanttrinh/qui",
   "homepage": "https://quanttrinh.github.io/qui/",
   "bugs": {

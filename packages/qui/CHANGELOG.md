@@ -1,5 +1,55 @@
 # @quanttrinh/qui
 
+## 0.7.0
+
+### Minor Changes
+
+- 1cb9681: Improve and align SSR/SSG stylesheet handling.
+  
+  `withShadowStylesheet()` now adds or reconciles the document-level stylesheet link before hydration, so components inject their own shadow-root links without a second document traversal. It exposes typed Stencil hydrate options and supports CSP nonces. Add `injectDocumentStylesheet()` for servers that manage their own document. Remove the unsupported `serializeShadowRoot: "scoped"` type option.
+  
+  Add `@quanttrinh/qui-server`, a Node-only server-first package. It normalizes `hydrateDocument()` to always return serialized HTML, exposes styled `renderToString()` and `renderPage()` helpers, collects rendered component tags, generates document shells, and adds `renderToStream()` for flushing a document shell before rendering. Keeping these helpers in a separate package avoids adding HTML parsing and server-only dependencies to the browser runtime. Add downstream framework integration documentation for Astro, Next.js, Remix, Nuxt, Express, and Koa.
+  
+  Add output-aware registration. Server results now include the rendered component list plus a static registration module and JSON manifest. `writeRegistrationManifest()` writes that manifest for the unplugin's new `virtual:qui/registration-manifest` build-time module, so components rendered from CMS data, Markdown, HTML strings, or other dynamic output are registered on the client alongside source-scanned tags.
+  
+  Move generic stylesheet URL resolution to the shared SSR/internal layer.
+  
+  Add an internal `@quanttrinh/qui/internal` entry point so the runtime, SSR helper, and unplugin share the same stylesheet marker, href normalization, primary-stylesheet detection, and URL resolution. The unplugin now exports `ensureStylesheetLinks()` and `ensureExternalStylesheetLinks()`, which mark matching links, insert missing links before `</head>`, and remove stale managed links. The unplugin's source extraction now uses Oxc's visitor API instead of a hand-rolled AST walker.
+  
+  Replace the custom module builder with `tsdown` for package builds, bundleless ESM output, and declaration generation. Server and unplugin builds use `tsdown.config.ts` files directly. They now fail on `publint` and `arethetypeswrong` package validation errors; the main package runs `publint` after its production build.
+- 7d7b6d3: Replace `qui-input`'s `maskPattern` prop with `mask` and move input editing to `@maskito/core`.
+  
+  The new mask syntax supports compact `#` digit, `A` letter, `W` word, and `?` any-character tokens, plus `[ ... ]` character classes, fixed `{n}` repetition, and literal backslash escapes. A backslash always displays the next character literally, so `\A`, `\W`, `\#`, and `\?` render those characters instead of applying token semantics. Variable-width repeats are rejected until dynamic Maskito masks are added. A property-only `maskExpression` prop accepts a native Maskito mask for advanced JavaScript usage and is hidden from HTML attributes. Maskito now also owns text masking, number masking, text-case normalization, numeric/decimal character filtering, caret, paste, delete, undo, composition, controlled-value formatting, change events, and initial calibration.
+  
+  Number inputs now render as Maskito-managed text inputs instead of native `type="number"` controls. `min`, `max`, and `step` are validated by the component and participate in form constraint validation; `step="any"` still increments by one in the stepper. Grouped pasted values are normalized, locale-aware separators are resolved through `Intl.NumberFormat` with an optional `number-locale` override, and incomplete values such as `-` are accepted while editing and validated on blur.
+  
+  Limit `inputType` to Maskito-supported input types plus masked number: `text`, `search`, `tel`, `url`, `password`, and `number`. Remove the unsupported `email` input type and the email-only `multiple` prop.
+- 1cb9681: Reorganize the build pipeline around a shared build config and async build helpers. Utility, theme, and style modules now expose focused entry points, Stencil output targets are gated for test and dev builds, and production type finalization runs automatically after the build.
+  
+  Replace component controller base classes with composable mixins (`ControllerHostMixin`, `FormControlMixin`, and `OptionControlMixin`), and extract dedicated field and field-part controllers. The public `ControllerHostBase` export is replaced by these mixins.
+  
+  Replace `qui-field`'s `elementIds` object prop with simple string props: `rootId`, `controlId`, `labelId`, `errorTextId`, and `helperTextId`. This makes every field id override usable as an HTML attribute and in SSR markup.
+  
+  Remove the function variant from `qui-popover`'s `anchor` prop. It now accepts only an `HTMLElement`; the previous sibling remains the default.
+  
+  Mark complex props as property-only with `attribute: null`: `items`, `optionRender`, `value`, and `defaultValue` on select/combobox, `value` and `defaultValue` on accordion, `filter` on combobox, and `anchor` on popover. Setting these through HTML attributes previously assigned a string to an array/object/function prop.
+- 1cb9681: Reorganize shared component internals into focused `aria`, `context`, `controllers`, `dom`, `forms`, `option`, and `styles` modules, and move test utilities and smoke coverage under `tests/`. Controller state and comparison guards were simplified, and stricter type-aware linting plus shared tooling ignore patterns were enabled.
+  
+  The unplugin uses Oxc's synchronous parser for per-module transforms, which avoids async parsing overhead, and reads the shared stylesheet on demand so watch rebuilds pick up CSS edits.
+- 1cb9681: Standardize reactive controllers around a self-registering Lit-style base class. Controllers now receive the component instance in their constructor, use `hostElement`, and schedule renders through `host.requestUpdate()`.
+- 1cb9681: Streamline the build and theme tooling. Build paths are centralized, utility compilation runs as a Stencil output target, test and dev builds skip production-only outputs, type finalization runs automatically after production builds, and type checking now uses Oxlint's type-aware mode.
+  
+  Undefined-content components are discovered from `@undefinedContent` source markers, and the color/theme helpers build role records directly while removing redundant variable helpers.
+
+### Patch Changes
+
+- 1cb9681: Remove the extra left inset from `qui-input` when no prefix is slotted. Affix padding is now applied only when the prefix or suffix slot has content, so text starts at the normal input padding.
+- 1cb9681: Add vertical padding to the select and combobox option list so the scrollbar no longer clips against the panel's rounded corners.
+- 1cb9681: Enable the full Panda CSS lint ruleset and normalize component styles around its conventions. Styles now use token-backed values, shorthand properties, logical spacing, and shared text styles, and the public `qui-icon` and internal icon helpers share one SVG renderer while internal icons stay as lightweight VNodes.
+  
+  Move the package build tooling from `build/` to `tooling/` and keep the shared lint configuration in each package.
+- 1cb9681: Move lint and formatter ignore configuration into package-level configs and remove the shared root ignore module. This is a tooling-only change with no runtime behavior changes.
+
 ## 0.6.0
 
 ### Minor Changes
