@@ -57,8 +57,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
         run: |
-          labels=$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name')
-          author=$(gh pr view "$PR_NUMBER" --json author --jq '.author.login')
+          set -euo pipefail
+          data=$(gh pr view "$PR_NUMBER" --json author,labels \
+            --jq '[.author.login, ([.labels[].name] | join("\n"))] | join("\t")')
+          author=${data%%$'\t'*}
+          labels=${data#*$'\t'}
 
           if ! grep -qx 'ai-review' <<< "$labels"; then
             echo "Skipping — PR is missing the ai-review label."

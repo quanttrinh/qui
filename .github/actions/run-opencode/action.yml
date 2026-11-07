@@ -17,7 +17,6 @@ runs:
   using: composite
   steps:
     - name: Run OpenCode
-      id: review
       shell: bash
       env:
         TARGET_PROMPT_FILE: ${{ inputs.prompt_file }}
