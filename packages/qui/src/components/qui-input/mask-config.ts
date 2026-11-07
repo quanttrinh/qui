@@ -39,9 +39,10 @@ const PASS_THROUGH_MASK = /^[\s\S]*$/u;
 const identity = (value: string): string => value;
 
 function cacheKey(settings: InputMaskSettings): string {
+  const textMask = settings.maskExpression === undefined ? (settings.mask ?? "") : "";
   return [
     settings.isNumber ? "number" : "text",
-    settings.mask ?? "",
+    textMask,
     settings.textCase,
     settings.filterMode ?? "",
     settings.allowNegative ? "negative" : "positive",

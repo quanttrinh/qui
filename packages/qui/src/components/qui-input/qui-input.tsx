@@ -297,6 +297,9 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   @Watch("min")
   @Watch("max")
   @Watch("step")
+  @Watch("inputPattern")
+  @Watch("minLength")
+  @Watch("maxLength")
   private syncFormValidity(): void {
     this.form.sync();
     this.syncStepperAvailability();
@@ -473,8 +476,33 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
   private get inputValidity(): FormValidity {
     const element = this.inputEl;
+    const native = element?.validity;
+    const nativeFlags =
+      native === undefined
+        ? ""
+        : [
+            native.badInput,
+            native.customError,
+            native.patternMismatch,
+            native.rangeOverflow,
+            native.rangeUnderflow,
+            native.stepMismatch,
+            native.tooLong,
+            native.tooShort,
+            native.typeMismatch,
+            native.valid,
+            native.valueMissing,
+          ]
+            .map((value) => (value ? "1" : "0"))
+            .join("");
+    const nativeKey = `${nativeFlags}\u0000${element?.validationMessage ?? ""}`;
     const key = [
       element?.value ?? "",
+      nativeKey,
+      this.inputType,
+      this.inputPattern ?? "",
+      String(this.minLength ?? ""),
+      String(this.maxLength ?? ""),
       this.form.isInvalid ? "1" : "0",
       this.form.isRequired ? "1" : "0",
       this.isNumber ? String(this.min ?? "") : "",

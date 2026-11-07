@@ -3,6 +3,7 @@ import { describe, expect, h, it, render } from "@stencil/vitest";
 import { queryControl, resolveHost } from "../../../tests/test-utils/component";
 import { nextFrame, waitForShadowStyles } from "../../../tests/test-utils/dom-ready";
 import { expectFocusedDeep, typeInto } from "../../../tests/test-utils/interactions";
+import { isHTMLFormElement } from "../shared/helpers/dom/dom";
 
 function queryVisibilityTrigger(host: Element): HTMLButtonElement {
   return queryControl<HTMLButtonElement>(host, "[data-part=visibility-trigger]");
@@ -49,6 +50,26 @@ describe("qui-input", () => {
     await waitForChanges();
 
     expect(input.value).toBe("12-34");
+  });
+
+  it("revalidates when the input pattern changes", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-input name="code" inputPattern={String.raw`\d+`} value="abc" />
+      </form>,
+    );
+    const form = isHTMLFormElement(root) ? root : root.querySelector("form");
+    if (!isHTMLFormElement(form)) {
+      throw new TypeError("Expected a form");
+    }
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+
+    expect(form.checkValidity()).toBe(false);
+
+    host.inputPattern = String.raw`[a-z]+`;
+    await waitForChanges();
+
+    expect(form.checkValidity()).toBe(true);
   });
 
   it("steps number inputs and respects min/max", async () => {

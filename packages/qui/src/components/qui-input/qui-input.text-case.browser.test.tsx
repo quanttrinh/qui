@@ -56,6 +56,21 @@ describe("qui-input text case", () => {
     expect(input.value).toBe("ABC");
   });
 
+  it("restores the caret after a length-changing case mapping", async () => {
+    const { root, waitForChanges } = await render(<qui-input textCase="uppercase" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    input.focus();
+    input.value = "aßb";
+    input.setSelectionRange(2, 2);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await waitForChanges();
+
+    expect(input.value).toBe("ASSB");
+    expect(input.selectionStart).toBe(3);
+  });
+
   it("normalizes initial and controlled values to lowercase", async () => {
     const { root, setProps, waitForChanges } = await render(
       <qui-input textCase="lowercase" value="ABC" />,

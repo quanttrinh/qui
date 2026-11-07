@@ -9,13 +9,20 @@ import {
 
 /** Normalizes case before the mask sees the value. */
 export function createTextCasePreprocessor(textCase: TextCase): MaskitoPreprocessor {
-  return ({ elementState, data }) => ({
-    elementState: {
-      ...elementState,
-      value: applyTextCase(elementState.value, textCase),
-    },
-    data,
-  });
+  return ({ elementState, data }) => {
+    const [from, to] = elementState.selection;
+    const valueBeforeCaret = applyTextCase(elementState.value.slice(0, from), textCase);
+    const valueBeforeSelectionEnd =
+      from === to ? valueBeforeCaret : applyTextCase(elementState.value.slice(0, to), textCase);
+
+    return {
+      elementState: {
+        value: applyTextCase(elementState.value, textCase),
+        selection: [valueBeforeCaret.length, valueBeforeSelectionEnd.length],
+      },
+      data,
+    };
+  };
 }
 
 function filterIncomingData(
