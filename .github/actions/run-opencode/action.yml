@@ -12,6 +12,10 @@ inputs:
     description: Model variant / reasoning effort
     required: false
     default: ''
+  agent:
+    description: OpenCode agent ID
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -22,6 +26,7 @@ runs:
         TARGET_PROMPT_FILE: ${{ inputs.prompt_file }}
         OPENCODE_MODEL: ${{ inputs.model }}
         OPENCODE_VARIANT: ${{ inputs.variant }}
+        OPENCODE_AGENT: ${{ inputs.agent }}
         OPENCODE_DISABLE_PROJECT_CONFIG: "1"
       run: |
         set -euo pipefail
@@ -32,5 +37,10 @@ runs:
           model="${model}#${OPENCODE_VARIANT}"
         fi
 
-        opencode run --standalone --model "$model" --auto --format json \
+        agent_args=()
+        if [ -n "$OPENCODE_AGENT" ]; then
+          agent_args=(--agent "$OPENCODE_AGENT")
+        fi
+
+        opencode run --standalone --model "$model" "${agent_args[@]}" --auto --format json \
           < "$TARGET_PROMPT_FILE"

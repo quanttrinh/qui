@@ -71,6 +71,16 @@ runs:
         {
           "formatter": false,
           "lsp": false,
+          "agents": {
+            "review": {
+              "description": "Bounded pull request reviewer",
+              "mode": "primary",
+              "steps": 8,
+              "permissions": [
+                { "action": "glob", "resource": "*", "effect": "deny" }
+              ]
+            }
+          },
           "permissions": [
             { "action": "*", "resource": "*", "effect": "deny" },
             { "action": "external_directory", "resource": "*", "effect": "deny" },
