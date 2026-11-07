@@ -6,6 +6,8 @@ export interface InputValidityOptions {
   readonly invalid: boolean;
   readonly required: boolean;
   readonly numberConstraints?: NumberConstraints;
+  /** Allows incomplete number values while the user is editing. */
+  readonly allowPartialNumber?: boolean;
 }
 
 export interface InputFormSignatureOptions {
@@ -47,6 +49,7 @@ export function resolveInputValidity({
   invalid,
   required,
   numberConstraints,
+  allowPartialNumber = false,
 }: InputValidityOptions): FormValidity {
   if (element === undefined) {
     return { flags: {} };
@@ -63,7 +66,11 @@ export function resolveInputValidity({
   }
 
   const number =
-    numberConstraints === undefined ? undefined : numberValidity(element.value, numberConstraints);
+    numberConstraints === undefined
+      ? undefined
+      : numberValidity(element.value, numberConstraints, {
+          allowPartial: allowPartialNumber,
+        });
   const flags = mergeNumberFlags(element.validity, number);
   if (!Object.values(flags).some((flag) => flag === true)) {
     return { flags: {} };

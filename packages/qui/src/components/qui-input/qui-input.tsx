@@ -174,6 +174,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   private validityResult?: FormValidity;
   private initialValue = "";
   private canonicalValue = "";
+  private inputFocused = false;
   private readonly generatedId = nextId("qui-input");
   private readonly fieldControl = createFieldControl(() => this.inputEl);
   protected readonly form = new FormController(this, {
@@ -508,6 +509,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
       this.isNumber ? String(this.min ?? "") : "",
       this.isNumber ? String(this.max ?? "") : "",
       this.isNumber ? String(this.numericStep ?? "") : "",
+      this.isNumber && this.inputFocused ? "focused" : "blurred",
     ].join("\u0000");
 
     if (this.validityResult !== undefined && this.validityKey === key) {
@@ -519,6 +521,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
       invalid: this.form.isInvalid,
       required: this.form.isRequired,
       numberConstraints: this.isNumber ? this.numberConstraints : undefined,
+      allowPartialNumber: this.isNumber && this.inputFocused,
     });
     this.validityKey = key;
     this.validityResult = validity;
@@ -574,6 +577,16 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
   private readonly handleTogglePassword = (): void => {
     this.passwordVisible = !this.passwordVisible;
+  };
+
+  private readonly handleFocus = (): void => {
+    this.inputFocused = true;
+    this.form.sync();
+  };
+
+  private readonly handleBlur = (): void => {
+    this.inputFocused = false;
+    this.form.sync();
   };
 
   private readonly handleStartHold = (direction: 1 | -1): void => {
@@ -645,6 +658,8 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
               pattern={this.inputPattern}
               class={styles.input}
               part="input"
+              onFocus={this.handleFocus}
+              onBlur={this.handleBlur}
             />
 
             <span data-part="suffix" class={cx(styles.affix, this.hasSuffix && styles.affixEnd)}>

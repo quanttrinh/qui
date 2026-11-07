@@ -12,6 +12,7 @@ const LETTER = /[a-z]/iu;
 const WORD = /[a-z0-9_]/iu;
 const ANY = /[^\r\n]/u;
 
+const MASK_CACHE_LIMIT = 100;
 const cache = new Map<string, CompiledMask>();
 
 const VARIABLE_QUANTIFIER =
@@ -169,6 +170,12 @@ export function compileMask(mask: string): CompiledMask {
     rawFromMasked: (value: string): string => rawFromMasked(value, expression),
   };
   cache.set(mask, compiled);
+  if (cache.size > MASK_CACHE_LIMIT) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) {
+      cache.delete(oldest);
+    }
+  }
   return compiled;
 }
 

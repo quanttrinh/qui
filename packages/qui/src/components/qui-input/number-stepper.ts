@@ -39,11 +39,16 @@ export class NumberStepper {
 
   /** Steps once without starting hold-to-repeat. */
   stepOnce(direction: 1 | -1): void {
-    this.step(direction);
+    if (this.canStep(direction)) {
+      this.step(direction);
+    }
   }
 
   /** Steps once, then keeps stepping while the trigger stays pressed. */
   startHold(direction: 1 | -1): void {
+    if (!this.canStep(direction)) {
+      return;
+    }
     this.stop();
     this.step(direction);
     this.holdTimer = setTimeout(() => {

@@ -28,6 +28,20 @@ describe("compileNumberMask", () => {
   it("rejects decimal separators in integer mode", () => {
     expect(maskitoTransform("1.5", integerMask)).toBe("15");
   });
+
+  it("normalizes grouped pasted values", () => {
+    const preprocessor = decimalMask.preprocessors?.[0];
+    if (preprocessor === undefined) {
+      throw new TypeError("Expected a number preprocessor");
+    }
+    const paste = (data: string): string | undefined =>
+      preprocessor({ elementState: { value: "", selection: [0, 0] }, data }, "insert").data;
+
+    expect(paste("1,234.56")).toBe("1234.56");
+    expect(paste("1.234,56")).toBe("1234.56");
+    expect(paste("1,234,567")).toBe("1234567");
+    expect(paste("1.2.3")).toBe("1.23");
+  });
 });
 
 describe("number helpers", () => {
@@ -44,6 +58,13 @@ describe("number helpers", () => {
     expect(numberValidity("1.5", { step: 1 }).flags.stepMismatch).toBe(true);
     expect(numberValidity(".", {}).flags.badInput).toBe(true);
     expect(numberValidity("2", { min: 1, max: 3, step: 1 }).flags).toEqual({});
+  });
+
+  it("allows partial numbers while editing", () => {
+    expect(numberValidity("-", {}, { allowPartial: true }).flags).toEqual({});
+    expect(numberValidity(".", {}, { allowPartial: true }).flags).toEqual({});
+    expect(numberValidity("-.", {}, { allowPartial: true }).flags).toEqual({});
+    expect(numberValidity("-", {}).flags.badInput).toBe(true);
   });
 
   it("steps within bounds and respects step any", () => {

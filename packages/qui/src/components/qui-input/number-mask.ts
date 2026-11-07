@@ -22,6 +22,13 @@ export interface NumberValidation {
   message?: string;
 }
 
+export interface NumberValidationOptions {
+  /** Treat intermediate values such as "-" or "." as valid while editing. */
+  readonly allowPartial?: boolean;
+}
+
+const PARTIAL_NUMBER = new Set(["-", ".", "-."]);
+
 function trimLeadingZeros(value: string): string {
   const negative = value.startsWith("-");
   const body = negative ? value.slice(1) : value;
@@ -63,6 +70,33 @@ function buildMask({ allowNegative, decimal }: NumberMaskOptions): RegExp {
   return new RegExp(`^${sign}\\d*${fraction}$`, "u");
 }
 
+function normalizePastedNumber(data: string, options: NumberMaskOptions): string {
+  if (!options.decimal) {
+    return normalizeNumberValue(data, options);
+  }
+
+  const lastDot = data.lastIndexOf(".");
+  const lastComma = data.lastIndexOf(",");
+  const lastSeparator = Math.max(lastDot, lastComma);
+  if (lastSeparator === -1) {
+    return normalizeNumberValue(data, options);
+  }
+
+  if (lastDot !== -1 && lastComma !== -1) {
+    const integer = data.slice(0, lastSeparator).replaceAll(/[.,]/gu, "");
+    const fraction = data.slice(lastSeparator + 1).replaceAll(/[.,]/gu, "");
+    return normalizeNumberValue(`${integer}.${fraction}`, options);
+  }
+
+  const separator = data[lastSeparator];
+  const groups = data.split(separator);
+  const grouped =
+    groups.length > 2 &&
+    /^\d{1,3}$/u.test(groups[0].replace(/^-/u, "")) &&
+    groups.slice(1).every((group) => /^\d{3}$/u.test(group));
+  return normalizeNumberValue(grouped ? groups.join("") : data, options);
+}
+
 function sanitizeData(data: string, options: NumberMaskOptions): string {
   if (data === "-") {
     return options.allowNegative ? "-" : "";
@@ -70,7 +104,9 @@ function sanitizeData(data: string, options: NumberMaskOptions): string {
   if (data === "." || data === ",") {
     return options.decimal ? "." : "";
   }
-  return normalizeNumberValue(data, options);
+  return data.length > 1
+    ? normalizePastedNumber(data, options)
+    : normalizeNumberValue(data, options);
 }
 
 /** A minimal Maskito number mask without locale grouping. */
@@ -121,7 +157,15 @@ function rejectionMessage(value: number, constraints: NumberConstraints): string
 }
 
 /** Validates a numeric mask value against the same bounds used by the stepper. */
-export function numberValidity(value: string, constraints: NumberConstraints): NumberValidation {
+export function numberValidity(
+  value: string,
+  constraints: NumberConstraints,
+  options: NumberValidationOptions = {},
+): NumberValidation {
+  if (options.allowPartial && PARTIAL_NUMBER.has(value)) {
+    return { flags: {} };
+  }
+
   const parsed = parseNumber(value);
   const flags: ValidityStateFlags = {};
   if (value !== "" && Number.isNaN(parsed)) {

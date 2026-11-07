@@ -1,6 +1,7 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 import { userEvent } from "vitest/browser";
 
+import { isHTMLFormElement } from "../src/components/shared/helpers/dom/dom";
 import { queryControl, resolveHost } from "./test-utils/component";
 
 describe("qui-input with Playwright", () => {
@@ -93,6 +94,30 @@ describe("qui-input with Playwright", () => {
 
     expect(input.value).toBe("3");
     expect(increment.disabled).toBe(true);
+  });
+
+  it("allows a partial negative number while editing", async () => {
+    const { root, waitForChanges } = await render(
+      h("form", null, h("qui-input", { inputType: "number", name: "qty" })),
+    );
+    const form = isHTMLFormElement(root) ? root : root.querySelector("form");
+    if (!isHTMLFormElement(form)) {
+      throw new TypeError("Expected a form");
+    }
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    await userEvent.click(input);
+    await userEvent.keyboard("-");
+    await waitForChanges();
+
+    expect(input.value).toBe("-");
+    expect(form.checkValidity()).toBe(true);
+
+    input.blur();
+    await waitForChanges();
+
+    expect(form.checkValidity()).toBe(false);
   });
 
   it("accepts decimal input through the keyboard", async () => {
