@@ -8,12 +8,8 @@ export interface CompiledMask {
 }
 
 const DIGIT = /\d/u;
-const NON_DIGIT = /\D/u;
 const LETTER = /[a-z]/iu;
 const WORD = /[a-z0-9_]/iu;
-const NON_WORD = /[^a-z0-9_]/iu;
-const SPACE = /\s/u;
-const NON_SPACE = /\S/u;
 const ANY = /[^\r\n]/u;
 
 const cache = new Map<string, CompiledMask>();
@@ -28,19 +24,6 @@ const TOKEN_ATOMS: Record<string, RegExp> = {
   W: WORD,
   "?": ANY,
 };
-
-const ESCAPE_ATOMS: Record<string, RegExp> = {
-  d: DIGIT,
-  D: NON_DIGIT,
-  w: WORD,
-  W: NON_WORD,
-  s: SPACE,
-  S: NON_SPACE,
-};
-
-function atomForEscape(token: string): RegExp | undefined {
-  return ESCAPE_ATOMS[token];
-}
 
 function characterClass(mask: string, start: number): { regex: RegExp; next: number } {
   let index = start + 1;
@@ -104,21 +87,15 @@ function parse(mask: string): MaskitoMaskExpression {
     const character = mask[index];
 
     if (character === "\\") {
-      const token = mask.charAt(index + 1);
-      if (token === "") {
+      const literal = mask.charAt(index + 1);
+      if (literal === "") {
         throw new Error("Mask pattern cannot end with an unescaped backslash.");
       }
-      const atom = atomForEscape(token);
-      if (atom === undefined) {
-        parts.push(token);
-        index += 2;
-      } else {
-        const { count, next } = quantifier(mask, index + 2);
-        for (let repetition = 0; repetition < count; repetition += 1) {
-          parts.push(atom);
-        }
-        index = next;
+      const { count, next } = quantifier(mask, index + 2);
+      for (let repetition = 0; repetition < count; repetition += 1) {
+        parts.push(literal);
       }
+      index = next;
     } else if (character === "[") {
       const { regex, next } = characterClass(mask, index);
       const { count, next: afterQuantifier } = quantifier(mask, next);

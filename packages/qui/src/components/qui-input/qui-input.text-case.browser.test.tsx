@@ -73,7 +73,7 @@ describe("qui-input text case", () => {
 
   it("applies case before a mask", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(
-      <qui-input textCase="uppercase" mask={String.raw`[a-zA-Z]{2}-\d{4}`} />,
+      <qui-input textCase="uppercase" mask="AA-####" />,
     );
     const spy = spyOnEvent("valuechange");
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
@@ -89,7 +89,7 @@ describe("qui-input text case", () => {
 
   it("re-masks from raw data when textCase changes", async () => {
     const { root, setProps, waitForChanges } = await render(
-      <qui-input mask={String.raw`\+1 \d{3} \d{3} \d{4}`} textCase="uppercase" />,
+      <qui-input mask={String.raw`\+1 ### ### ####`} textCase="uppercase" />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
@@ -105,7 +105,7 @@ describe("qui-input text case", () => {
 
   it("preserves mask literal case when textCase changes", async () => {
     const { root, setProps, waitForChanges } = await render(
-      <qui-input mask={String.raw`X-[a-zA-Z]{2}-\d{4}`} textCase="uppercase" />,
+      <qui-input mask="X-AA-####" textCase="uppercase" />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");

@@ -7,7 +7,7 @@ import { isHTMLFormElement } from "../shared/helpers/dom/dom";
 describe("qui-input numeric", () => {
   it("strips non-numeric characters when input mode is numeric", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(
-      <qui-input inputModeHint="numeric" mask={String.raw`\d{3}-\d{3}`} />,
+      <qui-input inputModeHint="numeric" mask="###-###" />,
     );
     const spy = spyOnEvent("valuechange");
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");

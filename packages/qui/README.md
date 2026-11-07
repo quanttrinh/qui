@@ -247,18 +247,26 @@ Use `mask` on non-number inputs. Other characters are inserted automatically:
 <qui-input mask="##/##/####"></qui-input>
 ```
 
-| Token     | Matches                   |
-| --------- | ------------------------- |
-| `#`       | digit                     |
-| `A`       | letter                    |
-| `W`       | word character            |
-| `?`       | any character             |
-| `[ ... ]` | character class           |
-| `{n}`     | repeat the previous token |
-| `\`       | escape a literal or token |
+| Token     | Matches                              |
+| --------- | ------------------------------------ |
+| `#`       | digit                                |
+| `A`       | letter                               |
+| `W`       | word character                       |
+| `?`       | any character                        |
+| `[ ... ]` | character class                      |
+| `{n}`     | repeat the previous token            |
+| `\`       | display the next character literally |
 
-The regex-style `\d`, `\w`, and `\s` tokens also work. Escape compact tokens
-when you need them literally, e.g. `mask="\#-####"`.
+Backslash always means “literal”, including for token characters:
+
+```html
+<qui-input mask="\A-####"></qui-input>
+<!-- A-1234 -->
+<qui-input mask="\W-####"></qui-input>
+<!-- W-1234 -->
+<qui-input mask="\#-####"></qui-input>
+<!-- #-1234 -->
+```
 
 Variable-width repeats such as `*`, `+`, `{n,}`, and `{n,m}` are not supported
 yet.

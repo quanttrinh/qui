@@ -7,21 +7,20 @@ const BACKSLASH = String.fromCodePoint(92);
 
 describe("compileMask", () => {
   it("applies fixed-width tokens and literals", () => {
-    const mask = compileMask(String.raw`\d{3}-\d{3}`);
+    const mask = compileMask("###-###");
 
     expect(maskitoTransform("123456", mask.options)).toBe("123-456");
     expect(maskitoTransform("12", mask.options)).toBe("12");
   });
 
-  it("supports escaped literal characters", () => {
-    const mask = compileMask(String.raw`\+\d \(\d{3}\)-\d{3}-\d{4}`);
+  it("treats escaped characters as literals", () => {
+    const mask = compileMask(String.raw`\#\?\A\W\\####`);
 
-    expect(maskitoTransform("15551234567", mask.options)).toBe("+1 (555)-123-4567");
-    expect(maskitoTransform("1555", mask.options)).toBe("+1 (555");
+    expect(maskitoTransform("1234", mask.options)).toBe(String.raw`#?AW\1234`);
   });
 
   it("supports character classes", () => {
-    const mask = compileMask(String.raw`[a-zA-Z]{2}-\d{4}`);
+    const mask = compileMask("[a-zA-Z]{2}-####");
 
     expect(maskitoTransform("ab1234", mask.options)).toBe("ab-1234");
   });
@@ -37,22 +36,28 @@ describe("compileMask", () => {
   });
 
   it("escapes compact tokens for literal use", () => {
-    const mask = compileMask(String.raw`\#-\?`);
+    const mask = compileMask(String.raw`\#-\?-\A-\W`);
 
-    expect(maskitoTransform("#-?", mask.options)).toBe("#-?");
+    expect(maskitoTransform("", mask.options)).toBe("#-?-A-W");
+  });
+
+  it("treats old regex-style escapes as literals", () => {
+    const mask = compileMask(String.raw`\d\w\s\D\W\S`);
+
+    expect(maskitoTransform("", mask.options)).toBe("dwsDWS");
   });
 
   it("uses raw extraction that respects literals", () => {
-    const mask = compileMask(String.raw`X-\w{2}-\d{4}`);
+    const mask = compileMask("X-AA-####");
 
     expect(mask.rawFromMasked("X-AB-1234")).toBe("AB1234");
   });
 
   it("rejects variable-width quantifiers until dynamic masks exist", () => {
-    expect(() => compileMask(String.raw`\d+`)).toThrow("Variable-width masks");
-    expect(() => compileMask(String.raw`\d*`)).toThrow("Variable-width masks");
-    expect(() => compileMask(String.raw`\d{2,}`)).toThrow("Variable-width masks");
-    expect(() => compileMask(String.raw`\d{2,4}`)).toThrow("Variable-width masks");
+    expect(() => compileMask("#+")).toThrow("Variable-width masks");
+    expect(() => compileMask("#*")).toThrow("Variable-width masks");
+    expect(() => compileMask("#{2,}")).toThrow("Variable-width masks");
+    expect(() => compileMask("#{2,4}")).toThrow("Variable-width masks");
   });
 
   it("rejects malformed masks", () => {
@@ -63,7 +68,7 @@ describe("compileMask", () => {
 
   it("caches compiled masks", () => {
     clearMaskCache();
-    const pattern = String.raw`\d{3}`;
+    const pattern = "###";
     const first = compileMask(pattern);
     const second = compileMask(pattern);
 

@@ -99,9 +99,9 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   /**
    * A compact mask for text-like inputs. Tokens: `#` digit, `A` letter, `W`
    * word character, and `?` any character. `[a-z]` defines a character class,
-   * `{n}` repeats the previous token, and `\` escapes a literal. The escaping
-   * tokens `\d`, `\w`, and `\s` also work. Variable-width repeats (`*`, `+`,
-   * `{n,}`, and `{n,m}`) are not supported yet.
+   * `{n}` repeats the previous token, and `\` displays the next character
+   * literally. Variable-width repeats (`*`, `+`, `{n,}`, and `{n,m}`) are not
+   * supported yet.
    */
   @Prop() mask?: string;
   /**
