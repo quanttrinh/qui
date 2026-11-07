@@ -8,6 +8,7 @@ import {
 import { type TextCase } from "./case";
 import { compileMask, extractRawFromMasked } from "./mask";
 import { compileNumberMask } from "./number-mask";
+import { type NumberSeparators } from "./number-separators";
 import { createNumericFilterPreprocessor, createTextCasePreprocessor } from "./preprocessors";
 
 /** Numeric filter modes that also drive Maskito preprocessing. */
@@ -33,6 +34,7 @@ export interface InputMaskSettings {
   readonly filterMode?: MaskFilterMode;
   readonly allowNegative: boolean;
   readonly numberDecimal: boolean;
+  readonly numberSeparators: NumberSeparators;
 }
 
 const PASS_THROUGH_MASK = /^[\s\S]*$/u;
@@ -47,6 +49,8 @@ function cacheKey(settings: InputMaskSettings): string {
     settings.filterMode ?? "",
     settings.allowNegative ? "negative" : "positive",
     settings.numberDecimal ? "decimal" : "integer",
+    settings.numberSeparators.decimal,
+    settings.numberSeparators.group,
   ].join("\u0000");
 }
 
@@ -54,6 +58,7 @@ function createNumberMask(settings: InputMaskSettings): MaskitoOptions {
   return compileNumberMask({
     allowNegative: settings.allowNegative,
     decimal: settings.numberDecimal,
+    separators: settings.numberSeparators,
   });
 }
 

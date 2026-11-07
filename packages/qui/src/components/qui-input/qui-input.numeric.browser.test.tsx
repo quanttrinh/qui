@@ -80,7 +80,9 @@ describe("qui-input numeric", () => {
   });
 
   it("normalizes number values as a plain decimal", async () => {
-    const { root, waitForChanges } = await render(<qui-input inputType="number" value="001,5" />);
+    const { root, waitForChanges } = await render(
+      <qui-input inputType="number" numberLocale="de-DE" value="001,5" />,
+    );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 

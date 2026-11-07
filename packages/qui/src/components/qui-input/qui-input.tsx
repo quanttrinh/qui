@@ -33,6 +33,7 @@ import { renderNumberStepper, renderPasswordToggle } from "./input-controls";
 import { filterNumericOrDecimalInput } from "./input-filter";
 import { resolveInputFormSignature, resolveInputValidity } from "./input-validity";
 import { resolveInputMaskConfig, type InputMaskConfig } from "./mask-config";
+import { resolveNumberSeparators, type NumberSeparators } from "./number-separators";
 import { NumberStepper, type NumberConstraints } from "./number-stepper";
 import { styles } from "./styles";
 
@@ -125,6 +126,8 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   @Prop() spellcheckHint?: boolean;
   /** Input mode hint. */
   @Prop() inputModeHint?: InputMode;
+  /** Locale used to interpret number separators. Defaults to the document/browser locale. */
+  @Prop() numberLocale?: string;
   /** Maximum number of characters. */
   @Prop() maxLength?: number;
   /** Minimum number of characters. */
@@ -167,6 +170,8 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   private canonicalValue = "";
   private inputFocused = false;
   private lastEmittedValue?: InputValueDetails;
+  private separatorLocaleKey = "";
+  private resolvedSeparators?: NumberSeparators;
   private readonly generatedId = nextId("qui-input");
   private readonly fieldControl = createFieldControl(() => this.inputEl);
   protected readonly form = new FormController(this, {
@@ -268,6 +273,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
   @Watch("mask")
   @Watch("maskExpression")
+  @Watch("numberLocale")
   @Watch("textCase")
   @Watch("inputModeHint")
   @Watch("inputType")
@@ -310,6 +316,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
       filterMode,
       allowNegative: this.allowNegative,
       numberDecimal: this.numberFilterMode === "decimal",
+      numberSeparators: this.numberSeparators,
     });
     return this.maskConfig;
   }
@@ -424,6 +431,15 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
   private get allowNegative(): boolean {
     return this.min == null || this.min < 0;
+  }
+
+  private get numberSeparators(): NumberSeparators {
+    const key = this.numberLocale ?? "";
+    if (this.separatorLocaleKey !== key || this.resolvedSeparators === undefined) {
+      this.separatorLocaleKey = key;
+      this.resolvedSeparators = resolveNumberSeparators(this.numberLocale);
+    }
+    return this.resolvedSeparators;
   }
 
   /** Number inputs accept decimals unless the numeric hint is explicit. */

@@ -91,10 +91,13 @@ describe("qui-input with Playwright", () => {
   });
 
   it("normalizes a leading comma decimal separator", async () => {
-    const { root, waitForChanges } = await render(h("qui-input", { inputType: "number" }));
+    const { root, waitForChanges } = await render(
+      h("qui-input", { inputType: "number", numberLocale: "de-DE" }),
+    );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
+    await waitForChanges();
     typeInto(input, ",5");
     await waitForChanges();
 

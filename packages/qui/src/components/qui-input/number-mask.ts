@@ -7,10 +7,12 @@ import {
 } from "@maskito/core";
 
 import { appendAcceptedNumericOrDecimalCharacter } from "./input-filter";
+import { type NumberSeparators } from "./number-separators";
 
 export interface NumberMaskOptions {
   readonly allowNegative: boolean;
   readonly decimal: boolean;
+  readonly separators?: NumberSeparators;
 }
 
 interface NumberState {
@@ -53,11 +55,53 @@ function trimLeadingZeros(value: string): string {
   return `${negative ? "-" : ""}${digits}${fraction.length > 0 ? `.${fraction.join("")}` : ""}`;
 }
 
+function hasGrouping(value: string, separators: NumberSeparators): boolean {
+  if (separators.group === "") {
+    return false;
+  }
+  if (separators.group !== "." || separators.decimal === ".") {
+    return true;
+  }
+  if (value.includes(separators.decimal)) {
+    return true;
+  }
+  return value.split(".").length > 2;
+}
+
+function normalizeLocaleNumberValue(
+  raw: string,
+  options: NumberMaskOptions,
+  separators: NumberSeparators,
+): string {
+  const sign = options.allowNegative && raw.trimStart().startsWith("-") ? "-" : "";
+  if (!options.decimal) {
+    return trimLeadingZeros(`${sign}${raw.replaceAll(/\D/gu, "")}`);
+  }
+
+  const withoutGrouping = hasGrouping(raw, separators) ? raw.replaceAll(separators.group, "") : raw;
+  let decimalIndex = withoutGrouping.indexOf(separators.decimal);
+  if (decimalIndex === -1) {
+    decimalIndex = Math.max(withoutGrouping.lastIndexOf("."), withoutGrouping.lastIndexOf(","));
+  }
+
+  const integer = (
+    decimalIndex === -1 ? withoutGrouping : withoutGrouping.slice(0, decimalIndex)
+  ).replaceAll(/\D/gu, "");
+  const fraction =
+    decimalIndex === -1 ? "" : withoutGrouping.slice(decimalIndex + 1).replaceAll(/\D/gu, "");
+  const body = decimalIndex === -1 ? integer : `${integer}.${fraction}`;
+  return trimLeadingZeros(`${sign}${body}`);
+}
+
 /**
  * Normalizes free-form text into a plain number: optional leading minus, one
  * decimal separator, and no grouping.
  */
 export function normalizeNumberValue(raw: string, options: NumberMaskOptions): string {
+  if (options.separators !== undefined) {
+    return normalizeLocaleNumberValue(raw, options, options.separators);
+  }
+
   let result = "";
   let hasSeparator = false;
 
@@ -83,6 +127,9 @@ function buildMask({ allowNegative, decimal }: NumberMaskOptions): RegExp {
 }
 
 function normalizePastedNumber(data: string, options: NumberMaskOptions): string {
+  if (options.separators !== undefined) {
+    return normalizeNumberValue(data, options);
+  }
   if (!options.decimal) {
     return normalizeNumberValue(data, options);
   }
@@ -109,11 +156,55 @@ function normalizePastedNumber(data: string, options: NumberMaskOptions): string
   return normalizeNumberValue(grouped ? groups.join("") : data, options);
 }
 
+function appendLocaleData(
+  valueBeforeCaret: string,
+  data: string,
+  options: NumberMaskOptions,
+): string {
+  const { separators } = options;
+  if (separators === undefined) {
+    return "";
+  }
+
+  let acceptedValue = valueBeforeCaret;
+  let acceptedData = "";
+
+  for (const character of data) {
+    let next: string | undefined;
+    if (character >= "0" && character <= "9") {
+      next = acceptedValue + character;
+    } else if (character === "-" && options.allowNegative && acceptedValue === "") {
+      next = "-";
+    } else if (
+      options.decimal &&
+      (character === separators.decimal ||
+        ((character === "." || character === ",") && character !== separators.group))
+    ) {
+      if (acceptedValue === "" || acceptedValue === "-") {
+        next = `${acceptedValue}0.`;
+      } else if (!acceptedValue.endsWith(".")) {
+        next = `${acceptedValue}.`;
+      }
+    }
+
+    if (next !== undefined) {
+      acceptedData += next.slice(acceptedValue.length);
+      acceptedValue = next;
+    }
+  }
+
+  return acceptedData;
+}
+
 function appendAcceptedData(
   valueBeforeCaret: string,
   data: string,
   options: NumberMaskOptions,
 ): string {
+  if (options.separators !== undefined) {
+    return appendLocaleData(valueBeforeCaret, data, options);
+  }
+
   const filterOptions = {
     allowNegative: options.allowNegative,
     mode: options.decimal ? ("decimal" as const) : ("numeric" as const),
@@ -136,9 +227,19 @@ function sanitizeData(valueBeforeCaret: string, data: string, options: NumberMas
   if (data === "-") {
     return options.allowNegative && valueBeforeCaret === "" ? "-" : "";
   }
-  if (data === "." || data === ",") {
+  const { separators } = options;
+  const isDecimalData =
+    separators === undefined
+      ? data === "." || data === ","
+      : options.decimal &&
+        (data === separators.decimal ||
+          ((data === "." || data === ",") && data !== separators.group));
+  if (isDecimalData) {
     if (!options.decimal || valueBeforeCaret.endsWith(".")) {
       return "";
+    }
+    if (separators !== undefined) {
+      return appendLocaleData(valueBeforeCaret, data, options);
     }
     return valueBeforeCaret === "" || valueBeforeCaret === "-" ? "0." : ".";
   }
@@ -171,6 +272,10 @@ function normalizeState(
 
 /** A minimal Maskito number mask without locale grouping. */
 export function compileNumberMask(options: NumberMaskOptions): MaskitoOptions {
+  const canonicalOptions = {
+    allowNegative: options.allowNegative,
+    decimal: options.decimal,
+  };
   const preprocessor: MaskitoPreprocessor = ({ elementState, data }) => {
     const normalized = normalizeState(elementState.value, elementState.selection, options);
     const valueBeforeCaret = normalized.value.slice(0, normalized.selection[0]);
@@ -180,7 +285,7 @@ export function compileNumberMask(options: NumberMaskOptions): MaskitoOptions {
     };
   };
   const postprocessor: MaskitoPostprocessor = (elementState) =>
-    normalizeState(elementState.value, elementState.selection, options);
+    normalizeState(elementState.value, elementState.selection, canonicalOptions);
 
   return {
     mask: buildMask(options),

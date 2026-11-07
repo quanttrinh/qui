@@ -326,6 +326,15 @@ form's constraint validation. The rendered stepper buttons use the same bounds.
 Use `step="any"` to allow arbitrary decimal values. The stepper buttons still
 increment and decrement by `1` in that mode.
 
+Numbers are parsed with the document/browser locale by default. Use
+`number-locale` to override it. Grouping separators are stripped and the
+decimal separator is normalized to `.` internally, so `value` and
+`valuechange` always use a dot decimal.
+
+```html
+<qui-input input-type="number" number-locale="de-DE"></qui-input>
+```
+
 ```html
 <qui-input input-type="number" step="any"></qui-input>
 ```

@@ -5,6 +5,7 @@ import {
   canStepNumber,
   compileNumberMask,
   formatNumber,
+  normalizeNumberValue,
   numberValidity,
   parseNumber,
   stepNumber,
@@ -41,6 +42,25 @@ describe("compileNumberMask", () => {
     expect(paste("1.234,56")).toBe("1234.56");
     expect(paste("1,234,567")).toBe("1234567");
     expect(paste("1.2.3")).toBe("1.23");
+  });
+
+  it("normalizes locale-specific separators", () => {
+    const german = compileNumberMask({
+      allowNegative: true,
+      decimal: true,
+      separators: { decimal: ",", group: "." },
+    });
+
+    expect(
+      normalizeNumberValue("1.234,56", {
+        allowNegative: true,
+        decimal: true,
+        separators: { decimal: ",", group: "." },
+      }),
+    ).toBe("1234.56");
+    expect(maskitoTransform("1.234,56", german)).toBe("1234.56");
+    expect(maskitoTransform(",5", german)).toBe("0.5");
+    expect(maskitoTransform("1.234.567", german)).toBe("1234567");
   });
 
   it("normalizes leading decimal data", () => {
