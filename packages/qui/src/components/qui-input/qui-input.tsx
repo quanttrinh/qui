@@ -31,7 +31,11 @@ import { ControllerHostMixin, FormControlMixin } from "../shared/mixins";
 import { type TextCase } from "./case";
 import { renderNumberStepper, renderPasswordToggle } from "./input-controls";
 import { filterNumericOrDecimalInput } from "./input-filter";
-import { resolveInputFormSignature, resolveInputValidity } from "./input-validity";
+import {
+  resolveInputFormSignature,
+  resolveInputValidity,
+  resolveInputValidityKey,
+} from "./input-validity";
 import { hasConfiguredMask, resolveInputMaskConfig, type InputMaskConfig } from "./mask-config";
 import { resolveNumberSeparators, type NumberSeparators } from "./number-separators";
 import { NumberStepper, type NumberConstraints } from "./number-stepper";
@@ -485,48 +489,24 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   }
 
   private get inputValidity(): FormValidity {
-    const element = this.inputEl;
-    const native = element?.validity;
-    const nativeFlags =
-      native === undefined
-        ? ""
-        : [
-            native.badInput,
-            native.customError,
-            native.patternMismatch,
-            native.rangeOverflow,
-            native.rangeUnderflow,
-            native.stepMismatch,
-            native.tooLong,
-            native.tooShort,
-            native.typeMismatch,
-            native.valid,
-            native.valueMissing,
-          ]
-            .map((value) => (value ? "1" : "0"))
-            .join("");
-    const nativeKey = `${nativeFlags}\u0000${element?.validationMessage ?? ""}`;
-    const key = [
-      element?.value ?? "",
-      nativeKey,
-      this.inputType,
-      this.inputPattern ?? "",
-      String(this.minLength ?? ""),
-      String(this.maxLength ?? ""),
-      this.form.isInvalid ? "1" : "0",
-      this.form.isRequired ? "1" : "0",
-      this.isNumber ? String(this.min ?? "") : "",
-      this.isNumber ? String(this.max ?? "") : "",
-      this.isNumber ? String(this.numericStep ?? "") : "",
-      this.isNumber && this.inputFocused ? "focused" : "blurred",
-    ].join("\u0000");
+    const key = resolveInputValidityKey({
+      element: this.inputEl,
+      inputType: this.inputType,
+      inputPattern: this.inputPattern,
+      minLength: this.minLength,
+      maxLength: this.maxLength,
+      invalid: this.form.isInvalid,
+      required: this.form.isRequired,
+      numberConstraints: this.isNumber ? this.numberConstraints : undefined,
+      focused: this.inputFocused,
+    });
 
     if (this.validityResult !== undefined && this.validityKey === key) {
       return this.validityResult;
     }
 
     const validity = resolveInputValidity({
-      element,
+      element: this.inputEl,
       invalid: this.form.isInvalid,
       required: this.form.isRequired,
       numberConstraints: this.isNumber ? this.numberConstraints : undefined,

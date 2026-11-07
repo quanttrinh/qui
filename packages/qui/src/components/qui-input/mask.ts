@@ -87,6 +87,36 @@ function quantifier(mask: string, start: number): { count: number; next: number 
   return { count, next: end + 1 };
 }
 
+function pushRepeated(parts: (string | RegExp)[], atom: string | RegExp, count: number): void {
+  for (let repetition = 0; repetition < count; repetition += 1) {
+    parts.push(atom);
+  }
+}
+
+function appendEscape(parts: (string | RegExp)[], mask: string, index: number): number {
+  const literal = mask.charAt(index + 1);
+  if (literal === "") {
+    throw new Error("Mask pattern cannot end with an unescaped backslash.");
+  }
+  const { count, next } = quantifier(mask, index + 2);
+  pushRepeated(parts, literal, count);
+  return next;
+}
+
+function appendClass(parts: (string | RegExp)[], mask: string, index: number): number {
+  const { regex, next } = characterClass(mask, index);
+  const { count, next: afterQuantifier } = quantifier(mask, next);
+  pushRepeated(parts, regex, count);
+  return afterQuantifier;
+}
+
+function appendToken(parts: (string | RegExp)[], mask: string, index: number): number {
+  const atom = TOKEN_ATOMS[mask[index]];
+  const { count, next } = quantifier(mask, index + 1);
+  pushRepeated(parts, atom, count);
+  return next;
+}
+
 function parse(mask: string): MaskitoMaskExpression {
   const parts: (string | RegExp)[] = [];
   let index = 0;
@@ -95,29 +125,11 @@ function parse(mask: string): MaskitoMaskExpression {
     const character = mask[index];
 
     if (character === "\\") {
-      const literal = mask.charAt(index + 1);
-      if (literal === "") {
-        throw new Error("Mask pattern cannot end with an unescaped backslash.");
-      }
-      const { count, next } = quantifier(mask, index + 2);
-      for (let repetition = 0; repetition < count; repetition += 1) {
-        parts.push(literal);
-      }
-      index = next;
+      index = appendEscape(parts, mask, index);
     } else if (character === "[") {
-      const { regex, next } = characterClass(mask, index);
-      const { count, next: afterQuantifier } = quantifier(mask, next);
-      for (let repetition = 0; repetition < count; repetition += 1) {
-        parts.push(regex);
-      }
-      index = afterQuantifier;
+      index = appendClass(parts, mask, index);
     } else if (character in TOKEN_ATOMS) {
-      const atom = TOKEN_ATOMS[character];
-      const { count, next } = quantifier(mask, index + 1);
-      for (let repetition = 0; repetition < count; repetition += 1) {
-        parts.push(atom);
-      }
-      index = next;
+      index = appendToken(parts, mask, index);
     } else {
       parts.push(character);
       index += 1;

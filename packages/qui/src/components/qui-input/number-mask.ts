@@ -224,34 +224,50 @@ function appendAcceptedData(
   return acceptedData;
 }
 
+function isDecimalData(data: string, options: NumberMaskOptions): boolean {
+  const { separators } = options;
+  if (separators === undefined) {
+    return data === "." || data === ",";
+  }
+  return (
+    options.decimal &&
+    (data === separators.decimal || ((data === "." || data === ",") && data !== separators.group))
+  );
+}
+
+function sanitizeDecimalData(
+  valueBeforeCaret: string,
+  data: string,
+  options: NumberMaskOptions,
+): string {
+  if (!options.decimal || valueBeforeCaret.endsWith(".")) {
+    return "";
+  }
+  if (options.separators !== undefined) {
+    return appendLocaleData(valueBeforeCaret, data, options);
+  }
+  return valueBeforeCaret === "" || valueBeforeCaret === "-" ? "0." : ".";
+}
+
+function sanitizePastedData(
+  valueBeforeCaret: string,
+  data: string,
+  options: NumberMaskOptions,
+): string {
+  const normalized = normalizePastedNumber(data, options);
+  return valueBeforeCaret === "-" && normalized.startsWith("-") ? normalized.slice(1) : normalized;
+}
+
 function sanitizeData(valueBeforeCaret: string, data: string, options: NumberMaskOptions): string {
   if (data === "-") {
     return options.allowNegative && valueBeforeCaret === "" ? "-" : "";
   }
-  const { separators } = options;
-  const isDecimalData =
-    separators === undefined
-      ? data === "." || data === ","
-      : options.decimal &&
-        (data === separators.decimal ||
-          ((data === "." || data === ",") && data !== separators.group));
-  if (isDecimalData) {
-    if (!options.decimal || valueBeforeCaret.endsWith(".")) {
-      return "";
-    }
-    if (separators !== undefined) {
-      return appendLocaleData(valueBeforeCaret, data, options);
-    }
-    return valueBeforeCaret === "" || valueBeforeCaret === "-" ? "0." : ".";
+  if (isDecimalData(data, options)) {
+    return sanitizeDecimalData(valueBeforeCaret, data, options);
   }
-
   if (data.length > 1 && (valueBeforeCaret === "" || valueBeforeCaret === "-")) {
-    const normalized = normalizePastedNumber(data, options);
-    return valueBeforeCaret === "-" && normalized.startsWith("-")
-      ? normalized.slice(1)
-      : normalized;
+    return sanitizePastedData(valueBeforeCaret, data, options);
   }
-
   return appendAcceptedData(valueBeforeCaret, data, options);
 }
 
@@ -321,6 +337,21 @@ function rejectionMessage(value: number, constraints: NumberConstraints): string
   return undefined;
 }
 
+function stepMismatchMessage(parsed: number, constraints: NumberConstraints): string | undefined {
+  const { step } = constraints;
+  if (step === undefined || step <= 0) {
+    return undefined;
+  }
+  const base = constraints.min ?? 0;
+  const steps = (parsed - base) / step;
+  if (Math.abs(steps - Math.round(steps)) <= 1e-9) {
+    return undefined;
+  }
+  return base === 0
+    ? `Value must be a multiple of ${String(step)}.`
+    : `Value must be ${String(base)} plus a multiple of ${String(step)}.`;
+}
+
 /** Validates a numeric mask value against the same bounds used by the stepper. */
 export function numberValidity(
   value: string,
@@ -348,21 +379,10 @@ export function numberValidity(
     flags.rangeOverflow = true;
   }
 
-  const { step } = constraints;
-  if (step !== undefined && step > 0) {
-    const base = constraints.min ?? 0;
-    const steps = (parsed - base) / step;
-    if (Math.abs(steps - Math.round(steps)) > 1e-9) {
-      flags.stepMismatch = true;
-      return {
-        flags,
-        message:
-          message ??
-          (base === 0
-            ? `Value must be a multiple of ${String(step)}.`
-            : `Value must be ${String(base)} plus a multiple of ${String(step)}.`),
-      };
-    }
+  const stepMessage = stepMismatchMessage(parsed, constraints);
+  if (stepMessage !== undefined) {
+    flags.stepMismatch = true;
+    return { flags, message: message ?? stepMessage };
   }
 
   return { flags, message };

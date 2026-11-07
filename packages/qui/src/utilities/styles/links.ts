@@ -112,57 +112,58 @@ function reorderHeadLinks(document: Document, links: (HTMLLinkElement | undefine
   }
 }
 
-/**
- * Reconciles document-level marked stylesheet links with the configured hrefs.
- * Runtime callers only update links that were already marked. SSR callers can
- * opt into adopting existing matching links and creating missing ones.
- */
-export function reconcileDocumentStylesheetLinks(
-  document: Document,
-  hrefs: string[],
-  options: ReconcileDocumentStylesheetOptions = {},
-): void {
-  const { create = false, markExisting = false, nonce } = options;
-  const managed = [...document.querySelectorAll<HTMLLinkElement>(STYLESHEET_SELECTOR)];
-  documentNonces.delete(document);
-
-  const managedByHref = new Map<string, HTMLLinkElement>();
+function indexManagedLinks(managed: HTMLLinkElement[]): Map<string, HTMLLinkElement> {
+  const byHref = new Map<string, HTMLLinkElement>();
   for (const link of managed) {
     const href = link.getAttribute("href");
-    if (href !== null && !managedByHref.has(href)) {
-      managedByHref.set(href, link);
+    if (href !== null && !byHref.has(href)) {
+      byHref.set(href, link);
     }
   }
+  return byHref;
+}
 
-  const selected: (HTMLLinkElement | undefined)[] = [];
-  const claimed = new Set<HTMLLinkElement>();
-
-  // Claim exact managed matches before reusing links reserved for later hrefs.
-  for (const href of hrefs) {
+function claimExactLinks(
+  hrefs: string[],
+  managedByHref: Map<string, HTMLLinkElement>,
+  claimed: Set<HTMLLinkElement>,
+): (HTMLLinkElement | undefined)[] {
+  return hrefs.map((href) => {
     const link = managedByHref.get(href);
     if (link === undefined) {
-      selected.push(undefined);
-    } else {
-      managedByHref.delete(href);
-      claimed.add(link);
-      selected.push(link);
+      return undefined;
     }
-  }
+    managedByHref.delete(href);
+    claimed.add(link);
+    return link;
+  });
+}
 
-  if (markExisting) {
-    for (const [index, href] of hrefs.entries()) {
-      if (selected[index] === undefined) {
-        const link = findMatchingStylesheetLink(document, href);
-        if (link !== undefined) {
-          claimed.add(link);
-          selected[index] = link;
-        }
+interface LinkSelectionContext {
+  document: Document;
+  hrefs: string[];
+  selected: (HTMLLinkElement | undefined)[];
+  claimed: Set<HTMLLinkElement>;
+}
+
+function claimExistingLinks(context: LinkSelectionContext, markExisting: boolean): void {
+  if (!markExisting) {
+    return;
+  }
+  const { document, hrefs, selected, claimed } = context;
+  for (const [index, href] of hrefs.entries()) {
+    if (selected[index] === undefined) {
+      const link = findMatchingStylesheetLink(document, href);
+      if (link !== undefined) {
+        claimed.add(link);
+        selected[index] = link;
       }
     }
   }
+}
 
-  // Reuse remaining managed links before creating new markup.
-  const reusable = managed.filter((link) => !claimed.has(link));
+function claimReusableLinks(context: LinkSelectionContext, reusable: HTMLLinkElement[]): void {
+  const { hrefs, selected, claimed } = context;
   for (const index of hrefs.keys()) {
     if (selected[index] === undefined) {
       const link = reusable.shift();
@@ -172,7 +173,14 @@ export function reconcileDocumentStylesheetLinks(
       }
     }
   }
+}
 
+function ensureStylesheetLinks(
+  context: LinkSelectionContext,
+  create: boolean,
+  nonce?: string,
+): void {
+  const { document, hrefs, selected, claimed } = context;
   for (const [index, href] of hrefs.entries()) {
     let link = selected[index];
     if (link === undefined && create) {
@@ -189,13 +197,41 @@ export function reconcileDocumentStylesheetLinks(
       applyStylesheetNonce(link, nonce);
     }
   }
+}
 
+function removeUnclaimedLinks(managed: HTMLLinkElement[], claimed: Set<HTMLLinkElement>): void {
   for (const link of managed) {
     if (!claimed.has(link)) {
       link.remove();
     }
   }
+}
 
+/**
+ * Reconciles document-level marked stylesheet links with the configured hrefs.
+ * Runtime callers only update links that were already marked. SSR callers can
+ * opt into adopting existing matching links and creating missing ones.
+ */
+export function reconcileDocumentStylesheetLinks(
+  document: Document,
+  hrefs: string[],
+  options: ReconcileDocumentStylesheetOptions = {},
+): void {
+  const { create = false, markExisting = false, nonce } = options;
+  const managed = [...document.querySelectorAll<HTMLLinkElement>(STYLESHEET_SELECTOR)];
+  documentNonces.delete(document);
+
+  const claimed = new Set<HTMLLinkElement>();
+  const selected = claimExactLinks(hrefs, indexManagedLinks(managed), claimed);
+
+  const context: LinkSelectionContext = { document, hrefs, selected, claimed };
+  claimExistingLinks(context, markExisting);
+  claimReusableLinks(
+    context,
+    managed.filter((link) => !claimed.has(link)),
+  );
+  ensureStylesheetLinks(context, create, nonce);
+  removeUnclaimedLinks(managed, claimed);
   reorderHeadLinks(document, selected);
 }
 

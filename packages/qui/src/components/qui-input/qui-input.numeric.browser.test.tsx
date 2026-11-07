@@ -356,7 +356,9 @@ describe("qui-input number constraints", () => {
     expect(input.hasAttribute("max")).toBe(false);
     expect(input.hasAttribute("step")).toBe(false);
   });
+});
 
+describe("qui-input number stepping", () => {
   it("supports step any for number inputs", async () => {
     const { root, waitForChanges } = await render(
       <qui-input inputType="number" step="any" value={1.5} />,

@@ -203,7 +203,9 @@ describe("qui-dialog", () => {
     await waitForChanges();
     expectAriaElements(dialog, { ariaDescribedByElements: [descriptionHost] });
   });
+});
 
+describe("qui-dialog scroll behavior", () => {
   it("updates the scroll lock when preventScroll changes while open", async () => {
     const { root, setProps, waitForChanges } = await render(
       <qui-dialog open preventScroll={false}>

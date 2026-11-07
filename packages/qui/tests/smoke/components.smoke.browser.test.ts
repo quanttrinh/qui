@@ -6,7 +6,7 @@ import { waitForShadowStyles } from "../test-utils/dom-ready";
 
 describe("cross-browser smoke", () => {
   it("renders a component in a shadow root", async () => {
-    const { root } = await render(<qui-button variant="filled">Save</qui-button>);
+    const { root } = await render(h("qui-button", { variant: "filled" }, "Save"));
     const button = queryControl<HTMLButtonElement>(root, "button");
 
     expect(root.shadowRoot).toBeInstanceOf(ShadowRoot);
@@ -16,9 +16,7 @@ describe("cross-browser smoke", () => {
 
   it("keeps host layout separate from the visual root", async () => {
     const { root, waitForChanges } = await render(
-      <qui-card variant="filled">
-        <span>Content</span>
-      </qui-card>,
+      h("qui-card", { variant: "filled" }, h("span", null, "Content")),
     );
     await waitForChanges();
     await waitForShadowStyles(root);
@@ -31,10 +29,12 @@ describe("cross-browser smoke", () => {
 
   it("wires a field label and control across shadow roots", async () => {
     const { root, waitForChanges } = await render(
-      <qui-field id="email" required>
-        <qui-field-label>Email</qui-field-label>
-        <qui-input />
-      </qui-field>,
+      h(
+        "qui-field",
+        { id: "email", required: true },
+        h("qui-field-label", null, "Email"),
+        h("qui-input", null),
+      ),
     );
 
     await waitForChanges();
@@ -51,12 +51,16 @@ describe("cross-browser smoke", () => {
 
   it("names a dialog across shadow roots", async () => {
     const { root, waitForChanges } = await render(
-      <qui-dialog open>
-        <qui-dialog-content>
-          <qui-dialog-title>Delete item?</qui-dialog-title>
-          <qui-dialog-description>This cannot be undone.</qui-dialog-description>
-        </qui-dialog-content>
-      </qui-dialog>,
+      h(
+        "qui-dialog",
+        { open: true },
+        h(
+          "qui-dialog-content",
+          null,
+          h("qui-dialog-title", null, "Delete item?"),
+          h("qui-dialog-description", null, "This cannot be undone."),
+        ),
+      ),
     );
 
     await waitForChanges();
@@ -71,12 +75,12 @@ describe("cross-browser smoke", () => {
 
   it("links tabs across shadow roots", async () => {
     const { root, waitForChanges } = await render(
-      <qui-tabs defaultValue="one">
-        <qui-tab-list>
-          <qui-tab-trigger value="one">One</qui-tab-trigger>
-        </qui-tab-list>
-        <qui-tab-panel value="one">One panel</qui-tab-panel>
-      </qui-tabs>,
+      h(
+        "qui-tabs",
+        { defaultValue: "one" },
+        h("qui-tab-list", null, h("qui-tab-trigger", { value: "one" }, "One")),
+        h("qui-tab-panel", { value: "one" }, "One panel"),
+      ),
     );
 
     await waitForChanges();
@@ -92,12 +96,16 @@ describe("cross-browser smoke", () => {
 
   it("links accordion parts across shadow roots", async () => {
     const { root, waitForChanges } = await render(
-      <qui-accordion>
-        <qui-accordion-item value="one">
-          <qui-accordion-trigger>One</qui-accordion-trigger>
-          <qui-accordion-content>One content</qui-accordion-content>
-        </qui-accordion-item>
-      </qui-accordion>,
+      h(
+        "qui-accordion",
+        null,
+        h(
+          "qui-accordion-item",
+          { value: "one" },
+          h("qui-accordion-trigger", null, "One"),
+          h("qui-accordion-content", null, "One content"),
+        ),
+      ),
     );
 
     await waitForChanges();
