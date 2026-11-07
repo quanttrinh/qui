@@ -12,6 +12,10 @@ inputs:
     description: Model variant / reasoning effort
     required: false
     default: ''
+  agent:
+    description: OpenCode agent ID
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -22,6 +26,7 @@ runs:
         TARGET_PROMPT_FILE: ${{ inputs.prompt_file }}
         OPENCODE_MODEL: ${{ inputs.model }}
         OPENCODE_VARIANT: ${{ inputs.variant }}
+        OPENCODE_AGENT: ${{ inputs.agent }}
         OPENCODE_DISABLE_PROJECT_CONFIG: "1"
       run: |
         set -euo pipefail
@@ -32,5 +37,22 @@ runs:
           model="${model}#${OPENCODE_VARIANT}"
         fi
 
-        opencode run --standalone --model "$model" --auto --format json \
-          < "$TARGET_PROMPT_FILE"
+        agent_args=()
+        if [ -n "$OPENCODE_AGENT" ]; then
+          agent_args=(--agent "$OPENCODE_AGENT")
+        fi
+
+        # The CLI stream is only useful for diagnosing failures. Keep it out of
+        # the Actions log and surface the tail if the run fails.
+        log_file="${RUNNER_TEMP:-/tmp}/opencode-run.log"
+        set +e
+        opencode run --standalone --model "$model" "${agent_args[@]}" --auto \
+          < "$TARGET_PROMPT_FILE" >"$log_file" 2>&1
+        status=$?
+        set -e
+
+        if [ "$status" -ne 0 ]; then
+          echo "OpenCode failed with exit code $status. Log tail:" >&2
+          tail -c 20000 "$log_file" >&2
+          exit "$status"
+        fi

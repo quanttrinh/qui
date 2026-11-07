@@ -858,7 +858,7 @@ import { flex } from "@quanttrinh/qui/patterns";
 
 ## Distribution layout
 
-`bun run build:release` produces:
+`bun run build:all` produces:
 
 ```text
 dist/shared/                 custom-elements build
@@ -900,7 +900,7 @@ Run workspace-wide commands from the repository root. Inside this package:
 ```sh
 bun run dev              # styles + Stencil dev server
 bun run build            # production build
-bun run build:release    # release build with Panda artifacts
+bun run build:all        # build plus Panda artifacts
 bun run test:unit
 ```
 

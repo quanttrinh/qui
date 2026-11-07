@@ -33,7 +33,7 @@ export const quiPreset: Preset = {
     // covers the gap before that runtime boots. SSR hosts already carry
     // `.hydrated`, so server-rendered content stays visible until the client
     // takes over.
-    [undefinedContentSelector(config)]: {
+    [undefinedContentSelector()]: {
       display: "none !important",
     },
     body: {

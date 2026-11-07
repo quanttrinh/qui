@@ -126,7 +126,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
-        run: gh pr diff "$PR_NUMBER" > /tmp/pr-diff.txt
+        run: |
+          gh pr diff "$PR_NUMBER" > /tmp/pr-diff.txt
+          gh pr diff "$PR_NUMBER" --name-only > /tmp/pr-files.txt
 
       - name: Build review prompt
         if: steps.skip.outputs.skip != 'true'
@@ -170,6 +172,19 @@ jobs:
           PROMPT
           fi
 
+          cat >> /tmp/review-prompt.txt << 'PROMPT'
+
+          Review scope:
+          - Review only the patch below.
+          - Read only the changed files listed above.
+          - Read another file only when the patch directly references a symbol or signature you must verify.
+          - Do not traverse directories, inspect unrelated components, or map the repository.
+          - Stop exploring as soon as you can support your findings.
+          PROMPT
+
+          echo >> /tmp/review-prompt.txt
+          echo 'Changed files:' >> /tmp/review-prompt.txt
+          cat /tmp/pr-files.txt >> /tmp/review-prompt.txt
           echo >> /tmp/review-prompt.txt
           echo '---' >> /tmp/review-prompt.txt
           cat /tmp/pr-diff.txt >> /tmp/review-prompt.txt
@@ -240,6 +255,7 @@ jobs:
         with:
           model: opencode-go/deepseek-v4.1-flash
           variant: high
+          agent: review
           prompt_file: /tmp/review-prompt.txt
 
       - name: Parse verdict

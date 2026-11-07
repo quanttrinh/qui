@@ -1,7 +1,6 @@
 /// <reference types="node" />
-import { parse, type ParserPlugin } from "@babel/parser";
+import { parseSync, type Comment, type Node } from "oxc-parser";
 
-const PARSE_PLUGINS: ParserPlugin[] = ["typescript", "jsx", "decorators-legacy"];
 const SKIPPED_AST_KEYS = new Set([
   "comments",
   "end",
@@ -14,6 +13,21 @@ const SKIPPED_AST_KEYS = new Set([
   "trailingComments",
 ]);
 const UNDEFINED_CONTENT_MARKER = /@undefinedContent\b/u;
+
+const NODE_TYPE = {
+  callExpression: "CallExpression",
+  classDeclaration: "ClassDeclaration",
+  exportDefaultDeclaration: "ExportDefaultDeclaration",
+  exportNamedDeclaration: "ExportNamedDeclaration",
+  identifier: "Identifier",
+  literal: "Literal",
+  objectExpression: "ObjectExpression",
+  property: "Property",
+} as const satisfies Record<string, Node["type"]>;
+
+const COMMENT_TYPE = {
+  block: "Block",
+} as const satisfies Record<string, Comment["type"]>;
 
 interface AstNode {
   type: string;
@@ -32,26 +46,49 @@ function isAstNode(value: unknown): value is AstNode {
   );
 }
 
-function commentsOf(node: AstNode | undefined): unknown[] {
-  if (node === undefined) {
-    return [];
-  }
-  const comments: unknown = Reflect.get(node, "leadingComments");
-  return Array.isArray(comments) ? comments : [];
+function nodeStart(node: AstNode): number {
+  const start: unknown = Reflect.get(node, "start");
+  return typeof start === "number" ? start : 0;
 }
 
 /**
- * Reads the JSDoc marker from the class or its enclosing export declaration.
- * Babel attaches documentation for `export class` to the export, not the class.
+ * Reads the JSDoc marker attached to the declaration or its enclosing export.
+ * Decorators sit between the comment and the class, so the first decorator is
+ * the declaration's visual start.
  */
-function hasUndefinedContentMarker(node: AstNode, parent: AstNode | undefined): boolean {
-  return [...commentsOf(node), ...commentsOf(parent)].some((comment) => {
-    if (!isAstNode(comment) || comment.type !== "CommentBlock") {
-      return false;
+function hasUndefinedContentMarker(context: {
+  source: string;
+  comments: readonly Comment[];
+  node: AstNode;
+  parent: AstNode | undefined;
+}): boolean {
+  let start = nodeStart(context.node);
+  const decorators: unknown = Reflect.get(context.node, "decorators");
+
+  if (Array.isArray(decorators)) {
+    for (const decorator of decorators) {
+      if (isAstNode(decorator)) {
+        start = Math.min(start, nodeStart(decorator));
+      }
     }
-    const value: unknown = Reflect.get(comment, "value");
-    return typeof value === "string" && UNDEFINED_CONTENT_MARKER.test(value);
-  });
+  }
+
+  if (
+    context.parent?.type !== NODE_TYPE.exportNamedDeclaration &&
+    context.parent?.type !== NODE_TYPE.exportDefaultDeclaration
+  ) {
+    return false;
+  }
+
+  start = Math.min(start, nodeStart(context.parent));
+
+  return context.comments.some(
+    (comment) =>
+      comment.type === COMMENT_TYPE.block &&
+      comment.end <= start &&
+      UNDEFINED_CONTENT_MARKER.test(comment.value) &&
+      context.source.slice(comment.end, start).trim() === "",
+  );
 }
 
 function componentTag(node: AstNode): string | undefined {
@@ -65,14 +102,14 @@ function componentTag(node: AstNode): string | undefined {
       continue;
     }
     const expression: unknown = Reflect.get(decorator, "expression");
-    if (!isAstNode(expression) || expression.type !== "CallExpression") {
+    if (!isAstNode(expression) || expression.type !== NODE_TYPE.callExpression) {
       continue;
     }
 
     const callee: unknown = Reflect.get(expression, "callee");
     if (
       !isAstNode(callee) ||
-      callee.type !== "Identifier" ||
+      callee.type !== NODE_TYPE.identifier ||
       Reflect.get(callee, "name") !== "Component"
     ) {
       continue;
@@ -82,8 +119,8 @@ function componentTag(node: AstNode): string | undefined {
     if (!Array.isArray(args)) {
       continue;
     }
-    const options = args[0];
-    if (!isAstNode(options) || options.type !== "ObjectExpression") {
+    const options: unknown = Reflect.get(args, 0);
+    if (!isAstNode(options) || options.type !== NODE_TYPE.objectExpression) {
       continue;
     }
 
@@ -93,7 +130,7 @@ function componentTag(node: AstNode): string | undefined {
     }
 
     for (const property of properties) {
-      if (!isAstNode(property) || property.type !== "ObjectProperty") {
+      if (!isAstNode(property) || property.type !== NODE_TYPE.property) {
         continue;
       }
       const key: unknown = Reflect.get(property, "key");
@@ -101,7 +138,7 @@ function componentTag(node: AstNode): string | undefined {
         continue;
       }
       const value: unknown = Reflect.get(property, "value");
-      if (!isAstNode(value) || value.type !== "StringLiteral") {
+      if (!isAstNode(value) || value.type !== NODE_TYPE.literal) {
         continue;
       }
       const tag: unknown = Reflect.get(value, "value");
@@ -143,24 +180,42 @@ function visitNodes(
  * The `@undefinedContent` marker is scoped to the declaration that owns the
  * JSDoc comment, so a file with several components only hides the marked one.
  */
-export function componentDeclarationsFromSource(source: string): ComponentDeclaration[] {
+export function componentDeclarationsFromSource(
+  source: string,
+  filename = "component.tsx",
+): ComponentDeclaration[] {
   if (!source.includes("@Component")) {
     return [];
   }
 
-  const ast = parse(source, {
+  const result = parseSync(filename, source, {
+    lang: "tsx",
     sourceType: "module",
-    plugins: PARSE_PLUGINS,
   });
+  if (result.errors.length > 0) {
+    const [error] = result.errors;
+    throw new Error(
+      `[qui] failed to parse ${filename}: ${error?.message ?? "unknown parser error"}`,
+    );
+  }
+
   const declarations: ComponentDeclaration[] = [];
 
-  visitNodes(ast.program, undefined, (node, parent) => {
-    if (node.type !== "ClassDeclaration") {
+  visitNodes(result.program, undefined, (node, parent) => {
+    if (node.type !== NODE_TYPE.classDeclaration) {
       return;
     }
     const tag = componentTag(node);
     if (tag !== undefined) {
-      declarations.push({ tag, undefinedContent: hasUndefinedContentMarker(node, parent) });
+      declarations.push({
+        tag,
+        undefinedContent: hasUndefinedContentMarker({
+          source,
+          comments: result.comments,
+          node,
+          parent,
+        }),
+      });
     }
   });
 
