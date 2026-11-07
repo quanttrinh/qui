@@ -44,6 +44,26 @@ describe("qui-input with Playwright", () => {
     expect(input.value).toBe("123-4");
   });
 
+  it("keeps the caret when numeric mode rejects a character", async () => {
+    const { root, waitForChanges } = await render(h("qui-input", { inputModeHint: "numeric" }));
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    await userEvent.type(input, "123");
+    input.focus();
+    input.setSelectionRange(0, 0);
+
+    await userEvent.keyboard("+");
+    await waitForChanges();
+    expect(input.value).toBe("123");
+    expect(input.selectionStart).toBe(0);
+
+    await userEvent.keyboard("-");
+    await waitForChanges();
+    expect(input.value).toBe("-123");
+    expect(input.selectionStart).toBe(1);
+  });
+
   it("supports a native Maskito mask expression from JavaScript", async () => {
     const { root, waitForChanges } = await render(
       h("qui-input", {
