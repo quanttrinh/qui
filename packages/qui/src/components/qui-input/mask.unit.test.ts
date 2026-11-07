@@ -32,14 +32,6 @@ describe("compileMask", () => {
     expect(mask.rawFromMasked("X-AB-1234")).toBe("AB1234");
   });
 
-  it("maps raw character counts back to masked caret positions", () => {
-    const mask = compileMask(String.raw`[a-zA-Z]{2}-\d{4}`);
-
-    expect(mask.caretForRaw("AB-1234", 0)).toBe(0);
-    expect(mask.caretForRaw("AB-1234", 2)).toBe(2);
-    expect(mask.caretForRaw("AB-1234", 3)).toBe(4);
-  });
-
   it("rejects variable-width quantifiers until dynamic masks exist", () => {
     expect(() => compileMask(String.raw`\d+`)).toThrow("Variable-width masks");
     expect(() => compileMask(String.raw`\d*`)).toThrow("Variable-width masks");

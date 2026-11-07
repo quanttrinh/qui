@@ -5,10 +5,10 @@ import {
   type MaskitoPreprocessor,
 } from "@maskito/core";
 
-import { applyTextCase, type TextCase } from "./case";
-import { filterNumericOrDecimalInput } from "./input-filter";
+import { type TextCase } from "./case";
 import { compileMask } from "./mask";
 import { compileNumberMask } from "./number-mask";
+import { createNumericFilterPreprocessor, createTextCasePreprocessor } from "./preprocessors";
 
 /** Numeric filter modes that also drive Maskito preprocessing. */
 export type MaskFilterMode = "numeric" | "decimal";
@@ -20,8 +20,6 @@ export interface InputMaskConfig {
   readonly options: MaskitoOptions;
   /** Extracts user-typed characters from an already-masked value. */
   readonly rawFromMasked: (value: string) => string;
-  /** Maps a count of typed characters to a caret offset in a masked value. */
-  readonly caretForRaw?: (value: string, rawCount: number) => number;
 }
 
 /** The component state that affects Maskito configuration. */
@@ -58,37 +56,24 @@ function createNumberMask(settings: InputMaskSettings): MaskitoOptions {
 function createTextMask(settings: InputMaskSettings): Omit<InputMaskConfig, "key"> {
   let maskExpression: MaskitoOptions["mask"] = PASS_THROUGH_MASK;
   let rawFromMasked = identity;
-  let caretForRaw: ((value: string, rawCount: number) => number) | undefined;
 
   if (settings.mask !== undefined && settings.mask.length > 0) {
     const compiled = compileMask(settings.mask);
-    const { options, rawFromMasked: compiledRaw, caretForRaw: compiledCaret } = compiled;
+    const { options, rawFromMasked: compiledRaw } = compiled;
     maskExpression = options.mask;
     rawFromMasked = compiledRaw;
-    caretForRaw = compiledCaret;
   }
 
-  const preprocessors: MaskitoPreprocessor[] = [
-    ({ elementState, data }) => ({
-      elementState: {
-        ...elementState,
-        value: applyTextCase(elementState.value, settings.textCase),
-      },
-      data,
-    }),
-  ];
+  const preprocessors: MaskitoPreprocessor[] = [createTextCasePreprocessor(settings.textCase)];
 
   const hasTextMask = settings.mask !== undefined && settings.mask.length > 0;
   if (settings.filterMode !== undefined && !hasTextMask) {
-    const { allowNegative } = settings;
-    const mode = settings.filterMode;
-    preprocessors.push(({ elementState, data }) => ({
-      elementState: {
-        ...elementState,
-        value: filterNumericOrDecimalInput(elementState.value, { allowNegative, mode }),
-      },
-      data,
-    }));
+    preprocessors.push(
+      createNumericFilterPreprocessor({
+        allowNegative: settings.allowNegative,
+        mode: settings.filterMode,
+      }),
+    );
   }
 
   return {
@@ -98,7 +83,6 @@ function createTextMask(settings: InputMaskSettings): Omit<InputMaskConfig, "key
       plugins: [maskitoInitialCalibrationPlugin(), maskitoChangeEventPlugin()],
     },
     rawFromMasked,
-    caretForRaw,
   };
 }
 

@@ -1,12 +1,10 @@
 import { type MaskitoMaskExpression, type MaskitoOptions } from "@maskito/core";
 
-/** A compiled mask plus the helpers the input needs to report raw values. */
+/** A compiled mask plus the helper the input needs to report raw values. */
 export interface CompiledMask {
   options: MaskitoOptions;
   /** Extracts user-typed characters from an already-masked value. */
   rawFromMasked: (value: string) => string;
-  /** Maps a count of typed characters to a caret offset in a masked value. */
-  caretForRaw: (value: string, rawCount: number) => number;
 }
 
 const DIGIT = /\d/u;
@@ -153,38 +151,6 @@ function rawFromMasked(value: string, mask: MaskitoMaskExpression): string {
   return raw;
 }
 
-function caretForRaw(value: string, mask: MaskitoMaskExpression, rawCount: number): number {
-  if (!Array.isArray(mask)) {
-    return value.length;
-  }
-  if (rawCount <= 0) {
-    return 0;
-  }
-
-  let seen = 0;
-  let index = 0;
-  for (const part of mask) {
-    if (typeof part === "string") {
-      if (value[index] === part) {
-        index += 1;
-      }
-    } else {
-      while (index < value.length) {
-        const character = value[index];
-        index += 1;
-        if (part.test(character)) {
-          seen += 1;
-          break;
-        }
-      }
-      if (seen >= rawCount) {
-        return index;
-      }
-    }
-  }
-  return index;
-}
-
 /**
  * Compiles a Maskito-compatible mask expression with an ergonomic regex-like
  * syntax. Fixed-width tokens support `{n}`; variable-width quantifiers are
@@ -200,8 +166,6 @@ export function compileMask(mask: string): CompiledMask {
   const compiled: CompiledMask = {
     options: { mask: expression },
     rawFromMasked: (value: string): string => rawFromMasked(value, expression),
-    caretForRaw: (value: string, rawCount: number): number =>
-      caretForRaw(value, expression, rawCount),
   };
   cache.set(mask, compiled);
   return compiled;

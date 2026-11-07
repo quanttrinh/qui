@@ -474,20 +474,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     }
 
     const mask = this.inputMaskConfig;
-    const caret = element.selectionStart ?? element.value.length;
-    const rawBeforeCaret = mask.rawFromMasked(element.value.slice(0, caret));
-    const masked = maskitoTransform(element.value, mask.options);
-    if (element.value !== masked) {
-      element.value = masked;
-    }
-    if (
-      mask.caretForRaw !== undefined &&
-      this.supportsSelection &&
-      element.ownerDocument.activeElement === element
-    ) {
-      const position = mask.caretForRaw(masked, rawBeforeCaret.length);
-      element.setSelectionRange(position, position);
-    }
+    const masked = element.value;
     if (this.isNumber) {
       this.currentValue = masked;
     }
