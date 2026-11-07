@@ -32,8 +32,9 @@ export class NumberStepper {
   }
 
   /** Resolves both trigger states with a single value parse. */
-  getAvailability(value = this.options.getInput()?.value ?? ""): StepAvailability {
-    return stepAvailability(value, this.options.getConstraints());
+  getAvailability(value?: string): StepAvailability {
+    const currentValue = value ?? this.options.getInput()?.value ?? "";
+    return stepAvailability(currentValue, this.options.getConstraints());
   }
 
   /** Steps once without starting hold-to-repeat. */
