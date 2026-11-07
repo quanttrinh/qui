@@ -1,11 +1,4 @@
-import {
-  Maskito,
-  maskitoChangeEventPlugin,
-  maskitoInitialCalibrationPlugin,
-  maskitoTransform,
-  type MaskitoOptions,
-  type MaskitoPreprocessor,
-} from "@maskito/core";
+import { Maskito, maskitoTransform } from "@maskito/core";
 import {
   Mixin,
   Build,
@@ -28,7 +21,6 @@ import { styleUrls } from "#qui-style-url";
 import { cx } from "#styled-system/css";
 
 import { ensureShadowStylesheet } from "../../utilities/styles";
-import { AddIcon, RemoveIcon, VisibilityIcon, VisibilityOffIcon } from "../qui-icon/icons";
 import { FormController, type FormValidity } from "../shared/controllers";
 import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
 import { isHTMLInputElement, isHTMLSlotElement } from "../shared/helpers/dom/dom";
@@ -36,17 +28,12 @@ import { focusElement } from "../shared/helpers/dom/focus";
 import { nextId } from "../shared/helpers/dom/id";
 import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
 import { ControllerHostMixin, FormControlMixin } from "../shared/mixins";
-import { applyTextCase, type TextCase } from "./case";
+import { type TextCase } from "./case";
+import { renderNumberStepper, renderPasswordToggle } from "./input-controls";
 import { filterNumericOrDecimalInput } from "./input-filter";
-import { compileMask } from "./mask";
-import {
-  canStepNumber,
-  compileNumberMask,
-  formatNumber,
-  numberValidity,
-  parseNumber,
-  stepNumber,
-} from "./number-mask";
+import { resolveInputFormSignature, resolveInputValidity } from "./input-validity";
+import { resolveInputMaskConfig, type InputMaskConfig } from "./mask-config";
+import { NumberStepper, type NumberConstraints } from "./number-stepper";
 import { styles } from "./styles";
 
 /** The input types `qui-input` can render. */
@@ -72,15 +59,6 @@ export type InputAutocapitalize = "none" | "off" | "sentences" | "on" | "words" 
 /** The native `enterkeyhint` hints supported by the inner input. */
 export type InputEnterKeyHint = "enter" | "done" | "go" | "next" | "previous" | "search" | "send";
 
-const SELECTABLE_INPUT_TYPES = new Set<InputType>([
-  "text",
-  "search",
-  "tel",
-  "password",
-  "url",
-  "number",
-]);
-
 /** The values handed to `valuechange` after every edit. */
 export interface InputValueDetails {
   /** The value shown in the input, including mask literals. */
@@ -89,14 +67,14 @@ export interface InputValueDetails {
   unmaskedValue: string;
 }
 
-interface InputMaskConfig {
-  options: MaskitoOptions;
-  rawFromMasked: (value: string) => string;
-  caretForRaw?: (value: string, rawCount: number) => number;
-}
-
-const PASS_THROUGH_MASK = /^[\s\S]*$/u;
-const identity = (value: string): string => value;
+const SELECTABLE_INPUT_TYPES = new Set<InputType>([
+  "text",
+  "search",
+  "tel",
+  "password",
+  "url",
+  "number",
+]);
 
 /**
  * A single-line input with optional masks, number stepping, and a password
@@ -182,12 +160,9 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
   private inputEl?: HTMLInputElement;
   private maskito?: Maskito;
-  private inputMask?: InputMaskConfig;
-  private inputMaskKey = "";
-  private holdDelay?: ReturnType<typeof setTimeout>;
-  private holdRepeat?: ReturnType<typeof setInterval>;
+  private maskConfig?: InputMaskConfig;
   private initialValue = "";
-  private rawValue = "";
+  private canonicalValue = "";
   private readonly generatedId = nextId("qui-input");
   private readonly fieldControl = createFieldControl(() => this.inputEl);
   protected readonly form = new FormController(this, {
@@ -204,7 +179,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     getInvalid: (): boolean => this.invalid,
     getValidationElement: (): HTMLElement | undefined => this.inputEl,
     getFormValue: (): string => this.inputEl?.value ?? "",
-    getValidity: (): FormValidity => this.validity(),
+    getValidity: (): FormValidity => this.inputValidity,
     getSignature: (): string => this.formSignature(),
     onReset: (): void => {
       this.value = this.initialValue;
@@ -214,6 +189,15 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
       const value = values.at(0) ?? "";
       this.value = value;
       this.applyValue(value);
+    },
+  });
+  private readonly numberStepper = new NumberStepper({
+    getInput: () => this.inputEl,
+    getConstraints: () => this.numberConstraints,
+    getDisabled: () => this.form.isDisabled,
+    getReadOnly: () => this.form.isReadOnly,
+    onStep: (value) => {
+      this.currentValue = value;
     },
   });
 
@@ -231,13 +215,13 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     super.componentWillLoad();
     this.normalizeStep();
     this.initialValue = String(this.defaultValue ?? this.value ?? "");
-    this.syncInitialValue();
+    this.applyInitialValue();
   }
 
   componentDidLoad(): void {
     super.componentDidLoad();
-    // Applies the initial value to the native input; state is already seeded.
-    this.syncInitialValue();
+    // Apply the initial value to the native input; state is already seeded.
+    this.applyInitialValue();
     this.form.sync();
   }
 
@@ -250,8 +234,8 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     super.disconnectedCallback();
     this.maskito?.destroy();
     this.maskito = undefined;
-    this.inputEl?.removeEventListener("input", this.handleMaskInput);
-    this.clearHold();
+    this.inputEl?.removeEventListener("input", this.handleInput);
+    this.numberStepper.stop();
   }
 
   /** Moves focus to the internal native input. */
@@ -288,14 +272,14 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   @Watch("inputType")
   @Watch("min")
   @Watch("max")
-  private resyncFormattedValue(): void {
+  private reformatValue(): void {
     const el = this.inputEl;
     if (el === undefined) {
       return;
     }
     const caret = el.selectionStart ?? el.value.length;
     this.syncMaskito();
-    this.applyValue(this.rawValue);
+    this.applyValue(this.canonicalValue);
     if (this.supportsSelection && el.ownerDocument.activeElement === el) {
       const position = Math.min(caret, el.value.length);
       el.setSelectionRange(position, position);
@@ -311,96 +295,34 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     this.form.sync();
   }
 
-  private get inputMaskConfig(): InputMaskConfig | undefined {
+  private get inputMaskConfig(): InputMaskConfig {
     const mode = this.effectiveInputMode;
-    if (this.isNumber) {
-      const numberMode = this.numberFilterMode;
-      const key = `number\u0000${numberMode}\u0000${this.allowNegative ? 1 : 0}`;
-      if (this.inputMask !== undefined && this.inputMaskKey === key) {
-        return this.inputMask;
-      }
-      this.inputMask = {
-        options: compileNumberMask({
-          allowNegative: this.allowNegative,
-          decimal: numberMode === "decimal",
-        }),
-        rawFromMasked: (value: string): string => value,
-      };
-      this.inputMaskKey = key;
-      return this.inputMask;
-    }
-
-    const key = `${this.mask ?? ""}\u0000${this.textCase}\u0000${mode ?? ""}\u0000${this.allowNegative}`;
-    if (this.inputMask !== undefined && this.inputMaskKey === key) {
-      return this.inputMask;
-    }
-
-    let maskExpression: MaskitoOptions["mask"] = PASS_THROUGH_MASK;
-    let rawFromMasked = identity;
-    let caretForRaw: ((value: string, rawCount: number) => number) | undefined;
-    if (this.mask !== undefined && this.mask.length > 0) {
-      const compiled = compileMask(this.mask);
-      const { options, rawFromMasked: compiledRaw, caretForRaw: compiledCaret } = compiled;
-      maskExpression = options.mask;
-      rawFromMasked = compiledRaw;
-      caretForRaw = compiledCaret;
-    }
-
-    const { textCase } = this;
-    const preprocessors: MaskitoPreprocessor[] = [
-      ({ elementState, data }) => ({
-        elementState: {
-          ...elementState,
-          value: applyTextCase(elementState.value, textCase),
-        },
-        data,
-      }),
-    ];
-    if (
-      (mode === "numeric" || mode === "decimal") &&
-      (this.mask === undefined || this.mask.length === 0)
-    ) {
-      const inputMode = mode;
-      const { allowNegative } = this;
-      preprocessors.push(({ elementState, data }) => ({
-        elementState: {
-          ...elementState,
-          value: filterNumericOrDecimalInput(elementState.value, {
-            allowNegative,
-            mode: inputMode,
-          }),
-        },
-        data,
-      }));
-    }
-
-    this.inputMask = {
-      options: {
-        mask: maskExpression,
-        preprocessors,
-        plugins: [maskitoInitialCalibrationPlugin(), maskitoChangeEventPlugin()],
-      },
-      rawFromMasked,
-      caretForRaw,
-    };
-    this.inputMaskKey = key;
-    return this.inputMask;
+    const filterMode = mode === "numeric" || mode === "decimal" ? mode : undefined;
+    this.maskConfig = resolveInputMaskConfig(this.maskConfig, {
+      isNumber: this.isNumber,
+      mask: this.mask,
+      textCase: this.textCase,
+      filterMode,
+      allowNegative: this.allowNegative,
+      numberDecimal: this.numberFilterMode === "decimal",
+    });
+    return this.maskConfig;
   }
 
   private syncMaskito(): void {
     this.maskito?.destroy();
     this.maskito = undefined;
-    this.inputEl?.removeEventListener("input", this.handleMaskInput);
+    this.inputEl?.removeEventListener("input", this.handleInput);
     if (!Build.isBrowser) {
       return;
     }
     const el = this.inputEl;
-    const config = this.inputMaskConfig;
-    if (el !== undefined && config !== undefined) {
-      this.maskito = new Maskito(el, config.options);
-      // This runs after Maskito's listener so the caret reflects the pre-mask selection.
-      el.addEventListener("input", this.handleMaskInput);
+    if (el === undefined) {
+      return;
     }
+    this.maskito = new Maskito(el, this.inputMaskConfig.options);
+    // This runs after Maskito's listener so the caret reflects the pre-mask selection.
+    el.addEventListener("input", this.handleInput);
   }
 
   private get isNumber(): boolean {
@@ -475,7 +397,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     return props;
   }
 
-  private syncInitialValue(): void {
+  private applyInitialValue(): void {
     if (this.value !== undefined) {
       this.applyValue(String(this.value));
     } else if (this.defaultValue !== undefined) {
@@ -492,7 +414,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     return this.inputModeHint === "numeric" ? "numeric" : "decimal";
   }
 
-  private normalizeInputValue(raw: string): string {
+  private sanitizeValue(raw: string): string {
     if (this.isNumber) {
       return raw;
     }
@@ -503,110 +425,76 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     return filterNumericOrDecimalInput(raw, { allowNegative: this.allowNegative, mode });
   }
 
-  private applyValue(raw: string): void {
-    const rawValue = this.normalizeInputValue(raw);
-    const config = this.inputMaskConfig;
-    const next = config === undefined ? rawValue : maskitoTransform(rawValue, config.options);
-    const canonical = this.isNumber ? next : rawValue;
+  private applyValue(value: string): void {
+    const sanitized = this.sanitizeValue(value);
+    const mask = this.inputMaskConfig;
+    const masked = maskitoTransform(sanitized, mask.options);
+    const canonical = this.isNumber ? masked : sanitized;
     const changed = this.value !== undefined && String(this.value) !== canonical;
+
     if (changed) {
       this.value = canonical;
     }
-    this.rawValue = canonical;
-    if (this.inputEl !== undefined && this.inputEl.value !== next) {
-      this.inputEl.value = next;
+    this.canonicalValue = canonical;
+
+    if (this.inputEl !== undefined && this.inputEl.value !== masked) {
+      this.inputEl.value = masked;
     }
     if (this.isNumber) {
-      this.currentValue = next;
+      this.currentValue = masked;
     }
     if (changed) {
-      this.emitValue(next, this.isNumber ? next : rawValue);
+      this.emitValue(masked, this.isNumber ? masked : sanitized);
     }
     this.form.sync();
   }
 
-  private validity(): FormValidity {
-    const element = this.inputEl;
-    if (element === undefined) {
-      return { flags: {} };
-    }
-    if (this.form.isInvalid) {
-      return { flags: { customError: true }, message: "Invalid value", element };
-    }
-    if (this.form.isRequired && element.value === "") {
-      return {
-        flags: { valueMissing: true },
-        message: "Please fill out this field.",
-        element,
-      };
-    }
-
-    const native = element.validity;
-    const number = this.isNumber
-      ? numberValidity(element.value, this.numberConstraints)
-      : undefined;
-    const flags = {
-      badInput: native.badInput || number?.flags.badInput,
-      customError: native.customError || number?.flags.customError,
-      patternMismatch: native.patternMismatch,
-      rangeOverflow: native.rangeOverflow || number?.flags.rangeOverflow,
-      rangeUnderflow: native.rangeUnderflow || number?.flags.rangeUnderflow,
-      stepMismatch: native.stepMismatch || number?.flags.stepMismatch,
-      tooLong: native.tooLong,
-      tooShort: native.tooShort,
-      typeMismatch: native.typeMismatch,
-      valueMissing: native.valueMissing,
-    };
-    if (Object.values(flags).some((value) => value === true)) {
-      return {
-        flags,
-        message: number?.message ?? element.validationMessage,
-        element,
-      };
-    }
-    return { flags: {} };
+  private get inputValidity(): FormValidity {
+    return resolveInputValidity({
+      element: this.inputEl,
+      invalid: this.form.isInvalid,
+      required: this.form.isRequired,
+      numberConstraints: this.isNumber ? this.numberConstraints : undefined,
+    });
   }
 
   private formSignature(): string {
-    const element = this.inputEl;
-    const validity = this.validity();
-    const activeFlags = Object.entries(validity.flags)
-      .filter(([, value]) => value === true)
-      .map(([flag]) => flag)
-      .toSorted()
-      .join(",");
-    return `${element?.value ?? ""}\u0001${this.form.isRequired ? 1 : 0}\u0001${
-      this.form.isInvalid ? 1 : 0
-    }\u0001${activeFlags}\u0001${validity.message ?? ""}`;
+    return resolveInputFormSignature({
+      element: this.inputEl,
+      required: this.form.isRequired,
+      invalid: this.form.isInvalid,
+      validity: this.inputValidity,
+    });
   }
 
-  private readonly handleMaskInput = (event: Event): void => {
+  private readonly handleInput = (event: Event): void => {
     const element = event.target;
-    const mask = this.inputMaskConfig;
-    if (!isHTMLInputElement(element) || mask === undefined) {
+    if (!isHTMLInputElement(element)) {
       return;
     }
 
+    const mask = this.inputMaskConfig;
     const caret = element.selectionStart ?? element.value.length;
     const rawBeforeCaret = mask.rawFromMasked(element.value.slice(0, caret));
-    const next = maskitoTransform(element.value, mask.options);
-    if (element.value !== next) {
-      element.value = next;
+    const masked = maskitoTransform(element.value, mask.options);
+    if (element.value !== masked) {
+      element.value = masked;
     }
     if (
       mask.caretForRaw !== undefined &&
       this.supportsSelection &&
       element.ownerDocument.activeElement === element
     ) {
-      const position = mask.caretForRaw(next, rawBeforeCaret.length);
+      const position = mask.caretForRaw(masked, rawBeforeCaret.length);
       element.setSelectionRange(position, position);
     }
     if (this.isNumber) {
-      this.currentValue = next;
+      this.currentValue = masked;
     }
-    const unmasked = mask.rawFromMasked(next);
-    this.rawValue = unmasked;
-    this.emitValue(next, unmasked);
+
+    const unmasked = mask.rawFromMasked(masked);
+    this.canonicalValue = unmasked;
+    this.emitValue(masked, unmasked);
     this.form.sync();
   };
 
@@ -614,57 +502,8 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     this.valueChange.emit({ value, unmaskedValue });
   }
 
-  /** Whether the value can still move one `step` in the given direction. */
-  private get numberConstraints(): { min?: number; max?: number; step?: number } {
+  private get numberConstraints(): NumberConstraints {
     return { min: this.min, max: this.max, step: this.numericStep };
-  }
-
-  private canStep(direction: 1 | -1): boolean {
-    return canStepNumber(this.inputEl?.value ?? "", direction, this.numberConstraints);
-  }
-
-  /** Snaps one step in the given direction, respecting `min`/`max`. */
-  private nudge(direction: 1 | -1): void {
-    const el = this.inputEl;
-    if (el === undefined) {
-      return;
-    }
-    const parsed = parseNumber(el.value);
-    const next = stepNumber(Number.isNaN(parsed) ? 0 : parsed, direction, this.numberConstraints);
-    const value = formatNumber(next);
-    if (value === el.value) {
-      return;
-    }
-    el.value = value;
-    this.currentValue = value;
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-  }
-
-  private clearHold(): void {
-    if (this.holdDelay !== undefined) {
-      clearTimeout(this.holdDelay);
-      this.holdDelay = undefined;
-    }
-    if (this.holdRepeat !== undefined) {
-      clearInterval(this.holdRepeat);
-      this.holdRepeat = undefined;
-    }
-  }
-
-  /** Nudges once, then keeps nudging while the trigger stays pressed. */
-  private startHold(direction: 1 | -1): void {
-    this.clearHold();
-    this.nudge(direction);
-    this.holdDelay = setTimeout(() => {
-      this.holdRepeat = setInterval(() => {
-        if (!this.canStep(direction)) {
-          this.clearHold();
-          return;
-        }
-        this.nudge(direction);
-      }, 80);
-    }, 400);
   }
 
   private readonly handleTogglePassword = (): void => {
@@ -711,7 +550,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
                 if (this.inputEl === el) {
                   return;
                 }
-                this.inputEl?.removeEventListener("input", this.handleMaskInput);
+                this.inputEl?.removeEventListener("input", this.handleInput);
                 this.inputEl = el;
                 this.syncMaskito();
               }}
@@ -733,89 +572,29 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
               <slot name="suffix" onSlotchange={this.handleSlotChange} />
             </span>
 
-            {this.isNumber ? (
-              <div data-part="number-triggers" class={styles.numberTriggers}>
-                <button
-                  type="button"
-                  data-part="increment-trigger"
-                  aria-label="Increment"
-                  class={styles.stepper}
-                  disabled={this.form.isDisabled || this.form.isReadOnly || !this.canStep(1)}
-                  onPointerDown={() => {
-                    this.startHold(1);
-                  }}
-                  onPointerUp={() => {
-                    this.clearHold();
-                  }}
-                  onPointerCancel={() => {
-                    this.clearHold();
-                  }}
-                  onPointerLeave={() => {
-                    this.clearHold();
-                  }}
-                  onMouseDown={(event) => {
-                    event.preventDefault();
-                  }}
-                  onClick={(event) => {
-                    if (event.detail === 0) {
-                      this.nudge(1);
-                    }
-                  }}
-                >
-                  <AddIcon class={styles.stepperIcon} />
-                </button>
-                <button
-                  type="button"
-                  data-part="decrement-trigger"
-                  aria-label="Decrement"
-                  class={styles.stepper}
-                  disabled={this.form.isDisabled || this.form.isReadOnly || !this.canStep(-1)}
-                  onPointerDown={() => {
-                    this.startHold(-1);
-                  }}
-                  onPointerUp={() => {
-                    this.clearHold();
-                  }}
-                  onPointerCancel={() => {
-                    this.clearHold();
-                  }}
-                  onPointerLeave={() => {
-                    this.clearHold();
-                  }}
-                  onMouseDown={(event) => {
-                    event.preventDefault();
-                  }}
-                  onClick={(event) => {
-                    if (event.detail === 0) {
-                      this.nudge(-1);
-                    }
-                  }}
-                >
-                  <RemoveIcon class={styles.stepperIcon} />
-                </button>
-              </div>
-            ) : undefined}
+            {this.isNumber
+              ? renderNumberStepper({
+                  canIncrement: this.numberStepper.canIncrement,
+                  canDecrement: this.numberStepper.canDecrement,
+                  onStartHold: (direction) => {
+                    this.numberStepper.startHold(direction);
+                  },
+                  onStopHold: () => {
+                    this.numberStepper.stop();
+                  },
+                  onStep: (direction) => {
+                    this.numberStepper.stepOnce(direction);
+                  },
+                })
+              : undefined}
 
-            {this.inputType === "password" ? (
-              <button
-                type="button"
-                data-part="visibility-trigger"
-                aria-label={this.passwordVisible ? "Hide password" : "Show password"}
-                aria-pressed={this.passwordVisible ? "true" : "false"}
-                class={styles.trigger}
-                disabled={this.form.isDisabled || this.form.isReadOnly}
-                onMouseDown={(event) => {
-                  event.preventDefault();
-                }}
-                onClick={this.handleTogglePassword}
-              >
-                {this.passwordVisible ? (
-                  <VisibilityIcon class={styles.triggerIcon} />
-                ) : (
-                  <VisibilityOffIcon class={styles.triggerIcon} />
-                )}
-              </button>
-            ) : undefined}
+            {this.inputType === "password"
+              ? renderPasswordToggle({
+                  visible: this.passwordVisible,
+                  disabled: this.form.isDisabled || this.form.isReadOnly,
+                  onToggle: this.handleTogglePassword,
+                })
+              : undefined}
           </div>
         </div>
       </Host>
