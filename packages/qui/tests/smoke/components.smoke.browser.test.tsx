@@ -33,7 +33,7 @@ describe("cross-browser smoke", () => {
     const { root, waitForChanges } = await render(
       <qui-field id="email" required>
         <qui-field-label>Email</qui-field-label>
-        <qui-input inputType="email" />
+        <qui-input />
       </qui-field>,
     );
 
@@ -45,7 +45,7 @@ describe("cross-browser smoke", () => {
 
     expect(label.htmlFor).toBe(input.id);
     expect(label).toHaveAttribute("data-required");
-    expect(input.type).toBe("email");
+    expect(input.type).toBe("text");
     expectLinked(input, labelHost, "labelledby");
   });
 

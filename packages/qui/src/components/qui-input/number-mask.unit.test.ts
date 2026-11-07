@@ -42,6 +42,19 @@ describe("compileNumberMask", () => {
     expect(paste("1,234,567")).toBe("1234567");
     expect(paste("1.2.3")).toBe("1.23");
   });
+
+  it("normalizes leading decimal data", () => {
+    const preprocessor = decimalMask.preprocessors?.[0];
+    if (preprocessor === undefined) {
+      throw new TypeError("Expected a number preprocessor");
+    }
+    const insert = (data: string): string | undefined =>
+      preprocessor({ elementState: { value: "", selection: [0, 0] }, data }, "insert").data;
+
+    expect(insert(".")).toBe("0.");
+    expect(insert(",")).toBe("0.");
+    expect(insert("-")).toBe("-");
+  });
 });
 
 describe("number helpers", () => {
@@ -56,6 +69,7 @@ describe("number helpers", () => {
     expect(numberValidity("5", { min: 1, max: 3 }).flags.rangeOverflow).toBe(true);
     expect(numberValidity("0", { min: 1, max: 3 }).flags.rangeUnderflow).toBe(true);
     expect(numberValidity("1.5", { step: 1 }).flags.stepMismatch).toBe(true);
+    expect(numberValidity("0", { min: 1, step: 1 }).message).toContain("greater than or equal");
     expect(numberValidity(".", {}).flags.badInput).toBe(true);
     expect(numberValidity("2", { min: 1, max: 3, step: 1 }).flags).toEqual({});
   });

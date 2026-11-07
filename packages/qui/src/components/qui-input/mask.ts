@@ -15,6 +15,7 @@ const ANY = /[^\r\n]/u;
 const EXACT_QUANTIFIER = /^(?<count>\d+)$/u;
 const RANGE_QUANTIFIER = /^(?<min>\d+),(?<max>\d*)$/u;
 
+const MAX_REPETITION = 1000;
 const MASK_CACHE_LIMIT = 100;
 const cache = new Map<string, CompiledMask>();
 
@@ -80,6 +81,9 @@ function quantifier(mask: string, start: number): { count: number; next: number 
   }
 
   const count = Number(exact.groups?.count);
+  if (!Number.isSafeInteger(count) || count < 1 || count > MAX_REPETITION) {
+    throw new Error(`Mask repetition count must be between 1 and ${String(MAX_REPETITION)}.`);
+  }
   return { count, next: end + 1 };
 }
 

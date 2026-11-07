@@ -6,9 +6,16 @@ import {
   type MaskitoPreprocessor,
 } from "@maskito/core";
 
+import { appendAcceptedNumericOrDecimalCharacter } from "./input-filter";
+
 export interface NumberMaskOptions {
   readonly allowNegative: boolean;
   readonly decimal: boolean;
+}
+
+interface NumberState {
+  readonly value: string;
+  readonly selection: readonly [number, number];
 }
 
 export interface NumberConstraints {
@@ -102,31 +109,78 @@ function normalizePastedNumber(data: string, options: NumberMaskOptions): string
   return normalizeNumberValue(grouped ? groups.join("") : data, options);
 }
 
-function sanitizeData(data: string, options: NumberMaskOptions): string {
+function appendAcceptedData(
+  valueBeforeCaret: string,
+  data: string,
+  options: NumberMaskOptions,
+): string {
+  const filterOptions = {
+    allowNegative: options.allowNegative,
+    mode: options.decimal ? ("decimal" as const) : ("numeric" as const),
+  };
+  let acceptedValue = valueBeforeCaret;
+  let acceptedData = "";
+
+  for (const character of data) {
+    const next = appendAcceptedNumericOrDecimalCharacter(acceptedValue, character, filterOptions);
+    if (next !== undefined) {
+      acceptedData += next.slice(acceptedValue.length);
+      acceptedValue = next;
+    }
+  }
+
+  return acceptedData;
+}
+
+function sanitizeData(valueBeforeCaret: string, data: string, options: NumberMaskOptions): string {
   if (data === "-") {
-    return options.allowNegative ? "-" : "";
+    return options.allowNegative && valueBeforeCaret === "" ? "-" : "";
   }
   if (data === "." || data === ",") {
-    return options.decimal ? "." : "";
+    if (!options.decimal || valueBeforeCaret.endsWith(".")) {
+      return "";
+    }
+    return valueBeforeCaret === "" || valueBeforeCaret === "-" ? "0." : ".";
   }
-  return data.length > 1
-    ? normalizePastedNumber(data, options)
-    : normalizeNumberValue(data, options);
+
+  if (data.length > 1 && (valueBeforeCaret === "" || valueBeforeCaret === "-")) {
+    const normalized = normalizePastedNumber(data, options);
+    return valueBeforeCaret === "-" && normalized.startsWith("-")
+      ? normalized.slice(1)
+      : normalized;
+  }
+
+  return appendAcceptedData(valueBeforeCaret, data, options);
+}
+
+function normalizeState(
+  value: string,
+  selection: readonly [number, number],
+  options: NumberMaskOptions,
+): NumberState {
+  const [from, to] = selection;
+  const valueBeforeCaret = normalizeNumberValue(value.slice(0, from), options);
+  const valueBeforeSelectionEnd =
+    from === to ? valueBeforeCaret : normalizeNumberValue(value.slice(0, to), options);
+
+  return {
+    value: normalizeNumberValue(value, options),
+    selection: [valueBeforeCaret.length, valueBeforeSelectionEnd.length],
+  };
 }
 
 /** A minimal Maskito number mask without locale grouping. */
 export function compileNumberMask(options: NumberMaskOptions): MaskitoOptions {
-  const preprocessor: MaskitoPreprocessor = ({ elementState, data }) => ({
-    elementState: {
-      ...elementState,
-      value: normalizeNumberValue(elementState.value, options),
-    },
-    data: sanitizeData(data, options),
-  });
-  const postprocessor: MaskitoPostprocessor = (elementState) => ({
-    ...elementState,
-    value: normalizeNumberValue(elementState.value, options),
-  });
+  const preprocessor: MaskitoPreprocessor = ({ elementState, data }) => {
+    const normalized = normalizeState(elementState.value, elementState.selection, options);
+    const valueBeforeCaret = normalized.value.slice(0, normalized.selection[0]);
+    return {
+      elementState: normalized,
+      data: sanitizeData(valueBeforeCaret, data, options),
+    };
+  };
+  const postprocessor: MaskitoPostprocessor = (elementState) =>
+    normalizeState(elementState.value, elementState.selection, options);
 
   return {
     mask: buildMask(options),
@@ -197,9 +251,10 @@ export function numberValidity(
       return {
         flags,
         message:
-          base === 0
+          message ??
+          (base === 0
             ? `Value must be a multiple of ${String(step)}.`
-            : `Value must be ${String(base)} plus a multiple of ${String(step)}.`,
+            : `Value must be ${String(base)} plus a multiple of ${String(step)}.`),
       };
     }
   }

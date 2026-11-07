@@ -58,6 +58,15 @@ describe("qui-input numeric", () => {
     expect(host.value).toBe("12");
   });
 
+  it("does not apply numeric filtering on top of a mask", async () => {
+    const { root } = await render(<qui-input inputModeHint="numeric" mask="???" value="a1b" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(input.value).toBe("a1b");
+    expect(host.value).toBe("a1b");
+  });
+
   it("re-sanitizes when the input mode changes", async () => {
     const { root, waitForChanges } = await render(<qui-input value="a1b2" />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");

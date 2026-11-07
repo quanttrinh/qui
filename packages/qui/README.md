@@ -354,8 +354,9 @@ exact formatting. Leading zeros are removed and repeated `-`, `.`, or `,`
 characters are collapsed. Masks do not preserve a leading sign or decimal
 separator, so use decimal mode without a mask. When filtering changes a
 controlled `value`, the component updates `value` and emits `valuechange` with
-the normalized value. Filtering applies whenever the effective input mode is
-`numeric` or `decimal` (from `input-mode-hint`) and to every number input.
+the normalized value. Filtering applies when the effective input mode is
+`numeric` or `decimal` (from `input-mode-hint`) and no text mask is configured,
+and to every number input.
 
 ```html
 <qui-input input-mode-hint="numeric"></qui-input> <qui-input input-mode-hint="decimal"></qui-input>

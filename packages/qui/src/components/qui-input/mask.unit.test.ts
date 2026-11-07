@@ -60,6 +60,11 @@ describe("compileMask", () => {
     expect(() => compileMask("#{2,4}")).toThrow("Variable-width masks");
   });
 
+  it("rejects unreasonable repetition counts", () => {
+    expect(() => compileMask("#{0}")).toThrow("between 1 and");
+    expect(() => compileMask("#{100000000}")).toThrow("between 1 and");
+  });
+
   it("rejects malformed masks", () => {
     expect(() => compileMask("[abc")).toThrow("missing its closing ]");
     expect(() => compileMask(BACKSLASH)).toThrow("unescaped backslash");

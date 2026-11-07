@@ -67,15 +67,6 @@ export interface InputValueDetails {
   unmaskedValue: string;
 }
 
-const SELECTABLE_INPUT_TYPES = new Set<InputType>([
-  "text",
-  "search",
-  "tel",
-  "password",
-  "url",
-  "number",
-]);
-
 /**
  * A single-line input with optional masks, number stepping, and a password
  * visibility toggle. When nested in `qui-field`, it inherits the field ids and
@@ -175,6 +166,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   private initialValue = "";
   private canonicalValue = "";
   private inputFocused = false;
+  private lastEmittedValue?: InputValueDetails;
   private readonly generatedId = nextId("qui-input");
   private readonly fieldControl = createFieldControl(() => this.inputEl);
   protected readonly form = new FormController(this, {
@@ -218,6 +210,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   connectedCallback(): void {
     super.connectedCallback();
     ensureShadowStylesheet(this.host);
+    this.syncMaskito();
   }
 
   componentWillLoad(): void {
@@ -287,7 +280,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     const caret = el.selectionStart ?? el.value.length;
     this.syncMaskito();
     this.applyValue(this.canonicalValue);
-    if (this.supportsSelection && el.ownerDocument.activeElement === el) {
+    if (el.ownerDocument.activeElement === el) {
       const position = Math.min(caret, el.value.length);
       el.setSelectionRange(position, position);
     }
@@ -355,10 +348,6 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
   private get isNumber(): boolean {
     return this.inputType === "number";
-  }
-
-  private get supportsSelection(): boolean {
-    return SELECTABLE_INPUT_TYPES.has(this.inputType);
   }
 
   private get supportsSpellcheck(): boolean {
@@ -442,8 +431,12 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     return this.inputModeHint === "numeric" ? "numeric" : "decimal";
   }
 
+  private get hasTextMask(): boolean {
+    return this.maskExpression !== undefined || (this.mask !== undefined && this.mask.length > 0);
+  }
+
   private sanitizeValue(raw: string): string {
-    if (this.isNumber) {
+    if (this.isNumber || this.hasTextMask) {
       return raw;
     }
     const mode = this.effectiveInputMode;
@@ -554,6 +547,13 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   };
 
   private emitValue(value: string, unmaskedValue: string): void {
+    if (
+      this.lastEmittedValue?.value === value &&
+      this.lastEmittedValue.unmaskedValue === unmaskedValue
+    ) {
+      return;
+    }
+    this.lastEmittedValue = { value, unmaskedValue };
     this.valueChange.emit({ value, unmaskedValue });
   }
 
