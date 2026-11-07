@@ -58,8 +58,8 @@ jobs:
           PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
         run: |
           set -euo pipefail
-          data=$(gh pr view "$PR_NUMBER" --json author,labels \
-            --jq '[.author.login, ([.labels[].name] | join("\n"))] | join("\t")')
+          data=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" \
+            --jq '[.user.login, ([.labels[].name] | join("\n"))] | join("\t")')
           author=${data%%$'\t'*}
           labels=${data#*$'\t'}
 
