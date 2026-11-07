@@ -5,6 +5,12 @@ export interface NumberSeparators {
 }
 
 const FALLBACK: NumberSeparators = { decimal: ".", group: "," };
+const FORMAT_OPTIONS = {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+  useGrouping: true,
+} satisfies Intl.NumberFormatOptions;
+const SAMPLE_NUMBER = 12_345.6;
 const cache = new Map<string, NumberSeparators>();
 
 function browserLocale(): string | undefined {
@@ -17,6 +23,29 @@ function browserLocale(): string | undefined {
   return undefined;
 }
 
+function canonicalLocale(locale?: string): string | undefined {
+  if (locale === undefined || locale.trim() === "") {
+    return undefined;
+  }
+  try {
+    return Intl.getCanonicalLocales(locale)[0];
+  } catch {
+    return undefined;
+  }
+}
+
+function readSeparators(locale?: string): NumberSeparators {
+  const parts = new Intl.NumberFormat(canonicalLocale(locale), FORMAT_OPTIONS).formatToParts(
+    SAMPLE_NUMBER,
+  );
+  const values = new Map(parts.map(({ type, value }) => [type, value]));
+
+  return {
+    decimal: values.get("decimal") ?? FALLBACK.decimal,
+    group: values.get("group") ?? FALLBACK.group,
+  };
+}
+
 /** Resolves locale separators through `Intl.NumberFormat`. */
 export function resolveNumberSeparators(locale?: string): NumberSeparators {
   const resolvedLocale = locale ?? browserLocale();
@@ -27,21 +56,7 @@ export function resolveNumberSeparators(locale?: string): NumberSeparators {
     return cached;
   }
 
-  let separators: NumberSeparators;
-  try {
-    const parts = new Intl.NumberFormat(resolvedLocale, {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
-      useGrouping: true,
-    }).formatToParts(12_345.6);
-    separators = {
-      decimal: parts.find((part) => part.type === "decimal")?.value ?? FALLBACK.decimal,
-      group: parts.find((part) => part.type === "group")?.value ?? FALLBACK.group,
-    };
-  } catch {
-    separators = FALLBACK;
-  }
-
+  const separators = readSeparators(resolvedLocale);
   cache.set(key, separators);
   return separators;
 }
