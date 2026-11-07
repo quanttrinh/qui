@@ -1,6 +1,6 @@
 {
   "name": "@quanttrinh/qui-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Server-first SSR/SSG helpers for @quanttrinh/qui",
   "homepage": "https://quanttrinh.github.io/qui/",
   "bugs": {
@@ -47,7 +47,7 @@
     "vitest": "^5.1.0"
   },
   "peerDependencies": {
-    "@quanttrinh/qui": "^0.7.0"
+    "@quanttrinh/qui": "^0.7.1"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
