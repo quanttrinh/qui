@@ -31,6 +31,8 @@ runs:
         } >> "$GITHUB_OUTPUT"
         echo "OPENCODE_DISABLE_AUTOUPDATE=1" >> "$GITHUB_ENV"
         echo "OPENCODE_DISABLE_PROJECT_CONFIG=1" >> "$GITHUB_ENV"
+        echo "OPENCODE_DISABLE_CLAUDE_CODE=1" >> "$GITHUB_ENV"
+        echo "OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1" >> "$GITHUB_ENV"
 
     - name: Restore OpenCode from cache
       id: cache
@@ -71,6 +73,13 @@ runs:
         {
           "formatter": false,
           "lsp": false,
+          "share": "disabled",
+          "snapshots": false,
+          "update": "disable",
+          "tool_output": {
+            "max_lines": 500,
+            "max_bytes": 25000
+          },
           "agents": {
             "review": {
               "description": "Bounded pull request reviewer",
@@ -90,23 +99,6 @@ runs:
             { "action": "read", "resource": "*", "effect": "allow" },
             { "action": "glob", "resource": "*", "effect": "allow" },
             { "action": "webfetch", "resource": "*", "effect": "allow" },
-            { "action": "read", "resource": "*.env", "effect": "deny" },
-            { "action": "read", "resource": "*.env.*", "effect": "deny" },
-            { "action": "read", "resource": ".git/config", "effect": "deny" },
-            { "action": "read", "resource": "*/.git/config", "effect": "deny" },
-            { "action": "read", "resource": "${HOME}/.ssh/*", "effect": "deny" },
-            { "action": "read", "resource": "${HOME}/.aws/*", "effect": "deny" },
-            { "action": "read", "resource": "${HOME}/.config/gh/*", "effect": "deny" },
-            { "action": "read", "resource": "${HOME}/.config/git/credentials", "effect": "deny" },
-            { "action": "read", "resource": "${HOME}/.docker/config.json", "effect": "deny" },
-            { "action": "read", "resource": "${HOME}/.git-credentials", "effect": "deny" },
-            { "action": "read", "resource": "${HOME}/.netrc", "effect": "deny" },
-            { "action": "read", "resource": "${HOME}/.npmrc", "effect": "deny" },
-            { "action": "read", "resource": "${HOME}/.local/share/opencode/*", "effect": "deny" },
-            { "action": "read", "resource": "*opencode.db", "effect": "deny" },
-            { "action": "read", "resource": "*opencode.db-*", "effect": "deny" },
-            { "action": "read", "resource": "${HOME}/.config/opencode/*", "effect": "deny" },
-            { "action": "read", "resource": "/proc/*", "effect": "deny" },
             { "action": "shell", "resource": "*", "effect": "deny" },
             { "action": "grep", "resource": "*", "effect": "deny" },
             { "action": "subagent", "resource": "*", "effect": "deny" },
@@ -127,19 +119,24 @@ runs:
             { "action": "tool.use", "resource": "edit:/tmp/opencode-output/*", "effect": "allow" },
             { "action": "tool.use", "resource": "read:*.env", "effect": "deny" },
             { "action": "tool.use", "resource": "read:*.env.*", "effect": "deny" },
-            { "action": "tool.use", "resource": "read:*/.git/config", "effect": "deny" },
-            { "action": "tool.use", "resource": "read:*/.ssh/*", "effect": "deny" },
-            { "action": "tool.use", "resource": "read:*/.aws/*", "effect": "deny" },
-            { "action": "tool.use", "resource": "read:*/.config/gh/*", "effect": "deny" },
-            { "action": "tool.use", "resource": "read:*/.config/git/credentials", "effect": "deny" },
-            { "action": "tool.use", "resource": "read:*/.docker/config.json", "effect": "deny" },
-            { "action": "tool.use", "resource": "read:*/.git-credentials", "effect": "deny" },
-            { "action": "tool.use", "resource": "read:*/.netrc", "effect": "deny" },
-            { "action": "tool.use", "resource": "read:*/.npmrc", "effect": "deny" },
-            { "action": "tool.use", "resource": "read:*/.local/share/opencode/*", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:.git/**", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:**/.git/**", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:.opencode/**", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:**/.opencode/**", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:opencode.json*", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:**/opencode.json*", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:${HOME}/.ssh/*", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:${HOME}/.aws/*", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:${HOME}/.config/gh/*", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:${HOME}/.config/git/credentials", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:${HOME}/.docker/config.json", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:${HOME}/.git-credentials", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:${HOME}/.netrc", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:${HOME}/.npmrc", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:${HOME}/.local/share/opencode/*", "effect": "deny" },
             { "action": "tool.use", "resource": "read:*opencode.db", "effect": "deny" },
             { "action": "tool.use", "resource": "read:*opencode.db-*", "effect": "deny" },
-            { "action": "tool.use", "resource": "read:*/.config/opencode/*", "effect": "deny" },
+            { "action": "tool.use", "resource": "read:${HOME}/.config/opencode/*", "effect": "deny" },
             { "action": "tool.use", "resource": "read:/proc/*", "effect": "deny" },
             { "action": "tool.use", "resource": "external_directory:*", "effect": "deny" },
             { "action": "tool.use", "resource": "external_directory:/tmp/opencode-output/*", "effect": "allow" },

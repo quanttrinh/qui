@@ -42,5 +42,17 @@ runs:
           agent_args=(--agent "$OPENCODE_AGENT")
         fi
 
-        opencode run --standalone --model "$model" "${agent_args[@]}" --auto --format json \
-          < "$TARGET_PROMPT_FILE"
+        # The CLI stream is only useful for diagnosing failures. Keep it out of
+        # the Actions log and surface the tail if the run fails.
+        log_file="${RUNNER_TEMP:-/tmp}/opencode-run.log"
+        set +e
+        opencode run --standalone --model "$model" "${agent_args[@]}" --auto \
+          < "$TARGET_PROMPT_FILE" >"$log_file" 2>&1
+        status=$?
+        set -e
+
+        if [ "$status" -ne 0 ]; then
+          echo "OpenCode failed with exit code $status. Log tail:" >&2
+          tail -c 20000 "$log_file" >&2
+          exit "$status"
+        fi
