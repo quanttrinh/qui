@@ -232,6 +232,7 @@ jobs:
         if: steps.skip.outputs.skip != 'true'
         id: opencode
         continue-on-error: true
+        timeout-minutes: 45
         uses: ./.github/actions/run-opencode
         with:
           model: opencode-go/deepseek-v4.1-flash
