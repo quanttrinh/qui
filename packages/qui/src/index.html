@@ -201,6 +201,40 @@
                         ></qui-input>
                     </qui-field>
 
+                    <qui-field id="field-phone">
+                        <qui-field-label>Phone number</qui-field-label>
+                        <qui-input mask="(###) ###-####" placeholder="(555) 123-4567"></qui-input>
+                        <qui-field-helper-text
+                            ><code>#</code> matches a digit.</qui-field-helper-text
+                        >
+                    </qui-field>
+
+                    <qui-field id="field-code">
+                        <qui-field-label>Product code</qui-field-label>
+                        <qui-input mask="AA-####" placeholder="AB-1234"></qui-input>
+                        <qui-field-helper-text
+                            ><code>A</code> matches a letter; <code>#</code> matches a
+                            digit.</qui-field-helper-text
+                        >
+                    </qui-field>
+
+                    <qui-field id="field-literal">
+                        <qui-field-label>Literal prefix</qui-field-label>
+                        <qui-input mask="\A-####" placeholder="A-1234"></qui-input>
+                        <qui-field-helper-text
+                            >A backslash displays <code>A</code> literally.</qui-field-helper-text
+                        >
+                    </qui-field>
+
+                    <qui-field id="field-native-mask">
+                        <qui-field-label>Native Maskito mask</qui-field-label>
+                        <qui-input id="native-mask" placeholder="12-34"></qui-input>
+                        <qui-field-helper-text
+                            >Set through the property-only
+                            <code>maskExpression</code>.</qui-field-helper-text
+                        >
+                    </qui-field>
+
                     <qui-field id="field-number">
                         <qui-field-label>Quantity</qui-field-label>
                         <qui-input
@@ -417,6 +451,13 @@
                 const select = document.getElementById("virtual-select");
                 if (select) {
                     select.items = virtualItems;
+                }
+            });
+
+            customElements.whenDefined("qui-input").then(() => {
+                const input = document.getElementById("native-mask");
+                if (input) {
+                    input.maskExpression = [/\d/u, /\d/u, "-", /\d/u, /\d/u];
                 }
             });
 
