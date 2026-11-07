@@ -42,6 +42,7 @@ const NUMBER_SEPARATORS = /[.,]/gu;
 const SHORT_GROUP = /^\d{1,3}$/u;
 const THREE_DIGITS = /^\d{3}$/u;
 const LEADING_MINUS = /^-/u;
+const NON_DIGITS = /\D/gu;
 
 function trimLeadingZeros(value: string): string {
   const negative = value.startsWith("-");
@@ -75,7 +76,7 @@ function normalizeLocaleNumberValue(
 ): string {
   const sign = options.allowNegative && raw.trimStart().startsWith("-") ? "-" : "";
   if (!options.decimal) {
-    return trimLeadingZeros(`${sign}${raw.replaceAll(/\D/gu, "")}`);
+    return trimLeadingZeros(`${sign}${raw.replaceAll(NON_DIGITS, "")}`);
   }
 
   const withoutGrouping = hasGrouping(raw, separators) ? raw.replaceAll(separators.group, "") : raw;
@@ -86,9 +87,9 @@ function normalizeLocaleNumberValue(
 
   const integer = (
     decimalIndex === -1 ? withoutGrouping : withoutGrouping.slice(0, decimalIndex)
-  ).replaceAll(/\D/gu, "");
+  ).replaceAll(NON_DIGITS, "");
   const fraction =
-    decimalIndex === -1 ? "" : withoutGrouping.slice(decimalIndex + 1).replaceAll(/\D/gu, "");
+    decimalIndex === -1 ? "" : withoutGrouping.slice(decimalIndex + 1).replaceAll(NON_DIGITS, "");
   const body = decimalIndex === -1 ? integer : `${integer}.${fraction}`;
   return trimLeadingZeros(`${sign}${body}`);
 }
