@@ -12,6 +12,9 @@ const LETTER = /[a-z]/iu;
 const WORD = /[a-z0-9_]/iu;
 const ANY = /[^\r\n]/u;
 
+const EXACT_QUANTIFIER = /^(?<count>\d+)$/u;
+const RANGE_QUANTIFIER = /^(?<min>\d+),(?<max>\d*)$/u;
+
 const MASK_CACHE_LIMIT = 100;
 const cache = new Map<string, CompiledMask>();
 
@@ -67,8 +70,8 @@ function quantifier(mask: string, start: number): { count: number; next: number 
     return { count: 1, next: start };
   }
   const body = mask.slice(start + 1, end);
-  const exact = /^(?<count>\d+)$/u.exec(body);
-  const range = /^(?<min>\d+),(?<max>\d*)$/u.exec(body);
+  const exact = EXACT_QUANTIFIER.exec(body);
+  const range = RANGE_QUANTIFIER.exec(body);
   if (exact === null) {
     if (range !== null) {
       throw new Error(VARIABLE_QUANTIFIER);

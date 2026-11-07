@@ -28,6 +28,11 @@ export interface NumberValidationOptions {
 }
 
 const PARTIAL_NUMBER = new Set(["-", ".", "-."]);
+const LEADING_ZEROS = /^0+(?=\d)/u;
+const NUMBER_SEPARATORS = /[.,]/gu;
+const SHORT_GROUP = /^\d{1,3}$/u;
+const THREE_DIGITS = /^\d{3}$/u;
+const LEADING_MINUS = /^-/u;
 
 function trimLeadingZeros(value: string): string {
   const negative = value.startsWith("-");
@@ -37,7 +42,7 @@ function trimLeadingZeros(value: string): string {
   }
 
   const [integer = "", ...fraction] = body.split(".");
-  const digits = integer.replace(/^0+(?=\d)/u, "") || "0";
+  const digits = integer.replace(LEADING_ZEROS, "") || "0";
   return `${negative ? "-" : ""}${digits}${fraction.length > 0 ? `.${fraction.join("")}` : ""}`;
 }
 
@@ -83,8 +88,8 @@ function normalizePastedNumber(data: string, options: NumberMaskOptions): string
   }
 
   if (lastDot !== -1 && lastComma !== -1) {
-    const integer = data.slice(0, lastSeparator).replaceAll(/[.,]/gu, "");
-    const fraction = data.slice(lastSeparator + 1).replaceAll(/[.,]/gu, "");
+    const integer = data.slice(0, lastSeparator).replaceAll(NUMBER_SEPARATORS, "");
+    const fraction = data.slice(lastSeparator + 1).replaceAll(NUMBER_SEPARATORS, "");
     return normalizeNumberValue(`${integer}.${fraction}`, options);
   }
 
@@ -92,8 +97,8 @@ function normalizePastedNumber(data: string, options: NumberMaskOptions): string
   const groups = data.split(separator);
   const grouped =
     groups.length > 2 &&
-    /^\d{1,3}$/u.test(groups[0].replace(/^-/u, "")) &&
-    groups.slice(1).every((group) => /^\d{3}$/u.test(group));
+    SHORT_GROUP.test(groups[0].replace(LEADING_MINUS, "")) &&
+    groups.slice(1).every((group) => THREE_DIGITS.test(group));
   return normalizeNumberValue(grouped ? groups.join("") : data, options);
 }
 
