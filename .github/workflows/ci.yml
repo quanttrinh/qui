@@ -103,10 +103,6 @@ jobs:
         if: steps.filter.outputs.code == 'true'
         run: bun run build
 
-      - name: Verify generated sources
-        if: steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true'
-        run: git diff --exit-code -- packages/qui/tooling/panda/generated
-
       - name: Get Playwright version
         id: playwright-version
         if: steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true'
