@@ -235,7 +235,7 @@ async function pandaAsync(config: Config, args: string[], logger: Logger): Promi
 }
 
 function componentEntries(file: string, source: string, outputDirectory: string): ComponentEntry[] {
-  return componentDeclarationsFromSource(source).map((declaration) => ({
+  return componentDeclarationsFromSource(source, file).map((declaration) => ({
     file,
     tag: declaration.tag,
     name: declaration.tag,
@@ -427,8 +427,8 @@ class StyleGenerator {
       return false;
     }
 
-    this.undefinedContentKey = key;
     await writeUndefinedContentTags(this.config, tags);
+    this.undefinedContentKey = key;
     return true;
   }
 

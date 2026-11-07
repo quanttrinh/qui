@@ -118,7 +118,9 @@
   },
   "scripts": {
     "dev": "stencil build --dev --watch --serve",
-    "build": "stencil build && panda lib --files './**/*.{js,mjs}'",
+    "build": "stencil build",
+    "build:lib": "bun run build && panda lib --files './**/*.{js,mjs}'",
+    "build:release": "bun run build:lib",
     "postbuild": "bun tooling/scripts/finalize-types.ts && publint",
     "codegen": "panda codegen",
     "test": "bun tooling/scripts/stencil-test.ts && bun run test:framework-types",
@@ -128,7 +130,7 @@
     "test:smoke": "bun tooling/scripts/stencil-test.ts --project smoke",
     "test:watch": "bun tooling/scripts/stencil-test.ts --watch",
     "test:framework-types": "bun tooling/scripts/require-built-types.ts && tsc -p tests/fixtures/framework-types/react/tsconfig.json && tsc -p tests/fixtures/framework-types/solid/tsconfig.json && tsc -p tests/fixtures/framework-types/preact/tsconfig.json",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build:release"
   },
   "dependencies": {
     "@maskito/core": "^5.6.1",

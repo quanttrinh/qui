@@ -266,6 +266,7 @@ async function accessibilityTree(page: Page): Promise<AxNode[]> {
 
 beforeAll(async () => {
   UNDEFINED_CONTENT_TAGS = await undefinedContentTagsFromSource(build);
+  expect(UNDEFINED_CONTENT_TAGS.length).toBeGreaterThan(0);
   const { renderToString } = await loadHydrate();
   const [buttonResult, fieldResult, iconResult, iconButtonResult, compositeResult] =
     await Promise.all([

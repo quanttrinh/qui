@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createConfig } from "../config";
+import { normalizeHydratePackageJson } from "../panda/hydrate-package";
 
 const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const config = createConfig(root);
@@ -41,27 +42,8 @@ async function referenceComponentTypes(): Promise<void> {
   console.log("[qui] linked Stencil component types from package type entry");
 }
 
-/**
- * Stencil writes a nested package.json so `index.js` stays CommonJS. Its
- * `exports` field is ignored by Node for nested packages and triggers publint,
- * so keep the file for module-type resolution and remove only that field.
- */
-async function normalizeHydratePackageJson(): Promise<void> {
-  if (!(await pathExists(HYDRATE_PACKAGE_JSON))) {
-    return;
-  }
-
-  const source = await readFile(HYDRATE_PACKAGE_JSON, "utf8");
-  const value: unknown = JSON.parse(source);
-
-  if (typeof value !== "object" || value === null || !("exports" in value)) {
-    return;
-  }
-
-  Reflect.deleteProperty(value, "exports");
-  await writeFile(HYDRATE_PACKAGE_JSON, `${JSON.stringify(value, null, 2)}\n`);
+if (await normalizeHydratePackageJson(HYDRATE_PACKAGE_JSON)) {
   console.log("[qui] removed the ignored hydrate package exports field");
 }
 
 await referenceComponentTypes();
-await normalizeHydratePackageJson();

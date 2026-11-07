@@ -34,6 +34,7 @@ describe("quiPreset global CSS", () => {
   });
 
   it("keeps the generated tag module in sync with the source markers", () => {
+    expect(SOURCE_TAGS.length).toBeGreaterThan(0);
     expect(UNDEFINED_CONTENT_TAGS).toEqual(SOURCE_TAGS);
     expect(SOURCE_TAGS).toEqual(
       expect.arrayContaining(["qui-dialog-content", "qui-select", "qui-tab-panel"]),
@@ -61,5 +62,37 @@ describe("component declarations", () => {
       { tag: "qui-two", undefinedContent: false },
       { tag: "qui-three", undefinedContent: false },
     ]);
+  });
+
+  it("does not attach a later marker to an earlier component", () => {
+    const declarations = componentDeclarationsFromSource(`
+      @Component({ tag: "qui-first" })
+      export class First {}
+
+      /** @undefinedContent */
+      @Component({ tag: "qui-second" })
+      export class Second {}
+    `);
+
+    expect(declarations).toEqual([
+      { tag: "qui-first", undefinedContent: false },
+      { tag: "qui-second", undefinedContent: true },
+    ]);
+  });
+
+  it("ignores markers on non-exported components", () => {
+    const declarations = componentDeclarationsFromSource(`
+      /** @undefinedContent */
+      @Component({ tag: "qui-local" })
+      class Local {}
+    `);
+
+    expect(declarations).toEqual([{ tag: "qui-local", undefinedContent: false }]);
+  });
+
+  it("throws when the component source cannot be parsed", () => {
+    expect(() =>
+      componentDeclarationsFromSource('@Component({ tag: "qui-broken" })\nexport class Broken {'),
+    ).toThrow("[qui] failed to parse component.tsx");
   });
 });

@@ -11,6 +11,7 @@ let UNDEFINED_CONTENT_TAGS: string[] = [];
 
 beforeAll(async () => {
   UNDEFINED_CONTENT_TAGS = await undefinedContentTagsFromSource(build);
+  expect(UNDEFINED_CONTENT_TAGS.length).toBeGreaterThan(0);
 });
 
 const SHADOW_LINK = /<link[^>]*data-qui-styles[^>]*>/gu;

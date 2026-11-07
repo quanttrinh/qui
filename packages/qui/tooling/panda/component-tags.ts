@@ -58,13 +58,19 @@ function hasUndefinedContentMarker(context: {
     }
   }
 
-  if (context.parent !== undefined) {
-    start = Math.min(start, nodeStart(context.parent));
+  if (
+    context.parent?.type !== "ExportNamedDeclaration" &&
+    context.parent?.type !== "ExportDefaultDeclaration"
+  ) {
+    return false;
   }
+
+  start = Math.min(start, nodeStart(context.parent));
 
   return context.comments.some(
     (comment) =>
       comment.type === "Block" &&
+      comment.end <= start &&
       UNDEFINED_CONTENT_MARKER.test(comment.value) &&
       context.source.slice(comment.end, start).trim() === "",
   );
@@ -159,17 +165,23 @@ function visitNodes(
  * The `@undefinedContent` marker is scoped to the declaration that owns the
  * JSDoc comment, so a file with several components only hides the marked one.
  */
-export function componentDeclarationsFromSource(source: string): ComponentDeclaration[] {
+export function componentDeclarationsFromSource(
+  source: string,
+  filename = "component.tsx",
+): ComponentDeclaration[] {
   if (!source.includes("@Component")) {
     return [];
   }
 
-  const result = parseSync("component.tsx", source, {
+  const result = parseSync(filename, source, {
     lang: "tsx",
     sourceType: "module",
   });
   if (result.errors.length > 0) {
-    return [];
+    const [error] = result.errors;
+    throw new Error(
+      `[qui] failed to parse ${filename}: ${error?.message ?? "unknown parser error"}`,
+    );
   }
 
   const declarations: ComponentDeclaration[] = [];
