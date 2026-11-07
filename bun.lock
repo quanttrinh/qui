@@ -20,6 +20,7 @@
       "name": "@quanttrinh/qui",
       "version": "0.6.0",
       "dependencies": {
+        "@maskito/core": "^5.6.1",
         "@material/material-color-utilities": "^0.4.0",
         "@stencil/core": "^4.45.2",
       },
@@ -74,7 +75,7 @@
         "vitest": "^5.1.0",
       },
       "peerDependencies": {
-        "@quanttrinh/qui": "workspace:^",
+        "@quanttrinh/qui": "^0.6.0",
       },
     },
     "packages/unplugin": {
@@ -94,7 +95,7 @@
         "vitest": "^5.1.0",
       },
       "peerDependencies": {
-        "@quanttrinh/qui": "workspace:^",
+        "@quanttrinh/qui": "^0.6.0",
       },
     },
   },
@@ -226,6 +227,8 @@
     "@manypkg/get-packages": ["@manypkg/get-packages@3.1.0", "", { "dependencies": { "@manypkg/find-root": "^3.1.0", "@manypkg/tools": "^2.1.0" } }, "sha512-0TbBVyvPrP7xGYBI/cP8UP+yl/z+HtbTttAD7FMAJgn/kXOTwh5/60TsqP9ZYY710forNfyV0N8P/IE/ujGZJg=="],
 
     "@manypkg/tools": ["@manypkg/tools@2.1.2", "", { "dependencies": { "jju": "^1.4.0", "tinyglobby": "^0.2.13", "yaml": "^2.9.0" } }, "sha512-6QEf6yqFbETdwGITKq57aYoPfX/3K8XFNwsAlx0C1M7o8cb79sv1M3w+tWuWvIcSbNqrLF7OD7YpZMVVz335hQ=="],
+
+    "@maskito/core": ["@maskito/core@5.6.1", "", {}, "sha512-P5XKR1wwkTLagzyH79ZE6TfQI20IR+eHeP8hoKrfqlr99luLo1QYTux9OFPvIH+o2GGzCkIBbgwYaquunZlC1Q=="],
 
     "@material/material-color-utilities": ["@material/material-color-utilities@0.4.0", "", {}, "sha512-dlq6VExJReb8dhjj3a/yTigr3ncNwoFmL5Iy2ENtbDX03EmNeOEdZ+vsaGrj7RTuO+mB7L58II4LCsl4NpM8uw=="],
 

@@ -148,7 +148,9 @@ describe("qui-tabs", () => {
       expectTabLinked(tab);
     }
   });
+});
 
+describe("qui-tabs controlled behavior", () => {
   it("keeps a controlled value while emitting the next value", async () => {
     const { root, setProps, spyOnEvent, waitForChanges } = await render(
       <qui-tabs value="one">

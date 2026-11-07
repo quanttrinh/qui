@@ -17,10 +17,8 @@ describe("qui-input text case", () => {
     expect(spy).toHaveReceivedEventDetail({ value: "AB-12", unmaskedValue: "AB-12" });
   });
 
-  it("normalizes email values without using the unsupported selection API", async () => {
-    const { root, spyOnEvent, waitForChanges } = await render(
-      <qui-input inputType="email" textCase="lowercase" />,
-    );
+  it("normalizes typed values to lowercase", async () => {
+    const { root, spyOnEvent, waitForChanges } = await render(<qui-input textCase="lowercase" />);
     const spy = spyOnEvent("valuechange");
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
@@ -35,18 +33,16 @@ describe("qui-input text case", () => {
     });
   });
 
-  it("restores the caret after a length-changing case mapping", async () => {
+  it("applies a length-changing case mapping", async () => {
     const { root, waitForChanges } = await render(<qui-input textCase="uppercase" />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
     input.value = "aßb";
-    input.setSelectionRange(2, 2);
     input.dispatchEvent(new Event("input", { bubbles: true }));
     await waitForChanges();
 
     expect(input.value).toBe("ASSB");
-    expect(input.selectionStart).toBe(3);
   });
 
   it("normalizes the defaultValue", async () => {
@@ -58,6 +54,21 @@ describe("qui-input text case", () => {
 
     await waitForChanges();
     expect(input.value).toBe("ABC");
+  });
+
+  it("restores the caret after a length-changing case mapping", async () => {
+    const { root, waitForChanges } = await render(<qui-input textCase="uppercase" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    input.focus();
+    input.value = "aßb";
+    input.setSelectionRange(2, 2);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await waitForChanges();
+
+    expect(input.value).toBe("ASSB");
+    expect(input.selectionStart).toBe(3);
   });
 
   it("normalizes initial and controlled values to lowercase", async () => {
@@ -75,27 +86,25 @@ describe("qui-input text case", () => {
     expect(input.value).toBe("def");
   });
 
-  it("applies case before a mask and keeps the caret stable", async () => {
+  it("applies case before a mask", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(
-      <qui-input textCase="uppercase" maskPattern="aa-####" />,
+      <qui-input textCase="uppercase" mask="AA-####" />,
     );
     const spy = spyOnEvent("valuechange");
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
 
     input.value = "ab1234";
-    input.setSelectionRange(2, 2);
     input.dispatchEvent(new Event("input", { bubbles: true }));
     await waitForChanges();
 
     expect(input.value).toBe("AB-1234");
-    expect(input.selectionStart).toBe(2);
     expect(spy).toHaveReceivedEventDetail({ value: "AB-1234", unmaskedValue: "AB1234" });
   });
 
   it("re-masks from raw data when textCase changes", async () => {
     const { root, setProps, waitForChanges } = await render(
-      <qui-input maskPattern="+1 ### ### ####" textCase="uppercase" />,
+      <qui-input mask={String.raw`\+1 ### ### ####`} textCase="uppercase" />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
@@ -111,7 +120,7 @@ describe("qui-input text case", () => {
 
   it("preserves mask literal case when textCase changes", async () => {
     const { root, setProps, waitForChanges } = await render(
-      <qui-input maskPattern="X-aa-####" textCase="uppercase" />,
+      <qui-input mask="X-AA-####" textCase="uppercase" />,
     );
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");

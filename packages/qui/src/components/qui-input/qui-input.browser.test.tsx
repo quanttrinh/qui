@@ -3,6 +3,7 @@ import { describe, expect, h, it, render } from "@stencil/vitest";
 import { queryControl, resolveHost } from "../../../tests/test-utils/component";
 import { nextFrame, waitForShadowStyles } from "../../../tests/test-utils/dom-ready";
 import { expectFocusedDeep, typeInto } from "../../../tests/test-utils/interactions";
+import { isHTMLFormElement } from "../shared/helpers/dom/dom";
 
 function queryVisibilityTrigger(host: Element): HTMLButtonElement {
   return queryControl<HTMLButtonElement>(host, "[data-part=visibility-trigger]");
@@ -10,7 +11,7 @@ function queryVisibilityTrigger(host: Element): HTMLButtonElement {
 
 describe("qui-input", () => {
   it("applies a mask and emits both masked and unmasked values", async () => {
-    const { root, spyOnEvent, waitForChanges } = await render(<qui-input maskPattern="###-###" />);
+    const { root, spyOnEvent, waitForChanges } = await render(<qui-input mask="###-###" />);
     const spy = spyOnEvent("valuechange");
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
     const input = queryControl<HTMLInputElement>(host, "input");
@@ -20,6 +21,55 @@ describe("qui-input", () => {
 
     expect(input.value).toBe("123-456");
     expect(spy).toHaveReceivedEventDetail({ value: "123-456", unmaskedValue: "123456" });
+  });
+
+  it("accepts a native Maskito mask expression", async () => {
+    const { root, spyOnEvent, waitForChanges } = await render(
+      <qui-input maskExpression={[/\d/u, /\d/u, "-", /\d/u, /\d/u]} />,
+    );
+    const spy = spyOnEvent("valuechange");
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    typeInto(input, "1234");
+    await waitForChanges();
+
+    expect(input.value).toBe("12-34");
+    expect(spy).toHaveReceivedEventDetail({ value: "12-34", unmaskedValue: "1234" });
+    expect(host.hasAttribute("mask-expression")).toBe(false);
+  });
+
+  it("prefers a native mask expression over the string mask", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-input mask="###" maskExpression={[/\d/u, /\d/u, "-", /\d/u, /\d/u]} />,
+    );
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    typeInto(input, "1234");
+    await waitForChanges();
+
+    expect(input.value).toBe("12-34");
+  });
+
+  it("revalidates when the input pattern changes", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-input name="code" inputPattern={String.raw`\d+`} value="abc" />
+      </form>,
+    );
+    const form = isHTMLFormElement(root) ? root : root.querySelector("form");
+    if (!isHTMLFormElement(form)) {
+      throw new TypeError("Expected a form");
+    }
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+
+    expect(form.checkValidity()).toBe(false);
+
+    host.inputPattern = String.raw`[a-z]+`;
+    await waitForChanges();
+
+    expect(form.checkValidity()).toBe(true);
   });
 
   it("steps number inputs and respects min/max", async () => {
@@ -39,22 +89,6 @@ describe("qui-input", () => {
     decrement.click();
     await waitForChanges();
     expect(input.value).toBe("2");
-  });
-
-  it("forwards multiple for email inputs", async () => {
-    const { root } = await render(<qui-input inputType="email" multiple />);
-    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
-    const input = queryControl<HTMLInputElement>(host, "input");
-
-    expect(input.multiple).toBe(true);
-  });
-
-  it("does not forward multiple to non-email inputs", async () => {
-    const { root } = await render(<qui-input multiple />);
-    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
-    const input = queryControl<HTMLInputElement>(host, "input");
-
-    expect(input.multiple).toBe(false);
   });
 
   it("renders url inputs with keyboard hints", async () => {
@@ -83,14 +117,6 @@ describe("qui-input", () => {
     const input = queryControl<HTMLInputElement>(host, "input");
 
     expect(input.spellcheck).toBe(false);
-  });
-
-  it("does not forward spellcheck to email", async () => {
-    const { root } = await render(<qui-input inputType="email" spellcheckHint={false} />);
-    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
-    const input = queryControl<HTMLInputElement>(host, "input");
-
-    expect(input.hasAttribute("spellcheck")).toBe(false);
   });
 
   it("does not forward spellcheck to unsupported inputs", async () => {

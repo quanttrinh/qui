@@ -17,7 +17,7 @@ for (let index = 0; index < args.length; index += 1) {
 const testProject = projects.length === 1 ? projects[0] : "all";
 const child = spawn("stencil-test", args, {
   stdio: "inherit",
-  shell: true,
+  shell: process.platform === "win32",
   env: {
     ...process.env,
     NODE_ENV: "test",

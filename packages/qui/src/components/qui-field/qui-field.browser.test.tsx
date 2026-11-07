@@ -165,7 +165,9 @@ describe("qui-field", () => {
     expect(selectTrigger).toHaveAttribute("aria-expanded", "false");
     expect(comboTrigger).toHaveAttribute("aria-expanded", "false");
   });
+});
 
+describe("qui-field label behavior", () => {
   it("focuses the internal control when the label is clicked", async () => {
     const { root, waitForChanges } = await render(
       <qui-field id="email">

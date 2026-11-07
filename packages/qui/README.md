@@ -153,7 +153,7 @@ defineComponents(defineButton, defineInput);
 ```
 
 ```html
-<qui-input placeholder="Email" input-type="email"></qui-input>
+<qui-input placeholder="Email" autocomplete="email"></qui-input>
 <qui-button variant="filled">Save</qui-button>
 ```
 
@@ -170,7 +170,7 @@ or per-tag network waterfall.
 - `<qui-switch>` — checked, disabled, required, `checkedchange`
 - `<qui-radio-group>` + `<qui-radio>` — orientation, disabled, required, `valuechange`
 - `<qui-field>` + label, helper text, error text and required indicator parts
-- `<qui-input>` — text/email/tel/search/password/url/number, masks, text case,
+- `<qui-input>` — text/tel/search/password/url/number, masks, text case,
   prefix/suffix slots, number stepping, password visibility, `valuechange`
 - `<qui-textarea>` — multi-line text, auto-growth, character counter, native
   resize modes, `valuechange`
@@ -213,7 +213,7 @@ Descendant controls consume the field through a DOM context.
 ```html
 <qui-field id="email" required>
     <qui-field-label>Email</qui-field-label>
-    <qui-input input-type="email" placeholder="you@example.com"></qui-input>
+    <qui-input autocomplete="email" placeholder="you@example.com"></qui-input>
     <qui-field-helper-text>We never share it.</qui-field-helper-text>
 </qui-field>
 ```
@@ -237,14 +237,57 @@ Register every tag used by the form. For a field with an input:
 defineComponents(defineField, defineFieldLabel, defineFieldHelperText, defineInput);
 ```
 
+### Input masks
+
+Use `mask` on non-number inputs. Other characters are inserted automatically:
+
+```html
+<qui-input mask="(###) ###-####"></qui-input>
+<qui-input mask="AA-####"></qui-input>
+<qui-input mask="##/##/####"></qui-input>
+```
+
+| Token     | Matches                              |
+| --------- | ------------------------------------ |
+| `#`       | digit                                |
+| `A`       | letter                               |
+| `W`       | word character                       |
+| `?`       | any character                        |
+| `[ ... ]` | character class                      |
+| `{n}`     | repeat the previous token            |
+| `\`       | display the next character literally |
+
+Backslash always means “literal”, including for token characters:
+
+```html
+<qui-input mask="\A-####"></qui-input>
+<!-- A-1234 -->
+<qui-input mask="\W-####"></qui-input>
+<!-- W-1234 -->
+<qui-input mask="\#-####"></qui-input>
+<!-- #-1234 -->
+```
+
+Variable-width repeats such as `*`, `+`, `{n,}`, and `{n,m}` are not supported
+yet.
+
+For advanced JavaScript usage, set the property-only `maskExpression` with a
+native Maskito mask. It takes precedence over `mask` and is not available as an
+HTML attribute:
+
+```ts
+const input = document.querySelector("qui-input");
+input.maskExpression = [/\d/, /\d/, "-", /\d/, /\d/];
+```
+
 ### Input text case
 
 Use `text-case` to normalize the value itself, not just its appearance:
 
 ```html
 <qui-input text-case="uppercase"></qui-input>
-<qui-input text-case="lowercase" input-type="email"></qui-input>
-<qui-input text-case="uppercase" mask-pattern="aa-####"></qui-input>
+<qui-input text-case="lowercase"></qui-input>
+<qui-input text-case="uppercase" mask="AA-####"></qui-input>
 ```
 
 Casing runs before masking, so mask literals keep their authored case and the
@@ -267,11 +310,14 @@ qui-input::part(input) {
 
 ### Number inputs
 
-`input-type="number"` forwards `min`, `max`, and `step` to the native input so
-native constraint validation and keyboard stepping use the same bounds as the
-rendered stepper buttons. Number inputs also default to `inputmode="numeric"`
-and numeric filtering; set `input-mode-hint="decimal"` to allow decimal
-punctuation.
+`input-type="number"` renders a Maskito-managed text input with numeric or
+decimal keyboard hints. It accepts digits, an optional leading `-`, and a single
+decimal separator; commas are normalized to `.`, and leading zeros are removed.
+Number inputs default to `inputmode="numeric"` but still accept decimal values —
+set `input-mode-hint="numeric"` to reject decimal punctuation.
+
+`min`, `max`, and `step` are validated by the component and surface through the
+form's constraint validation. The rendered stepper buttons use the same bounds.
 
 ```html
 <qui-input input-type="number" min="1" max="10" step="1" value="1"></qui-input>
@@ -280,8 +326,17 @@ punctuation.
 Use `step="any"` to allow arbitrary decimal values. The stepper buttons still
 increment and decrement by `1` in that mode.
 
+Numbers are parsed with the document/browser locale by default. Use
+`number-locale` to override it. Grouping separators are stripped and the
+decimal separator is normalized to `.` internally, so `value` and
+`valuechange` always use a dot decimal.
+
 ```html
-<qui-input input-type="number" input-mode-hint="decimal" step="any"></qui-input>
+<qui-input input-type="number" number-locale="de-DE"></qui-input>
+```
+
+```html
+<qui-input input-type="number" step="any"></qui-input>
 ```
 
 ### Native input hints
@@ -290,12 +345,9 @@ Additional native hints are forwarded when they apply to the selected input
 type:
 
 ```html
-<qui-input input-type="email" multiple></qui-input>
-<qui-input input-type="url" keyboard-hint="go"></qui-input>
-<qui-input spellcheck-hint></qui-input>
+<qui-input input-type="url" keyboard-hint="go"></qui-input> <qui-input spellcheck-hint></qui-input>
 ```
 
-- `multiple` applies only to `email`.
 - `keyboard-hint` is forwarded for every input type, but is most useful for
   text-like inputs and virtual keyboards.
 - `spellcheck-hint` applies to `text` and `search`.
@@ -311,9 +363,9 @@ exact formatting. Leading zeros are removed and repeated `-`, `.`, or `,`
 characters are collapsed. Masks do not preserve a leading sign or decimal
 separator, so use decimal mode without a mask. When filtering changes a
 controlled `value`, the component updates `value` and emits `valuechange` with
-the normalized value. Filtering applies whenever the effective input mode is
-`numeric` or `decimal`: from `input-mode-hint`, or the numeric default for
-number inputs.
+the normalized value. Filtering applies when the effective input mode is
+`numeric` or `decimal` (from `input-mode-hint`) and no text mask is configured,
+and to every number input.
 
 ```html
 <qui-input input-mode-hint="numeric"></qui-input> <qui-input input-mode-hint="decimal"></qui-input>
