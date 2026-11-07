@@ -9,15 +9,25 @@ export interface CompiledMask {
 
 const DIGIT = /\d/u;
 const NON_DIGIT = /\D/u;
+const LETTER = /[a-z]/iu;
 const WORD = /[a-z0-9_]/iu;
 const NON_WORD = /[^a-z0-9_]/iu;
 const SPACE = /\s/u;
 const NON_SPACE = /\S/u;
+const ANY = /[^\r\n]/u;
 
 const cache = new Map<string, CompiledMask>();
 
 const VARIABLE_QUANTIFIER =
-  'Variable-width masks ("?", "*", "+", "{n,}", and "{n,m}") require a dynamic Maskito mask and are not supported yet.';
+  'Variable-width masks ("*", "+", "{n,}", and "{n,m}") require a dynamic Maskito mask and are not supported yet.';
+
+/** Shorthand atoms for the compact mask DSL. Escape one to use it literally. */
+const TOKEN_ATOMS: Record<string, RegExp> = {
+  "#": DIGIT,
+  A: LETTER,
+  W: WORD,
+  "?": ANY,
+};
 
 const ESCAPE_ATOMS: Record<string, RegExp> = {
   d: DIGIT,
@@ -61,7 +71,7 @@ function characterClass(mask: string, start: number): { regex: RegExp; next: num
 
 function quantifier(mask: string, start: number): { count: number; next: number } {
   const character = mask[start];
-  if (character === "?" || character === "*" || character === "+") {
+  if (character === "*" || character === "+") {
     throw new Error(VARIABLE_QUANTIFIER);
   }
   if (character !== "{") {
@@ -116,6 +126,13 @@ function parse(mask: string): MaskitoMaskExpression {
         parts.push(regex);
       }
       index = afterQuantifier;
+    } else if (character in TOKEN_ATOMS) {
+      const atom = TOKEN_ATOMS[character];
+      const { count, next } = quantifier(mask, index + 1);
+      for (let repetition = 0; repetition < count; repetition += 1) {
+        parts.push(atom);
+      }
+      index = next;
     } else {
       parts.push(character);
       index += 1;
@@ -149,6 +166,13 @@ function rawFromMasked(value: string, mask: MaskitoMaskExpression): string {
     }
   }
   return raw;
+}
+
+/** Extracts the raw value for a native Maskito mask expression. */
+export function extractRawFromMasked(value: string, mask: MaskitoOptions["mask"]): string {
+  const expression =
+    typeof mask === "function" ? mask({ value, selection: [value.length, value.length] }) : mask;
+  return Array.isArray(expression) ? rawFromMasked(value, expression) : value;
 }
 
 /**

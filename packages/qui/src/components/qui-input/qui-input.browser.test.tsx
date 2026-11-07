@@ -24,6 +24,35 @@ describe("qui-input", () => {
     expect(spy).toHaveReceivedEventDetail({ value: "123-456", unmaskedValue: "123456" });
   });
 
+  it("accepts a native Maskito mask expression", async () => {
+    const { root, spyOnEvent, waitForChanges } = await render(
+      <qui-input maskExpression={[/\d/u, /\d/u, "-", /\d/u, /\d/u]} />,
+    );
+    const spy = spyOnEvent("valuechange");
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    typeInto(input, "1234");
+    await waitForChanges();
+
+    expect(input.value).toBe("12-34");
+    expect(spy).toHaveReceivedEventDetail({ value: "12-34", unmaskedValue: "1234" });
+    expect(host.hasAttribute("mask-expression")).toBe(false);
+  });
+
+  it("prefers a native mask expression over the string mask", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-input mask="###" maskExpression={[/\d/u, /\d/u, "-", /\d/u, /\d/u]} />,
+    );
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    typeInto(input, "1234");
+    await waitForChanges();
+
+    expect(input.value).toBe("12-34");
+  });
+
   it("steps number inputs and respects min/max", async () => {
     const { root, waitForChanges } = await render(
       <qui-input inputType="number" value={2} min={1} max={3} step={1} />,

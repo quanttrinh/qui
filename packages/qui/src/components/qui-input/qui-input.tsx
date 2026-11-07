@@ -97,12 +97,18 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   /** The input type to render. */
   @Prop() inputType: InputType = "text";
   /**
-   * A mask for text-like inputs. Use `\d`, `\w`, `\s` (and their negations) for
-   * matching tokens, `[a-z]` for character classes, and `{n}` for a fixed
-   * repetition count. Escape literals with `\`; every other character is
-   * literal. Variable-width quantifiers are not supported yet.
+   * A compact mask for text-like inputs. Tokens: `#` digit, `A` letter, `W`
+   * word character, and `?` any character. `[a-z]` defines a character class,
+   * `{n}` repeats the previous token, and `\` escapes a literal. The escaping
+   * tokens `\d`, `\w`, and `\s` also work. Variable-width repeats (`*`, `+`,
+   * `{n,}`, and `{n,m}`) are not supported yet.
    */
   @Prop() mask?: string;
+  /**
+   * A native Maskito mask for advanced JavaScript usage. Takes precedence over
+   * `mask`. This is property-only and is not exposed as an HTML attribute.
+   */
+  @Prop({ attribute: null }) maskExpression?: MaskitoOptions["mask"];
   /** Normalizes the value's case before masking. Ignored for number inputs. */
   @Prop() textCase: InputTextCase = "none";
   /**
@@ -265,6 +271,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   }
 
   @Watch("mask")
+  @Watch("maskExpression")
   @Watch("textCase")
   @Watch("inputModeHint")
   @Watch("inputType")
@@ -300,6 +307,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     this.maskConfig = resolveInputMaskConfig(this.maskConfig, {
       isNumber: this.isNumber,
       mask: this.mask,
+      maskExpression: this.maskExpression,
       textCase: this.textCase,
       filterMode,
       allowNegative: this.allowNegative,

@@ -239,17 +239,38 @@ defineComponents(defineField, defineFieldLabel, defineFieldHelperText, defineInp
 
 ### Input masks
 
-Use `mask` on non-number inputs. `\d`, `\w`, and `\s` match characters,
-`[ ... ]` defines a character class, `{n}` repeats a matching token a fixed
-number of times, and `\` escapes a literal. Other characters are inserted
-automatically:
+Use `mask` on non-number inputs. Other characters are inserted automatically:
 
 ```html
-<qui-input mask="\d{3}-\d{3}"></qui-input> <qui-input mask="\+\d (\d{3})-\d{3}-\d{4}"></qui-input>
+<qui-input mask="(###) ###-####"></qui-input>
+<qui-input mask="AA-####"></qui-input>
+<qui-input mask="##/##/####"></qui-input>
 ```
 
-Variable-width quantifiers such as `+`, `*`, `?`, `{n,}`, and `{n,m}` are not
-supported yet.
+| Token     | Matches                   |
+| --------- | ------------------------- |
+| `#`       | digit                     |
+| `A`       | letter                    |
+| `W`       | word character            |
+| `?`       | any character             |
+| `[ ... ]` | character class           |
+| `{n}`     | repeat the previous token |
+| `\`       | escape a literal or token |
+
+The regex-style `\d`, `\w`, and `\s` tokens also work. Escape compact tokens
+when you need them literally, e.g. `mask="\#-####"`.
+
+Variable-width repeats such as `*`, `+`, `{n,}`, and `{n,m}` are not supported
+yet.
+
+For advanced JavaScript usage, set the property-only `maskExpression` with a
+native Maskito mask. It takes precedence over `mask` and is not available as an
+HTML attribute:
+
+```ts
+const input = document.querySelector("qui-input");
+input.maskExpression = [/\d/, /\d/, "-", /\d/, /\d/];
+```
 
 ### Input text case
 
@@ -258,7 +279,7 @@ Use `text-case` to normalize the value itself, not just its appearance:
 ```html
 <qui-input text-case="uppercase"></qui-input>
 <qui-input text-case="lowercase"></qui-input>
-<qui-input text-case="uppercase" mask="[a-zA-Z]{2}-\d{4}"></qui-input>
+<qui-input text-case="uppercase" mask="AA-####"></qui-input>
 ```
 
 Casing runs before masking, so mask literals keep their authored case and the

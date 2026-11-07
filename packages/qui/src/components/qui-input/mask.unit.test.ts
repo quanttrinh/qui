@@ -26,6 +26,22 @@ describe("compileMask", () => {
     expect(maskitoTransform("ab1234", mask.options)).toBe("ab-1234");
   });
 
+  it("supports compact tokens", () => {
+    const phone = compileMask("(###) ###-####");
+    const product = compileMask("AA-####");
+    const any = compileMask("?#");
+
+    expect(maskitoTransform("15551234567", phone.options)).toBe("(155) 512-3456");
+    expect(maskitoTransform("ab1234", product.options)).toBe("ab-1234");
+    expect(maskitoTransform("x1", any.options)).toBe("x1");
+  });
+
+  it("escapes compact tokens for literal use", () => {
+    const mask = compileMask(String.raw`\#-\?`);
+
+    expect(maskitoTransform("#-?", mask.options)).toBe("#-?");
+  });
+
   it("uses raw extraction that respects literals", () => {
     const mask = compileMask(String.raw`X-\w{2}-\d{4}`);
 
@@ -35,7 +51,6 @@ describe("compileMask", () => {
   it("rejects variable-width quantifiers until dynamic masks exist", () => {
     expect(() => compileMask(String.raw`\d+`)).toThrow("Variable-width masks");
     expect(() => compileMask(String.raw`\d*`)).toThrow("Variable-width masks");
-    expect(() => compileMask(String.raw`\d?`)).toThrow("Variable-width masks");
     expect(() => compileMask(String.raw`\d{2,}`)).toThrow("Variable-width masks");
     expect(() => compileMask(String.raw`\d{2,4}`)).toThrow("Variable-width masks");
   });

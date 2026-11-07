@@ -6,7 +6,7 @@ import {
 } from "@maskito/core";
 
 import { type TextCase } from "./case";
-import { compileMask } from "./mask";
+import { compileMask, extractRawFromMasked } from "./mask";
 import { compileNumberMask } from "./number-mask";
 import { createNumericFilterPreprocessor, createTextCasePreprocessor } from "./preprocessors";
 
@@ -18,6 +18,8 @@ export interface InputMaskConfig {
   /** Cache key describing the settings used to build this configuration. */
   readonly key: string;
   readonly options: MaskitoOptions;
+  /** Native mask reference used to invalidate the cache. */
+  readonly sourceMask?: MaskitoOptions["mask"];
   /** Extracts user-typed characters from an already-masked value. */
   readonly rawFromMasked: (value: string) => string;
 }
@@ -26,6 +28,7 @@ export interface InputMaskConfig {
 export interface InputMaskSettings {
   readonly isNumber: boolean;
   readonly mask?: string;
+  readonly maskExpression?: MaskitoOptions["mask"];
   readonly textCase: TextCase;
   readonly filterMode?: MaskFilterMode;
   readonly allowNegative: boolean;
@@ -57,7 +60,11 @@ function createTextMask(settings: InputMaskSettings): Omit<InputMaskConfig, "key
   let maskExpression: MaskitoOptions["mask"] = PASS_THROUGH_MASK;
   let rawFromMasked = identity;
 
-  if (settings.mask !== undefined && settings.mask.length > 0) {
+  if (settings.maskExpression !== undefined) {
+    const nativeMask = settings.maskExpression;
+    maskExpression = nativeMask;
+    rawFromMasked = (value: string): string => extractRawFromMasked(value, nativeMask);
+  } else if (settings.mask !== undefined && settings.mask.length > 0) {
     const compiled = compileMask(settings.mask);
     const { options, rawFromMasked: compiledRaw } = compiled;
     maskExpression = options.mask;
@@ -66,7 +73,9 @@ function createTextMask(settings: InputMaskSettings): Omit<InputMaskConfig, "key
 
   const preprocessors: MaskitoPreprocessor[] = [createTextCasePreprocessor(settings.textCase)];
 
-  const hasTextMask = settings.mask !== undefined && settings.mask.length > 0;
+  const hasTextMask =
+    settings.maskExpression !== undefined ||
+    (settings.mask !== undefined && settings.mask.length > 0);
   if (settings.filterMode !== undefined && !hasTextMask) {
     preprocessors.push(
       createNumericFilterPreprocessor({
@@ -96,17 +105,18 @@ export function resolveInputMaskConfig(
   settings: InputMaskSettings,
 ): InputMaskConfig {
   const key = cacheKey(settings);
-  if (previous?.key === key) {
+  if (previous?.key === key && previous.sourceMask === settings.maskExpression) {
     return previous;
   }
 
   if (settings.isNumber) {
     return {
       key,
+      sourceMask: settings.maskExpression,
       options: createNumberMask(settings),
       rawFromMasked: identity,
     };
   }
 
-  return { key, ...createTextMask(settings) };
+  return { key, sourceMask: settings.maskExpression, ...createTextMask(settings) };
 }
