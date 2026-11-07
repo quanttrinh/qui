@@ -40,6 +40,14 @@ export interface InputMaskSettings {
 const PASS_THROUGH_MASK = /^[\s\S]*$/u;
 const identity = (value: string): string => value;
 
+/** Whether either mask prop contributes a fixed text mask. */
+export function hasConfiguredMask(
+  mask: string | undefined,
+  maskExpression: MaskitoOptions["mask"] | undefined,
+): boolean {
+  return maskExpression !== undefined || (mask !== undefined && mask.length > 0);
+}
+
 function cacheKey(settings: InputMaskSettings): string {
   const textMask = settings.maskExpression === undefined ? (settings.mask ?? "") : "";
   return [
@@ -79,10 +87,10 @@ function createTextMask(settings: InputMaskSettings): Omit<InputMaskConfig, "key
 
   const preprocessors: MaskitoPreprocessor[] = [createTextCasePreprocessor(settings.textCase)];
 
-  const hasTextMask =
-    settings.maskExpression !== undefined ||
-    (settings.mask !== undefined && settings.mask.length > 0);
-  if (settings.filterMode !== undefined && !hasTextMask) {
+  if (
+    settings.filterMode !== undefined &&
+    !hasConfiguredMask(settings.mask, settings.maskExpression)
+  ) {
     preprocessors.push(
       createNumericFilterPreprocessor({
         allowNegative: settings.allowNegative,

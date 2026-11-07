@@ -32,7 +32,7 @@ import { type TextCase } from "./case";
 import { renderNumberStepper, renderPasswordToggle } from "./input-controls";
 import { filterNumericOrDecimalInput } from "./input-filter";
 import { resolveInputFormSignature, resolveInputValidity } from "./input-validity";
-import { resolveInputMaskConfig, type InputMaskConfig } from "./mask-config";
+import { hasConfiguredMask, resolveInputMaskConfig, type InputMaskConfig } from "./mask-config";
 import { resolveNumberSeparators, type NumberSeparators } from "./number-separators";
 import { NumberStepper, type NumberConstraints } from "./number-stepper";
 import { styles } from "./styles";
@@ -448,7 +448,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   }
 
   private get hasTextMask(): boolean {
-    return this.maskExpression !== undefined || (this.mask !== undefined && this.mask.length > 0);
+    return hasConfiguredMask(this.mask, this.maskExpression);
   }
 
   private sanitizeValue(raw: string): string {

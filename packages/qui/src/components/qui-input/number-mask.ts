@@ -299,7 +299,7 @@ export function compileNumberMask(options: NumberMaskOptions): MaskitoOptions {
 /** Parses a numeric mask value without locale grouping. */
 export function parseNumber(value: string): number {
   const normalized = value.trim().replace(",", ".");
-  if (normalized === "" || normalized === "-" || normalized === "." || normalized === "-.") {
+  if (normalized === "" || PARTIAL_NUMBER.has(normalized)) {
     return Number.NaN;
   }
   const parsed = Number(normalized);
@@ -395,15 +395,8 @@ export function canStepNumber(
   direction: 1 | -1,
   constraints: Pick<NumberConstraints, "min" | "max">,
 ): boolean {
-  const parsed = parseNumber(value);
-  if (Number.isNaN(parsed)) {
-    return true;
-  }
-  const limit = direction > 0 ? constraints.max : constraints.min;
-  if (limit === undefined) {
-    return true;
-  }
-  return direction > 0 ? parsed < limit : parsed > limit;
+  const availability = stepAvailability(value, constraints);
+  return direction > 0 ? availability.canIncrement : availability.canDecrement;
 }
 
 /** Snaps a numeric value one step in the requested direction. */
