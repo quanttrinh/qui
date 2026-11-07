@@ -16,8 +16,6 @@ export interface NumberStepperOptions {
   getConstraints: () => NumberConstraints;
   getDisabled: () => boolean;
   getReadOnly: () => boolean;
-  /** Called with the new value before the input events are dispatched. */
-  onStep: (value: string) => void;
 }
 
 /** Pointer-driven stepping with press-and-hold repeat. */
@@ -32,11 +30,11 @@ export class NumberStepper {
   }
 
   get canIncrement(): boolean {
-    return this.canStep(1);
+    return this.canStepValue(1);
   }
 
   get canDecrement(): boolean {
-    return this.canStep(-1);
+    return this.canStepValue(-1);
   }
 
   /** Steps once without starting hold-to-repeat. */
@@ -72,9 +70,12 @@ export class NumberStepper {
   }
 
   private canStep(direction: 1 | -1): boolean {
-    if (this.options.getDisabled() || this.options.getReadOnly()) {
-      return false;
-    }
+    return (
+      !this.options.getDisabled() && !this.options.getReadOnly() && this.canStepValue(direction)
+    );
+  }
+
+  private canStepValue(direction: 1 | -1): boolean {
     const input = this.options.getInput();
     return canStepNumber(input?.value ?? "", direction, this.options.getConstraints());
   }
@@ -97,7 +98,6 @@ export class NumberStepper {
     }
 
     input.value = value;
-    this.options.onStep(value);
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.dispatchEvent(new Event("change", { bubbles: true }));
   }

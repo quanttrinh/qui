@@ -306,6 +306,36 @@ describe("qui-input number constraints", () => {
     expect(form.checkValidity()).toBe(true);
   });
 
+  it("updates stepper availability while typing", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-input inputType="number" value={1} min={1} max={3} />,
+    );
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+    const increment = queryControl<HTMLButtonElement>(host, "[data-part=increment-trigger]");
+    const decrement = queryControl<HTMLButtonElement>(host, "[data-part=decrement-trigger]");
+
+    typeInto(input, "3");
+    await waitForChanges();
+    expect(increment.disabled).toBe(true);
+    expect(decrement.disabled).toBe(false);
+
+    typeInto(input, "1");
+    await waitForChanges();
+    expect(increment.disabled).toBe(false);
+    expect(decrement.disabled).toBe(true);
+  });
+
+  it("disables the stepper when the input is disabled", async () => {
+    const { root } = await render(<qui-input inputType="number" value={1} disabled />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const increment = queryControl<HTMLButtonElement>(host, "[data-part=increment-trigger]");
+    const decrement = queryControl<HTMLButtonElement>(host, "[data-part=decrement-trigger]");
+
+    expect(increment.disabled).toBe(true);
+    expect(decrement.disabled).toBe(true);
+  });
+
   it("does not forward number constraints to non-number inputs", async () => {
     const { root } = await render(<qui-input min={1} max={3} step={1} />);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");

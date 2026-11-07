@@ -1,4 +1,4 @@
-import { Maskito, maskitoTransform } from "@maskito/core";
+import { Maskito, maskitoTransform, type MaskitoOptions } from "@maskito/core";
 import {
   Mixin,
   Build,
@@ -154,12 +154,15 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   private readonly valueChange!: EventEmitter<InputValueDetails>;
 
   @State() private passwordVisible = false;
-  @State() private currentValue = "";
+  @State() private canIncrement = true;
+  @State() private canDecrement = true;
   @State() private hasPrefix = false;
   @State() private hasSuffix = false;
 
   private inputEl?: HTMLInputElement;
   private maskito?: Maskito;
+  private maskitoElement?: HTMLInputElement;
+  private maskitoOptions?: MaskitoOptions;
   private maskConfig?: InputMaskConfig;
   private initialValue = "";
   private canonicalValue = "";
@@ -196,9 +199,6 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     getConstraints: () => this.numberConstraints,
     getDisabled: () => this.form.isDisabled,
     getReadOnly: () => this.form.isReadOnly,
-    onStep: (value) => {
-      this.currentValue = value;
-    },
   });
 
   constructor() {
@@ -232,9 +232,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.maskito?.destroy();
-    this.maskito = undefined;
-    this.inputEl?.removeEventListener("input", this.handleInput);
+    this.destroyMaskito();
     this.numberStepper.stop();
   }
 
@@ -293,6 +291,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   @Watch("step")
   private syncFormValidity(): void {
     this.form.sync();
+    this.syncStepperAvailability();
   }
 
   private get inputMaskConfig(): InputMaskConfig {
@@ -310,19 +309,35 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   }
 
   private syncMaskito(): void {
-    this.maskito?.destroy();
-    this.maskito = undefined;
-    this.inputEl?.removeEventListener("input", this.handleInput);
-    if (!Build.isBrowser) {
-      return;
-    }
     const el = this.inputEl;
-    if (el === undefined) {
+    if (!Build.isBrowser || el === undefined) {
+      this.destroyMaskito();
       return;
     }
-    this.maskito = new Maskito(el, this.inputMaskConfig.options);
+
+    const { options } = this.inputMaskConfig;
+    if (
+      this.maskito !== undefined &&
+      this.maskitoElement === el &&
+      this.maskitoOptions === options
+    ) {
+      return;
+    }
+
+    this.destroyMaskito();
+    this.maskito = new Maskito(el, options);
+    this.maskitoElement = el;
+    this.maskitoOptions = options;
     // This runs after Maskito's listener so the caret reflects the pre-mask selection.
     el.addEventListener("input", this.handleInput);
+  }
+
+  private destroyMaskito(): void {
+    this.maskito?.destroy();
+    this.maskito = undefined;
+    this.maskitoElement?.removeEventListener("input", this.handleInput);
+    this.maskitoElement = undefined;
+    this.maskitoOptions = undefined;
   }
 
   private get isNumber(): boolean {
@@ -427,7 +442,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
   private applyValue(value: string): void {
     const sanitized = this.sanitizeValue(value);
-    const mask = this.inputMaskConfig;
+    const mask = this.maskConfig ?? this.inputMaskConfig;
     const masked = maskitoTransform(sanitized, mask.options);
     const canonical = this.isNumber ? masked : sanitized;
     const changed = this.value !== undefined && String(this.value) !== canonical;
@@ -440,9 +455,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     if (this.inputEl !== undefined && this.inputEl.value !== masked) {
       this.inputEl.value = masked;
     }
-    if (this.isNumber) {
-      this.currentValue = masked;
-    }
+    this.syncStepperAvailability();
     if (changed) {
       this.emitValue(masked, this.isNumber ? masked : sanitized);
     }
@@ -473,11 +486,9 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
       return;
     }
 
-    const mask = this.inputMaskConfig;
+    const mask = this.maskConfig ?? this.inputMaskConfig;
     const masked = element.value;
-    if (this.isNumber) {
-      this.currentValue = masked;
-    }
+    this.syncStepperAvailability();
 
     const unmasked = mask.rawFromMasked(masked);
     this.canonicalValue = unmasked;
@@ -487,6 +498,18 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
   private emitValue(value: string, unmaskedValue: string): void {
     this.valueChange.emit({ value, unmaskedValue });
+  }
+
+  private syncStepperAvailability(): void {
+    if (!this.isNumber) {
+      return;
+    }
+    if (this.canIncrement !== this.numberStepper.canIncrement) {
+      this.canIncrement = this.numberStepper.canIncrement;
+    }
+    if (this.canDecrement !== this.numberStepper.canDecrement) {
+      this.canDecrement = this.numberStepper.canDecrement;
+    }
   }
 
   private get numberConstraints(): NumberConstraints {
@@ -561,8 +584,8 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
             {this.isNumber
               ? renderNumberStepper({
-                  canIncrement: this.numberStepper.canIncrement,
-                  canDecrement: this.numberStepper.canDecrement,
+                  canIncrement: !this.form.isDisabled && !this.form.isReadOnly && this.canIncrement,
+                  canDecrement: !this.form.isDisabled && !this.form.isReadOnly && this.canDecrement,
                   onStartHold: (direction) => {
                     this.numberStepper.startHold(direction);
                   },
