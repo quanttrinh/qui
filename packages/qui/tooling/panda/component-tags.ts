@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { parseSync, type Comment } from "oxc-parser";
+import { parseSync, type Comment, type Node } from "oxc-parser";
 
 const SKIPPED_AST_KEYS = new Set([
   "comments",
@@ -13,6 +13,21 @@ const SKIPPED_AST_KEYS = new Set([
   "trailingComments",
 ]);
 const UNDEFINED_CONTENT_MARKER = /@undefinedContent\b/u;
+
+const NODE_TYPE = {
+  callExpression: "CallExpression",
+  classDeclaration: "ClassDeclaration",
+  exportDefaultDeclaration: "ExportDefaultDeclaration",
+  exportNamedDeclaration: "ExportNamedDeclaration",
+  identifier: "Identifier",
+  literal: "Literal",
+  objectExpression: "ObjectExpression",
+  property: "Property",
+} as const satisfies Record<string, Node["type"]>;
+
+const COMMENT_TYPE = {
+  block: "Block",
+} as const satisfies Record<string, Comment["type"]>;
 
 interface AstNode {
   type: string;
@@ -59,8 +74,8 @@ function hasUndefinedContentMarker(context: {
   }
 
   if (
-    context.parent?.type !== "ExportNamedDeclaration" &&
-    context.parent?.type !== "ExportDefaultDeclaration"
+    context.parent?.type !== NODE_TYPE.exportNamedDeclaration &&
+    context.parent?.type !== NODE_TYPE.exportDefaultDeclaration
   ) {
     return false;
   }
@@ -69,7 +84,7 @@ function hasUndefinedContentMarker(context: {
 
   return context.comments.some(
     (comment) =>
-      comment.type === "Block" &&
+      comment.type === COMMENT_TYPE.block &&
       comment.end <= start &&
       UNDEFINED_CONTENT_MARKER.test(comment.value) &&
       context.source.slice(comment.end, start).trim() === "",
@@ -87,14 +102,14 @@ function componentTag(node: AstNode): string | undefined {
       continue;
     }
     const expression: unknown = Reflect.get(decorator, "expression");
-    if (!isAstNode(expression) || expression.type !== "CallExpression") {
+    if (!isAstNode(expression) || expression.type !== NODE_TYPE.callExpression) {
       continue;
     }
 
     const callee: unknown = Reflect.get(expression, "callee");
     if (
       !isAstNode(callee) ||
-      callee.type !== "Identifier" ||
+      callee.type !== NODE_TYPE.identifier ||
       Reflect.get(callee, "name") !== "Component"
     ) {
       continue;
@@ -105,7 +120,7 @@ function componentTag(node: AstNode): string | undefined {
       continue;
     }
     const options: unknown = Reflect.get(args, 0);
-    if (!isAstNode(options) || options.type !== "ObjectExpression") {
+    if (!isAstNode(options) || options.type !== NODE_TYPE.objectExpression) {
       continue;
     }
 
@@ -115,7 +130,7 @@ function componentTag(node: AstNode): string | undefined {
     }
 
     for (const property of properties) {
-      if (!isAstNode(property) || property.type !== "Property") {
+      if (!isAstNode(property) || property.type !== NODE_TYPE.property) {
         continue;
       }
       const key: unknown = Reflect.get(property, "key");
@@ -123,7 +138,7 @@ function componentTag(node: AstNode): string | undefined {
         continue;
       }
       const value: unknown = Reflect.get(property, "value");
-      if (!isAstNode(value) || value.type !== "Literal") {
+      if (!isAstNode(value) || value.type !== NODE_TYPE.literal) {
         continue;
       }
       const tag: unknown = Reflect.get(value, "value");
@@ -187,7 +202,7 @@ export function componentDeclarationsFromSource(
   const declarations: ComponentDeclaration[] = [];
 
   visitNodes(result.program, undefined, (node, parent) => {
-    if (node.type !== "ClassDeclaration") {
+    if (node.type !== NODE_TYPE.classDeclaration) {
       return;
     }
     const tag = componentTag(node);
