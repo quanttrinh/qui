@@ -170,6 +170,8 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   private maskitoElement?: HTMLInputElement;
   private maskitoOptions?: MaskitoOptions;
   private maskConfig?: InputMaskConfig;
+  private validityKey = "";
+  private validityResult?: FormValidity;
   private initialValue = "";
   private canonicalValue = "";
   private readonly generatedId = nextId("qui-input");
@@ -276,7 +278,6 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   @Watch("inputModeHint")
   @Watch("inputType")
   @Watch("min")
-  @Watch("max")
   private reformatValue(): void {
     const el = this.inputEl;
     if (el === undefined) {
@@ -471,12 +472,29 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   }
 
   private get inputValidity(): FormValidity {
-    return resolveInputValidity({
-      element: this.inputEl,
+    const element = this.inputEl;
+    const key = [
+      element?.value ?? "",
+      this.form.isInvalid ? "1" : "0",
+      this.form.isRequired ? "1" : "0",
+      this.isNumber ? String(this.min ?? "") : "",
+      this.isNumber ? String(this.max ?? "") : "",
+      this.isNumber ? String(this.numericStep ?? "") : "",
+    ].join("\u0000");
+
+    if (this.validityResult !== undefined && this.validityKey === key) {
+      return this.validityResult;
+    }
+
+    const validity = resolveInputValidity({
+      element,
       invalid: this.form.isInvalid,
       required: this.form.isRequired,
       numberConstraints: this.isNumber ? this.numberConstraints : undefined,
     });
+    this.validityKey = key;
+    this.validityResult = validity;
+    return validity;
   }
 
   private formSignature(): string {
@@ -512,11 +530,13 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     if (!this.isNumber) {
       return;
     }
-    if (this.canIncrement !== this.numberStepper.canIncrement) {
-      this.canIncrement = this.numberStepper.canIncrement;
+
+    const { canIncrement, canDecrement } = this.numberStepper.getAvailability();
+    if (this.canIncrement !== canIncrement) {
+      this.canIncrement = canIncrement;
     }
-    if (this.canDecrement !== this.numberStepper.canDecrement) {
-      this.canDecrement = this.numberStepper.canDecrement;
+    if (this.canDecrement !== canDecrement) {
+      this.canDecrement = canDecrement;
     }
   }
 
@@ -526,6 +546,26 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
   private readonly handleTogglePassword = (): void => {
     this.passwordVisible = !this.passwordVisible;
+  };
+
+  private readonly handleStartHold = (direction: 1 | -1): void => {
+    this.numberStepper.startHold(direction);
+  };
+
+  private readonly handleStopHold = (): void => {
+    this.numberStepper.stop();
+  };
+
+  private readonly handleStep = (direction: 1 | -1): void => {
+    this.numberStepper.stepOnce(direction);
+  };
+
+  private readonly setInputElement = (element?: HTMLInputElement): void => {
+    if (this.inputEl === element) {
+      return;
+    }
+    this.inputEl = element;
+    this.syncMaskito();
   };
 
   /** Slot contents are invisible to `:empty`, so track them for affix padding. */
@@ -564,14 +604,7 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
             <input
               {...this.inputProps}
-              ref={(el) => {
-                if (this.inputEl === el) {
-                  return;
-                }
-                this.inputEl?.removeEventListener("input", this.handleInput);
-                this.inputEl = el;
-                this.syncMaskito();
-              }}
+              ref={this.setInputElement}
               type={this.resolvedType}
               placeholder={this.placeholder}
               autocomplete={this.autocomplete}
@@ -594,15 +627,9 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
               ? renderNumberStepper({
                   canIncrement: !this.form.isDisabled && !this.form.isReadOnly && this.canIncrement,
                   canDecrement: !this.form.isDisabled && !this.form.isReadOnly && this.canDecrement,
-                  onStartHold: (direction) => {
-                    this.numberStepper.startHold(direction);
-                  },
-                  onStopHold: () => {
-                    this.numberStepper.stop();
-                  },
-                  onStep: (direction) => {
-                    this.numberStepper.stepOnce(direction);
-                  },
+                  onStartHold: this.handleStartHold,
+                  onStopHold: this.handleStopHold,
+                  onStep: this.handleStep,
                 })
               : undefined}
 

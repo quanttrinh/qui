@@ -48,10 +48,10 @@ export function createNumericFilterPreprocessor(
       elementState.value.slice(0, from),
       options,
     );
-    const valueBeforeSelectionEnd = filterNumericOrDecimalInput(
-      elementState.value.slice(0, to),
-      options,
-    );
+    const valueBeforeSelectionEnd =
+      from === to
+        ? valueBeforeCaret
+        : filterNumericOrDecimalInput(elementState.value.slice(0, to), options);
 
     return {
       elementState: {

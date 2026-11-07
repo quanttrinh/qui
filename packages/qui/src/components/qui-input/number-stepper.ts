@@ -2,8 +2,10 @@ import {
   canStepNumber,
   formatNumber,
   parseNumber,
+  stepAvailability,
   stepNumber,
   type NumberConstraints,
+  type StepAvailability,
 } from "./number-mask";
 
 export type { NumberConstraints } from "./number-mask";
@@ -29,12 +31,10 @@ export class NumberStepper {
     this.options = options;
   }
 
-  get canIncrement(): boolean {
-    return this.canStepValue(1);
-  }
-
-  get canDecrement(): boolean {
-    return this.canStepValue(-1);
+  /** Resolves both trigger states with a single value parse. */
+  getAvailability(): StepAvailability {
+    const input = this.options.getInput();
+    return stepAvailability(input?.value ?? "", this.options.getConstraints());
   }
 
   /** Steps once without starting hold-to-repeat. */

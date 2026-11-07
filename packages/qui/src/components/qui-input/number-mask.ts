@@ -158,6 +158,27 @@ export function numberValidity(value: string, constraints: NumberConstraints): N
   return { flags, message };
 }
 
+export interface StepAvailability {
+  readonly canIncrement: boolean;
+  readonly canDecrement: boolean;
+}
+
+/** Resolves both step directions with a single parse. */
+export function stepAvailability(
+  value: string,
+  constraints: Pick<NumberConstraints, "min" | "max">,
+): StepAvailability {
+  const parsed = parseNumber(value);
+  if (Number.isNaN(parsed)) {
+    return { canIncrement: true, canDecrement: true };
+  }
+
+  return {
+    canIncrement: constraints.max === undefined || parsed < constraints.max,
+    canDecrement: constraints.min === undefined || parsed > constraints.min,
+  };
+}
+
 /** Whether the value can move one step in the requested direction. */
 export function canStepNumber(
   value: string,
