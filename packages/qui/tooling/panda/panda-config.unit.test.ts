@@ -1,13 +1,19 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { quiPreset } from "../../panda.config";
 import { createConfig } from "../config";
 import { componentDeclarationsFromSource } from "./component-tags";
-import { undefinedContentSelector, undefinedContentTags } from "./undefined-content";
+import { UNDEFINED_CONTENT_TAGS } from "./generated/undefined-content-tags";
+import { undefinedContentSelector } from "./undefined-content";
+import { undefinedContentTagsFromSource } from "./undefined-content-scan";
 
 const build = createConfig(process.cwd());
-const UNDEFINED_CONTENT_TAGS = undefinedContentTags(build);
-const UNDEFINED_CONTENT_SELECTOR = undefinedContentSelector(build);
+let SOURCE_TAGS: string[] = [];
+const UNDEFINED_CONTENT_SELECTOR = undefinedContentSelector();
+
+beforeAll(async () => {
+  SOURCE_TAGS = await undefinedContentTagsFromSource(build);
+});
 
 vi.mock("@pandacss/dev", () => ({
   defineConfig: <Config>(config: Config) => config,
@@ -24,7 +30,14 @@ describe("quiPreset global CSS", () => {
     expect(UNDEFINED_CONTENT_SELECTOR).toContain(":not(.hydrated)");
 
     const tags = [...UNDEFINED_CONTENT_SELECTOR.matchAll(/qui-[a-z-]+/gu)].map((match) => match[0]);
-    expect(tags).toEqual([...UNDEFINED_CONTENT_TAGS]);
+    expect(tags).toEqual(SOURCE_TAGS);
+  });
+
+  it("keeps the generated tag module in sync with the source markers", () => {
+    expect(UNDEFINED_CONTENT_TAGS).toEqual(SOURCE_TAGS);
+    expect(SOURCE_TAGS).toEqual(
+      expect.arrayContaining(["qui-dialog-content", "qui-select", "qui-tab-panel"]),
+    );
   });
 });
 

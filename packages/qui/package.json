@@ -118,10 +118,8 @@
   },
   "scripts": {
     "dev": "stencil build --dev --watch --serve",
-    "build": "stencil build",
+    "build": "stencil build && panda lib --files './**/*.{js,mjs}'",
     "postbuild": "bun tooling/scripts/finalize-types.ts && publint",
-    "build:lib": "panda lib --files './**/*.{js,mjs}'",
-    "build:release": "bun run build && bun run build:lib",
     "codegen": "panda codegen",
     "test": "bun tooling/scripts/stencil-test.ts && bun run test:framework-types",
     "test:unit": "bun tooling/scripts/stencil-test.ts --project unit",
@@ -130,7 +128,7 @@
     "test:smoke": "bun tooling/scripts/stencil-test.ts --project smoke",
     "test:watch": "bun tooling/scripts/stencil-test.ts --watch",
     "test:framework-types": "bun tooling/scripts/require-built-types.ts && tsc -p tests/fixtures/framework-types/react/tsconfig.json && tsc -p tests/fixtures/framework-types/solid/tsconfig.json && tsc -p tests/fixtures/framework-types/preact/tsconfig.json",
-    "prepublishOnly": "bun run build:release"
+    "prepublishOnly": "bun run build"
   },
   "dependencies": {
     "@maskito/core": "^5.6.1",
@@ -138,7 +136,6 @@
     "@stencil/core": "^4.45.2"
   },
   "devDependencies": {
-    "@babel/parser": "^8.1.0",
     "@oxlint/plugins": "^1.91.0",
     "@pandacss/compiler": "2.5.0",
     "@pandacss/dev": "^2.5.0",
@@ -154,6 +151,7 @@
     "@typescript/native": "npm:typescript@^7.0.2",
     "@vitest/browser-playwright": "^5.1.0",
     "jiti": "^2.7.0",
+    "oxc-parser": "^0.157.0",
     "playwright": "^1.65.0",
     "postcss": "^8.5.32",
     "preact": "^11.0.0",

@@ -1,7 +1,6 @@
 /// <reference types="node" />
-import { parse, type ParserPlugin } from "@babel/parser";
+import { parseSync, type Comment } from "oxc-parser";
 
-const PARSE_PLUGINS: ParserPlugin[] = ["typescript", "jsx", "decorators-legacy"];
 const SKIPPED_AST_KEYS = new Set([
   "comments",
   "end",
@@ -32,26 +31,43 @@ function isAstNode(value: unknown): value is AstNode {
   );
 }
 
-function commentsOf(node: AstNode | undefined): unknown[] {
-  if (node === undefined) {
-    return [];
-  }
-  const comments: unknown = Reflect.get(node, "leadingComments");
-  return Array.isArray(comments) ? comments : [];
+function nodeStart(node: AstNode): number {
+  const start: unknown = Reflect.get(node, "start");
+  return typeof start === "number" ? start : 0;
 }
 
 /**
- * Reads the JSDoc marker from the class or its enclosing export declaration.
- * Babel attaches documentation for `export class` to the export, not the class.
+ * Reads the JSDoc marker attached to the declaration or its enclosing export.
+ * Decorators sit between the comment and the class, so the first decorator is
+ * the declaration's visual start.
  */
-function hasUndefinedContentMarker(node: AstNode, parent: AstNode | undefined): boolean {
-  return [...commentsOf(node), ...commentsOf(parent)].some((comment) => {
-    if (!isAstNode(comment) || comment.type !== "CommentBlock") {
-      return false;
+function hasUndefinedContentMarker(context: {
+  source: string;
+  comments: readonly Comment[];
+  node: AstNode;
+  parent: AstNode | undefined;
+}): boolean {
+  let start = nodeStart(context.node);
+  const decorators: unknown = Reflect.get(context.node, "decorators");
+
+  if (Array.isArray(decorators)) {
+    for (const decorator of decorators) {
+      if (isAstNode(decorator)) {
+        start = Math.min(start, nodeStart(decorator));
+      }
     }
-    const value: unknown = Reflect.get(comment, "value");
-    return typeof value === "string" && UNDEFINED_CONTENT_MARKER.test(value);
-  });
+  }
+
+  if (context.parent !== undefined) {
+    start = Math.min(start, nodeStart(context.parent));
+  }
+
+  return context.comments.some(
+    (comment) =>
+      comment.type === "Block" &&
+      UNDEFINED_CONTENT_MARKER.test(comment.value) &&
+      context.source.slice(comment.end, start).trim() === "",
+  );
 }
 
 function componentTag(node: AstNode): string | undefined {
@@ -82,7 +98,7 @@ function componentTag(node: AstNode): string | undefined {
     if (!Array.isArray(args)) {
       continue;
     }
-    const options = args[0];
+    const options: unknown = Reflect.get(args, 0);
     if (!isAstNode(options) || options.type !== "ObjectExpression") {
       continue;
     }
@@ -93,7 +109,7 @@ function componentTag(node: AstNode): string | undefined {
     }
 
     for (const property of properties) {
-      if (!isAstNode(property) || property.type !== "ObjectProperty") {
+      if (!isAstNode(property) || property.type !== "Property") {
         continue;
       }
       const key: unknown = Reflect.get(property, "key");
@@ -101,7 +117,7 @@ function componentTag(node: AstNode): string | undefined {
         continue;
       }
       const value: unknown = Reflect.get(property, "value");
-      if (!isAstNode(value) || value.type !== "StringLiteral") {
+      if (!isAstNode(value) || value.type !== "Literal") {
         continue;
       }
       const tag: unknown = Reflect.get(value, "value");
@@ -148,19 +164,31 @@ export function componentDeclarationsFromSource(source: string): ComponentDeclar
     return [];
   }
 
-  const ast = parse(source, {
+  const result = parseSync("component.tsx", source, {
+    lang: "tsx",
     sourceType: "module",
-    plugins: PARSE_PLUGINS,
   });
+  if (result.errors.length > 0) {
+    return [];
+  }
+
   const declarations: ComponentDeclaration[] = [];
 
-  visitNodes(ast.program, undefined, (node, parent) => {
+  visitNodes(result.program, undefined, (node, parent) => {
     if (node.type !== "ClassDeclaration") {
       return;
     }
     const tag = componentTag(node);
     if (tag !== undefined) {
-      declarations.push({ tag, undefinedContent: hasUndefinedContentMarker(node, parent) });
+      declarations.push({
+        tag,
+        undefinedContent: hasUndefinedContentMarker({
+          source,
+          comments: result.comments,
+          node,
+          parent,
+        }),
+      });
     }
   });
 

@@ -42,6 +42,8 @@ export interface Config {
     styleUrlsDeclaration: string;
     typesEntry: string;
     componentTypes: string;
+    /** Generated undefined-content tag module imported by the Panda config. */
+    undefinedContentTags: string;
     /** Generated Stencil declaration file name to exclude from style hashing. */
     generatedComponents: string;
   };
@@ -97,6 +99,13 @@ export function createConfig(root: string): Config {
       styleUrlsDeclaration: join(styledSystem, "style-urls", "index.d.ts"),
       typesEntry: join(types, "index.d.ts"),
       componentTypes: join(types, "components.d.ts"),
+      undefinedContentTags: join(
+        root,
+        "tooling",
+        "panda",
+        "generated",
+        "undefined-content-tags.ts",
+      ),
       generatedComponents: "components.d.ts",
     },
     configInputs: [join(root, "panda.config.ts")],
@@ -108,6 +117,7 @@ export function createConfig(root: string): Config {
       join(root, "tooling", "panda", "panda-driver.ts"),
       join(root, "tooling", "panda", "theme-css.ts"),
       join(root, "tooling", "panda", "undefined-content.ts"),
+      join(root, "tooling", "panda", "undefined-content-scan.ts"),
       join(root, "tooling", "plugins", "rollup", "pandacss.ts"),
       join(root, "tooling", "plugins", "stencil", "styles.ts"),
     ],

@@ -8,11 +8,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { loadHydrate } from "../../../tests/test-utils/hydrate";
 import { createConfig } from "../../../tooling/config";
-import { undefinedContentTags } from "../../../tooling/panda/undefined-content";
+import { undefinedContentTagsFromSource } from "../../../tooling/panda/undefined-content-scan";
 import { withShadowStylesheet } from "./index";
 
 const build = createConfig(process.cwd());
-const UNDEFINED_CONTENT_TAGS = undefinedContentTags(build);
+let UNDEFINED_CONTENT_TAGS: string[] = [];
 
 const { join } = path;
 const repoRoot = join(import.meta.dirname, "../../..");
@@ -265,6 +265,7 @@ async function accessibilityTree(page: Page): Promise<AxNode[]> {
 }
 
 beforeAll(async () => {
+  UNDEFINED_CONTENT_TAGS = await undefinedContentTagsFromSource(build);
   const { renderToString } = await loadHydrate();
   const [buttonResult, fieldResult, iconResult, iconButtonResult, compositeResult] =
     await Promise.all([

@@ -10,9 +10,13 @@ import { promisify } from "node:util";
 
 import { type Config } from "../../config";
 import { componentDeclarationsFromSource } from "../../panda/component-tags";
+import { UNDEFINED_CONTENT_TAGS } from "../../panda/generated/undefined-content-tags";
 import { type PandaDriver } from "../../panda/panda-driver";
 import { generateThemeCss } from "../../panda/theme-css";
-import { undefinedContentTags } from "../../panda/undefined-content";
+import {
+  undefinedContentTagsFromSource,
+  writeUndefinedContentTags,
+} from "../../panda/undefined-content-scan";
 
 interface ComponentEntry {
   file: string;
@@ -331,7 +335,7 @@ class StyleGenerator {
     this.driver = driver;
     this.logger = logger;
     this.components = findComponentsSync(config);
-    this.undefinedContentKey = this.currentUndefinedContentKey();
+    this.undefinedContentKey = UNDEFINED_CONTENT_TAGS.join(",");
     mkdirSync(this.outdir, { recursive: true });
   }
 
@@ -346,7 +350,6 @@ class StyleGenerator {
   generateBootstrap(reason: string): void {
     this.logger.info(`[qui] bootstrapping Panda styles (${reason})`);
     this.components = findComponentsSync(this.config);
-    this.undefinedContentKey = this.currentUndefinedContentKey();
 
     this.logger.info("[qui] generating Panda styled-system");
     panda(this.config, ["codegen"], this.logger);
@@ -359,7 +362,7 @@ class StyleGenerator {
   private async generateBootstrapAsync(reason: string): Promise<void> {
     this.logger.info(`[qui] bootstrapping Panda styles (${reason})`);
     this.components = await findComponents(this.config);
-    this.undefinedContentKey = this.currentUndefinedContentKey();
+    await this.refreshUndefinedContentTags();
 
     this.logger.info("[qui] generating Panda styled-system");
     await pandaAsync(this.config, ["codegen"], this.logger);
@@ -389,13 +392,7 @@ class StyleGenerator {
 
     // The undefined-content selector is embedded in the Panda config, so the
     // driver must reload when a marker is added, removed, or renamed.
-    const undefinedContentKey = this.currentUndefinedContentKey();
-    if (undefinedContentKey !== this.undefinedContentKey) {
-      this.undefinedContentKey = undefinedContentKey;
-      return true;
-    }
-
-    return false;
+    return this.refreshUndefinedContentTags();
   }
 
   hasPendingCss(): boolean {
@@ -422,8 +419,17 @@ class StyleGenerator {
     } while (this.pendingReload || this.pendingHashes !== undefined);
   }
 
-  private currentUndefinedContentKey(): string {
-    return undefinedContentTags(this.config).join(",");
+  async refreshUndefinedContentTags(): Promise<boolean> {
+    const tags = await undefinedContentTagsFromSource(this.config);
+    const key = tags.join(",");
+
+    if (key === this.undefinedContentKey) {
+      return false;
+    }
+
+    this.undefinedContentKey = key;
+    await writeUndefinedContentTags(this.config, tags);
+    return true;
   }
 
   private async generateCssNow(reload: boolean, hashes: Map<string, string>): Promise<void> {
@@ -562,10 +568,11 @@ export function stylesPlugin({ config, driver, logger }: StylesPluginOptions) {
       }
 
       const next = firstBuild ? hashes : await fileHashes(config);
+      const tagsChanged = firstBuild && (await generator.refreshUndefinedContentTags());
       firstBuild = false;
 
-      if (generator.hasPendingCss()) {
-        await generator.generateCss(false, next);
+      if (generator.hasPendingCss() || tagsChanged) {
+        await generator.generateCss(tagsChanged, next);
       }
 
       const current = pluginState;
