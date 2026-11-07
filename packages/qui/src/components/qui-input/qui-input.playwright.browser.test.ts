@@ -1,9 +1,9 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 import { userEvent } from "vitest/browser";
 
-import { isHTMLFormElement } from "../src/components/shared/helpers/dom/dom";
-import { queryControl, resolveHost } from "./test-utils/component";
-import { typeInto } from "./test-utils/interactions";
+import { queryControl, resolveHost } from "../../../tests/test-utils/component";
+import { typeInto } from "../../../tests/test-utils/interactions";
+import { isHTMLFormElement } from "../shared/helpers/dom/dom";
 
 describe("qui-input with Playwright", () => {
   it("types through a compact mask and emits the unmasked value", async () => {
