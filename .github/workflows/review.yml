@@ -2,7 +2,7 @@ name: AI PR Review
 
 on:
   pull_request_target:
-    types: [opened, ready_for_review]
+    types: [opened, ready_for_review, labeled]
   issue_comment:
     types: [created]
   workflow_call:
@@ -30,7 +30,9 @@ jobs:
     if: >-
       ${{
         (github.event_name == 'pull_request_target'
-          && github.actor != 'renovate[bot]')
+          && github.actor != 'renovate[bot]'
+          && (github.event.action != 'labeled'
+            || github.event.label.name == 'ai-review'))
         || (inputs.pr_number != '')
         || (github.event_name == 'issue_comment'
           && github.event.issue.pull_request
@@ -55,8 +57,17 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
         run: |
-          if gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name' | grep -qx 'no-review'; then
-            echo "Skipping — PR has no-review label."
+          set -euo pipefail
+          data=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" \
+            --jq '[.user.login, ([.labels[].name] | join("\n"))] | join("\t")')
+          author=${data%%$'\t'*}
+          labels=${data#*$'\t'}
+
+          if ! grep -qx 'ai-review' <<< "$labels"; then
+            echo "Skipping — PR is missing the ai-review label."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          elif [ "$author" != 'renovate[bot]' ] && [ "$author" != "$GITHUB_REPOSITORY_OWNER" ]; then
+            echo "Skipping — PR author is not renovate[bot] or the repository owner."
             echo "skip=true" >> $GITHUB_OUTPUT
           else
             echo "skip=false" >> $GITHUB_OUTPUT
@@ -180,17 +191,6 @@ jobs:
           retry with the correct tool name. Do not give up.
           PROMPT
 
-      - name: Accumulate cost
-        id: cost
-        if: steps.skip.outputs.skip != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
-        run: |
-          prev=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews" \
-            --jq '[.[].body | strings | scan("total: \\$([0-9.]+)")[0] | tonumber] | max // 0')
-          echo "prev=$prev" >> $GITHUB_OUTPUT
-
       - name: Dismiss prior bot review
         if: steps.skip.outputs.skip != 'true'
         continue-on-error: true
@@ -235,7 +235,7 @@ jobs:
         if: steps.skip.outputs.skip != 'true'
         id: opencode
         continue-on-error: true
-        timeout-minutes: 20
+        timeout-minutes: 45
         uses: ./.github/actions/run-opencode
         with:
           model: opencode-go/deepseek-v4.1-flash
@@ -264,8 +264,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
-          COST: ${{ steps.opencode.outputs.cost }}
-          PREV: ${{ steps.cost.outputs.prev }}
           AUTO_APPROVE: ${{ inputs.auto_approve }}
           VARIANT: ${{ inputs.variant }}
           INFRA: ${{ steps.infra.outputs.infra }}
@@ -275,10 +273,6 @@ jobs:
             exit 0
           fi
 
-          : "${COST:=0}"
-          : "${PREV:=0}"
-          total=$(echo "${PREV} + ${COST}" | bc)
-
           action="--comment"
           if [ "$AUTO_APPROVE" = "true" ] && [ "$VARIANT" = "renovate" ] && [ "$INFRA" = "false" ]; then
             case "${{ steps.verdict.outputs.verdict }}" in
@@ -287,12 +281,7 @@ jobs:
             esac
           fi
 
-          {
-            cat /tmp/opencode-output/review.txt
-            printf '\n---\n\n`cost: $%s (total: $%s)`\n' \
-              "$(printf '%.4f' "${COST:-0}")" \
-              "$(printf '%.4f' "$total")"
-          } | gh pr review "$PR_NUMBER" "$action" --body-file -
+          gh pr review "$PR_NUMBER" "$action" --body-file /tmp/opencode-output/review.txt
 
       - name: Enable auto-merge
         if: >

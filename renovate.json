@@ -22,11 +22,11 @@
     },
     {
       "matchUpdateTypes": ["minor"],
-      "addLabels": ["update-type:minor"]
+      "addLabels": ["update-type:minor", "ai-review"]
     },
     {
       "matchUpdateTypes": ["patch"],
-      "addLabels": ["update-type:patch"]
+      "addLabels": ["update-type:patch", "ai-review"]
     },
     {
       "description": "Pins and digest-only updates are never auto-approved",

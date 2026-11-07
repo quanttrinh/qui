@@ -108,9 +108,52 @@ jobs:
         if: steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true'
         run: echo "version=$(bun x playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
 
+      - name: Compute Playwright apt cache key
+        id: playwright-apt-key
+        if: steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true'
+        run: |
+          echo "key=playwright-apt-${ImageOS:-unknown}-${ImageVersion:-unknown}-${{ runner.arch }}-${{ steps.playwright-version.outputs.version }}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore Playwright apt cache
+        id: playwright-apt-cache
+        if: steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/playwright-apt
+          key: ${{ steps.playwright-apt-key.outputs.key }}
+
+      - name: Configure Playwright apt cache
+        if: steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true'
+        env:
+          APT_CACHE_DIR: ${{ runner.temp }}/playwright-apt
+        run: |
+          set -euo pipefail
+          mkdir -p "$APT_CACHE_DIR/partial"
+          sudo chown _apt:root "$APT_CACHE_DIR/partial" || true
+          sudo chmod -R a+rX "$APT_CACHE_DIR" || true
+          printf 'Dir::Cache::archives "%s/";\nAPT::Keep-Downloaded-Packages "true";\n' \
+            "$APT_CACHE_DIR" | sudo tee /etc/apt/apt.conf.d/99-playwright-deps-cache >/dev/null
+
       - name: Install Playwright system dependencies
         if: steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true'
         run: bun x playwright install-deps chromium firefox webkit
+
+      - name: Prepare Playwright apt cache
+        if: (steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true') && steps.playwright-apt-cache.outputs.cache-hit != 'true'
+        env:
+          APT_CACHE_DIR: ${{ runner.temp }}/playwright-apt
+        run: |
+          set -euo pipefail
+          sudo rm -f "$APT_CACHE_DIR/lock"
+          sudo rm -rf "$APT_CACHE_DIR/partial"
+          sudo chmod -R a+rX "$APT_CACHE_DIR" || true
+
+      - name: Save Playwright apt cache
+        if: (steps.filter.outputs.qui == 'true' || steps.filter.outputs.workspace == 'true') && steps.playwright-apt-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/playwright-apt
+          key: ${{ steps.playwright-apt-key.outputs.key }}
 
       - name: Restore Playwright browsers
         id: playwright-cache

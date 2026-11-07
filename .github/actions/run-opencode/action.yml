@@ -1,5 +1,5 @@
 name: Run OpenCode CLI
-description: Run opencode with a prompt and capture cost
+description: Run opencode with a prompt
 
 inputs:
   model:
@@ -13,16 +13,10 @@ inputs:
     required: false
     default: ''
 
-outputs:
-  cost:
-    description: Cost of the run in USD
-    value: ${{ steps.review.outputs.cost }}
-
 runs:
   using: composite
   steps:
     - name: Run OpenCode
-      id: review
       shell: bash
       env:
         TARGET_PROMPT_FILE: ${{ inputs.prompt_file }}
@@ -39,15 +33,4 @@ runs:
         fi
 
         opencode run --standalone --model "$model" --auto --format json \
-          < "$TARGET_PROMPT_FILE" | tee /tmp/opencode-log.jsonl
-
-        session=$(jq -r 'select(.sessionID != null) | .sessionID' /tmp/opencode-log.jsonl \
-          | head -n 1 || true)
-        cost=0
-        if [ -n "$session" ]; then
-          cost=$(opencode session export "$session" --standalone \
-            | jq -r '.info.cost // 0')
-        fi
-        echo "cost=$cost" >> "$GITHUB_OUTPUT"
-
-        rm -f /tmp/opencode-log.jsonl
+          < "$TARGET_PROMPT_FILE"
