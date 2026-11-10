@@ -6,6 +6,7 @@ import {
   createRegistrationModule,
   createStylesModule,
   ensureStylesheetLinks,
+  expandComponents,
   extractComponents,
   importInjectionOffset,
   isExternalStyles,
@@ -142,6 +143,28 @@ describe("registration order", () => {
     const definitions = [...code.matchAll(IMPORT_PATTERN)].map((match) => match.groups?.tag);
 
     expect(definitions).toEqual(["qui-accordion", "qui-accordion-content"]);
+  });
+});
+
+describe("component dependencies", () => {
+  it("adds internal composite dependencies", () => {
+    expect(expandComponents(["qui-select"])).toEqual(["qui-popover", "qui-select"]);
+    expect(expandComponents(["qui-combobox"])).toEqual(["qui-combobox", "qui-popover"]);
+  });
+
+  it("includes internal dependencies in generated registration modules", () => {
+    const code = createRegistrationModule(["qui-select"], { styles: false });
+    const definitions = [
+      ...code.matchAll(/from "@quanttrinh\/qui\/shared\/(?<tag>qui-[^"]+)"/gu),
+    ].map((match) => match.groups?.tag);
+
+    expect(definitions).toEqual(["qui-popover", "qui-select"]);
+  });
+
+  it("includes internal dependencies in virtual module ids", () => {
+    const id = virtualModuleId(["qui-select"]);
+
+    expect(componentsFromVirtualModuleId(id)).toEqual(["qui-popover", "qui-select"]);
   });
 });
 

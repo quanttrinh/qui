@@ -101,6 +101,36 @@ export function normalizeComponents(components: Iterable<string>): string[] {
 }
 
 /**
+ * Components that compose other custom elements internally rather than
+ * declaring them directly in consumer source.
+ */
+const COMPONENT_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
+  "qui-combobox": ["qui-popover"],
+  "qui-select": ["qui-popover"],
+};
+
+/** Expand component tags with their internal custom-element dependencies. */
+export function expandComponents(components: Iterable<string>): string[] {
+  const tags = new Set(normalizeComponents(components));
+  const pending = [...tags];
+
+  while (pending.length > 0) {
+    const tag = pending.pop();
+
+    if (tag !== undefined) {
+      for (const dependency of COMPONENT_DEPENDENCIES[tag] ?? []) {
+        if (!tags.has(dependency)) {
+          tags.add(dependency);
+          pending.push(dependency);
+        }
+      }
+    }
+  }
+
+  return normalizeComponents(tags);
+}
+
+/**
  * Finds opening component tags in JavaScript-family source using Oxc's AST,
  * with a lexical fallback for MDX and files the parser rejects.
  */
@@ -118,7 +148,7 @@ export function extractComponents(code: string, id = "component.tsx"): string[] 
 }
 
 export function virtualModuleId(components: Iterable<string>): string {
-  const tags = normalizeComponents(components);
+  const tags = expandComponents(components);
   return `${VIRTUAL_MODULE_ID}?components=${tags.map((tag) => encodeURIComponent(tag)).join(",")}`;
 }
 
@@ -475,7 +505,7 @@ export function createRegistrationModule(
   components: Iterable<string>,
   options: QuiPluginOptions = {},
 ): string {
-  return componentRegistrationModule(components, {
+  return componentRegistrationModule(expandComponents(components), {
     stylesImport: options.styles === false ? undefined : VIRTUAL_STYLES_ID,
   });
 }
