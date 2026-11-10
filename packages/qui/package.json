@@ -152,7 +152,7 @@
     "@typescript/native": "npm:typescript@^7.0.2",
     "@vitest/browser-playwright": "^5.1.0",
     "jiti": "^2.7.0",
-    "oxc-parser": "^0.157.0",
+    "oxc-parser": "^0.158.0",
     "playwright": "^1.65.0",
     "postcss": "^8.5.32",
     "preact": "^11.0.0",
