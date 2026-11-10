@@ -1,5 +1,18 @@
 # @quanttrinh/qui-unplugin
 
+## 0.4.0
+
+### Minor Changes
+
+- 2509946: Dependency updates:
+  
+  - `packages/qui/package.json`: `oxc-parser`: `^0.157.0` -> `^0.158.0`
+  - `packages/unplugin/package.json`: `oxc-parser`: `^0.157.0` -> `^0.158.0`
+
+### Patch Changes
+
+- 0d3ce2d: Register internal composite component dependencies automatically. `qui-select` and `qui-combobox` now also register their internal `qui-popover`, so dropdowns work without extra consumer registration.
+
 ## 0.3.1
 
 ### Patch Changes
