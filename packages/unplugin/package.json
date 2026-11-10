@@ -39,7 +39,7 @@
   "dependencies": {
     "gray-matter": "^4.0.3",
     "magic-string": "^1.4.5",
-    "oxc-parser": "^0.157.0",
+    "oxc-parser": "^0.158.0",
     "parse5": "^8.1.0",
     "pathe": "^2.0.3",
     "unplugin": "^3.7.0"
