@@ -95,7 +95,7 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
   @StencilEvent({ eventName: "valuechange", bubbles: true, composed: true })
   private readonly valueChange!: EventEmitter<TextareaValueDetails>;
 
-  @State() private currentValue = "";
+  @State() private counterValue = "";
 
   private textareaEl?: HTMLTextAreaElement;
   private counterEl?: HTMLElement;
@@ -142,7 +142,7 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
   componentWillLoad(): void {
     super.componentWillLoad();
     this.initialValue = this.defaultValue ?? this.value ?? "";
-    this.currentValue = this.initialValue;
+    this.counterValue = this.initialValue;
     this.syncInitialValue();
   }
 
@@ -178,6 +178,13 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
     await focusElement(this.textareaEl, options);
   }
 
+  /** Returns the current native textarea value, including uncontrolled edits. */
+  @Method()
+  // oxlint-disable-next-line eslint/require-await, typescript/require-await -- Stencil @Method requires async, but the value is available synchronously.
+  async getValue(): Promise<string> {
+    return this.textareaEl?.value ?? "";
+  }
+
   @Watch("value")
   private syncControlledValue(): void {
     if (this.value === undefined) {
@@ -203,7 +210,7 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
   @Watch("showCount")
   private syncCounterValue(): void {
     if (this.showCount && this.textareaEl !== undefined) {
-      this.currentValue = this.textareaEl.value;
+      this.counterValue = this.textareaEl.value;
     }
   }
 
@@ -230,7 +237,7 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
   }
 
   private get counterText(): string {
-    const { length } = this.currentValue;
+    const { length } = this.counterValue;
     return this.maxLength === undefined ? String(length) : `${length}/${this.maxLength}`;
   }
 
@@ -248,7 +255,7 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
     if (this.textareaEl !== undefined && this.textareaEl.value !== value) {
       this.textareaEl.value = value;
     }
-    this.currentValue = value;
+    this.counterValue = value;
     this.form.sync();
     this.scheduleAutoResize();
   }
@@ -303,7 +310,7 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
       return;
     }
     if (this.showCount) {
-      this.currentValue = el.value;
+      this.counterValue = el.value;
     }
     this.valueChange.emit({ value: el.value });
     this.form.sync();

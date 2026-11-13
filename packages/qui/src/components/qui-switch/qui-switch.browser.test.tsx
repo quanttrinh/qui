@@ -20,6 +20,19 @@ describe("qui-switch", () => {
     expect(input.checked).toBe(true);
   });
 
+  it("returns the live checked state for uncontrolled edits", async () => {
+    const { root, waitForChanges } = await render(<qui-switch value="on">Enable</qui-switch>);
+    const host = resolveHost<HTMLQuiSwitchElement>(root, "qui-switch");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    await expect(host.getChecked()).resolves.toBe(false);
+
+    input.click();
+    await waitForChanges();
+
+    await expect(host.getChecked()).resolves.toBe(true);
+  });
+
   it("does not toggle when read-only", async () => {
     const { root, setProps, spyOnEvent, waitForChanges } = await render(
       <qui-switch readOnly>Enable</qui-switch>,

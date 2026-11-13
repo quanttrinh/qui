@@ -18,6 +18,7 @@ describe("qui-combobox", () => {
       <qui-combobox items={accounts} placeholder="Search accounts" />,
     );
     const spy = spyOnEvent("valuechange");
+    const host = resolveHost<HTMLQuiComboboxElement>(root, "qui-combobox");
     const input = queryPartIn<HTMLInputElement>(root, "input");
 
     input.click();
@@ -34,6 +35,7 @@ describe("qui-combobox", () => {
 
     expect(spy.lastEvent?.detail).toMatchObject({ value: ["account-2"] });
     expect(input.value).toBe("Account Two");
+    await expect(host.getValue()).resolves.toEqual(["account-2"]);
   });
 
   it("stays open when the trigger is clicked after focusing the input", async () => {

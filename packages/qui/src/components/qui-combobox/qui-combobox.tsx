@@ -266,6 +266,13 @@ export class QuiCombobox extends Mixin(ControllerHostMixin, FormControlMixin, Op
     await focusElement(this.inputEl, options);
   }
 
+  /** Returns the current selection, including uncontrolled changes. */
+  @Method()
+  // oxlint-disable-next-line eslint/require-await, typescript/require-await -- Stencil @Method requires async, but the selection is available synchronously.
+  async getValue(): Promise<string[]> {
+    return [...this.selection.selected];
+  }
+
   @Watch("value")
   private syncControlledValue(): void {
     this.form.sync();

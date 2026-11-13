@@ -33,6 +33,17 @@ describe("qui-textarea", () => {
     expect(spy).toHaveReceivedEventDetail({ value: "first line\nsecond line" });
   });
 
+  it("returns the live value for uncontrolled edits", async () => {
+    const { root, waitForChanges } = await render(<qui-textarea />);
+    const host = resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea");
+    const textarea = queryControl<HTMLTextAreaElement>(host, "textarea");
+
+    typeInto(textarea, "hello");
+    await waitForChanges();
+
+    await expect(host.getValue()).resolves.toBe("hello");
+  });
+
   it("syncs defaultValue and controlled values", async () => {
     const { root, setProps, waitForChanges } = await render(
       <qui-textarea defaultValue="initial" />,

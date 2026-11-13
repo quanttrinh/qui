@@ -28,6 +28,21 @@ describe("qui-checkbox", () => {
     expect(input.checked).toBe(true);
   });
 
+  it("returns the live checked state for uncontrolled edits", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-checkbox value="yes">Check me</qui-checkbox>,
+    );
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    await expect(host.getChecked()).resolves.toBe(false);
+
+    input.click();
+    await waitForChanges();
+
+    await expect(host.getChecked()).resolves.toBe(true);
+  });
+
   it("renders a required indicator and exposes aria-required", async () => {
     const { root, waitForChanges } = await render(<qui-checkbox required>Check me</qui-checkbox>);
 

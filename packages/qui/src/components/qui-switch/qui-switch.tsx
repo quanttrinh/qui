@@ -211,6 +211,13 @@ export class QuiSwitch extends Mixin(ControllerHostMixin, FormControlMixin) {
     await focusElement(this.inputEl, options);
   }
 
+  /** Returns the current checked state, including uncontrolled changes. */
+  @Method()
+  // oxlint-disable-next-line eslint/require-await, typescript/require-await -- Stencil @Method requires async, but the state is available synchronously.
+  async getChecked(): Promise<boolean> {
+    return this.checkable.isChecked;
+  }
+
   @Watch("checked")
   @Watch("disabled")
   @Watch("invalid")

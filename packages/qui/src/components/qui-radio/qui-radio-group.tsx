@@ -209,6 +209,13 @@ export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin) 
     this.controller.focusInput(options);
   }
 
+  /** Returns the current selected value, including uncontrolled changes. */
+  @Method()
+  // oxlint-disable-next-line eslint/require-await, typescript/require-await -- Stencil @Method requires async, but the value is available synchronously.
+  async getValue(): Promise<string | undefined> {
+    return this.controller.value;
+  }
+
   @Watch("value")
   @Watch("name")
   @Watch("disabled")

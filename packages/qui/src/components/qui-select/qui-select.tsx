@@ -197,6 +197,13 @@ export class QuiSelect extends Mixin(ControllerHostMixin, FormControlMixin, Opti
     await focusElement(this.triggerEl, options);
   }
 
+  /** Returns the current selection, including uncontrolled changes. */
+  @Method()
+  // oxlint-disable-next-line eslint/require-await, typescript/require-await -- Stencil @Method requires async, but the selection is available synchronously.
+  async getValue(): Promise<string[]> {
+    return [...this.selection.selected];
+  }
+
   @Watch("value")
   private syncForm(): void {
     this.form.sync();

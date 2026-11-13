@@ -253,6 +253,13 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     await focusElement(this.inputEl, options);
   }
 
+  /** Returns the current native input value, including uncontrolled edits. */
+  @Method()
+  // oxlint-disable-next-line eslint/require-await, typescript/require-await -- Stencil @Method requires async, but the value is available synchronously.
+  async getValue(): Promise<string> {
+    return this.inputEl?.value ?? "";
+  }
+
   @Watch("value")
   private syncControlledValue(): void {
     if (this.value === undefined) {

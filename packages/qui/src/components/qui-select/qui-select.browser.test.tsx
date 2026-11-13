@@ -18,6 +18,7 @@ describe("qui-select", () => {
       <qui-select items={accounts} placeholder="Pick an account" />,
     );
     const spy = spyOnEvent("valuechange");
+    const host = resolveHost<HTMLQuiSelectElement>(root, "qui-select");
     const trigger = queryPartIn<HTMLButtonElement>(root, "trigger");
 
     trigger.click();
@@ -38,6 +39,7 @@ describe("qui-select", () => {
 
     expect(spy.lastEvent?.detail).toMatchObject({ value: ["account-2"] });
     expect(queryPartIn(root, "trigger").textContent).toContain("Account 0002");
+    await expect(host.getValue()).resolves.toEqual(["account-2"]);
   });
 
   it("closes when the open trigger is clicked again", async () => {

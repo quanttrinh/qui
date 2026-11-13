@@ -181,6 +181,25 @@ or per-tag network waterfall.
   properties; measured virtualized rows in a native popover
 - `<qui-popover>` — native popover positioned with JavaScript
 
+### Reading current values
+
+Controlled `value` / `checked` props stay unset for uncontrolled controls, so
+read the live value with the component methods instead of reaching into shadow
+DOM:
+
+```ts
+const input = document.querySelector("qui-input");
+await input.getValue(); // current native input value
+
+const checkbox = document.querySelector("qui-checkbox");
+await checkbox.getChecked(); // true | false | "indeterminate"
+```
+
+`getValue()` is available on `qui-input`, `qui-textarea`, `qui-select`,
+`qui-combobox`, and `qui-radio-group`. `getChecked()` is available on
+`qui-checkbox` and `qui-switch`. Both read the live control state, including
+uncontrolled edits; `getValue()` returns the value used for form submission.
+
 ### Icons
 
 `qui-icon` renders inline SVG from a path and viewBox, so no icon font is

@@ -23,6 +23,17 @@ describe("qui-input", () => {
     expect(spy).toHaveReceivedEventDetail({ value: "123-456", unmaskedValue: "123456" });
   });
 
+  it("returns the live value for uncontrolled edits", async () => {
+    const { root, waitForChanges } = await render(<qui-input />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    typeInto(input, "hello");
+    await waitForChanges();
+
+    await expect(host.getValue()).resolves.toBe("hello");
+  });
+
   it("accepts a native Maskito mask expression", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(
       <qui-input maskExpression={[/\d/u, /\d/u, "-", /\d/u, /\d/u]} />,

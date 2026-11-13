@@ -35,6 +35,23 @@ describe("qui-radio-group", () => {
     expect(new FormData(form).get("plan")).toBe("free");
   });
 
+  it("returns the live value for uncontrolled selection", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-radio-group name="plan" defaultValue="pro">
+        <qui-radio value="free">Free</qui-radio>
+        <qui-radio value="pro">Pro</qui-radio>
+      </qui-radio-group>,
+    );
+    const group = resolveHost<HTMLQuiRadioGroupElement>(root, "qui-radio-group");
+
+    await expect(group.getValue()).resolves.toBe("pro");
+
+    queryControl<HTMLInputElement>(radioItems(root)[0], "input").click();
+    await waitForChanges();
+
+    await expect(group.getValue()).resolves.toBe("free");
+  });
+
   it("keeps a controlled value while emitting the next value", async () => {
     const { root, setProps, spyOnEvent, waitForChanges } = await render(
       <qui-radio-group name="plan" value="pro">
