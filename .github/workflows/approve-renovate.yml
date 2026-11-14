@@ -1,8 +1,9 @@
 name: Approve Renovate checks
 
 on:
-  schedule:
-    - cron: "*/5 * * * *"
+  workflow_run:
+    workflows: [CI, Pages]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -12,11 +13,16 @@ permissions:
 
 jobs:
   approve:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'action_required'
     runs-on: ubuntu-slim
     steps:
       - name: Approve pending Renovate runs
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Prefer a dedicated app/PAT when the repository blocks GITHUB_TOKEN
+          # from approving gated workflow runs.
+          GH_TOKEN: ${{ secrets.RENOVATE_APPROVAL_TOKEN || secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
