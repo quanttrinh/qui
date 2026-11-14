@@ -6,7 +6,7 @@ import { css } from "#styled-system/css";
 import { ContextPartController } from "../shared/controllers";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { dialogButtonBase } from "../shared/styles";
-import { consumeDialog, type DialogContext } from "./context";
+import { dialogContext, type DialogContext } from "./context";
 
 const styles = {
   host: css({ display: "inline-block" }),
@@ -33,8 +33,7 @@ export class QuiDialogTrigger extends Mixin(ShadowStylesMixin, ControllerHostMix
   @Prop() disabled = false;
 
   protected readonly contextPart = new ContextPartController(this, {
-    key: "dialog",
-    consume: consumeDialog,
+    context: dialogContext,
   });
 
   private get dialog(): DialogContext | undefined {

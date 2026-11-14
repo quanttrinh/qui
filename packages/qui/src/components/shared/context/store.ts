@@ -2,21 +2,10 @@ import { Build } from "@stencil/core";
 
 import { isShadowRoot } from "../helpers/dom/dom";
 
-// Context parts retry when a provider is defined or upgraded later, so component
-// Registration order does not need to be tracked separately.
-/** A provider key shared by a context family. */
-type ContextPartKey = "accordion" | "accordion-item" | "dialog" | "field" | "radio-group" | "tabs";
-
 interface ContextListener {
   host: Element;
   notify: () => void;
 }
-
-// Notifications are routed to consumers inside the provider's subtree. A
-// Sibling provider therefore never wakes an unrelated form/accordion tree.
-const contextChangedListeners = new Map<ContextPartKey, Set<ContextListener>>();
-const pendingProviders = new Map<ContextPartKey, Set<Element | undefined>>();
-let flushScheduled = false;
 
 function parentElement(node: Element): Element | undefined {
   const parent = node.parentElement;
@@ -28,7 +17,7 @@ function parentElement(node: Element): Element | undefined {
 }
 
 /** Whether `node` is `ancestor` or lives inside its subtree, across shadow roots. */
-function hasChangedProvider(node: Element, providers: Set<Element | undefined>): boolean {
+function hasChangedProvider(node: Element, providers: Set<Element>): boolean {
   let current: Element | undefined = node;
   while (current !== undefined) {
     if (providers.has(current)) {
@@ -44,143 +33,133 @@ interface NotificationState {
   notified: Set<ContextListener>;
 }
 
-function notifyKey(
-  key: ContextPartKey,
-  providers: Set<Element | undefined>,
-  state: NotificationState,
-): void {
-  const listeners = contextChangedListeners.get(key);
-  if (listeners === undefined) {
-    return;
-  }
-  // Walk each listener's ancestor chain once, rather than testing every
-  // Provider against every listener (providers x listeners).
-  const notifyAll = providers.has(undefined);
-  for (const entry of listeners) {
-    if (!state.notified.has(entry) && (notifyAll || hasChangedProvider(entry.host, providers))) {
-      state.notified.add(entry);
-      try {
-        entry.notify();
-      } catch (error) {
-        state.errors.push(error);
-      }
-    }
-  }
+interface PendingStore {
+  flush: () => void;
 }
 
-function flushNotifications(): void {
-  const state: NotificationState = { errors: [], notified: new Set() };
+const pendingStores = new Set<PendingStore>();
+let flushScheduled = false;
+
+function flushPendingStores(): void {
+  let firstError: Error | undefined;
   try {
-    // Drain iteratively so nested-provider notifications never recurse per item.
-    while (pendingProviders.size > 0) {
-      const providers = [...pendingProviders];
-      pendingProviders.clear();
-      for (const [key, hosts] of providers) {
-        notifyKey(key, hosts, state);
+    while (pendingStores.size > 0) {
+      const stores = [...pendingStores];
+      pendingStores.clear();
+      for (const store of stores) {
+        try {
+          store.flush();
+        } catch (error) {
+          firstError ??= error instanceof Error ? error : new Error(String(error));
+        }
       }
     }
   } finally {
     flushScheduled = false;
   }
-  if (state.errors.length > 0) {
-    throw state.errors[0];
+  if (firstError !== undefined) {
+    throw firstError;
   }
 }
 
-/**
- * Notifies waiting parts in `provider`'s subtree that context availability for
- * `key` changed. Providers call this after storing or clearing their context.
- *
- * Components are defined in an arbitrary order, so a part can upgrade before
- * its provider. Those parts attach when this notification arrives instead of
- * depending on custom element registration order.
- */
-function notifyContextChanged(key: ContextPartKey, provider?: Element): void {
-  if (Build.isServer) {
-    return;
-  }
-  let providers = pendingProviders.get(key);
-  if (providers === undefined) {
-    providers = new Set();
-    pendingProviders.set(key, providers);
-  }
-  providers.add(provider);
-  if (flushScheduled) {
-    return;
-  }
-  flushScheduled = true;
-  queueMicrotask(flushNotifications);
+/** The consumer side of one context family. */
+export interface ContextSource<TContext> {
+  /** Find the closest ancestor context, crossing shadow boundaries. */
+  consume: (host: Element) => TContext | undefined;
+  /** Subscribe a consumer to provider availability changes. */
+  onProvided: (host: Element, listener: () => void) => () => void;
 }
 
-/**
- * Subscribes a consumer host to provider notifications for `key`. Returns an
- * unsubscribe function. Notifications only wake consumers inside the changed
- * provider's subtree.
- */
-function onContextProvided(key: ContextPartKey, host: Element, listener: () => void): () => void {
-  if (Build.isServer) {
-    return () => undefined;
-  }
-  let listeners = contextChangedListeners.get(key);
-  if (listeners === undefined) {
-    listeners = new Set();
-    contextChangedListeners.set(key, listeners);
-  }
-  const entry: ContextListener = { host, notify: listener };
-  listeners.add(entry);
-  return () => {
-    listeners.delete(entry);
-    if (listeners.size === 0 && contextChangedListeners.get(key) === listeners) {
-      contextChangedListeners.delete(key);
-    }
-  };
-}
-
-/** Provides and consumes one family of context through the DOM tree. */
-interface ContextStore<TContext> {
+/** One independent context family, identified by the store instance itself. */
+export interface ContextStore<TContext> extends ContextSource<TContext> {
   /** Attach a context to its provider host. */
   provide: (host: Element, context: TContext) => void;
   /** Remove the context from a provider host. */
   clear: (host: Element) => void;
-  /** Find the closest ancestor context, crossing shadow boundaries. */
-  consume: (host: Element) => TContext | undefined;
+}
+
+class ContextStoreImpl<TContext> implements ContextStore<TContext> {
+  private readonly contexts = new WeakMap<Element, TContext>();
+  private readonly listeners = new Set<ContextListener>();
+  private readonly pendingProviders = new Set<Element>();
+
+  readonly provide = (host: Element, context: TContext): void => {
+    this.contexts.set(host, context);
+    this.schedule(host);
+  };
+
+  readonly clear = (host: Element): void => {
+    this.contexts.delete(host);
+    this.schedule(host);
+  };
+
+  readonly consume = (host: Element): TContext | undefined => {
+    let node = parentElement(host);
+    while (node !== undefined) {
+      const context = this.contexts.get(node);
+      if (context !== undefined) {
+        return context;
+      }
+      node = parentElement(node);
+    }
+    return undefined;
+  };
+
+  readonly onProvided = (host: Element, listener: () => void): (() => void) => {
+    if (Build.isServer) {
+      return () => undefined;
+    }
+    const entry: ContextListener = { host, notify: listener };
+    this.listeners.add(entry);
+    return () => {
+      this.listeners.delete(entry);
+    };
+  };
+
+  private schedule(provider: Element): void {
+    if (Build.isServer) {
+      return;
+    }
+    this.pendingProviders.add(provider);
+    pendingStores.add(this);
+    if (flushScheduled) {
+      return;
+    }
+    flushScheduled = true;
+    queueMicrotask(flushPendingStores);
+  }
+
+  readonly flush = (): void => {
+    const state: NotificationState = { errors: [], notified: new Set() };
+    while (this.pendingProviders.size > 0) {
+      const providers = new Set(this.pendingProviders);
+      this.pendingProviders.clear();
+      this.notifyProviders(providers, state);
+    }
+    if (state.errors.length > 0) {
+      throw state.errors[0];
+    }
+  };
+
+  private notifyProviders(providers: Set<Element>, state: NotificationState): void {
+    for (const entry of this.listeners) {
+      if (!state.notified.has(entry) && hasChangedProvider(entry.host, providers)) {
+        state.notified.add(entry);
+        try {
+          entry.notify();
+        } catch (error) {
+          state.errors.push(error);
+        }
+      }
+    }
+  }
 }
 
 /**
- * Creates a context store scoped to one provider key. The store owns the
- * WeakMap, the ancestor walk, and provider notifications so each context
- * module only declares its context type.
+ * Creates an independent context family. The returned store owns its WeakMap,
+ * ancestor walk, listeners, and notification batching, so adding a new context
+ * family never requires editing shared context code.
  */
-function createContextStore<TContext>(key: ContextPartKey): ContextStore<TContext> {
-  const contexts = new WeakMap<Element, TContext>();
-
-  return {
-    provide: (host: Element, context: TContext) => {
-      contexts.set(host, context);
-      notifyContextChanged(key, host);
-    },
-    clear: (host: Element) => {
-      contexts.delete(host);
-      notifyContextChanged(key, host);
-    },
-    consume: (host: Element) => {
-      let node = parentElement(host);
-      while (node !== undefined) {
-        const context = contexts.get(node);
-        if (context !== undefined) {
-          return context;
-        }
-        node = parentElement(node);
-      }
-      return undefined;
-    },
-  };
+export function createContextStore<TContext>(): ContextStore<TContext> {
+  return new ContextStoreImpl<TContext>();
 }
-
-export {
-  createContextStore,
-  notifyContextChanged,
-  onContextProvided,
-  type ContextPartKey,
-  type ContextStore,
-};

@@ -10,14 +10,13 @@ Reactive controller. Extends `ReactiveControllerBase`. Extended by
 
 ## Options
 
-| Option      | Type                                                | Description                                      |
-| ----------- | --------------------------------------------------- | ------------------------------------------------ |
-| `key`       | `ContextPartKey`                                    | Context family (`field`, `tabs`, `accordion`, …) |
-| `consume`   | `(host) => TContext \| undefined`                   | Resolves the nearest provider                    |
-| `setup`     | `(context) => (() => void) \| undefined` (optional) | Side effect after attach; returns teardown       |
-| `update`    | `(context) => void` (optional)                      | Custom notification handler; default renders     |
-| `subscribe` | `boolean` (optional)                                | Set `false` to skip state subscriptions          |
-| `getKey`    | `() => string \| undefined` (optional)              | Part value for scoped notifications              |
+| Option      | Type                                                | Description                                  |
+| ----------- | --------------------------------------------------- | -------------------------------------------- |
+| `context`   | `ContextSource<TContext>`                           | Context store to consume                     |
+| `setup`     | `(context) => (() => void) \| undefined` (optional) | Side effect after attach; returns teardown   |
+| `update`    | `(context) => void` (optional)                      | Custom notification handler; default renders |
+| `subscribe` | `boolean` (optional)                                | Set `false` to skip state subscriptions      |
+| `getKey`    | `() => string \| undefined` (optional)              | Part value for scoped notifications          |
 
 ## API
 
@@ -37,7 +36,7 @@ Reactive controller. Extends `ReactiveControllerBase`. Extended by
 ## Notes
 
 - Attach is idempotent: consuming the same context again does nothing.
-- `start()` subscribes to availability through `onContextProvided`, so parts
+- `start()` subscribes to availability through the context store, so parts
   upgrade correctly even when they connect before their provider exists.
 - `subscribe(listener, key?)` lets keyed `ListenerStore` providers skip parts
   whose value did not change. The key is read at notification time.
