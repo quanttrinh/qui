@@ -18,6 +18,8 @@ export function setColors(colors: Readonly<Record<ColorRole, string>>, target?: 
     return;
   }
 
+  // CSSOM property assignment stays allowed under strict style-src policies.
+  // Avoid cssText or a style attribute, which CSP treats as inline style.
   for (const role of colorRoles) {
     element.style.setProperty(cssVariableNames[role], colors[role]);
   }

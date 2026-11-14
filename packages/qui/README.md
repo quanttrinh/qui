@@ -621,6 +621,10 @@ applyTheme({ source: "#3e802b", variant: "tonalSpot", dark: true });
 clearColors();
 ```
 
+`applyTheme()` writes through the CSSOM (`style.setProperty`), not inline
+`<style>` elements or `style` attributes, so it works with strict `style-src`
+and `style-src-attr` policies.
+
 ```ts
 // vite.config.ts
 export default defineConfig({
