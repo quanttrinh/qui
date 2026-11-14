@@ -16,7 +16,7 @@ import { token } from "#styled-system/tokens";
 
 import { ContextPartController } from "../shared/controllers";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
-import { consumeDialog, type DialogContext, type DialogControl } from "./context";
+import { dialogContext, type DialogContext, type DialogControl } from "./context";
 import { applyDialogAria } from "./dialog-aria";
 
 const styles = {
@@ -75,8 +75,7 @@ export class QuiDialogContent extends Mixin(ShadowStylesMixin, ControllerHostMix
   @State() private dialogLabel?: string;
 
   protected readonly contextPart = new ContextPartController(this, {
-    key: "dialog",
-    consume: consumeDialog,
+    context: dialogContext,
     update: (): void => {
       this.applyDialogAttributes();
     },

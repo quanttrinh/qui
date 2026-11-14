@@ -38,10 +38,12 @@ export interface RadioGroupContext {
   subscribe: (listener: () => void, key?: () => string | undefined) => () => void;
 }
 
+export const radioGroupContext = createContextStore<RadioGroupContext>();
+
 const {
   provide: provideRadioGroup,
   clear: clearRadioGroup,
   consume: consumeRadioGroup,
-} = createContextStore<RadioGroupContext>("radio-group");
+} = radioGroupContext;
 
 export { clearRadioGroup, consumeRadioGroup, provideRadioGroup };

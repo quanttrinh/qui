@@ -19,7 +19,7 @@ import { setAriaControls, setAriaLabelledBy } from "../shared/helpers/aria/aria"
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { focusRing } from "../shared/styles";
-import { consumeTabs, type TabsContext } from "./context";
+import { tabsContext, type TabsContext } from "./context";
 import { type TabsTriggerRegistration } from "./controller";
 import { hasFocusableDescendant } from "./focusable";
 
@@ -68,8 +68,7 @@ export class QuiTabPanel extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   private readonly registration = new RegistrationReconciler();
 
   protected readonly contextPart = new ContextPartController(this, {
-    key: "tabs",
-    consume: consumeTabs,
+    context: tabsContext,
     getKey: () => this.value,
   });
 

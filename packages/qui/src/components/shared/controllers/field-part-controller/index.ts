@@ -1,4 +1,4 @@
-import { consumeField, type FieldApi } from "../../helpers/field/context";
+import { fieldContext, type FieldApi } from "../../helpers/field/context";
 import { ContextPartController } from "../context-part-controller";
 import { type ReactiveControllerHost } from "../reactive-controller";
 
@@ -26,8 +26,7 @@ const setupPart: Record<FieldPart, FieldPartSetup> = {
 export class FieldPartController extends ContextPartController<FieldApi> {
   constructor(host: ReactiveControllerHost, options: FieldPartControllerOptions) {
     super(host, {
-      key: "field",
-      consume: consumeField,
+      context: fieldContext,
       setup: (field) => setupPart[options.part](field, host.hostElement),
     });
   }

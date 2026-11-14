@@ -12,7 +12,7 @@ import { isHTMLElement } from "../shared/helpers/dom/dom";
 import { arrowDelta, edgeKey } from "../shared/helpers/dom/keyboard";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { focusRingInset } from "../shared/styles";
-import { consumeAccordionItem, type AccordionItemContext } from "./accordion-context";
+import { accordionItemContext, type AccordionItemContext } from "./accordion-context";
 
 const styles = {
   host: css({ display: "block" }),
@@ -74,8 +74,7 @@ export class QuiAccordionTrigger extends Mixin(ShadowStylesMixin, ControllerHost
   private ariaContent?: HTMLElement;
 
   protected readonly contextPart = new ContextPartController(this, {
-    key: "accordion-item",
-    consume: consumeAccordionItem,
+    context: accordionItemContext,
     getKey: () => this.item?.item().value,
   });
 

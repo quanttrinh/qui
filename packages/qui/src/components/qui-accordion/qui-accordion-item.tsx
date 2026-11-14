@@ -19,7 +19,7 @@ import { dataAttr } from "../shared/helpers/aria/attr";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import {
   clearAccordionItem,
-  consumeAccordion,
+  accordionContext,
   provideAccordionItem,
   type AccordionContext,
   type AccordionItem,
@@ -57,8 +57,7 @@ export class QuiAccordionItem extends Mixin(ShadowStylesMixin, ControllerHostMix
   private readonly listeners = createListenerStore();
 
   protected readonly contextPart = new ContextPartController(this, {
-    key: "accordion",
-    consume: consumeAccordion,
+    context: accordionContext,
     getKey: () => this.value,
     setup: (accordion): (() => void) => {
       provideAccordionItem(this.host, this.context(accordion));

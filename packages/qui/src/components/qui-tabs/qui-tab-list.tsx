@@ -8,7 +8,7 @@ import { ContextPartController, RegistrationReconciler } from "../shared/control
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { arrowDelta, edgeKey } from "../shared/helpers/dom/keyboard";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
-import { consumeTabs, type TabsContext } from "./context";
+import { tabsContext, type TabsContext } from "./context";
 
 const styles = {
   host: css({ display: "block" }),
@@ -40,8 +40,7 @@ export class QuiTabList extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiTabListElement;
 
   protected readonly contextPart = new ContextPartController(this, {
-    key: "tabs",
-    consume: consumeTabs,
+    context: tabsContext,
   });
   private listEl?: HTMLDivElement;
   private readonly registration = new RegistrationReconciler();

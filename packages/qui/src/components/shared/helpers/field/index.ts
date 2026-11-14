@@ -2,6 +2,7 @@ export { applyFieldAria, type FieldAriaOptions } from "./aria";
 export {
   clearField,
   consumeField,
+  fieldContext,
   provideField,
   type FieldApi,
   type FieldControlProps,

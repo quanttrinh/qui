@@ -42,10 +42,8 @@ export interface TabsContext {
   subscribe: (listener: () => void, key?: () => string | undefined) => () => void;
 }
 
-const {
-  provide: provideTabs,
-  clear: clearTabs,
-  consume: consumeTabs,
-} = createContextStore<TabsContext>("tabs");
+export const tabsContext = createContextStore<TabsContext>();
+
+const { provide: provideTabs, clear: clearTabs, consume: consumeTabs } = tabsContext;
 
 export { clearTabs, consumeTabs, provideTabs };

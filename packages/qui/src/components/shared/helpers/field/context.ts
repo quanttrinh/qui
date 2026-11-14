@@ -79,10 +79,8 @@ export interface FieldApi {
   subscribe: (listener: () => void) => () => void;
 }
 
-const {
-  provide: provideField,
-  clear: clearField,
-  consume: consumeField,
-} = createContextStore<FieldApi>("field");
+export const fieldContext = createContextStore<FieldApi>();
+
+const { provide: provideField, clear: clearField, consume: consumeField } = fieldContext;
 
 export { clearField, consumeField, provideField };
