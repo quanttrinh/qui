@@ -187,6 +187,71 @@ describe("qui-radio-group render scoping", () => {
     expect(deltas[2]).toBe(0);
   });
 
+  it("re-renders every radio when group validation state changes", async () => {
+    const { root, setProps, waitForChanges } = await render(
+      <qui-radio-group name="plan" defaultValue="pro">
+        <qui-radio value="free">Free</qui-radio>
+        <qui-radio value="pro">Pro</qui-radio>
+        <qui-radio value="business">Business</qui-radio>
+      </qui-radio-group>,
+      {
+        spyOn: {
+          components: {
+            "qui-radio": { lifecycle: ["render"] },
+          },
+        },
+      },
+    );
+    const items = radioItems(root);
+    const baseline = items.map(
+      (item) => getComponentSpies(item)?.lifecycle.render?.mock.calls.length ?? 0,
+    );
+
+    await setProps({ disabled: true });
+    await setProps({ invalid: true });
+    await waitForChanges();
+
+    const deltas = items.map(
+      (item, index) =>
+        (getComponentSpies(item)?.lifecycle.render?.mock.calls.length ?? 0) -
+        (baseline[index] ?? 0),
+    );
+    expect(deltas.every((delta) => delta > 0)).toBe(true);
+  });
+
+  it("re-renders only the focused radio when focus moves", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-radio-group name="plan" defaultValue="pro">
+        <qui-radio value="free">Free</qui-radio>
+        <qui-radio value="pro">Pro</qui-radio>
+        <qui-radio value="business">Business</qui-radio>
+      </qui-radio-group>,
+      {
+        spyOn: {
+          components: {
+            "qui-radio": { lifecycle: ["render"] },
+          },
+        },
+      },
+    );
+    const items = radioItems(root);
+    const baseline = items.map(
+      (item) => getComponentSpies(item)?.lifecycle.render?.mock.calls.length ?? 0,
+    );
+
+    await (items[2] as HTMLQuiRadioElement).focusControl();
+    await waitForChanges();
+
+    const deltas = items.map(
+      (item, index) =>
+        (getComponentSpies(item)?.lifecycle.render?.mock.calls.length ?? 0) -
+        (baseline[index] ?? 0),
+    );
+    expect(deltas[0]).toBe(0);
+    expect(deltas[1]).toBe(0);
+    expect(deltas[2]).toBeGreaterThan(0);
+  });
+
   it("skips the root when value or name changes", async () => {
     const { spies, setProps } = await render(
       <qui-radio-group name="plan" defaultValue="pro">

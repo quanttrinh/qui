@@ -39,7 +39,7 @@ Component controller. Extends
 
 - The group root renders form ARIA and layout only, so selection and focus use
   `requestNotify`, not `requestUpdate`.
-- Only the affected radios re-render because notifications are scoped with
-  `uniqueValues`.
+- Only the affected radios re-render because each part selects the context
+  values it renders and skips unchanged snapshots.
 - Label clicks from `qui-field` are routed through the registered control handle
   and call `focusInput()`.

@@ -332,6 +332,47 @@ describe("qui-tabs render scoping", () => {
     expect(panelDeltas[1]).toBeGreaterThan(0);
     expect(panelDeltas[2]).toBe(0);
   });
+
+  it("re-renders only the parts that read a shared context prop", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-tabs defaultValue="one">
+        <qui-tab-list>
+          <qui-tab-trigger value="one">One</qui-tab-trigger>
+          <qui-tab-trigger value="two">Two</qui-tab-trigger>
+          <qui-tab-trigger value="three">Three</qui-tab-trigger>
+        </qui-tab-list>
+        <qui-tab-panel value="one">One panel</qui-tab-panel>
+        <qui-tab-panel value="two">Two panel</qui-tab-panel>
+        <qui-tab-panel value="three">Three panel</qui-tab-panel>
+      </qui-tabs>,
+      {
+        spyOn: {
+          components: {
+            "qui-tab-trigger": { lifecycle: ["render"] },
+            "qui-tab-panel": { lifecycle: ["render"] },
+          },
+        },
+      },
+    );
+    const triggerHosts = [...root.querySelectorAll<HTMLElement>("qui-tab-trigger")];
+    const panelHosts = [...root.querySelectorAll<HTMLElement>("qui-tab-panel")];
+    const baselineTriggers = triggerHosts.map((host) => renderCount(host));
+    const baselinePanels = panelHosts.map((host) => renderCount(host));
+
+    root.setAttribute("variant", "secondary");
+    await waitForChanges();
+
+    const triggerDeltas = triggerHosts.map(
+      (host, index) => renderCount(host) - (baselineTriggers[index] ?? 0),
+    );
+    const panelDeltas = panelHosts.map(
+      (host, index) => renderCount(host) - (baselinePanels[index] ?? 0),
+    );
+    // Exact counts lock in that the shared prop produces one scoped pass,
+    // Not a duplicate notification through the provider and part selectors.
+    expect(triggerDeltas).toEqual([1, 1, 1]);
+    expect(panelDeltas).toEqual([0, 0, 0]);
+  });
 });
 
 describe("qui-tabs colors", () => {

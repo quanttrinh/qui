@@ -160,7 +160,18 @@ export class QuiTabTrigger extends Mixin(ShadowStylesMixin, ControllerHostMixin)
 
   protected readonly contextPart = new ContextPartController(this, {
     context: tabsContext,
-    getKey: () => this.value,
+    // Keep in sync with render() and the post-render sync.
+    select: (tabs) => [
+      tabs.isSelected(this.value),
+      tabs.isFocused(this.value),
+      tabs.variant(),
+      tabs.orientation(),
+      tabs.textDirection(),
+      tabs.triggerId(this.value),
+      tabs.listId(),
+      tabs.panelId(this.value),
+      tabs.getPanel(this.value),
+    ],
   });
 
   private get tabs(): TabsContext | undefined {

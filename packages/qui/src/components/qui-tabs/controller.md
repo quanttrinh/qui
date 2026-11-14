@@ -36,7 +36,7 @@ lives beside `qui-tabs`.
 ## Lifecycle
 
 - `hostWillLoad` — resets `FocusState` to the initial selected tab.
-- `onValueChanged` — notifies the previous/next selection keys and renders,
+- `onValueChanged` — notifies context subscribers and renders,
   because the root template shows `data-focus`.
 
 ## Notes
@@ -47,5 +47,5 @@ lives beside `qui-tabs`.
   manual activation only moves focus.
 - `triggers` is a `RovingFocusRegistry`; `panels` and `lists` are
   `KeyedHostRegistry` instances.
-- Registration changes notify only the affected value; the list is unkeyed and
-  always notified.
+- Registration changes notify context subscribers; parts select the values they
+  render, so unaffected parts skip the re-render.

@@ -75,7 +75,18 @@ export class QuiAccordionTrigger extends Mixin(ShadowStylesMixin, ControllerHost
 
   protected readonly contextPart = new ContextPartController(this, {
     context: accordionItemContext,
-    getKey: () => this.item?.item().value,
+    // Keep in sync with render() and the post-render sync.
+    select: (item) => [
+      item.isExpanded(item.item().value),
+      item.isFocused(item.item().value),
+      item.isItemDisabled(),
+      item.orientation(),
+      item.textDirection(),
+      item.triggerId(item.item().value),
+      item.contentId(item.item().value),
+      item.rootId(),
+      item.getContent(item.item().value),
+    ],
   });
 
   private get item(): AccordionItemContext | undefined {

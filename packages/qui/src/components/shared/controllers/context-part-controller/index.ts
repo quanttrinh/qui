@@ -1,12 +1,13 @@
 import { type ContextSource } from "../../context/store";
+import { shallowEqual } from "../../helpers/collection";
 import { ReactiveControllerBase, type ReactiveControllerHost } from "../reactive-controller";
 
 /** A context object that can notify a subscribed part when it changes. */
 interface ContextPartSource {
-  subscribe: (listener: () => void, key?: () => string | undefined) => () => void;
+  subscribe: (listener: () => void) => () => void;
 }
 
-interface ContextPartOptions<TContext extends ContextPartSource> {
+interface ContextPartOptions<TContext extends ContextPartSource, TSelection = unknown> {
   /** The context family to consume. */
   context: ContextSource<TContext>;
   /** Optional side effect when a context is attached. Returns a teardown. */
@@ -19,25 +20,31 @@ interface ContextPartOptions<TContext extends ContextPartSource> {
   /** Whether to re-render on context changes. Defaults to `true`. */
   subscribe?: boolean;
   /**
-   * The value this part cares about. When the provider's listener store is
-   * keyed, notifications for other values skip this part.
+   * Snapshot of the context values this part renders. When provided, provider
+   * notifications only re-render the part when the snapshot changes.
    */
-  getKey?: () => string | undefined;
+  select?: (context: TContext) => TSelection;
+  /** Compare selector snapshots. Defaults to `shallowEqual`. */
+  equals?: (previous: TSelection, next: TSelection) => boolean;
 }
 
 /**
  * Connects a part component to its nearest ancestor context and handles the
  * retry, subscription, and teardown lifecycle that every context part repeats.
  */
-class ContextPartController<TContext extends ContextPartSource> extends ReactiveControllerBase {
-  private readonly options: ContextPartOptions<TContext>;
+class ContextPartController<
+  TContext extends ContextPartSource,
+  TSelection = unknown,
+> extends ReactiveControllerBase {
+  private readonly options: ContextPartOptions<TContext, TSelection>;
   private attached: TContext | undefined;
   private unsubscribe?: () => void;
   private teardown?: () => void;
   private stopListening?: () => void;
+  private selection: { value: TSelection } | undefined;
   private loaded = false;
 
-  constructor(host: ReactiveControllerHost, options: ContextPartOptions<TContext>) {
+  constructor(host: ReactiveControllerHost, options: ContextPartOptions<TContext, TSelection>) {
     super(host);
     this.options = options;
   }
@@ -77,6 +84,20 @@ class ContextPartController<TContext extends ContextPartSource> extends Reactive
     this.unsubscribe = undefined;
     this.teardown?.();
     this.teardown = undefined;
+    this.selection = undefined;
+  };
+
+  private readonly notifySelected = (
+    context: TContext,
+    select: (context: TContext) => TSelection,
+  ): void => {
+    const { equals = shallowEqual } = this.options;
+    const next = select(context);
+    if (this.selection !== undefined && equals(this.selection.value, next)) {
+      return;
+    }
+    this.selection = { value: next };
+    this.notify(context);
   };
 
   private notify(context: TContext): void {
@@ -99,9 +120,17 @@ class ContextPartController<TContext extends ContextPartSource> extends Reactive
     }
     this.teardown = this.options.setup?.(next);
     if (this.options.subscribe !== false) {
-      this.unsubscribe = next.subscribe(() => {
-        this.notify(next);
-      }, this.options.getKey);
+      const { select } = this.options;
+      if (select === undefined) {
+        this.unsubscribe = next.subscribe(() => {
+          this.notify(next);
+        });
+      } else {
+        this.selection = { value: select(next) };
+        this.unsubscribe = next.subscribe(() => {
+          this.notifySelected(next, select);
+        });
+      }
     }
     return true;
   }
