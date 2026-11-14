@@ -1,5 +1,13 @@
 # @quanttrinh/qui-unplugin
 
+## 0.4.2
+
+### Patch Changes
+
+- Updated dependencies [19bf1b7]
+- Updated dependencies [7657d5f]
+  - @quanttrinh/qui@0.9.0
+
 ## 0.4.1
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # @quanttrinh/qui
 
+## 0.9.0
+
+### Minor Changes
+
+- 7657d5f: Refactor internal context notifications to use per-part selector snapshots. Providers notify without computing changed key sets, and parts skip re-renders when the context values they use are unchanged. The exported controller `requestUpdate`/`notifyUpdate` signatures no longer accept key sets.
+
+### Patch Changes
+
+- 19bf1b7: Refactor internal context providers into independent generic context stores. Context families no longer share a hardcoded component key union, and parts consume a context store directly.
+
 ## 0.8.0
 
 ### Minor Changes
