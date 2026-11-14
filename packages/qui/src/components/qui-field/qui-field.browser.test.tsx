@@ -295,3 +295,68 @@ describe("qui-field label behavior", () => {
     expect(input.readOnly).toBe(true);
   });
 });
+
+describe("qui-field render scoping", () => {
+  it("skips the root when only required changes", async () => {
+    const { spies, setProps } = await render(
+      <qui-field>
+        <qui-field-label>Email</qui-field-label>
+        <qui-input />
+      </qui-field>,
+      {
+        spyOn: {
+          components: {
+            "qui-field": { lifecycle: ["render"] },
+          },
+        },
+      },
+    );
+    const rootRenders = (): number => spies?.lifecycle.render?.mock.calls.length ?? 0;
+    const baseline = rootRenders();
+
+    await setProps({ required: true });
+
+    expect(rootRenders()).toBe(baseline);
+  });
+});
+
+describe("qui-field colors", () => {
+  it("applies label, helper, and error text color custom properties", async () => {
+    const { root } = await render(
+      <qui-field invalid>
+        <qui-field-label>Email</qui-field-label>
+        <qui-input />
+        <qui-field-helper-text>Helper</qui-field-helper-text>
+        <qui-field-error-text>Error</qui-field-error-text>
+      </qui-field>,
+    );
+    const { label, helperHost, errorHost } = queryParts(root);
+
+    root.style.setProperty("--qui-field-label-color", "rgb(1, 2, 3)");
+    root.style.setProperty("--qui-field-helper-color", "rgb(4, 5, 6)");
+    root.style.setProperty("--qui-field-error-text-color", "rgb(7, 8, 9)");
+
+    expect(getComputedStyle(label).color).toBe("rgb(1, 2, 3)");
+    expect(getComputedStyle(helperHost).color).toBe("rgb(4, 5, 6)");
+    expect(getComputedStyle(errorHost).color).toBe("rgb(7, 8, 9)");
+  });
+
+  it("scopes shared field colors to descendant controls", async () => {
+    const { root } = await render(
+      <qui-field>
+        <qui-field-label>Email</qui-field-label>
+        <qui-input />
+      </qui-field>,
+    );
+    const inputHost = queryHost(root, "qui-input");
+    const control = queryPartIn(inputHost, "control");
+    const input = queryPartIn<HTMLInputElement>(inputHost, "input");
+    control.style.transition = "none";
+
+    root.style.setProperty("--qui-field-container-color", "rgb(10, 11, 12)");
+    root.style.setProperty("--qui-field-text-color", "rgb(13, 14, 15)");
+
+    expect(getComputedStyle(control).backgroundColor).toBe("rgb(10, 11, 12)");
+    expect(getComputedStyle(input).color).toBe("rgb(13, 14, 15)");
+  });
+});

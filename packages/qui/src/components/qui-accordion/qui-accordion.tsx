@@ -4,7 +4,6 @@ import {
   Component,
   Element,
   Event,
-  forceUpdate,
   h,
   Host,
   Prop,
@@ -16,6 +15,7 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
+import { token } from "../../../styled-system/tokens";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { createListenerStore } from "../shared/controllers";
 import { nextId } from "../shared/helpers/dom/id";
@@ -23,14 +23,17 @@ import { ControllerHostMixin } from "../shared/mixins";
 import { clearAccordion, provideAccordion, type AccordionContext } from "./accordion-context";
 import { AccordionController } from "./controller";
 
+/** Props that only feed the child context, so the root template ignores them. */
+const CONTEXT_ONLY_PROPS = new Set(["multiple", "collapsible", "value", "disabled"]);
+
 const styles = {
   host: css({ display: "block" }),
   root: css({
     w: "full",
     borderWidth: "1px",
-    borderColor: "outlineVariant",
+    borderColor: `var(--qui-accordion-border-color, ${token("colors.outlineVariant")})`,
     rounded: "xl",
-    bgColor: "surface",
+    bgColor: `var(--qui-accordion-container-color, ${token("colors.surface")})`,
     overflow: "hidden",
   }),
 };
@@ -125,8 +128,8 @@ export class QuiAccordion extends Mixin(ControllerHostMixin) {
     subscribe: this.listeners.subscribe,
   };
 
-  protected onRequestUpdate(): void {
-    this.listeners.notify();
+  protected onRequestUpdate(keys?: Iterable<string>): void {
+    this.listeners.notify(keys);
   }
 
   connectedCallback(): void {
@@ -157,8 +160,13 @@ export class QuiAccordion extends Mixin(ControllerHostMixin) {
   @Watch("orientation")
   @Watch("textDirection")
   private syncContext(): void {
-    forceUpdate(this.host);
+    // Stencil re-renders on every prop change. `componentShouldUpdate` skips the root render.
+    // These props affect every part, so context subscribers are notified without keys.
     this.listeners.notify();
+  }
+
+  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
+    return !CONTEXT_ONLY_PROPS.has(propName);
   }
 
   private get rootId(): string {

@@ -57,3 +57,37 @@ describe("qui-button", () => {
     expect(button.disabled).toBe(true);
   });
 });
+
+describe("qui-button theming", () => {
+  it("overrides container and label colors per host", async () => {
+    const { root, waitForChanges } = await render(<qui-button>Save</qui-button>);
+    const button = queryPartIn<HTMLButtonElement>(root, "button");
+    button.style.transition = "none";
+
+    root.style.setProperty("--qui-button-container-color", "rgb(1, 2, 3)");
+    root.style.setProperty("--qui-button-label-color", "rgb(4, 5, 6)");
+    await waitForChanges();
+
+    const computed = getComputedStyle(button);
+    expect(computed.backgroundColor).toBe("rgb(1, 2, 3)");
+    expect(computed.color).toBe("rgb(4, 5, 6)");
+  });
+
+  it("applies the custom outline color to outlined buttons", async () => {
+    const { root } = await render(<qui-button variant="outlined">Save</qui-button>);
+    const button = queryPartIn<HTMLButtonElement>(root, "button");
+
+    root.style.setProperty("--qui-button-outline-color", "rgb(7, 8, 9)");
+
+    expect(getComputedStyle(button).borderTopColor).toBe("rgb(7, 8, 9)");
+  });
+
+  it("uses the custom state-layer color for the hover overlay", async () => {
+    const { root } = await render(<qui-button>Save</qui-button>);
+    const button = queryPartIn<HTMLButtonElement>(root, "button");
+
+    root.style.setProperty("--qui-button-state-layer-color", "rgb(10, 11, 12)");
+
+    expect(getComputedStyle(button, "::before").backgroundColor).toBe("rgb(10, 11, 12)");
+  });
+});

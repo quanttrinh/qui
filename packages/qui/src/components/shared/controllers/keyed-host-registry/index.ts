@@ -1,6 +1,7 @@
 /** Notifies the owner when the registry's contents change. */
 export interface KeyedHostRegistryOptions {
-  onChange?: () => void;
+  /** Receives the affected value, or `undefined` when the registry is cleared. */
+  onChange?: (value?: string) => void;
 }
 
 const noop = (): void => undefined;
@@ -14,7 +15,7 @@ const noop = (): void => undefined;
  */
 export class KeyedHostRegistry<TEntry> {
   private readonly entries = new Map<string, TEntry>();
-  private readonly onChange?: () => void;
+  private readonly onChange?: (value?: string) => void;
 
   constructor(options: KeyedHostRegistryOptions = {}) {
     this.onChange = options.onChange;
@@ -34,7 +35,7 @@ export class KeyedHostRegistry<TEntry> {
       return noop;
     }
     this.entries.set(value, entry);
-    this.onChange?.();
+    this.onChange?.(value);
     let active = true;
     return () => {
       if (!active) {
@@ -43,7 +44,7 @@ export class KeyedHostRegistry<TEntry> {
       active = false;
       if (Object.is(this.entries.get(value), entry)) {
         this.entries.delete(value);
-        this.onChange?.();
+        this.onChange?.(value);
       }
     };
   }

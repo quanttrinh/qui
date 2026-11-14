@@ -4,7 +4,6 @@ import {
   Component,
   Element,
   Event,
-  forceUpdate,
   h,
   Host,
   Prop,
@@ -23,6 +22,9 @@ import { nextId } from "../shared/helpers/dom/id";
 import { ControllerHostMixin } from "../shared/mixins";
 import { clearTabs, provideTabs, type TabsContext, type TabsVariant } from "./context";
 import { TabsController } from "./controller";
+
+/** Props that only feed the child context, so the root template ignores them. */
+const CONTEXT_ONLY_PROPS = new Set(["value", "activationMode", "loopFocus", "deselectable"]);
 
 const styles = {
   host: css({ display: "block" }),
@@ -135,8 +137,8 @@ export class QuiTabs extends Mixin(ControllerHostMixin) {
     subscribe: this.listeners.subscribe,
   };
 
-  protected onRequestUpdate(): void {
-    this.listeners.notify();
+  protected onRequestUpdate(keys?: Iterable<string>): void {
+    this.listeners.notify(keys);
   }
 
   connectedCallback(): void {
@@ -168,8 +170,13 @@ export class QuiTabs extends Mixin(ControllerHostMixin) {
   @Watch("textDirection")
   @Watch("variant")
   private syncContext(): void {
-    forceUpdate(this.host);
+    // Stencil re-renders on every prop change. `componentShouldUpdate` skips the root render.
+    // Context-only props still notify the children here.
     this.listeners.notify();
+  }
+
+  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
+    return !CONTEXT_ONLY_PROPS.has(propName);
   }
 
   private get rootId(): string {

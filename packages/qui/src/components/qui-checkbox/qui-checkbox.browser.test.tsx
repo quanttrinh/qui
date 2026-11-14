@@ -140,3 +140,23 @@ describe("qui-checkbox", () => {
     expectFocusedDeep(input);
   });
 });
+
+describe("qui-checkbox colors", () => {
+  it("applies checked, outline, and label color custom properties", async () => {
+    const { root } = await render(<qui-checkbox checked>Accept</qui-checkbox>);
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+    const control = queryPartIn(host, "control");
+    const label = queryPartIn(host, "label");
+    control.style.transition = "none";
+
+    host.style.setProperty("--qui-checkbox-checked-color", "rgb(1, 2, 3)");
+    host.style.setProperty("--qui-checkbox-checked-text-color", "rgb(4, 5, 6)");
+    host.style.setProperty("--qui-checkbox-label-color", "rgb(7, 8, 9)");
+    host.style.setProperty("--qui-checkbox-outline-color", "rgb(10, 11, 12)");
+
+    expect(getComputedStyle(control).backgroundColor).toBe("rgb(1, 2, 3)");
+    expect(getComputedStyle(control).borderTopColor).toBe("rgb(1, 2, 3)");
+    expect(getComputedStyle(control).color).toBe("rgb(4, 5, 6)");
+    expect(getComputedStyle(label).color).toBe("rgb(7, 8, 9)");
+  });
+});

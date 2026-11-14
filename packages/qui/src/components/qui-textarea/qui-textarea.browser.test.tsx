@@ -429,3 +429,46 @@ describe("qui-textarea form state", () => {
     expectFocusedDeep(textarea);
   });
 });
+
+describe("qui-textarea render scoping", () => {
+  it("updates a controlled value without re-rendering when the counter is off", async () => {
+    const { root, spies, setProps } = await render(<qui-textarea value="first" />, {
+      spyOn: {
+        components: {
+          "qui-textarea": { lifecycle: ["render"] },
+        },
+      },
+    });
+    const textarea = queryControl<HTMLTextAreaElement>(
+      resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea"),
+      "textarea",
+    );
+    const renders = (): number => spies?.lifecycle.render?.mock.calls.length ?? 0;
+    const baseline = renders();
+
+    await setProps({ value: "second" });
+
+    expect(renders()).toBe(baseline);
+    expect(textarea.value).toBe("second");
+  });
+});
+
+describe("qui-textarea field colors", () => {
+  it("applies field color custom properties", async () => {
+    const { root } = await render(<qui-textarea placeholder="Bio" />);
+    const host = resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea");
+    const control = queryPartIn(host, "control");
+    const textarea = queryControl<HTMLTextAreaElement>(host, "textarea");
+    control.style.transition = "none";
+
+    host.style.setProperty("--qui-field-container-color", "rgb(1, 2, 3)");
+    host.style.setProperty("--qui-field-outline-color", "rgb(4, 5, 6)");
+    host.style.setProperty("--qui-field-text-color", "rgb(7, 8, 9)");
+    host.style.setProperty("--qui-field-placeholder-color", "rgb(10, 11, 12)");
+
+    expect(getComputedStyle(control).backgroundColor).toBe("rgb(1, 2, 3)");
+    expect(getComputedStyle(control).borderTopColor).toBe("rgb(4, 5, 6)");
+    expect(getComputedStyle(textarea).color).toBe("rgb(7, 8, 9)");
+    expect(getComputedStyle(textarea, "::placeholder").color).toBe("rgb(10, 11, 12)");
+  });
+});

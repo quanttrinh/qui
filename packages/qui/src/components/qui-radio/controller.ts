@@ -4,6 +4,7 @@ import {
   KeyedHostRegistry,
   type ReactiveControllerHost,
 } from "../shared/controllers";
+import { uniqueValues } from "../shared/helpers/collection";
 
 interface RadioGroupControllerOptions {
   getValue: () => string | undefined;
@@ -60,14 +61,20 @@ export class RadioGroupController extends ControlledControllerBase<string | unde
   }
 
   focus(value: string, focusVisible: boolean): void {
+    const previous = this.focusState.focusedValue;
     if (this.focusState.focus(value, false, focusVisible)) {
-      this.requestUpdate();
+      this.requestNotify(uniqueValues(previous, value));
     }
   }
 
   blur(): void {
+    const previous = this.focusState.focusedValue;
     if (this.focusState.blur()) {
-      this.requestUpdate();
+      this.requestNotify(uniqueValues(previous));
     }
+  }
+
+  protected override onValueChanged(previous?: string, next?: string): void {
+    this.requestNotify(uniqueValues(previous, next));
   }
 }

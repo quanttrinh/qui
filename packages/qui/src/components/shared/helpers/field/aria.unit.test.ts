@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createReflectionElement, fakeTarget } from "../../../../../tests/test-utils/fake-aria";
 import { applyFieldAria } from "./aria";
@@ -89,5 +89,49 @@ describe("applyFieldAria", () => {
     expect(() => {
       applyFieldAria(undefined, createField(fakeTarget("label")));
     }).not.toThrow();
+  });
+
+  it("skips redundant relationship writes", () => {
+    const control = createControl(false);
+    const field = createField(fakeTarget("label"), [fakeTarget("helper")]);
+    const setAttribute = vi.spyOn(control, "setAttribute");
+
+    applyFieldAria(control, field);
+    expect(control.getAttribute("aria-labelledby")).toBe("label");
+    expect(control.getAttribute("aria-describedby")).toBe("helper");
+
+    setAttribute.mockClear();
+    applyFieldAria(control, field);
+    expect(setAttribute).not.toHaveBeenCalled();
+  });
+
+  it("updates relationships when a target id changes", () => {
+    const control = createControl(false);
+    const label = fakeTarget("label");
+    const field = createField(label);
+
+    applyFieldAria(control, field);
+    label.id = "renamed";
+    applyFieldAria(control, field);
+
+    expect(control.getAttribute("aria-labelledby")).toBe("renamed");
+  });
+
+  it("updates relationships when helper or error hosts register", () => {
+    const control = createControl(false);
+    const helpers: HTMLElement[] = [];
+    const errors: HTMLElement[] = [];
+    const field = createField(undefined, helpers, errors);
+
+    applyFieldAria(control, field);
+    expect(control.hasAttribute("aria-describedby")).toBe(false);
+    expect(control.hasAttribute("aria-errormessage")).toBe(false);
+
+    helpers.push(fakeTarget("helper"));
+    errors.push(fakeTarget("error"));
+    applyFieldAria(control, field);
+
+    expect(control.getAttribute("aria-describedby")).toBe("helper");
+    expect(control.getAttribute("aria-errormessage")).toBe("error");
   });
 });

@@ -163,257 +163,9 @@ or per-tag network waterfall.
 
 ## Components
 
-- `<qui-button>` — filled, tonal, elevated, outlined and text variants; anchor mode
-- `<qui-icon>` — inline SVG path and viewBox
-- `<qui-card>` — elevated, filled and outlined; named `title` / `description` / `actions` slots
-- `<qui-checkbox>` — checked, indeterminate, disabled, required, `checkedchange`
-- `<qui-switch>` — checked, disabled, required, `checkedchange`
-- `<qui-radio-group>` + `<qui-radio>` — orientation, disabled, required, `valuechange`
-- `<qui-field>` + label, helper text, error text and required indicator parts
-- `<qui-input>` — text/tel/search/password/url/number, masks, text case,
-  prefix/suffix slots, number stepping, password visibility, `valuechange`
-- `<qui-textarea>` — multi-line text, auto-growth, character counter, native
-  resize modes, `valuechange`
-- `<qui-accordion>` + item, trigger and content parts
-- `<qui-tabs>` + tab list, tab trigger and tab panel parts
-- `<qui-dialog>` + trigger, content, title, description, actions and close parts
-- `<qui-select>` and `<qui-combobox>` — child `qui-option` data sources or `items`
-  properties; measured virtualized rows in a native popover
-- `<qui-popover>` — native popover positioned with JavaScript
-
-### Reading current values
-
-Controlled `value` / `checked` props stay unset for uncontrolled controls, so
-read the live value with the component methods instead of reaching into shadow
-DOM:
-
-```ts
-const input = document.querySelector("qui-input");
-await input.getValue(); // current native input value
-
-const checkbox = document.querySelector("qui-checkbox");
-await checkbox.getChecked(); // true | false | "indeterminate"
-```
-
-`getValue()` is available on `qui-input`, `qui-textarea`, `qui-select`,
-`qui-combobox`, and `qui-radio-group`. `getChecked()` is available on
-`qui-checkbox` and `qui-switch`. Both read the live control state, including
-uncontrolled edits; `getValue()` returns the value used for form submission.
-
-### Icons
-
-`qui-icon` renders inline SVG from a path and viewBox, so no icon font is
-required:
-
-```html
-<qui-button>
-    <qui-icon view-box="0 0 24 24" path="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5z"></qui-icon>
-    Add item
-</qui-button>
-
-<qui-button icon-only label="Add">
-    <qui-icon view-box="0 0 24 24" path="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5z"></qui-icon>
-</qui-button>
-```
-
-`view-box` defaults to `0 0 24 24`. Material Symbols paths use
-`view-box="0 -960 960 960"`. Omit `label` for a decorative icon; provide it to
-expose an accessible name on the icon box. The icon inherits `font-size` and
-`color`. Its host uses `display: contents`; the inner icon box carries the
-accessible role and can be styled or resized through
-`qui-icon::part(icon)`. Any icon element can be used in a qui slot, so other
-icon packages work too.
-
-## Field composition
-
-`qui-field` owns IDs, label wiring, validation and disabled/read-only state.
-Descendant controls consume the field through a DOM context.
-
-```html
-<qui-field id="email" required>
-    <qui-field-label>Email</qui-field-label>
-    <qui-input autocomplete="email" placeholder="you@example.com"></qui-input>
-    <qui-field-helper-text>We never share it.</qui-field-helper-text>
-</qui-field>
-```
-
-Use one field per control.
-
-## Forms
-
-Checkbox, switch, radio group, input, textarea, select and combobox are
-form-associated custom elements. They support:
-
-- form values and reset
-- `required`, `invalid`, `disabled` and `readOnly`
-- `qui-field` inheritance
-- state restoration
-- native form validation hooks
-
-Register every tag used by the form. For a field with an input:
-
-```ts
-defineComponents(defineField, defineFieldLabel, defineFieldHelperText, defineInput);
-```
-
-### Input masks
-
-Use `mask` on non-number inputs. Other characters are inserted automatically:
-
-```html
-<qui-input mask="(###) ###-####"></qui-input>
-<qui-input mask="AA-####"></qui-input>
-<qui-input mask="##/##/####"></qui-input>
-```
-
-| Token     | Matches                              |
-| --------- | ------------------------------------ |
-| `#`       | digit                                |
-| `A`       | letter                               |
-| `W`       | word character                       |
-| `?`       | any character                        |
-| `[ ... ]` | character class                      |
-| `{n}`     | repeat the previous token            |
-| `\`       | display the next character literally |
-
-Backslash always means “literal”, including for token characters:
-
-```html
-<qui-input mask="\A-####"></qui-input>
-<!-- A-1234 -->
-<qui-input mask="\W-####"></qui-input>
-<!-- W-1234 -->
-<qui-input mask="\#-####"></qui-input>
-<!-- #-1234 -->
-```
-
-Variable-width repeats such as `*`, `+`, `{n,}`, and `{n,m}` are not supported
-yet.
-
-For advanced JavaScript usage, set the property-only `maskExpression` with a
-native Maskito mask. It takes precedence over `mask` and is not available as an
-HTML attribute:
-
-```ts
-const input = document.querySelector("qui-input");
-input.maskExpression = [/\d/, /\d/, "-", /\d/, /\d/];
-```
-
-### Input text case
-
-Use `text-case` to normalize the value itself, not just its appearance:
-
-```html
-<qui-input text-case="uppercase"></qui-input>
-<qui-input text-case="lowercase"></qui-input>
-<qui-input text-case="uppercase" mask="AA-####"></qui-input>
-```
-
-Casing runs before masking, so mask literals keep their authored case and the
-formatted value, the unmasked value and form submission all use the normalized
-case. For example, `ab1234` becomes `AB-1234` with the masked example above.
-`text-case` is ignored for `number` inputs.
-
-`autocapitalize` on the inner input is derived from `text-case`: `characters`
-for uppercase and `none` for lowercase. Set `autocapitalize-hint` to override
-that hint, e.g. `autocapitalize-hint="words"`.
-
-If you only need display casing and want to preserve the original form value, use
-CSS instead:
-
-```css
-qui-input::part(input) {
-    text-transform: uppercase;
-}
-```
-
-### Number inputs
-
-`input-type="number"` renders a Maskito-managed text input with numeric or
-decimal keyboard hints. It accepts digits, an optional leading `-`, and a single
-decimal separator; commas are normalized to `.`, and leading zeros are removed.
-Number inputs default to `inputmode="numeric"` but still accept decimal values —
-set `input-mode-hint="numeric"` to reject decimal punctuation.
-
-`min`, `max`, and `step` are validated by the component and surface through the
-form's constraint validation. The rendered stepper buttons use the same bounds.
-
-```html
-<qui-input input-type="number" min="1" max="10" step="1" value="1"></qui-input>
-```
-
-Use `step="any"` to allow arbitrary decimal values. The stepper buttons still
-increment and decrement by `1` in that mode.
-
-Numbers are parsed with the document/browser locale by default. Use
-`number-locale` to override it. Grouping separators are stripped and the
-decimal separator is normalized to `.` internally, so `value` and
-`valuechange` always use a dot decimal.
-
-```html
-<qui-input input-type="number" number-locale="de-DE"></qui-input>
-```
-
-```html
-<qui-input input-type="number" step="any"></qui-input>
-```
-
-### Native input hints
-
-Additional native hints are forwarded when they apply to the selected input
-type:
-
-```html
-<qui-input input-type="url" keyboard-hint="go"></qui-input> <qui-input spellcheck-hint></qui-input>
-```
-
-- `keyboard-hint` is forwarded for every input type, but is most useful for
-  text-like inputs and virtual keyboards.
-- `spellcheck-hint` applies to `text` and `search`.
-
-`spellcheck-hint` is boolean. In HTML, presence means `true`; set the property
-to `false` from JavaScript to disable spellcheck.
-
-For text-like inputs, `input-mode-hint="numeric"` keeps digits and a leading
-`-` when `min` is unset or negative; a non-negative `min` strips the minus.
-`input-mode-hint="decimal"` keeps digits, `-`, `.`, and `,` under the same
-minus rules; it does not parse separators, so pasted grouped values keep their
-exact formatting. Leading zeros are removed and repeated `-`, `.`, or `,`
-characters are collapsed. Masks do not preserve a leading sign or decimal
-separator, so use decimal mode without a mask. When filtering changes a
-controlled `value`, the component updates `value` and emits `valuechange` with
-the normalized value. Filtering applies when the effective input mode is
-`numeric` or `decimal` (from `input-mode-hint`) and no text mask is configured,
-and to every number input.
-
-```html
-<qui-input input-mode-hint="numeric"></qui-input> <qui-input input-mode-hint="decimal"></qui-input>
-```
-
-### Long text
-
-Use `qui-textarea` for multi-line values. It shares the field, form and validation
-behavior of `qui-input`.
-
-```html
-<qui-field id="bio">
-    <qui-field-label>Bio</qui-field-label>
-    <qui-textarea
-        rows="5"
-        max-length="500"
-        show-count
-        resize="auto"
-        placeholder="Write a short bio..."
-    ></qui-textarea>
-    <qui-field-helper-text>Keep it under 500 characters.</qui-field-helper-text>
-</qui-field>
-```
-
-`resize` accepts `none`, `vertical` (the default) or `auto`. Auto-growth uses
-`rows` as the minimum height and optionally caps growth with `max-rows`.
-`show-count` renders a character counter; with `max-length` it displays
-`current/max`. If `max-rows` is smaller than `rows`, `rows` remains the minimum
-height.
+Each component is documented next to its source in
+[`src/components`](./src/components/README.md). That index lists every tag and
+links to usage, properties, events, methods, slots, CSS parts, and behavior.
 
 ## Registering components
 
@@ -970,7 +722,7 @@ host in the constructor and registers itself, so components only declare the
 fields:
 
 ```ts
-export class QuiExample extends ReactiveControlBase {
+export class QuiExample extends Mixin(ControllerHostMixin) {
     @Element() host!: HTMLQuiExampleElement;
 
     private readonly form = new FormController(this, {
@@ -980,11 +732,19 @@ export class QuiExample extends ReactiveControlBase {
 }
 ```
 
-`ReactiveControllerBase` provides `hostElement` and `requestUpdate()`.
-`ReactiveControlBase` forwards the Stencil lifecycle hooks, implements
-`addController()` / `removeController()`, and schedules renders with
-`forceUpdate()`. Override `requestUpdate()` in a component when a controller
+`ReactiveControllerBase` provides `hostElement`, `requestUpdate()`, and
+`requestNotify()`. `ControllerHostMixin` forwards the Stencil lifecycle hooks,
+implements `addController()` / `removeController()`, and schedules renders with
+`forceUpdate()`. Override `onRequestUpdate()` in a component when a controller
 change also needs to notify context subscribers.
+
+Providers whose root template only reads props can notify without rendering:
+`requestNotify()` calls `notifyUpdate()` on the host, which runs
+`onRequestUpdate()` without `forceUpdate()` (hosts that only implement
+`requestUpdate()` fall back to a render). Listener stores accept a key getter
+per subscriber, and `ContextPartController` forwards its `getKey` option, so
+notifying with `uniqueValues(...)` re-renders only the parts whose value
+changed instead of every part in the subtree.
 
 ## Implementation notes
 

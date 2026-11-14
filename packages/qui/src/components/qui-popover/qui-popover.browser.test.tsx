@@ -1,4 +1,4 @@
-import { describe, expect, h, it, render } from "@stencil/vitest";
+import { describe, expect, getComponentSpies, h, it, render } from "@stencil/vitest";
 
 import { queryPartIn, resolveHost } from "../../../tests/test-utils/component";
 import { settle } from "../../../tests/test-utils/dom-ready";
@@ -77,5 +77,53 @@ describe("qui-popover", () => {
     await waitForChanges();
 
     expect(spy.lastEvent?.detail).toEqual({ reason: "outside" });
+  });
+});
+
+describe("qui-popover render scoping", () => {
+  it("skips the root when a positioning prop changes", async () => {
+    const { root, waitForChanges } = await render(
+      <div>
+        <button type="button">Anchor</button>
+        <qui-popover>Popover content</qui-popover>
+      </div>,
+      {
+        spyOn: {
+          components: {
+            "qui-popover": { lifecycle: ["render"] },
+          },
+        },
+      },
+    );
+    const popover = resolveHost<HTMLQuiPopoverElement>(root, "qui-popover");
+    const renders = (): number =>
+      getComponentSpies(popover)?.lifecycle.render?.mock.calls.length ?? 0;
+    const baseline = renders();
+
+    popover.placement = "top-start";
+    popover.offset = 12;
+    popover.sameWidth = true;
+    await waitForChanges();
+
+    expect(renders()).toBe(baseline);
+  });
+});
+
+describe("qui-popover colors", () => {
+  it("applies surface and border color custom properties", async () => {
+    const { root } = await render(
+      <div>
+        <button type="button">Anchor</button>
+        <qui-popover open>Popover content</qui-popover>
+      </div>,
+    );
+    const popover = resolveHost<HTMLQuiPopoverElement>(root, "qui-popover");
+    const panel = queryPartIn(popover, "content");
+
+    popover.style.setProperty("--qui-popover-surface-color", "rgb(1, 2, 3)");
+    popover.style.setProperty("--qui-popover-border-color", "rgb(4, 5, 6)");
+
+    expect(getComputedStyle(panel).backgroundColor).toBe("rgb(1, 2, 3)");
+    expect(getComputedStyle(panel).borderTopColor).toBe("rgb(4, 5, 6)");
   });
 });

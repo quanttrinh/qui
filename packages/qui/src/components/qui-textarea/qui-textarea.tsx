@@ -42,6 +42,9 @@ export interface TextareaValueDetails {
   value: string;
 }
 
+/** Props applied directly to the native textarea; the template does not read them. */
+const IMPERATIVE_PROPS = new Set(["value", "name"]);
+
 /**
  * A multi-line text input with optional auto-growth and a character counter.
  * When nested in `qui-field`, it inherits the field ids and state.
@@ -164,7 +167,10 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
     applyFieldAria(this.textareaEl, this.form.fieldApi, {
       describedBy: this.counterEl === undefined ? [] : [this.counterEl],
     });
-    this.scheduleAutoResize();
+  }
+
+  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
+    return !IMPERATIVE_PROPS.has(propName);
   }
 
   disconnectedCallback(): void {
@@ -255,7 +261,9 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
     if (this.textareaEl !== undefined && this.textareaEl.value !== value) {
       this.textareaEl.value = value;
     }
-    this.counterValue = value;
+    if (this.showCount) {
+      this.counterValue = value;
+    }
     this.form.sync();
     this.scheduleAutoResize();
   }

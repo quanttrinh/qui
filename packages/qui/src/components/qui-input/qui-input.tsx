@@ -72,6 +72,9 @@ export interface InputValueDetails {
   unmaskedValue: string;
 }
 
+/** Props applied directly to the native input; the template does not read them. */
+const IMPERATIVE_PROPS = new Set(["value", "name"]);
+
 /**
  * A single-line input with optional masks, number stepping, and a password
  * visibility toggle. When nested in `qui-field`, it inherits the field ids and
@@ -239,6 +242,10 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   componentDidRender(): void {
     super.componentDidRender();
     applyFieldAria(this.inputEl, this.form.fieldApi);
+  }
+
+  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
+    return !IMPERATIVE_PROPS.has(propName);
   }
 
   disconnectedCallback(): void {

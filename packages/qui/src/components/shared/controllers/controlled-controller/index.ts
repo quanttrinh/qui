@@ -54,20 +54,31 @@ export abstract class ControlledControllerBase<TValue> extends ReactiveControlle
 
   /** Restores the initial value without notifying. */
   reset(): void {
+    const previous = this.value;
     this.current = this.copy(this.initial);
-    this.requestUpdate();
+    this.onValueChanged(previous, this.current);
   }
 
   /** Restores an external value without notifying. */
   restore(value: TValue): void {
+    const previous = this.value;
     this.current = this.copy(value);
-    this.requestUpdate();
+    this.onValueChanged(previous, this.current);
   }
 
   /** Replaces the internal state, notifies, and schedules a render. */
   protected commit(value: TValue): void {
+    const previous = this.value;
     this.current = this.copy(value);
     this.stateOptions.onChange(this.current);
+    this.onValueChanged(previous, this.current);
+  }
+
+  /**
+   * Called after internal state changes. The default schedules a host render;
+   * context-only hosts override it to notify affected parts without rendering.
+   */
+  protected onValueChanged(_previous: TValue, _next: TValue): void {
     this.requestUpdate();
   }
 

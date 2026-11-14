@@ -3,6 +3,7 @@ import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@sten
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
+import { token } from "../../../styled-system/tokens";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 
 export type CardVariant = "elevated" | "filled" | "outlined";
@@ -17,16 +18,16 @@ const styles = {
     rounded: "2xl",
     transition: "box-shadow 200ms, background-color 200ms",
     "&[data-variant=elevated]": {
-      bgColor: "surfaceContainerLow",
+      bgColor: `var(--qui-card-container-color, ${token("colors.surfaceContainerLow")})`,
       shadow: "sm",
     },
     "&[data-variant=filled]": {
-      bgColor: "surfaceContainerHighest",
+      bgColor: `var(--qui-card-container-color, ${token("colors.surfaceContainerHighest")})`,
     },
     "&[data-variant=outlined]": {
-      bgColor: "surface",
+      bgColor: `var(--qui-card-container-color, ${token("colors.surface")})`,
       borderWidth: "1px",
-      borderColor: "outlineVariant",
+      borderColor: `var(--qui-card-border-color, ${token("colors.outlineVariant")})`,
     },
   }),
   title: css({

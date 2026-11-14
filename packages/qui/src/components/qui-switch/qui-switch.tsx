@@ -17,6 +17,7 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
+import { token } from "../../../styled-system/tokens";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { CheckIcon } from "../qui-icon/icons";
 import {
@@ -31,6 +32,9 @@ import { nextId } from "../shared/helpers/dom/id";
 import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
 import { ControllerHostMixin, FormControlMixin } from "../shared/mixins";
 import { focusRing } from "../shared/styles";
+
+/** Props that only feed form submission; the template does not read them. */
+const FORM_ONLY_PROPS = new Set(["name"]);
 
 const styles = {
   host: css({ display: "inline-flex" }),
@@ -51,15 +55,20 @@ const styles = {
     rounded: "full",
     borderWidth: "0.5",
     borderStyle: "solid",
-    borderColor: "outline",
-    bgColor: "surfaceContainerHighest",
+    borderColor: `var(--qui-switch-outline-color, ${token("colors.outline")})`,
+    bgColor: `var(--qui-switch-track-color, ${token("colors.surfaceContainerHighest")})`,
     transition: "background-color 150ms ease, border-color 150ms ease",
     "&[data-state=checked]": {
-      bgColor: "primary",
-      borderColor: "primary",
+      bgColor: `var(--qui-switch-checked-track-color, ${token("colors.primary")})`,
+      borderColor: `var(--qui-switch-checked-track-color, ${token("colors.primary")})`,
     },
-    "&[data-invalid]": { borderColor: "error" },
-    "&[data-focus-visible]": focusRing,
+    "&[data-invalid]": {
+      borderColor: `var(--qui-switch-error-color, ${token("colors.error")})`,
+    },
+    "&[data-focus-visible]": {
+      ...focusRing,
+      ringColor: `var(--qui-switch-focus-ring-color, ${token("colors.primary")})`,
+    },
   }),
   thumb: css({
     pos: "absolute",
@@ -72,8 +81,8 @@ const styles = {
     h: "4",
     rounded: "full",
     overflow: "hidden",
-    color: "primary",
-    bgColor: "outline",
+    color: `var(--qui-switch-thumb-icon-color, ${token("colors.primary")})`,
+    bgColor: `var(--qui-switch-thumb-color, ${token("colors.outline")})`,
     transform: "translateY(-50%)",
     transition:
       "inset-inline-start 150ms ease, width 150ms ease, height 150ms ease, background-color 150ms ease",
@@ -82,7 +91,7 @@ const styles = {
       start: "calc(100% - 1.65rem)",
       w: "6",
       h: "6",
-      bgColor: "onPrimary",
+      bgColor: `var(--qui-switch-checked-thumb-color, ${token("colors.onPrimary")})`,
       "--thumb-icon-opacity": "1",
     },
   }),
@@ -94,7 +103,7 @@ const styles = {
     cursor: "pointer",
     textStyle: "sm",
     fontWeight: "medium",
-    color: "onSurface",
+    color: `var(--qui-switch-label-color, ${token("colors.onSurface")})`,
   }),
   input: css({
     pos: "absolute",
@@ -203,6 +212,10 @@ export class QuiSwitch extends Mixin(ControllerHostMixin, FormControlMixin) {
     applyFieldAria(this.inputEl, this.form.fieldApi, {
       labelledBy: this.labelEl === undefined ? [] : [this.labelEl],
     });
+  }
+
+  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
+    return !FORM_ONLY_PROPS.has(propName);
   }
 
   /** Moves focus to the internal native input. */

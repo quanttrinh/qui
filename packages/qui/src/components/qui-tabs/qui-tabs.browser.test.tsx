@@ -1,4 +1,4 @@
-import { describe, expect, h, it, render } from "@stencil/vitest";
+import { describe, expect, getComponentSpies, h, it, render } from "@stencil/vitest";
 
 import { expectLinked } from "../../../tests/test-utils/aria";
 import { queryHost, queryPartIn } from "../../../tests/test-utils/component";
@@ -38,6 +38,10 @@ function tabs(root: HTMLElement): TabParts[] {
   return [...root.querySelectorAll<HTMLElement>("qui-tab-trigger")].map((trigger) =>
     tabParts(root, trigger),
   );
+}
+
+function renderCount(element: HTMLElement): number {
+  return getComponentSpies(element)?.lifecycle.render?.mock.calls.length ?? 0;
 }
 
 function expectTabLinked(tab: TabParts): void {
@@ -211,6 +215,47 @@ describe("qui-tabs controlled behavior", () => {
     expect(parts[2].trigger).toHaveAttribute("aria-selected", "true");
   });
 
+  it("updates children when a context-only prop changes", async () => {
+    const { root, setProps, spyOnEvent, waitForChanges } = await render(
+      <qui-tabs defaultValue="one">
+        <qui-tab-list>
+          <qui-tab-trigger value="one">One</qui-tab-trigger>
+          <qui-tab-trigger value="two">Two</qui-tab-trigger>
+        </qui-tab-list>
+        <qui-tab-panel value="one">One panel</qui-tab-panel>
+        <qui-tab-panel value="two">Two panel</qui-tab-panel>
+      </qui-tabs>,
+    );
+    const spy = spyOnEvent("valuechange");
+    const parts = tabs(root);
+
+    await setProps({ deselectable: true });
+    parts[0].trigger.click();
+    await waitForChanges();
+
+    expect(spy).toHaveReceivedEventDetail({ value: undefined });
+    expect(parts[0].trigger).toHaveAttribute("aria-selected", "false");
+    expect(parts[0].panel.hidden).toBe(true);
+  });
+
+  it("re-renders the root when a template prop changes", async () => {
+    const { root, setProps } = await render(
+      <qui-tabs defaultValue="one">
+        <qui-tab-list>
+          <qui-tab-trigger value="one">One</qui-tab-trigger>
+        </qui-tab-list>
+        <qui-tab-panel value="one">One panel</qui-tab-panel>
+      </qui-tabs>,
+    );
+    const part = queryPartIn(root, "root");
+
+    expect(part.dataset.variant).toBe("primary");
+
+    await setProps({ variant: "secondary" });
+
+    expect(part.dataset.variant).toBe("secondary");
+  });
+
   it("navigates with arrow, Home, and End keys", async () => {
     const { root, waitForChanges } = await render(
       <qui-tabs defaultValue="one">
@@ -241,5 +286,82 @@ describe("qui-tabs controlled behavior", () => {
     await waitForChanges();
     expectFocusedDeep(buttons[0]);
     expect(buttons[0]).toHaveAttribute("aria-selected", "true");
+  });
+});
+
+describe("qui-tabs render scoping", () => {
+  it("skips unaffected triggers and panels when the selection changes", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-tabs defaultValue="one">
+        <qui-tab-list>
+          <qui-tab-trigger value="one">One</qui-tab-trigger>
+          <qui-tab-trigger value="two">Two</qui-tab-trigger>
+          <qui-tab-trigger value="three">Three</qui-tab-trigger>
+        </qui-tab-list>
+        <qui-tab-panel value="one">One panel</qui-tab-panel>
+        <qui-tab-panel value="two">Two panel</qui-tab-panel>
+        <qui-tab-panel value="three">Three panel</qui-tab-panel>
+      </qui-tabs>,
+      {
+        spyOn: {
+          components: {
+            "qui-tab-trigger": { lifecycle: ["render"] },
+            "qui-tab-panel": { lifecycle: ["render"] },
+          },
+        },
+      },
+    );
+    const triggerHosts = [...root.querySelectorAll<HTMLElement>("qui-tab-trigger")];
+    const panelHosts = [...root.querySelectorAll<HTMLElement>("qui-tab-panel")];
+    const baselineTriggers = triggerHosts.map((host) => renderCount(host));
+    const baselinePanels = panelHosts.map((host) => renderCount(host));
+
+    tabs(root)[1]?.trigger.click();
+    await waitForChanges();
+
+    const triggerDeltas = triggerHosts.map(
+      (host, index) => renderCount(host) - (baselineTriggers[index] ?? 0),
+    );
+    const panelDeltas = panelHosts.map(
+      (host, index) => renderCount(host) - (baselinePanels[index] ?? 0),
+    );
+    expect(triggerDeltas[0]).toBeGreaterThan(0);
+    expect(triggerDeltas[1]).toBeGreaterThan(0);
+    expect(triggerDeltas[2]).toBe(0);
+    expect(panelDeltas[0]).toBeGreaterThan(0);
+    expect(panelDeltas[1]).toBeGreaterThan(0);
+    expect(panelDeltas[2]).toBe(0);
+  });
+});
+
+describe("qui-tabs colors", () => {
+  it("applies selected, indicator, border, and panel color custom properties", async () => {
+    const { root } = await render(
+      <qui-tabs defaultValue="one">
+        <qui-tab-list>
+          <qui-tab-trigger value="one">One</qui-tab-trigger>
+        </qui-tab-list>
+        <qui-tab-panel value="one">Panel</qui-tab-panel>
+      </qui-tabs>,
+    );
+    const tabsHost = root;
+    const triggerHost = queryHost(root, "qui-tab-trigger");
+    const listHost = queryHost(root, "qui-tab-list");
+    const panelHost = queryHost(root, "qui-tab-panel");
+    const trigger = queryPartIn<HTMLButtonElement>(triggerHost, "trigger");
+    const indicator = queryPartIn(triggerHost, "indicator");
+    const list = queryPartIn(listHost, "list");
+    const panel = queryPartIn(panelHost, "panel");
+    trigger.style.transition = "none";
+
+    tabsHost.style.setProperty("--qui-tabs-label-selected-color", "rgb(1, 2, 3)");
+    tabsHost.style.setProperty("--qui-tabs-indicator-color", "rgb(4, 5, 6)");
+    tabsHost.style.setProperty("--qui-tabs-list-border-color", "rgb(7, 8, 9)");
+    tabsHost.style.setProperty("--qui-tabs-panel-text-color", "rgb(10, 11, 12)");
+
+    expect(getComputedStyle(trigger).color).toBe("rgb(1, 2, 3)");
+    expect(getComputedStyle(indicator).backgroundColor).toBe("rgb(4, 5, 6)");
+    expect(getComputedStyle(list).borderBlockEndColor).toBe("rgb(7, 8, 9)");
+    expect(getComputedStyle(panel).color).toBe("rgb(10, 11, 12)");
   });
 });

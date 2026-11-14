@@ -13,6 +13,7 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
+import { token } from "../../../styled-system/tokens";
 import { ContextPartController, createListenerStore } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { ControllerHostMixin } from "../shared/mixins";
@@ -29,7 +30,7 @@ const styles = {
   host: css({ display: "block" }),
   item: css({
     borderBlockEndWidth: "1px",
-    borderColor: "outlineVariant",
+    borderColor: `var(--qui-accordion-border-color, ${token("colors.outlineVariant")})`,
     "&:last-child": { borderBlockEndWidth: "0" },
     "&[data-disabled]": { opacity: 0.38, cursor: "not-allowed" },
   }),
@@ -58,6 +59,7 @@ export class QuiAccordionItem extends Mixin(ControllerHostMixin) {
   protected readonly contextPart = new ContextPartController(this, {
     key: "accordion",
     consume: consumeAccordion,
+    getKey: () => this.value,
     setup: (accordion): (() => void) => {
       provideAccordionItem(this.host, this.context(accordion));
       return () => {
@@ -88,9 +90,9 @@ export class QuiAccordionItem extends Mixin(ControllerHostMixin) {
       ...accordion,
       item: () => this.item(),
       isItemDisabled: () => this.isDisabled(accordion),
-      subscribe: (listener: () => void) => {
+      subscribe: (listener, key) => {
         const stopItem = this.listeners.subscribe(listener);
-        const stopAccordion = accordion.subscribe(listener);
+        const stopAccordion = accordion.subscribe(listener, key);
         return () => {
           stopItem();
           stopAccordion();

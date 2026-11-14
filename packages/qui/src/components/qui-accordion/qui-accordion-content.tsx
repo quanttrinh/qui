@@ -3,11 +3,13 @@ import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@ste
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
+import { token } from "../../../styled-system/tokens";
 import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
 import { setAriaControls, setAriaLabelledBy } from "../shared/helpers/aria/aria";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { ControllerHostMixin } from "../shared/mixins";
-import { consumeAccordionItem } from "./accordion-context";
+import { consumeAccordionItem, type AccordionItemContext } from "./accordion-context";
+import { type AccordionTriggerRegistration } from "./controller";
 
 const styles = {
   host: css({ display: "block" }),
@@ -15,6 +17,7 @@ const styles = {
     display: "grid",
     gridTemplateRows: "0fr",
     opacity: 0,
+    color: `var(--qui-accordion-content-text-color, ${token("colors.onSurfaceVariant")})`,
     transition: "grid-template-rows 200ms ease, opacity 200ms ease",
     "&[data-state=open]": {
       gridTemplateRows: "1fr",
@@ -33,7 +36,6 @@ const styles = {
     px: "4",
     py: "3",
     fontSize: "sm",
-    color: "onSurfaceVariant",
   }),
 };
 
@@ -52,12 +54,19 @@ export class QuiAccordionContent extends Mixin(ControllerHostMixin) {
   @Element() host!: HTMLQuiAccordionContentElement;
 
   private contentEl?: HTMLElement;
+  private ariaContentEl?: HTMLElement;
+  private ariaTrigger?: AccordionTriggerRegistration;
   private readonly registration = new RegistrationReconciler();
 
   protected readonly contextPart = new ContextPartController(this, {
     key: "accordion-item",
     consume: consumeAccordionItem,
+    getKey: () => this.item?.item().value,
   });
+
+  private get item(): AccordionItemContext | undefined {
+    return this.contextPart.context;
+  }
 
   componentDidRender(): void {
     this.syncRegistration();
@@ -79,12 +88,17 @@ export class QuiAccordionContent extends Mixin(ControllerHostMixin) {
   }
 
   private syncAria(): void {
-    const item = this.contextPart.context;
+    const { item } = this;
     const { contentEl } = this;
     if (!item || !contentEl) {
       return;
     }
     const trigger = item.getTrigger(item.item().value);
+    if (this.ariaContentEl === contentEl && this.ariaTrigger === trigger) {
+      return;
+    }
+    this.ariaContentEl = contentEl;
+    this.ariaTrigger = trigger;
     setAriaLabelledBy(contentEl, trigger === undefined ? [] : [trigger.host]);
     if (trigger !== undefined) {
       // Set the reverse relationship so a late trigger registration is reflected too.

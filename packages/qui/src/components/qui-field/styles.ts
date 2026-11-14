@@ -1,5 +1,7 @@
 import { css } from "#styled-system/css";
 
+import { token } from "../../../styled-system/tokens";
+
 export const fieldStyles = {
   host: css({ display: "block" }),
   root: css({
@@ -11,16 +13,16 @@ export const fieldStyles = {
   label: css({
     textStyle: "sm",
     fontWeight: "medium",
-    color: "onSurface",
+    color: `var(--qui-field-label-color, ${token("colors.onSurface")})`,
     "&[data-disabled]": { opacity: 0.38 },
   }),
   helperText: css({
     fontSize: "xs",
-    color: "onSurfaceVariant",
+    color: `var(--qui-field-helper-color, ${token("colors.onSurfaceVariant")})`,
   }),
   errorText: css({
     fontSize: "xs",
-    color: "error",
+    color: `var(--qui-field-error-text-color, ${token("colors.error")})`,
     "&:not([data-invalid])": { display: "none" },
   }),
 };

@@ -2,6 +2,7 @@ import { h, type VNode } from "@stencil/core";
 
 import { css } from "#styled-system/css";
 
+import { token } from "../../../../../styled-system/tokens";
 import { CheckIcon } from "../../../qui-icon/icons";
 import { type PopoverDismissEvent } from "../../../qui-popover/qui-popover";
 import { type ListEntry, type ListWindow } from "../list-window/model";
@@ -19,9 +20,9 @@ export const listStyles = {
     overflow: "hidden",
     w: "full",
     py: "1.5",
-    bgColor: "surface",
+    bgColor: `var(--qui-option-list-container-color, ${token("colors.surface")})`,
     borderWidth: "1px",
-    borderColor: "outlineVariant",
+    borderColor: `var(--qui-option-list-border-color, ${token("colors.outlineVariant")})`,
     rounded: "xl",
     shadow: "md",
   }),
@@ -37,7 +38,7 @@ export const listStyles = {
     px: "3",
     py: "2",
     fontSize: "sm",
-    color: "onSurfaceVariant",
+    color: `var(--qui-option-list-empty-color, ${token("colors.onSurfaceVariant")})`,
   }),
   srOnly: css({
     pos: "absolute",
@@ -58,12 +59,14 @@ export const listStyles = {
     minH: "10",
     px: "3",
     fontSize: "sm",
-    color: "onSurface",
+    color: `var(--qui-option-list-option-color, ${token("colors.onSurface")})`,
     cursor: "pointer",
-    "&[data-highlighted]": { bgColor: "surfaceContainerHighest" },
+    "&[data-highlighted]": {
+      bgColor: `var(--qui-option-list-option-hover-color, ${token("colors.surfaceContainerHighest")})`,
+    },
     "&[data-state=checked]": {
-      bgColor: "secondaryContainer",
-      color: "onSecondaryContainer",
+      bgColor: `var(--qui-option-list-option-selected-color, ${token("colors.secondaryContainer")})`,
+      color: `var(--qui-option-list-option-selected-text-color, ${token("colors.onSecondaryContainer")})`,
       fontWeight: "medium",
     },
     "&[data-disabled]": { opacity: 0.38, cursor: "not-allowed" },
@@ -80,7 +83,7 @@ export const listStyles = {
     justifyContent: "center",
     flexShrink: 0,
     w: "5",
-    color: "primary",
+    color: `var(--qui-option-list-indicator-color, ${token("colors.primary")})`,
     fontSize: "sm",
   }),
 };

@@ -17,6 +17,7 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
+import { token } from "../../../styled-system/tokens";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { CheckIcon, RemoveIcon } from "../qui-icon/icons";
 import {
@@ -31,6 +32,9 @@ import { nextId } from "../shared/helpers/dom/id";
 import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
 import { ControllerHostMixin, FormControlMixin } from "../shared/mixins";
 import { focusRing, requiredIndicatorStyle } from "../shared/styles";
+
+/** Props that only feed form submission; the template does not read them. */
+const FORM_ONLY_PROPS = new Set(["name"]);
 
 const styles = {
   host: css({ display: "inline-flex" }),
@@ -53,18 +57,25 @@ const styles = {
     rounded: "sm",
     borderWidth: "0.5",
     borderStyle: "solid",
-    borderColor: "outline",
+    borderColor: `var(--qui-checkbox-outline-color, ${token("colors.outline")})`,
     color: "transparent",
     bgColor: "transparent",
     transition: "background-color 150ms, border-color 150ms, color 150ms",
-    "&:hover": { borderColor: "onSurface" },
-    "&[data-state=checked], &[data-state=indeterminate]": {
-      borderColor: "primary",
-      bgColor: "primary",
-      color: "onPrimary",
+    "&:hover": {
+      borderColor: `var(--qui-checkbox-hover-outline-color, ${token("colors.onSurface")})`,
     },
-    "&[data-invalid]": { borderColor: "error" },
-    "&[data-focus-visible]": focusRing,
+    "&[data-state=checked], &[data-state=indeterminate]": {
+      borderColor: `var(--qui-checkbox-checked-color, ${token("colors.primary")})`,
+      bgColor: `var(--qui-checkbox-checked-color, ${token("colors.primary")})`,
+      color: `var(--qui-checkbox-checked-text-color, ${token("colors.onPrimary")})`,
+    },
+    "&[data-invalid]": {
+      borderColor: `var(--qui-checkbox-error-color, ${token("colors.error")})`,
+    },
+    "&[data-focus-visible]": {
+      ...focusRing,
+      ringColor: `var(--qui-checkbox-focus-ring-color, ${token("colors.primary")})`,
+    },
   }),
   indicator: css({
     display: "flex",
@@ -77,7 +88,7 @@ const styles = {
     cursor: "pointer",
     textStyle: "sm",
     fontWeight: "medium",
-    color: "onSurface",
+    color: `var(--qui-checkbox-label-color, ${token("colors.onSurface")})`,
   }),
   input: css({
     pos: "absolute",
@@ -189,6 +200,10 @@ export class QuiCheckbox extends Mixin(ControllerHostMixin, FormControlMixin) {
     applyFieldAria(this.inputEl, this.form.fieldApi, {
       labelledBy: this.labelEl === undefined ? [] : [this.labelEl],
     });
+  }
+
+  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
+    return !FORM_ONLY_PROPS.has(propName);
   }
 
   /** Moves focus to the internal native input. */

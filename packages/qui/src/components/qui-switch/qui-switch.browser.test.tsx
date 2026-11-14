@@ -64,3 +64,23 @@ describe("qui-switch", () => {
     expectFocusedDeep(input);
   });
 });
+
+describe("qui-switch colors", () => {
+  it("applies track, thumb, and label color custom properties", async () => {
+    const { root } = await render(<qui-switch checked>Wi-Fi</qui-switch>);
+    const host = resolveHost<HTMLQuiSwitchElement>(root, "qui-switch");
+    const control = queryPartIn(host, "control");
+    const thumb = queryPartIn(host, "thumb");
+    const label = queryPartIn(host, "label");
+    control.style.transition = "none";
+    thumb.style.transition = "none";
+
+    host.style.setProperty("--qui-switch-checked-track-color", "rgb(1, 2, 3)");
+    host.style.setProperty("--qui-switch-checked-thumb-color", "rgb(4, 5, 6)");
+    host.style.setProperty("--qui-switch-label-color", "rgb(7, 8, 9)");
+
+    expect(getComputedStyle(control).backgroundColor).toBe("rgb(1, 2, 3)");
+    expect(getComputedStyle(thumb).backgroundColor).toBe("rgb(4, 5, 6)");
+    expect(getComputedStyle(label).color).toBe("rgb(7, 8, 9)");
+  });
+});

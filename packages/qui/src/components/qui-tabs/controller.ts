@@ -8,6 +8,7 @@ import {
   type ReactiveControllerHost,
   type TriggerRegistration,
 } from "../shared/controllers";
+import { uniqueValues } from "../shared/helpers/collection";
 
 interface TabsControllerOptions {
   getValue: () => string | undefined;
@@ -39,8 +40,8 @@ export class TabsController extends ControlledControllerBase<string | undefined>
       onChange: options.onChange,
     });
     this.options = options;
-    const onChange = (): void => {
-      this.requestUpdate();
+    const onChange = (value?: string): void => {
+      this.requestNotify(value === undefined ? undefined : [value]);
     };
     this.panels = new KeyedHostRegistry({ onChange });
     this.triggers = new RovingFocusRegistry({ onChange });
@@ -101,26 +102,40 @@ export class TabsController extends ControlledControllerBase<string | undefined>
   }
 
   select(value: string): void {
+    const previousFocus = this.focusState.focusedValue;
     const selected = this.value;
     const next = this.options.getDeselectable() && selected === value ? undefined : value;
-    this.focusState.focus(value, true);
+    const focusChanged = this.focusState.focus(value, true);
+    if (focusChanged && previousFocus !== undefined && previousFocus !== value) {
+      // Programmatic selection can move focus without a focus event; update the old part.
+      this.requestUpdate(uniqueValues(previousFocus));
+    }
     if (next !== selected) {
       this.commit(next);
       return;
     }
-    this.requestUpdate();
+    if (focusChanged) {
+      // The root template shows focus-within, so keep rendering for it.
+      this.requestUpdate(uniqueValues(value));
+    }
   }
 
   focus(value: string): void {
+    const previous = this.focusState.focusedValue;
     if (this.focusState.focus(value, true)) {
-      this.requestUpdate();
+      this.requestUpdate(uniqueValues(previous, value));
     }
   }
 
   blur(): void {
+    const previous = this.focusState.focusedValue;
     if (this.focusState.blur()) {
-      this.requestUpdate();
+      this.requestUpdate(uniqueValues(previous));
     }
+  }
+
+  protected override onValueChanged(previous?: string, next?: string): void {
+    this.requestUpdate(uniqueValues(previous, next));
   }
 
   move(delta: 1 | -1): void {

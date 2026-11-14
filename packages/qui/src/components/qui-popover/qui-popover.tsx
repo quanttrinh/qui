@@ -16,6 +16,7 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
+import { token } from "../../../styled-system/tokens";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { isHTMLElement } from "../shared/helpers/dom/dom";
 
@@ -23,6 +24,19 @@ import { isHTMLElement } from "../shared/helpers/dom/dom";
 export interface PopoverDismissEvent {
   reason: "outside" | "escape";
 }
+
+/** Props whose changes only reposition or retarget; the template ignores them. */
+const POSITION_ONLY_PROPS = new Set([
+  "anchor",
+  "placement",
+  "flip",
+  "sameWidth",
+  "offset",
+  "padding",
+  "maxHeight",
+  "closeOnOutsideClick",
+  "closeOnEscape",
+]);
 
 const layout = {
   display: "flex",
@@ -40,9 +54,9 @@ const styles = {
     ...layout,
     p: "3",
     overflowY: "auto",
-    bgColor: "surface",
+    bgColor: `var(--qui-popover-surface-color, ${token("colors.surface")})`,
     borderWidth: "1px",
-    borderColor: "outlineVariant",
+    borderColor: `var(--qui-popover-border-color, ${token("colors.outlineVariant")})`,
     rounded: "xl",
     shadow: "md",
   }),
@@ -86,10 +100,6 @@ export interface PanelPlacement {
   side: "top" | "bottom";
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
-
 /**
  * Places a panel next to its anchor. The preferred side comes from
  * `placement`, `flip` switches sides when the preferred one is too small, and
@@ -116,7 +126,7 @@ function placePopover(
   const top = side === "top" ? anchor.top - offset - height : anchor.bottom + offset;
   const left = placement.endsWith("end") ? anchor.right - size.width : anchor.left;
   return {
-    left: Math.round(clamp(left, padding, viewport.width - size.width - padding)),
+    left: Math.round(Math.min(Math.max(left, padding), viewport.width - size.width - padding)),
     top: Math.max(padding, Math.round(top)),
     maxHeight,
     side,
@@ -183,6 +193,10 @@ export class QuiPopover {
 
   componentDidRender(): void {
     this.sync();
+  }
+
+  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
+    return !POSITION_ONLY_PROPS.has(propName);
   }
 
   @Watch("anchor")

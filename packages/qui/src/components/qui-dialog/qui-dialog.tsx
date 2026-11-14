@@ -28,6 +28,18 @@ import {
 } from "./context";
 import { createDialogHostRegistry } from "./dialog-aria";
 
+/** Props that only feed controllers and child parts; the root renders a slot. */
+const CONTEXT_ONLY_PROPS = new Set([
+  "open",
+  "defaultOpen",
+  "modal",
+  "closeOnEscape",
+  "closeOnInteractOutside",
+  "preventScroll",
+  "dialogRole",
+  "dialogLabel",
+]);
+
 const styles = {
   host: css({ display: "contents" }),
 };
@@ -86,6 +98,10 @@ export class QuiDialog {
     title: `${this.baseId}::title`,
     description: `${this.baseId}::description`,
   };
+
+  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
+    return !CONTEXT_ONLY_PROPS.has(propName);
+  }
 
   componentWillLoad(): void {
     provideDialog(this.host, this.context);

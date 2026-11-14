@@ -356,3 +356,59 @@ describe("qui-dialog scroll behavior", () => {
     expect(spy).toHaveReceivedEvent();
   });
 });
+
+describe("qui-dialog render scoping", () => {
+  it("skips the root when a context prop changes", async () => {
+    const { spies, setProps } = await render(
+      <qui-dialog>
+        <qui-dialog-content>
+          <qui-dialog-title>Title</qui-dialog-title>
+        </qui-dialog-content>
+      </qui-dialog>,
+      {
+        spyOn: {
+          components: {
+            "qui-dialog": { lifecycle: ["render"] },
+          },
+        },
+      },
+    );
+    const rootRenders = (): number => spies?.lifecycle.render?.mock.calls.length ?? 0;
+    const baseline = rootRenders();
+
+    await setProps({ dialogRole: "alertdialog" });
+    await setProps({ modal: true });
+    await setProps({ preventScroll: true });
+
+    expect(rootRenders()).toBe(baseline);
+  });
+});
+
+describe("qui-dialog colors", () => {
+  it("applies surface, title, and description color custom properties", async () => {
+    const { root } = await render(
+      <qui-dialog open>
+        <qui-dialog-content>
+          <qui-dialog-title>Title</qui-dialog-title>
+          <qui-dialog-description>Description</qui-dialog-description>
+        </qui-dialog-content>
+      </qui-dialog>,
+    );
+    const contentHost = queryHost(root, "qui-dialog-content");
+    const titleHost = queryHost(root, "qui-dialog-title");
+    const descriptionHost = queryHost(root, "qui-dialog-description");
+    const surface = queryPartIn(contentHost, "content");
+    const title = queryPartIn(titleHost, "title");
+    const description = queryPartIn(descriptionHost, "description");
+
+    root.style.setProperty("--qui-dialog-surface-color", "rgb(1, 2, 3)");
+    root.style.setProperty("--qui-dialog-text-color", "rgb(4, 5, 6)");
+    root.style.setProperty("--qui-dialog-title-color", "rgb(7, 8, 9)");
+    root.style.setProperty("--qui-dialog-description-color", "rgb(10, 11, 12)");
+
+    expect(getComputedStyle(surface).backgroundColor).toBe("rgb(1, 2, 3)");
+    expect(getComputedStyle(surface).color).toBe("rgb(4, 5, 6)");
+    expect(getComputedStyle(title).color).toBe("rgb(7, 8, 9)");
+    expect(getComputedStyle(description).color).toBe("rgb(10, 11, 12)");
+  });
+});

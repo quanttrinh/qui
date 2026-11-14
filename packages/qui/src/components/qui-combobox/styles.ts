@@ -1,5 +1,6 @@
 import { css } from "#styled-system/css";
 
+import { token } from "../../../styled-system/tokens";
 import { fieldSurface, focusRingFlush, focusRingInset } from "../shared/styles";
 
 export const comboboxStyles = {
@@ -13,9 +14,10 @@ export const comboboxStyles = {
     h: "10",
     "&:focus-within": {
       ...focusRingFlush,
-      borderColor: "primary",
+      ringColor: `var(--qui-field-focus-ring-color, ${token("colors.primary")})`,
+      borderColor: `var(--qui-field-focus-border-color, ${token("colors.primary")})`,
     },
-    "&[data-invalid]": { borderColor: "error" },
+    "&[data-invalid]": { borderColor: `var(--qui-field-error-color, ${token("colors.error")})` },
     "&[data-disabled]": { opacity: 0.38, cursor: "not-allowed" },
   }),
   input: css({
@@ -24,12 +26,14 @@ export const comboboxStyles = {
     h: "full",
     px: "3",
     fontSize: "sm",
-    color: "onSurface",
+    color: `var(--qui-field-text-color, ${token("colors.onSurface")})`,
     bgColor: "transparent",
     outlineStyle: "none",
     ringWidth: "0",
     borderWidth: "0",
-    "&::placeholder": { color: "onSurfaceVariant" },
+    "&::placeholder": {
+      color: `var(--qui-field-placeholder-color, ${token("colors.onSurfaceVariant")})`,
+    },
   }),
   trigger: css({
     display: "flex",

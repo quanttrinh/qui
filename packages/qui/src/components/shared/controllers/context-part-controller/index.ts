@@ -4,7 +4,7 @@ import { ReactiveControllerBase, type ReactiveControllerHost } from "../reactive
 
 /** A context object that can notify a subscribed part when it changes. */
 interface ContextPartSource {
-  subscribe: (listener: () => void) => () => void;
+  subscribe: (listener: () => void, key?: () => string | undefined) => () => void;
 }
 
 interface ContextPartOptions<TContext extends ContextPartSource> {
@@ -21,6 +21,11 @@ interface ContextPartOptions<TContext extends ContextPartSource> {
   update?: (context: TContext) => void;
   /** Whether to re-render on context changes. Defaults to `true`. */
   subscribe?: boolean;
+  /**
+   * The value this part cares about. When the provider's listener store is
+   * keyed, notifications for other values skip this part.
+   */
+  getKey?: () => string | undefined;
   /** Whether to ensure the shadow stylesheet on connect. Defaults to `true`. */
   styles?: boolean;
 }
@@ -104,7 +109,7 @@ class ContextPartController<TContext extends ContextPartSource> extends Reactive
     if (this.options.subscribe !== false) {
       this.unsubscribe = next.subscribe(() => {
         this.notify(next);
-      });
+      }, this.options.getKey);
     }
     return true;
   }

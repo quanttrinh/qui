@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createReflectionElement, fakeTarget } from "../../../../../tests/test-utils/fake-aria";
 import {
@@ -67,6 +67,23 @@ describe("ARIA host-targeting helpers", () => {
       fallback.setAttribute(attribute, "stale");
       set(fallback, []);
       expect(fallback.hasAttribute(attribute)).toBe(false);
+    });
+
+    it(`skips redundant ${property} assignments`, () => {
+      const element = createReflectionElement(false);
+      const target = fakeTarget("target");
+      const setAttribute = vi.spyOn(element, "setAttribute");
+
+      set(element, [target]);
+      expect(setAttribute).toHaveBeenCalledOnce();
+
+      setAttribute.mockClear();
+      set(element, [target]);
+      expect(setAttribute).not.toHaveBeenCalled();
+
+      target.id = "renamed";
+      set(element, [target]);
+      expect(element.getAttribute(attribute)).toBe("renamed");
     });
   }
 });

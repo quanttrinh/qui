@@ -1,6 +1,6 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryControl, resolveHost } from "../../../tests/test-utils/component";
+import { queryControl, queryPartIn, resolveHost } from "../../../tests/test-utils/component";
 import { nextFrame, waitForShadowStyles } from "../../../tests/test-utils/dom-ready";
 import { expectFocusedDeep, typeInto } from "../../../tests/test-utils/interactions";
 import { isHTMLFormElement } from "../shared/helpers/dom/dom";
@@ -205,5 +205,53 @@ describe("qui-input", () => {
     await waitForChanges();
 
     expectFocusedDeep(input);
+  });
+});
+
+describe("qui-input render scoping", () => {
+  it("updates a controlled value without re-rendering the root", async () => {
+    const { root, spies, setProps } = await render(<qui-input value="first" />, {
+      spyOn: {
+        components: {
+          "qui-input": { lifecycle: ["render"] },
+        },
+      },
+    });
+    const input = queryControl<HTMLInputElement>(
+      resolveHost<HTMLQuiInputElement>(root, "qui-input"),
+      "input",
+    );
+    const renders = (): number => spies?.lifecycle.render?.mock.calls.length ?? 0;
+    const baseline = renders();
+
+    await setProps({ value: "second" });
+
+    expect(renders()).toBe(baseline);
+    expect(input.value).toBe("second");
+  });
+});
+
+describe("qui-input field colors", () => {
+  it("applies field color custom properties", async () => {
+    const { root, waitForChanges } = await render(<qui-input placeholder="Email" />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const control = queryPartIn(host, "control");
+    const input = queryControl<HTMLInputElement>(host, "input");
+    control.style.transition = "none";
+
+    host.style.setProperty("--qui-field-container-color", "rgb(1, 2, 3)");
+    host.style.setProperty("--qui-field-outline-color", "rgb(4, 5, 6)");
+    host.style.setProperty("--qui-field-text-color", "rgb(7, 8, 9)");
+    host.style.setProperty("--qui-field-placeholder-color", "rgb(10, 11, 12)");
+    host.style.setProperty("--qui-field-error-color", "rgb(13, 14, 15)");
+
+    expect(getComputedStyle(control).backgroundColor).toBe("rgb(1, 2, 3)");
+    expect(getComputedStyle(control).borderTopColor).toBe("rgb(4, 5, 6)");
+    expect(getComputedStyle(input).color).toBe("rgb(7, 8, 9)");
+    expect(getComputedStyle(input, "::placeholder").color).toBe("rgb(10, 11, 12)");
+
+    host.invalid = true;
+    await waitForChanges();
+    expect(getComputedStyle(control).borderTopColor).toBe("rgb(13, 14, 15)");
   });
 });

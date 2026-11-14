@@ -32,6 +32,9 @@ import {
 } from "./context";
 import { RadioGroupController } from "./controller";
 
+/** Props that only feed the child context, so the root template ignores them. */
+const CONTEXT_ONLY_PROPS = new Set(["value", "name"]);
+
 const styles = {
   host: css({ display: "block" }),
   root: css({
@@ -172,8 +175,8 @@ export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin) 
     this.form.setControl(this.fieldControl);
   }
 
-  protected onRequestUpdate(): void {
-    this.listeners.notify();
+  protected onRequestUpdate(keys?: Iterable<string>): void {
+    this.listeners.notify(keys);
   }
 
   connectedCallback(): void {
@@ -227,6 +230,10 @@ export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin) 
   private syncGroup(): void {
     this.form.sync();
     this.listeners.notify();
+  }
+
+  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
+    return !CONTEXT_ONLY_PROPS.has(propName);
   }
 
   private get rootId(): string {

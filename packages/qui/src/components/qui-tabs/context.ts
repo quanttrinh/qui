@@ -39,7 +39,7 @@ export interface TabsContext {
   listId: () => string;
   triggerId: (value: string) => string;
   panelId: (value: string) => string;
-  subscribe: (listener: () => void) => () => void;
+  subscribe: (listener: () => void, key?: () => string | undefined) => () => void;
 }
 
 const {

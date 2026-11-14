@@ -1,6 +1,6 @@
-import { consumeField, type FieldApi } from "../helpers/field/context";
-import { ContextPartController } from "./context-part-controller";
-import { type ReactiveControllerHost } from "./reactive-controller";
+import { consumeField, type FieldApi } from "../../helpers/field/context";
+import { ContextPartController } from "../context-part-controller";
+import { type ReactiveControllerHost } from "../reactive-controller";
 
 /** The field parts that participate in field context. */
 export type FieldPart = "label" | "helper-text" | "error-text" | "required-indicator";

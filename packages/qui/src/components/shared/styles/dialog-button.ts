@@ -1,3 +1,4 @@
+import { token } from "../../../../styled-system/tokens";
 import { type SystemStyleObject } from "../../../../styled-system/types";
 import { focusRing } from "./focus-ring";
 
@@ -11,11 +12,16 @@ export const dialogButtonBase: SystemStyleObject = {
   borderWidth: "0",
   rounded: "full",
   bgColor: "transparent",
-  color: "primary",
+  color: `var(--qui-dialog-action-color, ${token("colors.primary")})`,
   font: "inherit",
   textStyle: "sm",
   fontWeight: "medium",
   cursor: "pointer",
-  "&:hover": { bgColor: "surfaceContainerHigh" },
-  "&:focus-visible": focusRing,
+  "&:hover": {
+    bgColor: `var(--qui-dialog-action-hover-color, ${token("colors.surfaceContainerHigh")})`,
+  },
+  "&:focus-visible": {
+    ...focusRing,
+    ringColor: `var(--qui-dialog-action-focus-ring-color, ${token("colors.primary")})`,
+  },
 };
