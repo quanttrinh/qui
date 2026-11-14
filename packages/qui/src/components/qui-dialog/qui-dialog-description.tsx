@@ -2,16 +2,17 @@ import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@ste
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
 import { ContextPartController } from "../shared/controllers";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { consumeDialog, type DialogContext } from "./context";
 
 const styles = {
   host: css({ display: "block" }),
   description: css({
     fontSize: "sm",
-    color: "onSurfaceVariant",
+    color: `var(--qui-dialog-description-color, ${token("colors.onSurfaceVariant")})`,
   }),
 };
 
@@ -25,7 +26,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiDialogDescription),
   shadow: true,
 })
-export class QuiDialogDescription extends Mixin(ControllerHostMixin) {
+export class QuiDialogDescription extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiDialogDescriptionElement;
 
   protected readonly contextPart = new ContextPartController(this, {

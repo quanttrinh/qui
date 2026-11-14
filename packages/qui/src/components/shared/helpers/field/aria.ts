@@ -7,10 +7,13 @@ interface FieldAriaOptions {
   describedBy?: readonly Element[];
 }
 
+const EMPTY: readonly Element[] = [];
+
 /**
  * Applies a field's host relationships to the control's internal focusable
  * element. The ARIA helpers use element reflection and fall back to same-tree
- * IDREFs where reflection is unavailable.
+ * IDREFs where reflection is unavailable, and skip writes while the
+ * relationship is unchanged.
  */
 function applyFieldAria(
   control: HTMLElement | undefined,
@@ -21,15 +24,14 @@ function applyFieldAria(
     return;
   }
   const label = field?.getLabelHost();
-  setAriaLabelledBy(control, [
-    ...(label === undefined ? [] : [label]),
-    ...(options.labelledBy ?? []),
-  ]);
-  setAriaDescribedBy(control, [
-    ...(field?.getHelperTextHosts() ?? []),
-    ...(options.describedBy ?? []),
-  ]);
-  setAriaErrorMessage(control, [...(field?.getErrorTextHosts() ?? [])]);
+  const extraLabelledBy = options.labelledBy ?? EMPTY;
+  const helperTexts = field?.getHelperTextHosts() ?? EMPTY;
+  const extraDescribedBy = options.describedBy ?? EMPTY;
+  const errorTexts = field?.getErrorTextHosts() ?? EMPTY;
+
+  setAriaLabelledBy(control, [...(label === undefined ? EMPTY : [label]), ...extraLabelledBy]);
+  setAriaDescribedBy(control, [...helperTexts, ...extraDescribedBy]);
+  setAriaErrorMessage(control, [...errorTexts]);
 }
 
 export { applyFieldAria, type FieldAriaOptions };

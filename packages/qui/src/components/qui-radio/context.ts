@@ -35,7 +35,7 @@ export interface RadioGroupContext {
   inputId: (value: string) => string;
   controlId: (value: string) => string;
   labelId: (value: string) => string;
-  subscribe: (listener: () => void) => () => void;
+  subscribe: (listener: () => void, key?: () => string | undefined) => () => void;
 }
 
 const {

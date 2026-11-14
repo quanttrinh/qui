@@ -20,14 +20,13 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { cx } from "#styled-system/css";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
 import { FormController, type FormValidity } from "../shared/controllers";
 import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
 import { isHTMLInputElement, isHTMLSlotElement } from "../shared/helpers/dom/dom";
 import { focusElement } from "../shared/helpers/dom/focus";
 import { nextId } from "../shared/helpers/dom/id";
 import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
-import { ControllerHostMixin, FormControlMixin } from "../shared/mixins";
+import { ControllerHostMixin, FormControlMixin, ShadowStylesMixin } from "../shared/mixins";
 import { type TextCase } from "./case";
 import { renderNumberStepper, renderPasswordToggle } from "./input-controls";
 import { filterNumericOrDecimalInput } from "./input-filter";
@@ -72,6 +71,9 @@ export interface InputValueDetails {
   unmaskedValue: string;
 }
 
+/** Props applied imperatively or through form association; the template does not read them. */
+const IMPERATIVE_PROPS = new Set(["value", "name"]);
+
 /**
  * A single-line input with optional masks, number stepping, and a password
  * visibility toggle. When nested in `qui-field`, it inherits the field ids and
@@ -86,7 +88,7 @@ export interface InputValueDetails {
   shadow: true,
   formAssociated: true,
 })
-export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
+export class QuiInput extends Mixin(ShadowStylesMixin, ControllerHostMixin, FormControlMixin) {
   @Element() host!: HTMLQuiInputElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -218,7 +220,6 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
   connectedCallback(): void {
     super.connectedCallback();
-    ensureShadowStylesheet(this.host);
     this.syncMaskito();
   }
 
@@ -241,6 +242,10 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
     applyFieldAria(this.inputEl, this.form.fieldApi);
   }
 
+  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
+    return !IMPERATIVE_PROPS.has(propName);
+  }
+
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.destroyMaskito();
@@ -251,6 +256,13 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
   @Method()
   async focusControl(options?: FocusOptions): Promise<void> {
     await focusElement(this.inputEl, options);
+  }
+
+  /** Returns the current native input value, including uncontrolled edits. */
+  @Method()
+  // oxlint-disable-next-line eslint/require-await, typescript/require-await -- Stencil @Method requires async, but the value is available synchronously.
+  async getValue(): Promise<string> {
+    return this.inputEl?.value ?? "";
   }
 
   @Watch("value")

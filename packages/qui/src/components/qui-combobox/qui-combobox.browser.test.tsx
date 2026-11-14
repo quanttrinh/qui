@@ -18,6 +18,7 @@ describe("qui-combobox", () => {
       <qui-combobox items={accounts} placeholder="Search accounts" />,
     );
     const spy = spyOnEvent("valuechange");
+    const host = resolveHost<HTMLQuiComboboxElement>(root, "qui-combobox");
     const input = queryPartIn<HTMLInputElement>(root, "input");
 
     input.click();
@@ -34,6 +35,7 @@ describe("qui-combobox", () => {
 
     expect(spy.lastEvent?.detail).toMatchObject({ value: ["account-2"] });
     expect(input.value).toBe("Account Two");
+    await expect(host.getValue()).resolves.toEqual(["account-2"]);
   });
 
   it("stays open when the trigger is clicked after focusing the input", async () => {
@@ -102,5 +104,35 @@ describe("qui-combobox", () => {
     await waitForChanges();
 
     expectFocusedDeep(input);
+  });
+});
+
+describe("qui-combobox field colors", () => {
+  it("applies field color custom properties to the control and input", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-combobox items={accounts} placeholder="Search" />,
+    );
+    const host = resolveHost<HTMLQuiComboboxElement>(root, "qui-combobox");
+    const control = queryPartIn(host, "control");
+    const input = queryPartIn<HTMLInputElement>(host, "input");
+    control.style.setProperty("transition", "none", "important");
+
+    host.style.setProperty("--qui-field-container-color", "rgb(1, 2, 3)");
+    host.style.setProperty("--qui-field-outline-color", "rgb(4, 5, 6)");
+    host.style.setProperty("--qui-field-outline-hover-color", "rgb(4, 5, 6)");
+    host.style.setProperty("--qui-field-text-color", "rgb(7, 8, 9)");
+    host.style.setProperty("--qui-field-placeholder-color", "rgb(10, 11, 12)");
+    host.style.setProperty("--qui-field-error-color", "rgb(13, 14, 15)");
+    await waitForChanges();
+
+    expect(getComputedStyle(control).backgroundColor).toBe("rgb(1, 2, 3)");
+    expect(getComputedStyle(control).borderTopColor).toBe("rgb(4, 5, 6)");
+    expect(getComputedStyle(input).color).toBe("rgb(7, 8, 9)");
+    expect(getComputedStyle(input, "::placeholder").color).toBe("rgb(10, 11, 12)");
+
+    host.style.setProperty("--qui-field-outline-hover-color", "rgb(13, 14, 15)");
+    host.invalid = true;
+    await waitForChanges();
+    expect(getComputedStyle(control).borderTopColor).toBe("rgb(13, 14, 15)");
   });
 });

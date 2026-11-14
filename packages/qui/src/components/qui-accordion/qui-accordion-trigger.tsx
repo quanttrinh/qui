@@ -2,6 +2,7 @@ import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@ste
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
 import { ExpandMoreIcon } from "../qui-icon/icons";
 import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
@@ -9,7 +10,7 @@ import { setAriaControls } from "../shared/helpers/aria/aria";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { isHTMLElement } from "../shared/helpers/dom/dom";
 import { arrowDelta, edgeKey } from "../shared/helpers/dom/keyboard";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { focusRingInset } from "../shared/styles";
 import { consumeAccordionItem, type AccordionItemContext } from "./accordion-context";
 
@@ -27,11 +28,16 @@ const styles = {
     bgColor: "transparent",
     textStyle: "sm",
     fontWeight: "medium",
-    color: "onSurface",
+    color: `var(--qui-accordion-trigger-color, ${token("colors.onSurface")})`,
     textAlign: "start",
     cursor: "pointer",
-    "&:hover": { bgColor: "surfaceContainerHigh" },
-    "&:focus-visible": focusRingInset,
+    "&:hover": {
+      bgColor: `var(--qui-accordion-trigger-hover-color, ${token("colors.surfaceContainerHigh")})`,
+    },
+    "&:focus-visible": {
+      ...focusRingInset,
+      ringColor: `var(--qui-accordion-focus-ring-color, ${token("colors.primary")})`,
+    },
     "&:disabled": { cursor: "not-allowed" },
   }),
   indicator: css({
@@ -41,7 +47,7 @@ const styles = {
     flexShrink: 0,
     w: "6",
     h: "6",
-    color: "onSurfaceVariant",
+    color: `var(--qui-accordion-indicator-color, ${token("colors.onSurfaceVariant")})`,
     fontSize: "md",
     transition: "transform 200ms ease",
     "&[data-state=open]": { transform: "rotate(180deg)" },
@@ -58,15 +64,19 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiAccordionTrigger),
   shadow: true,
 })
-export class QuiAccordionTrigger extends Mixin(ControllerHostMixin) {
+export class QuiAccordionTrigger extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiAccordionTriggerElement;
 
   private triggerEl?: HTMLButtonElement;
   private readonly registration = new RegistrationReconciler();
+  private lastDisabled?: boolean;
+  private ariaTriggerEl?: HTMLButtonElement;
+  private ariaContent?: HTMLElement;
 
   protected readonly contextPart = new ContextPartController(this, {
     key: "accordion-item",
     consume: consumeAccordionItem,
+    getKey: () => this.item?.item().value,
   });
 
   private get item(): AccordionItemContext | undefined {
@@ -76,7 +86,12 @@ export class QuiAccordionTrigger extends Mixin(ControllerHostMixin) {
   componentDidRender(): void {
     this.syncRegistration();
     this.syncAria();
-    this.item?.invalidateTriggers();
+    // Only invalidate the enabled cache when the computed disabled state flips.
+    const disabled = this.disabled();
+    if (disabled !== this.lastDisabled) {
+      this.lastDisabled = disabled;
+      this.item?.invalidateTriggers();
+    }
   }
 
   disconnectedCallback(): void {
@@ -101,6 +116,11 @@ export class QuiAccordionTrigger extends Mixin(ControllerHostMixin) {
       return;
     }
     const content = item.getContent(item.item().value);
+    if (this.ariaTriggerEl === triggerEl && this.ariaContent === content) {
+      return;
+    }
+    this.ariaTriggerEl = triggerEl;
+    this.ariaContent = content;
     setAriaControls(triggerEl, content === undefined ? [] : [content]);
   }
 

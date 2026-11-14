@@ -12,12 +12,13 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
 import { ContextPartController } from "../shared/controllers";
 import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
 import { isHTMLInputElement } from "../shared/helpers/dom/dom";
 import { focusElement } from "../shared/helpers/dom/focus";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { focusRing } from "../shared/styles";
 import {
   consumeRadioGroup,
@@ -46,25 +47,30 @@ const styles = {
     rounded: "full",
     borderWidth: "0.5",
     borderStyle: "solid",
-    borderColor: "outline",
+    borderColor: `var(--qui-radio-outline-color, ${token("colors.outline")})`,
     transition: "border-color 150ms",
     "&[data-state=checked]": {
-      borderColor: "primary",
+      borderColor: `var(--qui-radio-checked-color, ${token("colors.primary")})`,
       "&::after": {
         content: '""',
         w: "2.5",
         h: "2.5",
         rounded: "full",
-        bgColor: "primary",
+        bgColor: `var(--qui-radio-checked-color, ${token("colors.primary")})`,
       },
     },
-    "&[data-invalid]": { borderColor: "error" },
-    "&[data-focus-visible]": focusRing,
+    "&[data-invalid]": {
+      borderColor: `var(--qui-radio-error-color, ${token("colors.error")})`,
+    },
+    "&[data-focus-visible]": {
+      ...focusRing,
+      ringColor: `var(--qui-radio-focus-ring-color, ${token("colors.primary")})`,
+    },
   }),
   label: css({
     textStyle: "sm",
     fontWeight: "medium",
-    color: "onSurface",
+    color: `var(--qui-radio-label-color, ${token("colors.onSurface")})`,
   }),
   input: css({
     pos: "absolute",
@@ -88,7 +94,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiRadio),
   shadow: true,
 })
-export class QuiRadio extends Mixin(ControllerHostMixin) {
+export class QuiRadio extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiRadioElement;
 
   /** The value submitted when this item is selected. */
@@ -103,6 +109,7 @@ export class QuiRadio extends Mixin(ControllerHostMixin) {
   protected readonly contextPart = new ContextPartController(this, {
     key: "radio-group",
     consume: consumeRadioGroup,
+    getKey: () => this.value,
   });
   private inputEl?: HTMLInputElement;
   private registeredInput?: HTMLInputElement;

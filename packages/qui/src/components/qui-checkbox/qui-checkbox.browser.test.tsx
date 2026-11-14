@@ -28,6 +28,21 @@ describe("qui-checkbox", () => {
     expect(input.checked).toBe(true);
   });
 
+  it("returns the live checked state for uncontrolled edits", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-checkbox value="yes">Check me</qui-checkbox>,
+    );
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    await expect(host.getChecked()).resolves.toBe(false);
+
+    input.click();
+    await waitForChanges();
+
+    await expect(host.getChecked()).resolves.toBe(true);
+  });
+
   it("renders a required indicator and exposes aria-required", async () => {
     const { root, waitForChanges } = await render(<qui-checkbox required>Check me</qui-checkbox>);
 
@@ -123,5 +138,36 @@ describe("qui-checkbox", () => {
     await waitForChanges();
 
     expectFocusedDeep(input);
+  });
+});
+
+describe("qui-checkbox colors", () => {
+  it("applies checked, outline, and label color custom properties", async () => {
+    const { root } = await render(<qui-checkbox checked>Accept</qui-checkbox>);
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+    const control = queryPartIn(host, "control");
+    const label = queryPartIn(host, "label");
+    control.style.setProperty("transition", "none", "important");
+
+    host.style.setProperty("--qui-checkbox-checked-color", "rgb(1, 2, 3)");
+    host.style.setProperty("--qui-checkbox-checked-text-color", "rgb(4, 5, 6)");
+    host.style.setProperty("--qui-checkbox-label-color", "rgb(7, 8, 9)");
+    host.style.setProperty("--qui-checkbox-outline-color", "rgb(10, 11, 12)");
+
+    expect(getComputedStyle(control).backgroundColor).toBe("rgb(1, 2, 3)");
+    expect(getComputedStyle(control).borderTopColor).toBe("rgb(1, 2, 3)");
+    expect(getComputedStyle(control).color).toBe("rgb(4, 5, 6)");
+    expect(getComputedStyle(label).color).toBe("rgb(7, 8, 9)");
+  });
+
+  it("applies the unchecked outline color", async () => {
+    const { root } = await render(<qui-checkbox>Accept</qui-checkbox>);
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+    const control = queryPartIn(host, "control");
+    control.style.setProperty("transition", "none", "important");
+
+    host.style.setProperty("--qui-checkbox-outline-color", "rgb(20, 21, 22)");
+
+    expect(getComputedStyle(control).borderTopColor).toBe("rgb(20, 21, 22)");
   });
 });

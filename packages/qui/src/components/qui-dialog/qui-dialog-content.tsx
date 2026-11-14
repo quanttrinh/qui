@@ -12,9 +12,10 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
 import { ContextPartController } from "../shared/controllers";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { consumeDialog, type DialogContext, type DialogControl } from "./context";
 import { applyDialogAria } from "./dialog-aria";
 
@@ -27,12 +28,12 @@ const styles = {
     bgColor: "transparent",
     maxW: "none",
     maxH: "none",
-    color: "onSurface",
+    color: `var(--qui-dialog-text-color, ${token("colors.onSurface")})`,
     outlineStyle: "none",
     // Keeps the surface shadow from being clipped; the surface scrolls itself.
     overflow: "visible",
     "&::backdrop": {
-      bgColor: "scrim",
+      bgColor: `var(--qui-dialog-backdrop-color, ${token("colors.scrim")})`,
       opacity: 0.32,
     },
     "&:focus-visible": {
@@ -50,9 +51,9 @@ const styles = {
     overflowY: "auto",
     p: "6",
     rounded: "3xl",
-    bgColor: "surfaceContainerHigh",
+    bgColor: `var(--qui-dialog-surface-color, ${token("colors.surfaceContainerHigh")})`,
     shadow: "xl",
-    color: "onSurface",
+    color: `var(--qui-dialog-text-color, ${token("colors.onSurface")})`,
   }),
 };
 
@@ -67,7 +68,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiDialogContent),
   shadow: true,
 })
-export class QuiDialogContent extends Mixin(ControllerHostMixin) {
+export class QuiDialogContent extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiDialogContentElement;
 
   @State() private dialogRole: "dialog" | "alertdialog" = "dialog";
@@ -92,6 +93,10 @@ export class QuiDialogContent extends Mixin(ControllerHostMixin) {
   private unregister?: () => void;
   private dialogEl?: HTMLDialogElement;
   private modalState?: boolean;
+  private appliedDialog?: HTMLDialogElement;
+  private appliedClosedBy?: string;
+  private appliedTitle?: HTMLElement;
+  private appliedDescription?: HTMLElement;
   private pointerHandler?: (event: PointerEvent) => void;
   private keyHandler?: (event: KeyboardEvent) => void;
 
@@ -135,6 +140,7 @@ export class QuiDialogContent extends Mixin(ControllerHostMixin) {
       setClosedBy: (value) => {
         if (this.dialogEl !== undefined && "closedBy" in this.dialogEl) {
           Object.assign(this.dialogEl, { closedBy: value });
+          this.appliedClosedBy = value;
         }
       },
       setRole: (role) => {
@@ -184,16 +190,32 @@ export class QuiDialogContent extends Mixin(ControllerHostMixin) {
 
   private applyDialogAttributes(): void {
     const dialog = this.dialogEl;
-    if (!dialog || !this.dialogContext) {
+    const context = this.dialogContext;
+    if (!dialog || !context) {
       return;
     }
-    if ("closedBy" in dialog) {
-      Object.assign(dialog, {
-        closedBy: this.dialogContext.closeOnInteractOutside() ? "any" : "closerequest",
-      });
+
+    const closedBy: string = context.closeOnInteractOutside() ? "any" : "closerequest";
+    if (
+      "closedBy" in dialog &&
+      (dialog !== this.appliedDialog || closedBy !== this.appliedClosedBy)
+    ) {
+      Object.assign(dialog, { closedBy });
+      this.appliedClosedBy = closedBy;
     }
 
-    applyDialogAria(dialog, this.dialogContext);
+    const title = context.titleHost();
+    const description = context.descriptionHost();
+    if (
+      dialog !== this.appliedDialog ||
+      title !== this.appliedTitle ||
+      description !== this.appliedDescription
+    ) {
+      this.appliedDialog = dialog;
+      this.appliedTitle = title;
+      this.appliedDescription = description;
+      applyDialogAria(dialog, context);
+    }
   }
 
   private attachDocumentListeners(): void {

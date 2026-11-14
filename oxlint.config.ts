@@ -37,7 +37,12 @@ export default defineConfig({
   ],
   rules: {
     // --- ESLint ------------------------------------------------------------
-    "eslint/class-methods-use-this": ["error", { exceptMethods: ["render"] }],
+    "eslint/class-methods-use-this": [
+      "error",
+      // Lifecycle hooks answer questions about props/state and may not need
+      // instance state; `render` and `componentShouldUpdate` commonly don't.
+      { exceptMethods: ["render", "componentShouldUpdate"] },
+    ],
     "eslint/complexity": ["warn", 20],
     // Allow nullish comparisons (`== null`) while keeping strict equality for
     // all other comparisons.

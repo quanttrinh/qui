@@ -1,4 +1,5 @@
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
 import { fieldSurface, focusRingFlush } from "../shared/styles";
 
@@ -17,15 +18,18 @@ export const selectStyles = {
     ps: "3",
     pe: "1.5",
     fontSize: "sm",
-    color: "onSurface",
+    color: `var(--qui-field-text-color, ${token("colors.onSurface")})`,
     cursor: "pointer",
     textAlign: "start",
     "&:focus-visible": {
       ...focusRingFlush,
-      borderColor: "primary",
+      ringColor: `var(--qui-field-focus-ring-color, ${token("colors.primary")})`,
+      borderColor: `var(--qui-field-focus-border-color, ${token("colors.primary")})`,
     },
-    "&[data-placeholder-shown]": { color: "onSurfaceVariant" },
-    "&[data-invalid]": { borderColor: "error" },
+    "&[data-placeholder-shown]": {
+      color: `var(--qui-field-placeholder-color, ${token("colors.onSurfaceVariant")})`,
+    },
+    "&[data-invalid]": { borderColor: `var(--qui-field-error-color, ${token("colors.error")})` },
     "&:disabled": { opacity: 0.38, cursor: "not-allowed" },
   }),
   valueText: css({

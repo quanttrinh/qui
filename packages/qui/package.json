@@ -27,7 +27,8 @@
   "types": "./dist/types/index.d.ts",
   "imports": {
     "#styled-system/css": "./styled-system/css/index.js",
-    "#qui-style-url": "./styled-system/style-urls/index.js"
+    "#qui-style-url": "./styled-system/style-urls/index.js",
+    "#styled-system/tokens": "./styled-system/tokens/index.js"
   },
   "exports": {
     ".": {
@@ -153,7 +154,7 @@
     "@vitest/browser-playwright": "^5.1.0",
     "jiti": "^2.7.0",
     "oxc-parser": "^0.158.0",
-    "playwright": "^1.65.0",
+    "playwright": "^1.65.1",
     "postcss": "^8.5.32",
     "preact": "^11.0.0",
     "rollup": "^4.67.5",

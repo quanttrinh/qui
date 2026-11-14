@@ -112,4 +112,56 @@ describe("createListenerStore", () => {
     }).toThrow(error);
     expect(after).not.toHaveBeenCalled();
   });
+
+  it("notifies unkeyed listeners and only the keyed listeners whose key changed", () => {
+    const store = createListenerStore();
+    const one = vi.fn((): void => undefined);
+    const two = vi.fn((): void => undefined);
+    const all = vi.fn((): void => undefined);
+    store.subscribe(one, () => "one");
+    store.subscribe(two, () => "two");
+    store.subscribe(all);
+
+    store.notify(["one"]);
+
+    expect(one).toHaveBeenCalledOnce();
+    expect(two).not.toHaveBeenCalled();
+    expect(all).toHaveBeenCalledOnce();
+  });
+
+  it("reads a keyed listener's key at notification time", () => {
+    const store = createListenerStore();
+    const listener = vi.fn((): void => undefined);
+    let key = "one";
+    store.subscribe(listener, () => key);
+
+    store.notify(["two"]);
+    expect(listener).not.toHaveBeenCalled();
+
+    key = "two";
+    store.notify(["two"]);
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it("skips keyed listeners whose key is undefined for scoped notifications", () => {
+    const store = createListenerStore();
+    const listener = vi.fn((): void => undefined);
+    store.subscribe(listener, () => undefined);
+
+    store.notify(["one"]);
+    expect(listener).not.toHaveBeenCalled();
+
+    store.notify();
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it("notifies every listener when keys are omitted", () => {
+    const store = createListenerStore();
+    const keyed = vi.fn((): void => undefined);
+    store.subscribe(keyed, () => "one");
+
+    store.notify();
+
+    expect(keyed).toHaveBeenCalledOnce();
+  });
 });

@@ -12,11 +12,13 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
 import { FieldController } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { fieldStyles } from "./styles";
+
+/** Props that only feed the field context; the template ignores them. */
+const RENDER_INDEPENDENT_PROPS = new Set(["required"]);
 
 /**
  * Groups a control with its label, helper text, and error text.
@@ -32,7 +34,7 @@ import { fieldStyles } from "./styles";
   styleUrl: resolveVar(styleUrls.quiField),
   shadow: true,
 })
-export class QuiField extends Mixin(ControllerHostMixin) {
+export class QuiField extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiFieldElement;
 
   /** Base id used to derive the field part ids. Defaults to the host id. */
@@ -71,11 +73,6 @@ export class QuiField extends Mixin(ControllerHostMixin) {
     isRequired: () => this.required,
   });
 
-  connectedCallback(): void {
-    super.connectedCallback();
-    ensureShadowStylesheet(this.host);
-  }
-
   @Watch("fieldId")
   @Watch("rootId")
   @Watch("controlId")
@@ -88,6 +85,11 @@ export class QuiField extends Mixin(ControllerHostMixin) {
   @Watch("required")
   private notify(): void {
     this.field.notify();
+  }
+
+  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
+    // `required` only feeds the field context; the field template ignores it.
+    return !RENDER_INDEPENDENT_PROPS.has(propName);
   }
 
   render(): VNode {

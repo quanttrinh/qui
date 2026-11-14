@@ -104,9 +104,12 @@ export default defineConfig({
     "@pandacss/prefer-text-style": "error",
 
     // --- Stencil -------------------------------------------------------
-    // Panda's `css()` is a pure build-time helper, and the other entries
-    // are pure factory/lookup helpers.
-    "stencil/ban-side-effects": ["error", ["css", "createContextStore", "createGlobalHrefKey"]],
+    // Panda's `css()` and `token()` are pure build-time helpers, and the other
+    // entries are pure factory/lookup helpers.
+    "stencil/ban-side-effects": [
+      "error",
+      ["css", "token", "createContextStore", "createGlobalHrefKey"],
+    ],
     "stencil/decorators-style": [
       "error",
       {

@@ -1,10 +1,9 @@
-import { ensureShadowStylesheet } from "../../../../utilities/styles";
 import { onContextProvided, type ContextPartKey } from "../../context/store";
 import { ReactiveControllerBase, type ReactiveControllerHost } from "../reactive-controller";
 
 /** A context object that can notify a subscribed part when it changes. */
 interface ContextPartSource {
-  subscribe: (listener: () => void) => () => void;
+  subscribe: (listener: () => void, key?: () => string | undefined) => () => void;
 }
 
 interface ContextPartOptions<TContext extends ContextPartSource> {
@@ -21,8 +20,11 @@ interface ContextPartOptions<TContext extends ContextPartSource> {
   update?: (context: TContext) => void;
   /** Whether to re-render on context changes. Defaults to `true`. */
   subscribe?: boolean;
-  /** Whether to ensure the shadow stylesheet on connect. Defaults to `true`. */
-  styles?: boolean;
+  /**
+   * The value this part cares about. When the provider's listener store is
+   * keyed, notifications for other values skip this part.
+   */
+  getKey?: () => string | undefined;
 }
 
 /**
@@ -33,7 +35,7 @@ class ContextPartController<TContext extends ContextPartSource> extends Reactive
   private readonly options: ContextPartOptions<TContext>;
   private attached: TContext | undefined;
   private unsubscribe?: () => void;
-  private teardown?: (() => void) | undefined;
+  private teardown?: () => void;
   private stopListening?: () => void;
   private loaded = false;
 
@@ -49,9 +51,6 @@ class ContextPartController<TContext extends ContextPartSource> extends Reactive
 
   hostConnected(): void {
     const started = this.start();
-    if (this.options.styles !== false) {
-      ensureShadowStylesheet(this.hostElement);
-    }
     if (started && this.loaded) {
       this.updateAttached();
     }
@@ -104,7 +103,7 @@ class ContextPartController<TContext extends ContextPartSource> extends Reactive
     if (this.options.subscribe !== false) {
       this.unsubscribe = next.subscribe(() => {
         this.notify(next);
-      });
+      }, this.options.getKey);
     }
     return true;
   }

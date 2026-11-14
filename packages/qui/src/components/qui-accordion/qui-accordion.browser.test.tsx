@@ -1,4 +1,4 @@
-import { describe, expect, h, it, render } from "@stencil/vitest";
+import { describe, expect, getComponentSpies, h, it, render } from "@stencil/vitest";
 
 import { expectLinked } from "../../../tests/test-utils/aria";
 import { queryHost, queryPartIn } from "../../../tests/test-utils/component";
@@ -203,5 +203,138 @@ describe("qui-accordion", () => {
     pressKey(buttons[2], "Home");
     await waitForChanges();
     expectFocusedDeep(buttons[0]);
+  });
+});
+
+describe("qui-accordion prop updates", () => {
+  it("updates children when a context-only prop changes", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-accordion>
+        <qui-accordion-item value="one">
+          <qui-accordion-trigger>One</qui-accordion-trigger>
+          <qui-accordion-content>One content</qui-accordion-content>
+        </qui-accordion-item>
+        <qui-accordion-item value="two">
+          <qui-accordion-trigger>Two</qui-accordion-trigger>
+          <qui-accordion-content>Two content</qui-accordion-content>
+        </qui-accordion-item>
+      </qui-accordion>,
+    );
+    const host = root as HTMLElement & { multiple: boolean };
+    const parts = items(root);
+
+    host.multiple = true;
+    await waitForChanges();
+    parts[0].trigger.click();
+    await waitForChanges();
+    parts[1].trigger.click();
+    await waitForChanges();
+
+    expect(parts[0].trigger).toHaveAttribute("aria-expanded", "true");
+    expect(parts[1].trigger).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("re-renders the root when a template prop changes", async () => {
+    const { root, setProps } = await render(
+      <qui-accordion>
+        <qui-accordion-item value="one">
+          <qui-accordion-trigger>One</qui-accordion-trigger>
+          <qui-accordion-content>One content</qui-accordion-content>
+        </qui-accordion-item>
+      </qui-accordion>,
+    );
+    const part = queryPartIn(root, "root");
+
+    expect(part.dataset.orientation).toBe("vertical");
+
+    await setProps({ orientation: "horizontal" });
+
+    expect(part.dataset.orientation).toBe("horizontal");
+  });
+});
+
+describe("qui-accordion render scoping", () => {
+  it("skips the root and unaffected items when one item toggles", async () => {
+    const { root, spies, waitForChanges } = await render(
+      <qui-accordion>
+        <qui-accordion-item value="one">
+          <qui-accordion-trigger>One</qui-accordion-trigger>
+          <qui-accordion-content>One content</qui-accordion-content>
+        </qui-accordion-item>
+        <qui-accordion-item value="two">
+          <qui-accordion-trigger>Two</qui-accordion-trigger>
+          <qui-accordion-content>Two content</qui-accordion-content>
+        </qui-accordion-item>
+        <qui-accordion-item value="three">
+          <qui-accordion-trigger>Three</qui-accordion-trigger>
+          <qui-accordion-content>Three content</qui-accordion-content>
+        </qui-accordion-item>
+      </qui-accordion>,
+      {
+        spyOn: {
+          components: {
+            "qui-accordion": { lifecycle: ["render"] },
+            "qui-accordion-item": { lifecycle: ["render"] },
+          },
+        },
+      },
+    );
+    const parts = items(root);
+    const rootRenders = (): number => spies?.lifecycle.render?.mock.calls.length ?? 0;
+    const itemRenders = (): number[] =>
+      [...root.querySelectorAll("qui-accordion-item")].map(
+        (item) => getComponentSpies(item)?.lifecycle.render?.mock.calls.length ?? 0,
+      );
+    const baselineRoot = rootRenders();
+    const baselineItems = itemRenders();
+
+    parts[1].trigger.click();
+    await waitForChanges();
+
+    expect(rootRenders()).toBe(baselineRoot);
+    const deltas = itemRenders().map((count, index) => count - (baselineItems[index] ?? 0));
+    expect(deltas[0]).toBe(0);
+    expect(deltas[1]).toBeGreaterThan(0);
+    expect(deltas[2]).toBe(0);
+  });
+});
+
+function setAccordionColors(host: HTMLElement): void {
+  host.style.setProperty("--qui-accordion-container-color", "rgb(1, 2, 3)");
+  host.style.setProperty("--qui-accordion-border-color", "rgb(4, 5, 6)");
+  host.style.setProperty("--qui-accordion-trigger-color", "rgb(7, 8, 9)");
+  host.style.setProperty("--qui-accordion-indicator-color", "rgb(10, 11, 12)");
+  host.style.setProperty("--qui-accordion-content-text-color", "rgb(13, 14, 15)");
+}
+
+describe("qui-accordion colors", () => {
+  it("applies container, trigger, indicator, and content color custom properties", async () => {
+    const { root } = await render(
+      <qui-accordion defaultValue={["one"]}>
+        <qui-accordion-item value="one">
+          <qui-accordion-trigger>One</qui-accordion-trigger>
+          <qui-accordion-content>Content</qui-accordion-content>
+        </qui-accordion-item>
+      </qui-accordion>,
+    );
+    const accordionHost = root;
+    const itemHost = queryHost(root, "qui-accordion-item");
+    const triggerHost = queryHost(root, "qui-accordion-trigger");
+    const contentHost = queryHost(root, "qui-accordion-content");
+    const container = queryPartIn(accordionHost, "root");
+    const item = queryPartIn(itemHost, "item");
+    const trigger = queryPartIn<HTMLButtonElement>(triggerHost, "trigger");
+    const indicator = queryPartIn(triggerHost, "indicator");
+    const content = queryPartIn(contentHost, "content");
+    trigger.style.setProperty("transition", "none", "important");
+
+    setAccordionColors(accordionHost);
+
+    expect(getComputedStyle(container).backgroundColor).toBe("rgb(1, 2, 3)");
+    expect(getComputedStyle(container).borderTopColor).toBe("rgb(4, 5, 6)");
+    expect(getComputedStyle(item).borderBlockEndColor).toBe("rgb(4, 5, 6)");
+    expect(getComputedStyle(trigger).color).toBe("rgb(7, 8, 9)");
+    expect(getComputedStyle(indicator).color).toBe("rgb(10, 11, 12)");
+    expect(getComputedStyle(content).color).toBe("rgb(13, 14, 15)");
   });
 });

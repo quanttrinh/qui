@@ -1,13 +1,24 @@
-import { Mixin, resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
+import {
+  Mixin,
+  resolveVar,
+  Component,
+  Element,
+  h,
+  Host,
+  Prop,
+  Watch,
+  type VNode,
+} from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
 import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
 import { setAriaControls } from "../shared/helpers/aria/aria";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { isHTMLElement } from "../shared/helpers/dom/dom";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { focusRingInset } from "../shared/styles";
 import { consumeTabs, type TabsContext, type TabsVariant } from "./context";
 
@@ -21,7 +32,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     px: "4",
-    color: "onSurfaceVariant",
+    color: `var(--qui-tabs-label-color, ${token("colors.onSurfaceVariant")})`,
     textStyle: "sm",
     fontWeight: "medium",
     whiteSpace: "nowrap",
@@ -42,10 +53,19 @@ const styles = {
     "&:hover:not(:disabled)::before": { opacity: 0.08 },
     "&:focus-visible::before": { opacity: 0.1 },
     "&:active:not(:disabled)::before": { opacity: 0.1 },
-    "&:hover:not([data-selected])": { color: "onSurface" },
-    "&[data-selected]": { color: "primary" },
-    "&[data-variant=secondary][data-selected]": { color: "onSurface" },
-    "&:focus-visible": focusRingInset,
+    "&:hover:not([data-selected])": {
+      color: `var(--qui-tabs-label-hover-color, ${token("colors.onSurface")})`,
+    },
+    "&[data-selected]": {
+      color: `var(--qui-tabs-label-selected-color, ${token("colors.primary")})`,
+    },
+    "&[data-variant=secondary][data-selected]": {
+      color: `var(--qui-tabs-label-selected-color, ${token("colors.onSurface")})`,
+    },
+    "&:focus-visible": {
+      ...focusRingInset,
+      ringColor: `var(--qui-tabs-focus-ring-color, ${token("colors.primary")})`,
+    },
     "&:disabled": { cursor: "not-allowed", opacity: 0.38 },
     "&[data-orientation=vertical]": {
       flex: "none",
@@ -67,7 +87,7 @@ const styles = {
   }),
   indicator: css({
     pos: "absolute",
-    bgColor: "primary",
+    bgColor: `var(--qui-tabs-indicator-color, ${token("colors.primary")})`,
     opacity: 0,
     transform: "scaleX(0.5)",
     transition: "opacity 150ms, transform 200ms cubic-bezier(0.2, 0, 0, 1)",
@@ -125,7 +145,7 @@ function renderIndicator(
   styleUrl: resolveVar(styleUrls.quiTabTrigger),
   shadow: true,
 })
-export class QuiTabTrigger extends Mixin(ControllerHostMixin) {
+export class QuiTabTrigger extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiTabTriggerElement;
 
   /** The value linking this trigger to its panel. */
@@ -134,11 +154,14 @@ export class QuiTabTrigger extends Mixin(ControllerHostMixin) {
   @Prop() disabled = false;
 
   private triggerEl?: HTMLButtonElement;
+  private ariaTriggerEl?: HTMLButtonElement;
+  private ariaPanel?: HTMLElement;
   private readonly registration = new RegistrationReconciler();
 
   protected readonly contextPart = new ContextPartController(this, {
     key: "tabs",
     consume: consumeTabs,
+    getKey: () => this.value,
   });
 
   private get tabs(): TabsContext | undefined {
@@ -148,6 +171,11 @@ export class QuiTabTrigger extends Mixin(ControllerHostMixin) {
   componentDidRender(): void {
     this.syncRegistration();
     this.syncAria();
+  }
+
+  @Watch("disabled")
+  private invalidateTriggers(): void {
+    // The enabled-trigger cache only depends on this trigger's disabled state.
     this.tabs?.invalidateTriggers();
   }
 
@@ -172,6 +200,11 @@ export class QuiTabTrigger extends Mixin(ControllerHostMixin) {
       return;
     }
     const panel = tabs.getPanel(this.value);
+    if (this.ariaTriggerEl === triggerEl && this.ariaPanel === panel) {
+      return;
+    }
+    this.ariaTriggerEl = triggerEl;
+    this.ariaPanel = panel;
     setAriaControls(triggerEl, panel === undefined ? [] : [panel]);
   }
 

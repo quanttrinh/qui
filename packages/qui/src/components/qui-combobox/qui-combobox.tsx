@@ -16,7 +16,6 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
 import { UnfoldMoreIcon } from "../qui-icon/icons";
 import { quiOptionSource } from "../qui-option/option-source";
 import { type PopoverDismissEvent } from "../qui-popover/qui-popover";
@@ -40,7 +39,12 @@ import {
   renderOptionRow,
   type OptionItem,
 } from "../shared/helpers/option";
-import { ControllerHostMixin, FormControlMixin, OptionControlMixin } from "../shared/mixins";
+import {
+  ControllerHostMixin,
+  FormControlMixin,
+  OptionControlMixin,
+  ShadowStylesMixin,
+} from "../shared/mixins";
 import { ComboboxInputController } from "./input-controller";
 import { type ComboboxFilter, type ComboboxFilterMode, type ComboboxOption } from "./model";
 import { comboboxStyles as styles } from "./styles";
@@ -75,6 +79,9 @@ function displayValueFor(
   return value === undefined ? "" : labelForValue(items, value);
 }
 
+/** Props that only feed form submission; the template does not read them. */
+const FORM_ONLY_PROPS = new Set(["name"]);
+
 /**
  * MD3 combobox built on the native popover API. Provide options with
  * `qui-option` children or an `items` property.
@@ -89,7 +96,12 @@ function displayValueFor(
   shadow: true,
   formAssociated: true,
 })
-export class QuiCombobox extends Mixin(ControllerHostMixin, FormControlMixin, OptionControlMixin) {
+export class QuiCombobox extends Mixin(
+  ShadowStylesMixin,
+  ControllerHostMixin,
+  FormControlMixin,
+  OptionControlMixin,
+) {
   @Element() host!: HTMLQuiComboboxElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -237,11 +249,6 @@ export class QuiCombobox extends Mixin(ControllerHostMixin, FormControlMixin, Op
     this.form.setControl(this.fieldControl);
   }
 
-  connectedCallback(): void {
-    super.connectedCallback();
-    ensureShadowStylesheet(this.host);
-  }
-
   componentWillLoad(): void {
     // Seed the query before controllers initialize.
     // A default-open list resolves its active item against the filtered set.
@@ -260,10 +267,21 @@ export class QuiCombobox extends Mixin(ControllerHostMixin, FormControlMixin, Op
     applyFieldAria(this.inputEl, this.form.fieldApi);
   }
 
+  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
+    return !FORM_ONLY_PROPS.has(propName);
+  }
+
   /** Moves focus to the internal input. */
   @Method()
   async focusControl(options?: FocusOptions): Promise<void> {
     await focusElement(this.inputEl, options);
+  }
+
+  /** Returns the current selection, including uncontrolled changes. */
+  @Method()
+  // oxlint-disable-next-line eslint/require-await, typescript/require-await -- Stencil @Method requires async, but the selection is available synchronously.
+  async getValue(): Promise<string[]> {
+    return [...this.selection.selected];
   }
 
   @Watch("value")

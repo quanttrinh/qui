@@ -18,14 +18,13 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
 import { FormController, type FormValidity } from "../shared/controllers";
 import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
 import { isHTMLTextAreaElement } from "../shared/helpers/dom/dom";
 import { focusElement } from "../shared/helpers/dom/focus";
 import { nextId } from "../shared/helpers/dom/id";
 import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
-import { ControllerHostMixin, FormControlMixin } from "../shared/mixins";
+import { ControllerHostMixin, FormControlMixin, ShadowStylesMixin } from "../shared/mixins";
 import { styles } from "./styles";
 
 function pixels(value: string): number {
@@ -42,6 +41,9 @@ export interface TextareaValueDetails {
   value: string;
 }
 
+/** Props applied imperatively or through form association; the template does not read them. */
+const IMPERATIVE_PROPS = new Set(["value"]);
+
 /**
  * A multi-line text input with optional auto-growth and a character counter.
  * When nested in `qui-field`, it inherits the field ids and state.
@@ -52,7 +54,7 @@ export interface TextareaValueDetails {
   shadow: true,
   formAssociated: true,
 })
-export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
+export class QuiTextarea extends Mixin(ShadowStylesMixin, ControllerHostMixin, FormControlMixin) {
   @Element() host!: HTMLQuiTextareaElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -95,7 +97,7 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
   @StencilEvent({ eventName: "valuechange", bubbles: true, composed: true })
   private readonly valueChange!: EventEmitter<TextareaValueDetails>;
 
-  @State() private currentValue = "";
+  @State() private counterValue = "";
 
   private textareaEl?: HTMLTextAreaElement;
   private counterEl?: HTMLElement;
@@ -142,7 +144,7 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
   componentWillLoad(): void {
     super.componentWillLoad();
     this.initialValue = this.defaultValue ?? this.value ?? "";
-    this.currentValue = this.initialValue;
+    this.counterValue = this.initialValue;
     this.syncInitialValue();
   }
 
@@ -156,7 +158,6 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
   connectedCallback(): void {
     super.connectedCallback();
     this.syncAutoResize();
-    ensureShadowStylesheet(this.host);
   }
 
   componentDidRender(): void {
@@ -164,7 +165,10 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
     applyFieldAria(this.textareaEl, this.form.fieldApi, {
       describedBy: this.counterEl === undefined ? [] : [this.counterEl],
     });
-    this.scheduleAutoResize();
+  }
+
+  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
+    return !IMPERATIVE_PROPS.has(propName);
   }
 
   disconnectedCallback(): void {
@@ -176,6 +180,13 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
   @Method()
   async focusControl(options?: FocusOptions): Promise<void> {
     await focusElement(this.textareaEl, options);
+  }
+
+  /** Returns the current native textarea value, including uncontrolled edits. */
+  @Method()
+  // oxlint-disable-next-line eslint/require-await, typescript/require-await -- Stencil @Method requires async, but the value is available synchronously.
+  async getValue(): Promise<string> {
+    return this.textareaEl?.value ?? "";
   }
 
   @Watch("value")
@@ -203,7 +214,7 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
   @Watch("showCount")
   private syncCounterValue(): void {
     if (this.showCount && this.textareaEl !== undefined) {
-      this.currentValue = this.textareaEl.value;
+      this.counterValue = this.textareaEl.value;
     }
   }
 
@@ -230,7 +241,7 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
   }
 
   private get counterText(): string {
-    const { length } = this.currentValue;
+    const { length } = this.counterValue;
     return this.maxLength === undefined ? String(length) : `${length}/${this.maxLength}`;
   }
 
@@ -248,7 +259,9 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
     if (this.textareaEl !== undefined && this.textareaEl.value !== value) {
       this.textareaEl.value = value;
     }
-    this.currentValue = value;
+    if (this.showCount) {
+      this.counterValue = value;
+    }
     this.form.sync();
     this.scheduleAutoResize();
   }
@@ -303,7 +316,7 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
       return;
     }
     if (this.showCount) {
-      this.currentValue = el.value;
+      this.counterValue = el.value;
     }
     this.valueChange.emit({ value: el.value });
     this.form.sync();

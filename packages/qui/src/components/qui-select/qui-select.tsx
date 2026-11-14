@@ -16,7 +16,6 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
 import { UnfoldMoreIcon } from "../qui-icon/icons";
 import { quiOptionSource } from "../qui-option/option-source";
 import {
@@ -38,7 +37,12 @@ import {
   renderOptionRow,
   type OptionItem,
 } from "../shared/helpers/option";
-import { ControllerHostMixin, FormControlMixin, OptionControlMixin } from "../shared/mixins";
+import {
+  ControllerHostMixin,
+  FormControlMixin,
+  OptionControlMixin,
+  ShadowStylesMixin,
+} from "../shared/mixins";
 import { selectStyles as styles } from "./styles";
 
 /** A select option. */
@@ -64,6 +68,9 @@ function labelsForValues(
   return values.map((value) => labelForValue(items, value)).join(separator);
 }
 
+/** Props that only feed form submission; the template does not read them. */
+const FORM_ONLY_PROPS = new Set(["name"]);
+
 /**
  * MD3 select. Provide options with `qui-option` children or an `items`
  * property. The list and popover are shared with `qui-combobox`.
@@ -75,7 +82,12 @@ function labelsForValues(
   shadow: true,
   formAssociated: true,
 })
-export class QuiSelect extends Mixin(ControllerHostMixin, FormControlMixin, OptionControlMixin) {
+export class QuiSelect extends Mixin(
+  ShadowStylesMixin,
+  ControllerHostMixin,
+  FormControlMixin,
+  OptionControlMixin,
+) {
   @Element() host!: HTMLQuiSelectElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -173,14 +185,13 @@ export class QuiSelect extends Mixin(ControllerHostMixin, FormControlMixin, Opti
     this.form.setControl(this.fieldControl);
   }
 
-  connectedCallback(): void {
-    super.connectedCallback();
-    ensureShadowStylesheet(this.host);
-  }
-
   componentDidRender(): void {
     super.componentDidRender();
     applyFieldAria(this.triggerEl, this.form.fieldApi);
+  }
+
+  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
+    return !FORM_ONLY_PROPS.has(propName);
   }
 
   disconnectedCallback(): void {
@@ -195,6 +206,13 @@ export class QuiSelect extends Mixin(ControllerHostMixin, FormControlMixin, Opti
   @Method()
   async focusControl(options?: FocusOptions): Promise<void> {
     await focusElement(this.triggerEl, options);
+  }
+
+  /** Returns the current selection, including uncontrolled changes. */
+  @Method()
+  // oxlint-disable-next-line eslint/require-await, typescript/require-await -- Stencil @Method requires async, but the selection is available synchronously.
+  async getValue(): Promise<string[]> {
+    return [...this.selection.selected];
   }
 
   @Watch("value")

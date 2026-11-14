@@ -1,9 +1,9 @@
-import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
+import { ShadowStylesMixin } from "../shared/mixins";
 import { renderIconSvg } from "./render-icon";
 
 const styles = {
@@ -43,7 +43,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiIcon),
   shadow: true,
 })
-export class QuiIcon {
+export class QuiIcon extends Mixin(ShadowStylesMixin) {
   @Element() host!: HTMLElement;
 
   /** The SVG path data (`d` attribute). Required. */
@@ -52,10 +52,6 @@ export class QuiIcon {
   @Prop() viewBox = "0 0 24 24";
   /** Accessible label. Omit for a decorative icon. */
   @Prop() label?: string;
-
-  connectedCallback(): void {
-    ensureShadowStylesheet(this.host);
-  }
 
   render(): VNode {
     const labelled = Boolean(this.label);

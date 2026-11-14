@@ -1,9 +1,10 @@
-import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
+import { ShadowStylesMixin } from "../shared/mixins";
 import { focusRing } from "../shared/styles";
 
 export type ButtonVariant = "filled" | "tonal" | "elevated" | "outlined" | "text";
@@ -31,14 +32,17 @@ const styles = {
       pos: "absolute",
       inset: "0",
       zIndex: "-1",
-      bgColor: "currentColor",
+      bgColor: "var(--qui-button-state-layer-color, currentColor)",
       opacity: 0,
       pointerEvents: "none",
       transition: "opacity 150ms",
     },
     "&:hover:not(:disabled):not([aria-disabled=true])::before": { opacity: 0.08 },
     "&:active:not(:disabled):not([aria-disabled=true])::before": { opacity: 0.12 },
-    _focusVisible: focusRing,
+    _focusVisible: {
+      ...focusRing,
+      ringColor: `var(--qui-button-focus-ring-color, ${token("colors.primary")})`,
+    },
     "&:disabled, &[aria-disabled=true]": { opacity: 0.38, cursor: "not-allowed" },
 
     "&[data-size=sm]": { h: "8", px: "3", gap: "1.5", fontSize: "sm" },
@@ -46,27 +50,31 @@ const styles = {
     "&[data-size=lg]": { h: "12", px: "8", gap: "2.5", fontSize: "md" },
 
     "&[data-variant=filled]": {
-      bgColor: "primary",
-      color: "onPrimary",
+      bgColor: `var(--qui-button-container-color, ${token("colors.primary")})`,
+      color: `var(--qui-button-label-color, ${token("colors.onPrimary")})`,
       shadow: "sm",
     },
     "&[data-variant=filled]:hover:not(:disabled):not([aria-disabled=true])": { shadow: "md" },
     "&[data-variant=tonal]": {
-      bgColor: "secondaryContainer",
-      color: "onSecondaryContainer",
+      bgColor: `var(--qui-button-container-color, ${token("colors.secondaryContainer")})`,
+      color: `var(--qui-button-label-color, ${token("colors.onSecondaryContainer")})`,
     },
     "&[data-variant=elevated]": {
-      bgColor: "surfaceContainerLow",
-      color: "primary",
+      bgColor: `var(--qui-button-container-color, ${token("colors.surfaceContainerLow")})`,
+      color: `var(--qui-button-label-color, ${token("colors.primary")})`,
       shadow: "sm",
     },
     "&[data-variant=elevated]:hover:not(:disabled):not([aria-disabled=true])": { shadow: "md" },
     "&[data-variant=outlined]": {
-      color: "primary",
+      bgColor: "var(--qui-button-container-color, transparent)",
+      color: `var(--qui-button-label-color, ${token("colors.primary")})`,
       borderWidth: "1px",
-      borderColor: "outline",
+      borderColor: `var(--qui-button-outline-color, ${token("colors.outline")})`,
     },
-    "&[data-variant=text]": { color: "primary" },
+    "&[data-variant=text]": {
+      bgColor: "var(--qui-button-container-color, transparent)",
+      color: `var(--qui-button-label-color, ${token("colors.primary")})`,
+    },
 
     "&[data-icon-only][data-size=sm]": { w: "8", px: "0" },
     "&[data-icon-only][data-size=md]": { w: "10", px: "0" },
@@ -88,7 +96,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiButton),
   shadow: true,
 })
-export class QuiButton {
+export class QuiButton extends Mixin(ShadowStylesMixin) {
   @Element() host!: HTMLElement;
 
   /** The visual style. */
@@ -111,10 +119,6 @@ export class QuiButton {
   @Prop() download?: string;
   /** Native button type. */
   @Prop() type: "button" | "submit" | "reset" = "button";
-
-  connectedCallback(): void {
-    ensureShadowStylesheet(this.host);
-  }
 
   private get dataProps(): Record<string, string | undefined> {
     return {

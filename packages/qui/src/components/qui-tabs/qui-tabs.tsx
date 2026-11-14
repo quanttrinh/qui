@@ -4,7 +4,6 @@ import {
   Component,
   Element,
   Event,
-  forceUpdate,
   h,
   Host,
   Prop,
@@ -16,13 +15,15 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
 import { createListenerStore } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { nextId } from "../shared/helpers/dom/id";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { clearTabs, provideTabs, type TabsContext, type TabsVariant } from "./context";
 import { TabsController } from "./controller";
+
+/** Props that only feed the child context, so the root template ignores them. */
+const CONTEXT_ONLY_PROPS = new Set(["value", "activationMode", "loopFocus", "deselectable"]);
 
 const styles = {
   host: css({ display: "block" }),
@@ -53,7 +54,7 @@ export interface TabsValueChangeDetails {
   styleUrl: resolveVar(styleUrls.quiTabs),
   shadow: true,
 })
-export class QuiTabs extends Mixin(ControllerHostMixin) {
+export class QuiTabs extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiTabsElement;
 
   /** The controlled selected tab value. */
@@ -135,8 +136,8 @@ export class QuiTabs extends Mixin(ControllerHostMixin) {
     subscribe: this.listeners.subscribe,
   };
 
-  protected onRequestUpdate(): void {
-    this.listeners.notify();
+  protected onRequestUpdate(keys?: Iterable<string>): void {
+    this.listeners.notify(keys);
   }
 
   connectedCallback(): void {
@@ -145,7 +146,6 @@ export class QuiTabs extends Mixin(ControllerHostMixin) {
       this.idBase = this.host.id || this.generatedId;
     }
     provideTabs(this.host, this.context);
-    ensureShadowStylesheet(this.host);
   }
 
   componentWillLoad(): void {
@@ -168,8 +168,13 @@ export class QuiTabs extends Mixin(ControllerHostMixin) {
   @Watch("textDirection")
   @Watch("variant")
   private syncContext(): void {
-    forceUpdate(this.host);
+    // Stencil re-renders on every prop change. `componentShouldUpdate` skips the root render.
+    // Context-only props still notify the children here.
     this.listeners.notify();
+  }
+
+  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
+    return !CONTEXT_ONLY_PROPS.has(propName);
   }
 
   private get rootId(): string {

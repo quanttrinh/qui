@@ -2,9 +2,10 @@ import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@ste
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
 import { ContextPartController } from "../shared/controllers";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { consumeDialog, type DialogContext } from "./context";
 
 const styles = {
@@ -12,7 +13,7 @@ const styles = {
   title: css({
     textStyle: "2xl",
     lineHeight: "snug",
-    color: "onSurface",
+    color: `var(--qui-dialog-title-color, ${token("colors.onSurface")})`,
   }),
 };
 
@@ -26,7 +27,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiDialogTitle),
   shadow: true,
 })
-export class QuiDialogTitle extends Mixin(ControllerHostMixin) {
+export class QuiDialogTitle extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiDialogTitleElement;
 
   protected readonly contextPart = new ContextPartController(this, {

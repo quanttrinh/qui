@@ -17,12 +17,11 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
 import { createListenerStore, FormController, type FormValidity } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { nextId } from "../shared/helpers/dom/id";
 import { applyFieldAria, type FieldControlHandle } from "../shared/helpers/field";
-import { ControllerHostMixin, FormControlMixin } from "../shared/mixins";
+import { ControllerHostMixin, FormControlMixin, ShadowStylesMixin } from "../shared/mixins";
 import {
   clearRadioGroup,
   provideRadioGroup,
@@ -31,6 +30,9 @@ import {
   type RadioItemState,
 } from "./context";
 import { RadioGroupController } from "./controller";
+
+/** Props that only feed the child context, so the root template ignores them. */
+const CONTEXT_ONLY_PROPS = new Set(["value", "name"]);
 
 const styles = {
   host: css({ display: "block" }),
@@ -54,7 +56,7 @@ const styles = {
   shadow: true,
   formAssociated: true,
 })
-export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin) {
+export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin, ShadowStylesMixin) {
   @Element() host!: HTMLQuiRadioGroupElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -172,8 +174,8 @@ export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin) 
     this.form.setControl(this.fieldControl);
   }
 
-  protected onRequestUpdate(): void {
-    this.listeners.notify();
+  protected onRequestUpdate(keys?: Iterable<string>): void {
+    this.listeners.notify(keys);
   }
 
   connectedCallback(): void {
@@ -182,7 +184,6 @@ export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin) 
       this.idBase = this.host.id || this.generatedId;
     }
     provideRadioGroup(this.host, this.context);
-    ensureShadowStylesheet(this.host);
   }
 
   componentWillLoad(): void {
@@ -209,6 +210,13 @@ export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin) 
     this.controller.focusInput(options);
   }
 
+  /** Returns the current selected value, including uncontrolled changes. */
+  @Method()
+  // oxlint-disable-next-line eslint/require-await, typescript/require-await -- Stencil @Method requires async, but the value is available synchronously.
+  async getValue(): Promise<string | undefined> {
+    return this.controller.value;
+  }
+
   @Watch("value")
   @Watch("name")
   @Watch("disabled")
@@ -220,6 +228,10 @@ export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin) 
   private syncGroup(): void {
     this.form.sync();
     this.listeners.notify();
+  }
+
+  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
+    return !CONTEXT_ONLY_PROPS.has(propName);
   }
 
   private get rootId(): string {

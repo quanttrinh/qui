@@ -12,13 +12,15 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
 import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
 import { setAriaControls, setAriaLabelledBy } from "../shared/helpers/aria/aria";
 import { dataAttr } from "../shared/helpers/aria/attr";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { focusRing } from "../shared/styles";
 import { consumeTabs, type TabsContext } from "./context";
+import { type TabsTriggerRegistration } from "./controller";
 import { hasFocusableDescendant } from "./focusable";
 
 const styles = {
@@ -28,7 +30,7 @@ const styles = {
     py: "3",
     outlineStyle: "none",
     fontSize: "sm",
-    color: "onSurfaceVariant",
+    color: `var(--qui-tabs-panel-text-color, ${token("colors.onSurfaceVariant")})`,
     // Defers layout/paint of off-screen panels. Inactive panels are also hidden,
     // So this mainly helps long, active panels below the fold.
     contentVisibility: "auto",
@@ -49,7 +51,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiTabPanel),
   shadow: true,
 })
-export class QuiTabPanel extends Mixin(ControllerHostMixin) {
+export class QuiTabPanel extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiTabPanelElement;
 
   /** The value linking this panel to its trigger. */
@@ -59,12 +61,16 @@ export class QuiTabPanel extends Mixin(ControllerHostMixin) {
 
   private panelEl?: HTMLDivElement;
   private tabIndexQueued = false;
+  private lastSelected?: boolean;
+  private ariaPanelEl?: HTMLDivElement;
+  private ariaTrigger?: TabsTriggerRegistration;
   private contentObserver?: MutationObserver;
   private readonly registration = new RegistrationReconciler();
 
   protected readonly contextPart = new ContextPartController(this, {
     key: "tabs",
     consume: consumeTabs,
+    getKey: () => this.value,
   });
 
   private get tabs(): TabsContext | undefined {
@@ -81,7 +87,7 @@ export class QuiTabPanel extends Mixin(ControllerHostMixin) {
         subtree: true,
         childList: true,
         attributes: true,
-        attributeFilter: ["disabled", "hidden", "tabindex"],
+        attributeFilter: ["disabled", "hidden", "inert", "tabindex"],
       });
     }
   }
@@ -89,12 +95,18 @@ export class QuiTabPanel extends Mixin(ControllerHostMixin) {
   componentDidRender(): void {
     this.syncRegistration();
     this.syncAria();
-    this.scheduleTabIndex();
+    // Only re-walk on selection changes; content mutations schedule their own check.
+    const selected = this.tabs?.isSelected(this.value) ?? false;
+    if (selected !== this.lastSelected) {
+      this.lastSelected = selected;
+      this.scheduleTabIndex();
+    }
   }
 
   disconnectedCallback(): void {
     this.contentObserver?.disconnect();
     this.contentObserver = undefined;
+    this.lastSelected = undefined;
     this.registration.clear();
     super.disconnectedCallback();
   }
@@ -115,6 +127,11 @@ export class QuiTabPanel extends Mixin(ControllerHostMixin) {
       return;
     }
     const trigger = tabs.getTrigger(this.value);
+    if (this.ariaPanelEl === panelEl && this.ariaTrigger === trigger) {
+      return;
+    }
+    this.ariaPanelEl = panelEl;
+    this.ariaTrigger = trigger;
     setAriaLabelledBy(panelEl, trigger === undefined ? [] : [trigger.host]);
     if (trigger !== undefined) {
       // Set the reverse relationship so a late trigger registration is reflected too.

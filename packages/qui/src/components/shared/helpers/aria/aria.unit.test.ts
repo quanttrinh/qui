@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createReflectionElement, fakeTarget } from "../../../../../tests/test-utils/fake-aria";
 import {
@@ -67,6 +67,39 @@ describe("ARIA host-targeting helpers", () => {
       fallback.setAttribute(attribute, "stale");
       set(fallback, []);
       expect(fallback.hasAttribute(attribute)).toBe(false);
+    });
+
+    it(`re-applies ${property} after an external clear`, () => {
+      const fallback = createReflectionElement(false);
+      const fallbackTarget = fakeTarget("fallback");
+      set(fallback, [fallbackTarget]);
+      fallback.removeAttribute(attribute);
+      set(fallback, [fallbackTarget]);
+      expect(fallback.getAttribute(attribute)).toBe("fallback");
+
+      const supported = createReflectionElement(true);
+      const supportedTarget = fakeTarget("supported");
+      set(supported, [supportedTarget]);
+      Reflect.set(supported, property, []);
+      set(supported, [supportedTarget]);
+      expect(supported[property]).toEqual([supportedTarget]);
+    });
+
+    it(`skips redundant ${property} assignments`, () => {
+      const element = createReflectionElement(false);
+      const target = fakeTarget("target");
+      const setAttribute = vi.spyOn(element, "setAttribute");
+
+      set(element, [target]);
+      expect(setAttribute).toHaveBeenCalledOnce();
+
+      setAttribute.mockClear();
+      set(element, [target]);
+      expect(setAttribute).not.toHaveBeenCalled();
+
+      target.id = "renamed";
+      set(element, [target]);
+      expect(element.getAttribute(attribute)).toBe("renamed");
     });
   }
 });

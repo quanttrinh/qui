@@ -1,4 +1,5 @@
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
 import { fieldSurface, focusRingFlush } from "../shared/styles";
 
@@ -12,9 +13,10 @@ export const styles = {
     w: "full",
     "&:focus-within": {
       ...focusRingFlush,
-      borderColor: "primary",
+      ringColor: `var(--qui-field-focus-ring-color, ${token("colors.primary")})`,
+      borderColor: `var(--qui-field-focus-border-color, ${token("colors.primary")})`,
     },
-    "&[data-invalid]": { borderColor: "error" },
+    "&[data-invalid]": { borderColor: `var(--qui-field-error-color, ${token("colors.error")})` },
     "&[data-readonly]": { bgColor: "surfaceContainerLow" },
     "&[data-disabled]": { opacity: 0.38, cursor: "not-allowed" },
   }),
@@ -25,13 +27,15 @@ export const styles = {
     p: "3",
     textStyle: "sm",
     lineHeight: "snug",
-    color: "onSurface",
+    color: `var(--qui-field-text-color, ${token("colors.onSurface")})`,
     bgColor: "transparent",
     outlineStyle: "none",
     ringWidth: "0",
     borderWidth: "0",
     resize: "vertical",
-    "&::placeholder": { color: "onSurfaceVariant" },
+    "&::placeholder": {
+      color: `var(--qui-field-placeholder-color, ${token("colors.onSurfaceVariant")})`,
+    },
     "&:disabled": { cursor: "not-allowed" },
     "&[data-resize=auto], &[data-resize=none]": { resize: "none" },
   }),

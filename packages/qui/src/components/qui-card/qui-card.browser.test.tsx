@@ -38,3 +38,21 @@ describe("qui-card", () => {
     expect(assignedText(actionsSlot)).toContain("Action");
   });
 });
+
+describe("qui-card colors", () => {
+  it("applies container and border color custom properties", async () => {
+    const { root } = await render(
+      <qui-card variant="outlined">
+        <span slot="title">Title</span>
+      </qui-card>,
+    );
+    const card = queryPartIn(root, "root");
+    card.style.setProperty("transition", "none", "important");
+
+    root.style.setProperty("--qui-card-container-color", "rgb(1, 2, 3)");
+    root.style.setProperty("--qui-card-border-color", "rgb(4, 5, 6)");
+
+    expect(getComputedStyle(card).backgroundColor).toBe("rgb(1, 2, 3)");
+    expect(getComputedStyle(card).borderTopColor).toBe("rgb(4, 5, 6)");
+  });
+});
