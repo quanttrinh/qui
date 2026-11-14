@@ -4,6 +4,7 @@
     "dockerfile": "Containerfile",
     "context": ".."
   },
+  "remoteUser": "dev",
   "secrets": {
     "DOCKERHUB_USER": {},
     "DOCKERHUB_TOKEN": {}
