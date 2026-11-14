@@ -30,7 +30,10 @@ concurrency:
 
 jobs:
   pr-build:
-    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.user.login != 'renovate[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -102,7 +105,10 @@ jobs:
 
   pr-deploy:
     needs: pr-build
-    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.user.login != 'renovate[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -216,7 +222,10 @@ jobs:
           push_with_retry
 
   pr-cleanup:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.user.login != 'renovate[bot]'
     runs-on: ubuntu-slim
     permissions:
       contents: write
@@ -373,7 +382,10 @@ jobs:
 
   pr-deploy-pages:
     needs: pr-deploy
-    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.user.login != 'renovate[bot]'
     permissions:
       contents: read
       pages: write
@@ -382,7 +394,10 @@ jobs:
 
   pr-preview-comment:
     needs: pr-deploy-pages
-    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.user.login != 'renovate[bot]'
     runs-on: ubuntu-slim
     permissions:
       contents: read
@@ -416,7 +431,10 @@ jobs:
 
   pr-cleanup-pages:
     needs: pr-cleanup
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.user.login != 'renovate[bot]'
     permissions:
       contents: read
       pages: write
