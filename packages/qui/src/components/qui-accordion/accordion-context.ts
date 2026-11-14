@@ -46,22 +46,7 @@ export interface AccordionItemContext extends AccordionContext {
 export const accordionContext = createContextStore<AccordionContext>();
 export const accordionItemContext = createContextStore<AccordionItemContext>();
 
-const {
-  provide: provideAccordion,
-  clear: clearAccordion,
-  consume: consumeAccordion,
-} = accordionContext;
-const {
-  provide: provideAccordionItem,
-  clear: clearAccordionItem,
-  consume: consumeAccordionItem,
-} = accordionItemContext;
+const { provide: provideAccordion, clear: clearAccordion } = accordionContext;
+const { provide: provideAccordionItem, clear: clearAccordionItem } = accordionItemContext;
 
-export {
-  clearAccordion,
-  clearAccordionItem,
-  consumeAccordion,
-  consumeAccordionItem,
-  provideAccordion,
-  provideAccordionItem,
-};
+export { clearAccordion, clearAccordionItem, provideAccordion, provideAccordionItem };

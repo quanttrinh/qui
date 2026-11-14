@@ -81,6 +81,6 @@ export interface FieldApi {
 
 export const fieldContext = createContextStore<FieldApi>();
 
-const { provide: provideField, clear: clearField, consume: consumeField } = fieldContext;
+const { provide: provideField, clear: clearField } = fieldContext;
 
-export { clearField, consumeField, provideField };
+export { clearField, provideField };

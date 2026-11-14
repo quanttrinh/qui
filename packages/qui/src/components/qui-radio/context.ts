@@ -40,10 +40,6 @@ export interface RadioGroupContext {
 
 export const radioGroupContext = createContextStore<RadioGroupContext>();
 
-const {
-  provide: provideRadioGroup,
-  clear: clearRadioGroup,
-  consume: consumeRadioGroup,
-} = radioGroupContext;
+const { provide: provideRadioGroup, clear: clearRadioGroup } = radioGroupContext;
 
-export { clearRadioGroup, consumeRadioGroup, provideRadioGroup };
+export { clearRadioGroup, provideRadioGroup };

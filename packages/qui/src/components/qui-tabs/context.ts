@@ -44,6 +44,6 @@ export interface TabsContext {
 
 export const tabsContext = createContextStore<TabsContext>();
 
-const { provide: provideTabs, clear: clearTabs, consume: consumeTabs } = tabsContext;
+const { provide: provideTabs, clear: clearTabs } = tabsContext;
 
-export { clearTabs, consumeTabs, provideTabs };
+export { clearTabs, provideTabs };
