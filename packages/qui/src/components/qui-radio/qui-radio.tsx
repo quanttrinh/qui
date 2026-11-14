@@ -108,7 +108,25 @@ export class QuiRadio extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
 
   protected readonly contextPart = new ContextPartController(this, {
     context: radioGroupContext,
-    getKey: () => this.value,
+    // Keep in sync with render() and the post-render sync.
+    select: (group) => {
+      const state = group.itemState(this.item());
+      return [
+        state.checked,
+        state.disabled,
+        state.invalid,
+        state.focused,
+        state.focusVisible,
+        group.orientation(),
+        group.textDirection(),
+        group.isReadOnly(),
+        group.rootId(),
+        group.itemId(this.value),
+        group.inputId(this.value),
+        group.controlId(this.value),
+        group.labelId(this.value),
+      ];
+    },
   });
   private inputEl?: HTMLInputElement;
   private registeredInput?: HTMLInputElement;

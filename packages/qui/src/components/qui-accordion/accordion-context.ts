@@ -34,7 +34,7 @@ export interface AccordionContext {
   itemId: (value: string) => string;
   triggerId: (value: string) => string;
   contentId: (value: string) => string;
-  subscribe: (listener: () => void, key?: () => string | undefined) => () => void;
+  subscribe: (listener: () => void) => () => void;
 }
 
 export interface AccordionItemContext extends AccordionContext {

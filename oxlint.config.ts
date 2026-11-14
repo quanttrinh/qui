@@ -30,6 +30,7 @@ export default defineConfig({
       files: ["**/*.test.{ts,tsx}"],
       rules: {
         // Test files use compact helpers and intentionally cast fakes.
+        "eslint/max-statements": "off",
         "typescript/explicit-function-return-type": "off",
         "typescript/no-unsafe-type-assertion": "off",
       },

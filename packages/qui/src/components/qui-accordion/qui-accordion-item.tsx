@@ -58,7 +58,15 @@ export class QuiAccordionItem extends Mixin(ShadowStylesMixin, ControllerHostMix
 
   protected readonly contextPart = new ContextPartController(this, {
     context: accordionContext,
-    getKey: () => this.value,
+    // Keep in sync with render() and the post-render sync.
+    select: (accordion) => [
+      accordion.isExpanded(this.value),
+      accordion.isFocused(this.value),
+      this.isDisabled(accordion),
+      accordion.orientation(),
+      accordion.textDirection(),
+      accordion.itemId(this.value),
+    ],
     setup: (accordion): (() => void) => {
       provideAccordionItem(this.host, this.context(accordion));
       return () => {
@@ -89,9 +97,9 @@ export class QuiAccordionItem extends Mixin(ShadowStylesMixin, ControllerHostMix
       ...accordion,
       item: () => this.item(),
       isItemDisabled: () => this.isDisabled(accordion),
-      subscribe: (listener, key) => {
+      subscribe: (listener) => {
         const stopItem = this.listeners.subscribe(listener);
-        const stopAccordion = accordion.subscribe(listener, key);
+        const stopAccordion = accordion.subscribe(listener);
         return () => {
           stopItem();
           stopAccordion();

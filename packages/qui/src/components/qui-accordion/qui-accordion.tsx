@@ -127,8 +127,8 @@ export class QuiAccordion extends Mixin(ShadowStylesMixin, ControllerHostMixin) 
     subscribe: this.listeners.subscribe,
   };
 
-  protected onRequestUpdate(keys?: Iterable<string>): void {
-    this.listeners.notify(keys);
+  protected onRequestUpdate(): void {
+    this.listeners.notify();
   }
 
   connectedCallback(): void {

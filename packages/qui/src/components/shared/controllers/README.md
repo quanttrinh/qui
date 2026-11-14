@@ -37,12 +37,9 @@ to every registered controller:
 
 Controllers can request work in two ways:
 
-- `requestUpdate(keys?)` — renders the host and notifies context subscribers.
-- `requestNotify(keys?)` — notifies context subscribers **without** rendering
+- `requestUpdate()` — renders the host and notifies context subscribers.
+- `requestNotify()` — notifies context subscribers **without** rendering
   the host. Used by components whose root template only reads props.
-
-Both accept optional key sets so context notifications can be scoped to the
-affected values instead of waking every part of a widget.
 
 ## Controllers
 
@@ -67,7 +64,7 @@ reactive controllers themselves:
 | ---------------------------------------------------------------- | -------------------------------------------------------------- |
 | [`focus-state`](./focus-state/README.md)                         | Focused value, focus-within, focus-visible bookkeeping         |
 | [`keyed-host-registry`](./keyed-host-registry/README.md)         | Value-keyed registration registry with scoped change callbacks |
-| [`listener-store`](./listener-store/README.md)                   | Keyed set of change listeners used by context providers        |
+| [`listener-store`](./listener-store/README.md)                   | Set of change listeners used by context providers              |
 | [`registration-reconciler`](./registration-reconciler/README.md) | Re-run a registration only when its signature changes          |
 | [`roving-focus`](./roving-focus/README.md)                       | Roving-focus registries, index movement, and edge handling     |
 

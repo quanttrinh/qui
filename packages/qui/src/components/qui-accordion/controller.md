@@ -43,8 +43,7 @@ Component controller. Extends `ControlledControllerBase<string[]>`; lives beside
 - Toggle closes only when `multiple` or `collapsible` allows it; single mode
   replaces the array, multiple adds/removes.
 - The root template only reads props, so the controller uses `requestNotify`
-  with the previous/next values (or the registered value) instead of
-  `requestUpdate`.
+  instead of `requestUpdate`.
 - `triggers` is a `RovingFocusRegistry`; `contents` is a `KeyedHostRegistry`.
-- Registration changes notify only the affected value, so only that item's parts
-  re-render.
+- Registration changes notify context subscribers; parts select the values they
+  render, so only affected items re-render.

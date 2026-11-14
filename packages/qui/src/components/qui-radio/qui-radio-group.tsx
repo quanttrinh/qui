@@ -174,8 +174,8 @@ export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin, 
     this.form.setControl(this.fieldControl);
   }
 
-  protected onRequestUpdate(keys?: Iterable<string>): void {
-    this.listeners.notify(keys);
+  protected onRequestUpdate(): void {
+    this.listeners.notify();
   }
 
   connectedCallback(): void {

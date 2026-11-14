@@ -39,7 +39,7 @@ export interface TabsContext {
   listId: () => string;
   triggerId: (value: string) => string;
   panelId: (value: string) => string;
-  subscribe: (listener: () => void, key?: () => string | undefined) => () => void;
+  subscribe: (listener: () => void) => () => void;
 }
 
 export const tabsContext = createContextStore<TabsContext>();

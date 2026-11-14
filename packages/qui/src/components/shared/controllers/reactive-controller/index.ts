@@ -11,13 +11,13 @@ export interface ReactiveControllerHost<TElement extends HTMLElement = HTMLEleme
   addController: (controller: ReactiveController) => void;
   /** Unregisters a controller. */
   removeController: (controller: ReactiveController) => void;
-  /** Schedules a host render. `keys` scopes context notifications where supported. */
-  requestUpdate: (keys?: Iterable<string>) => void;
+  /** Schedules a host render. */
+  requestUpdate: () => void;
   /**
    * Notifies context subscribers without scheduling a host render. Providers
    * whose root template does not read controller state use this instead.
    */
-  notifyUpdate?: (keys?: Iterable<string>) => void;
+  notifyUpdate?: () => void;
 }
 
 /** Lifecycle hooks a controller can observe on its host component. */
@@ -68,19 +68,19 @@ export abstract class ReactiveControllerBase<
   }
 
   /** Schedules a render of the host component. */
-  protected requestUpdate(keys?: Iterable<string>): void {
-    this.host.requestUpdate(keys);
+  protected requestUpdate(): void {
+    this.host.requestUpdate();
   }
 
   /**
    * Notifies the host without scheduling a render. Falls back to a render for
    * hosts that only implement `requestUpdate`.
    */
-  protected requestNotify(keys?: Iterable<string>): void {
+  protected requestNotify(): void {
     if (this.host.notifyUpdate === undefined) {
-      this.host.requestUpdate(keys);
+      this.host.requestUpdate();
       return;
     }
-    this.host.notifyUpdate(keys);
+    this.host.notifyUpdate();
   }
 }

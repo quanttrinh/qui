@@ -8,7 +8,6 @@ import {
   type ReactiveControllerHost,
   type TriggerRegistration,
 } from "../shared/controllers";
-import { uniqueValues } from "../shared/helpers/collection";
 
 interface AccordionControllerOptions {
   getValue: () => string[] | undefined;
@@ -37,8 +36,8 @@ export class AccordionController extends ControlledControllerBase<string[]> {
       copy: (value: string[]) => [...value],
     });
     this.options = options;
-    const onChange = (value?: string): void => {
-      this.requestNotify(value === undefined ? undefined : [value]);
+    const onChange = (): void => {
+      this.requestNotify();
     };
     this.contents = new KeyedHostRegistry({ onChange });
     this.triggers = new RovingFocusRegistry({ onChange });
@@ -91,22 +90,19 @@ export class AccordionController extends ControlledControllerBase<string[]> {
   }
 
   focus(value: string): void {
-    const previous = this.focusState.focusedValue;
-    if (!this.focusState.focus(value)) {
-      return;
+    if (this.focusState.focus(value)) {
+      this.requestNotify();
     }
-    this.requestNotify(uniqueValues(previous, value));
   }
 
   blur(): void {
-    const previous = this.focusState.focusedValue;
     if (this.focusState.blur()) {
-      this.requestNotify(uniqueValues(previous));
+      this.requestNotify();
     }
   }
 
-  protected override onValueChanged(previous: string[], next: string[]): void {
-    this.requestNotify(uniqueValues(...previous, ...next));
+  protected override onValueChanged(): void {
+    this.requestNotify();
   }
 
   move(fromValue: string, delta: 1 | -1): void {
