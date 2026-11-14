@@ -1,10 +1,9 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryPartIn, resolveHost } from "../../../tests/test-utils/component";
+import { queryPartIn, resolveForm, resolveHost } from "../../../tests/test-utils/component";
 import { settle } from "../../../tests/test-utils/dom-ready";
 import { expectFocusedDeep, pointerDown, typeInto } from "../../../tests/test-utils/interactions";
 import { queryParts } from "../../../tests/test-utils/shadow";
-import { isHTMLFormElement } from "../shared/helpers/dom/dom";
 import { type OptionItem } from "../shared/helpers/option";
 
 const accounts: OptionItem[] = [
@@ -45,10 +44,7 @@ describe("qui-combobox", () => {
         <qui-combobox name="account" items={accounts} />
       </form>,
     );
-    const form = isHTMLFormElement(root) ? root : root.querySelector("form");
-    if (!isHTMLFormElement(form)) {
-      throw new TypeError("Expected a form");
-    }
+    const form = resolveForm(root);
     const host = resolveHost<HTMLQuiComboboxElement>(root, "qui-combobox");
     const input = queryPartIn<HTMLInputElement>(host, "input");
 
@@ -60,7 +56,10 @@ describe("qui-combobox", () => {
     const option = queryParts<HTMLElement>(host, "option").find(
       (candidate) => candidate.dataset.value === "account-2",
     );
-    option?.click();
+    if (option === undefined) {
+      throw new Error("Expected account-2 to be rendered");
+    }
+    option.click();
     await waitForChanges();
 
     expect(host.getAttribute("name")).toBe("account");

@@ -184,7 +184,6 @@ export class QuiSelect extends Mixin(
 
   componentDidRender(): void {
     super.componentDidRender();
-    this.form.sync();
     applyFieldAria(this.triggerEl, this.form.fieldApi);
   }
 
@@ -210,8 +209,12 @@ export class QuiSelect extends Mixin(
   }
 
   @Watch("value")
-  @Watch("name")
   private syncForm(): void {
+    this.form.sync();
+  }
+
+  @Watch("name")
+  private syncName(): void {
     this.form.sync();
   }
 

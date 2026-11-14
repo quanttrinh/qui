@@ -1,9 +1,13 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryControl, queryPartIn, resolveHost } from "../../../tests/test-utils/component";
+import {
+  queryControl,
+  queryPartIn,
+  resolveForm,
+  resolveHost,
+} from "../../../tests/test-utils/component";
 import { waitForShadowStyles } from "../../../tests/test-utils/dom-ready";
 import { expectFocusedDeep } from "../../../tests/test-utils/interactions";
-import { isHTMLFormElement } from "../shared/helpers/dom/dom";
 
 function queryRequiredIndicator(root: HTMLElement): HTMLElement {
   return queryPartIn(
@@ -52,10 +56,7 @@ describe("qui-checkbox", () => {
         </qui-checkbox>
       </form>,
     );
-    const form = isHTMLFormElement(root) ? root : root.querySelector("form");
-    if (!isHTMLFormElement(form)) {
-      throw new TypeError("Expected a form");
-    }
+    const form = resolveForm(root);
     const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
     const input = queryControl<HTMLInputElement>(host, "input");
 

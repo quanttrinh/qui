@@ -52,6 +52,21 @@ export function queryControl<TElement extends Element = Element>(
   return control;
 }
 
+/** Resolves the form element containing `root`, or throws. */
+export function resolveForm(root: HTMLElement): HTMLFormElement {
+  if (root instanceof HTMLFormElement) {
+    return root;
+  }
+
+  const form = root.querySelector("form");
+
+  if (!(form instanceof HTMLFormElement)) {
+    throw new TypeError("Expected a form");
+  }
+
+  return form;
+}
+
 /** Returns the first element in `root`'s shadow root whose `part` contains `partName`. */
 export function queryPartIn<TElement extends Element = HTMLElement>(
   root: Element,

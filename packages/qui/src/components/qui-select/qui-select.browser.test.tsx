@@ -1,10 +1,9 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryPartIn, resolveHost } from "../../../tests/test-utils/component";
+import { queryPartIn, resolveForm, resolveHost } from "../../../tests/test-utils/component";
 import { settle } from "../../../tests/test-utils/dom-ready";
 import { expectFocusedDeep, pointerDown } from "../../../tests/test-utils/interactions";
 import { queryParts } from "../../../tests/test-utils/shadow";
-import { isHTMLFormElement } from "../shared/helpers/dom/dom";
 import { type OptionItem } from "../shared/helpers/option";
 
 const accounts: OptionItem[] = Array.from({ length: 1000 }, (_entry, index) => ({
@@ -49,10 +48,7 @@ describe("qui-select", () => {
         <qui-select name="account" items={accounts} />
       </form>,
     );
-    const form = isHTMLFormElement(root) ? root : root.querySelector("form");
-    if (!isHTMLFormElement(form)) {
-      throw new TypeError("Expected a form");
-    }
+    const form = resolveForm(root);
     const host = resolveHost<HTMLQuiSelectElement>(root, "qui-select");
     const trigger = queryPartIn<HTMLButtonElement>(host, "trigger");
 
@@ -63,7 +59,10 @@ describe("qui-select", () => {
     const option = queryParts<HTMLElement>(host, "option").find(
       (candidate) => candidate.dataset.value === "account-2",
     );
-    option?.click();
+    if (option === undefined) {
+      throw new Error("Expected account-2 to be rendered");
+    }
+    option.click();
     await waitForChanges();
 
     expect(host.getAttribute("name")).toBe("account");
@@ -76,10 +75,7 @@ describe("qui-select", () => {
         <qui-select name="first" multiple items={accounts} />
       </form>,
     );
-    const form = isHTMLFormElement(root) ? root : root.querySelector("form");
-    if (!isHTMLFormElement(form)) {
-      throw new TypeError("Expected a form");
-    }
+    const form = resolveForm(root);
     const host = resolveHost<HTMLQuiSelectElement>(root, "qui-select");
     const trigger = queryPartIn<HTMLButtonElement>(host, "trigger");
 
@@ -87,9 +83,13 @@ describe("qui-select", () => {
     await waitForChanges();
     await settle(50);
 
-    queryParts<HTMLElement>(host, "option")
-      .find((candidate) => candidate.dataset.value === "account-2")
-      ?.click();
+    const option = queryParts<HTMLElement>(host, "option").find(
+      (candidate) => candidate.dataset.value === "account-2",
+    );
+    if (option === undefined) {
+      throw new Error("Expected account-2 to be rendered");
+    }
+    option.click();
     await waitForChanges();
 
     expect(new FormData(form).get("first")).toBe("account-2");

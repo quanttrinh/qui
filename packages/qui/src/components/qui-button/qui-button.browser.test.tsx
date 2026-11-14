@@ -78,6 +78,65 @@ describe("qui-button", () => {
     expect(submissions).toBe(1);
   });
 
+  it("uses the form attribute with native precedence", async () => {
+    let targetSubmissions = 0;
+    let outerSubmissions = 0;
+    const { root, waitForChanges } = await render(
+      <div>
+        <form
+          id="target-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            targetSubmissions += 1;
+          }}
+        />
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            outerSubmissions += 1;
+          }}
+        >
+          <qui-button form="target-form" type="submit">
+            Save
+          </qui-button>
+        </form>
+      </div>,
+    );
+    const host = resolveHost<HTMLQuiButtonElement>(root, "qui-button");
+    const button = queryPartIn<HTMLButtonElement>(host, "button");
+
+    button.click();
+    await waitForChanges();
+
+    expect(targetSubmissions).toBe(1);
+    expect(outerSubmissions).toBe(0);
+  });
+
+  it("ignores an empty form attribute", async () => {
+    let submissions = 0;
+    const { root, waitForChanges } = await render(
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          submissions += 1;
+        }}
+      >
+        <qui-button form="" type="submit">
+          Save
+        </qui-button>
+      </form>,
+    );
+    const host = resolveHost<HTMLQuiButtonElement>(root, "qui-button");
+    const button = queryPartIn<HTMLButtonElement>(host, "button");
+
+    expect(() => {
+      button.click();
+    }).not.toThrow();
+    await waitForChanges();
+
+    expect(submissions).toBe(0);
+  });
+
   it("lets a click handler cancel submission", async () => {
     let submissions = 0;
     const { root, waitForChanges } = await render(

@@ -261,7 +261,6 @@ export class QuiCombobox extends Mixin(
 
   componentDidRender(): void {
     super.componentDidRender();
-    this.form.sync();
     applyFieldAria(this.inputEl, this.form.fieldApi);
   }
 
@@ -279,7 +278,6 @@ export class QuiCombobox extends Mixin(
   }
 
   @Watch("value")
-  @Watch("name")
   private syncControlledValue(): void {
     this.form.sync();
     if (this.inputValue === undefined && !this.multiple && !this.navigation.open) {
@@ -287,6 +285,11 @@ export class QuiCombobox extends Mixin(
         displayValueFor(this.source.items, this.selection.selected, this.multiple),
       );
     }
+  }
+
+  @Watch("name")
+  private syncName(): void {
+    this.form.sync();
   }
 
   @Watch("inputValue")

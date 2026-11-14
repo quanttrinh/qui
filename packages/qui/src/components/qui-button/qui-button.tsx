@@ -123,26 +123,29 @@ export class QuiButton extends Mixin(ShadowStylesMixin) {
   @Prop() form?: string;
 
   private formOwner(): HTMLFormElement | null {
-    const closest = this.host.closest("form");
+    if (this.form !== undefined) {
+      if (this.form.length === 0) {
+        return null;
+      }
 
-    if (closest !== null) {
-      return closest;
+      const owner = this.host.ownerDocument.querySelector(`#${CSS.escape(this.form)}`);
+
+      return owner instanceof HTMLFormElement ? owner : null;
     }
 
-    if (this.form === undefined) {
-      return null;
-    }
-
-    const owner = this.host.ownerDocument.querySelector(`#${CSS.escape(this.form)}`);
-
-    return owner instanceof HTMLFormElement ? owner : null;
+    return this.host.closest("form");
   }
 
   private readonly handleNativeClick = (event: MouseEvent): void => {
-    const form = this.formOwner();
     const { type } = this;
 
-    if (form === null || (type !== "submit" && type !== "reset")) {
+    if (type !== "submit" && type !== "reset") {
+      return;
+    }
+
+    const form = this.formOwner();
+
+    if (form === null) {
       return;
     }
 
