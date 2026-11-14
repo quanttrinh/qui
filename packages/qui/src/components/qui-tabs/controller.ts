@@ -106,12 +106,12 @@ export class TabsController extends ControlledControllerBase<string | undefined>
     const selected = this.value;
     const next = this.options.getDeselectable() && selected === value ? undefined : value;
     const focusChanged = this.focusState.focus(value, true);
-    if (focusChanged && previousFocus !== undefined && previousFocus !== value) {
-      // Programmatic selection can move focus without a focus event; update the old part.
-      this.requestUpdate(uniqueValues(previousFocus));
-    }
     if (next !== selected) {
       this.commit(next);
+      if (focusChanged && previousFocus !== undefined && previousFocus !== value) {
+        // Programmatic selection can move focus without a focus event; notify the old part.
+        this.requestNotify(uniqueValues(previousFocus));
+      }
       return;
     }
     if (focusChanged) {
