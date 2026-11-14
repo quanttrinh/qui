@@ -78,6 +78,34 @@ describe("qui-button", () => {
     expect(submissions).toBe(1);
   });
 
+  it("lets a click handler cancel submission", async () => {
+    let submissions = 0;
+    const { root, waitForChanges } = await render(
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          submissions += 1;
+        }}
+      >
+        <qui-button
+          type="submit"
+          onClick={(event) => {
+            event.preventDefault();
+          }}
+        >
+          Save
+        </qui-button>
+      </form>,
+    );
+    const host = resolveHost<HTMLQuiButtonElement>(root, "qui-button");
+    const button = queryPartIn<HTMLButtonElement>(host, "button");
+
+    button.click();
+    await waitForChanges();
+
+    expect(submissions).toBe(0);
+  });
+
   it("resets the surrounding form", async () => {
     let resets = 0;
     const { root, waitForChanges } = await render(

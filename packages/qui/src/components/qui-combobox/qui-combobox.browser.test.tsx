@@ -4,6 +4,7 @@ import { queryPartIn, resolveHost } from "../../../tests/test-utils/component";
 import { settle } from "../../../tests/test-utils/dom-ready";
 import { expectFocusedDeep, pointerDown, typeInto } from "../../../tests/test-utils/interactions";
 import { queryParts } from "../../../tests/test-utils/shadow";
+import { isHTMLFormElement } from "../shared/helpers/dom/dom";
 import { type OptionItem } from "../shared/helpers/option";
 
 const accounts: OptionItem[] = [
@@ -36,6 +37,34 @@ describe("qui-combobox", () => {
     expect(spy.lastEvent?.detail).toMatchObject({ value: ["account-2"] });
     expect(input.value).toBe("Account Two");
     await expect(host.getValue()).resolves.toEqual(["account-2"]);
+  });
+
+  it("reflects its form name and submits selected values", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-combobox name="account" items={accounts} />
+      </form>,
+    );
+    const form = isHTMLFormElement(root) ? root : root.querySelector("form");
+    if (!isHTMLFormElement(form)) {
+      throw new TypeError("Expected a form");
+    }
+    const host = resolveHost<HTMLQuiComboboxElement>(root, "qui-combobox");
+    const input = queryPartIn<HTMLInputElement>(host, "input");
+
+    input.click();
+    await waitForChanges();
+    typeInto(input, "Two");
+    await waitForChanges();
+
+    const option = queryParts<HTMLElement>(host, "option").find(
+      (candidate) => candidate.dataset.value === "account-2",
+    );
+    option?.click();
+    await waitForChanges();
+
+    expect(host.getAttribute("name")).toBe("account");
+    expect(new FormData(form).get("account")).toBe("account-2");
   });
 
   it("stays open when the trigger is clicked after focusing the input", async () => {

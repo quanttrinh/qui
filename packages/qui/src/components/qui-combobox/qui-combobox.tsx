@@ -79,9 +79,6 @@ function displayValueFor(
   return value === undefined ? "" : labelForValue(items, value);
 }
 
-/** Props that only feed form submission; the template does not read them. */
-const FORM_ONLY_PROPS = new Set(["name"]);
-
 /**
  * MD3 combobox built on the native popover API. Provide options with
  * `qui-option` children or an `items` property.
@@ -264,11 +261,8 @@ export class QuiCombobox extends Mixin(
 
   componentDidRender(): void {
     super.componentDidRender();
+    this.form.sync();
     applyFieldAria(this.inputEl, this.form.fieldApi);
-  }
-
-  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
-    return !FORM_ONLY_PROPS.has(propName);
   }
 
   /** Moves focus to the internal input. */
@@ -285,6 +279,7 @@ export class QuiCombobox extends Mixin(
   }
 
   @Watch("value")
+  @Watch("name")
   private syncControlledValue(): void {
     this.form.sync();
     if (this.inputValue === undefined && !this.multiple && !this.navigation.open) {

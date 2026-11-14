@@ -29,7 +29,8 @@ describe("qui-radio-group", () => {
     const form = root as HTMLFormElement;
     const group = resolveHost<HTMLQuiRadioGroupElement>(root, "qui-radio-group");
     const spy = spyOnEvent("valuechange");
-    group.setAttribute("name", "plan");
+
+    expect(group.getAttribute("name")).toBe("plan");
 
     const items = radioItems(root);
     queryControl<HTMLInputElement>(items[0], "input").click();

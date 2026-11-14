@@ -121,7 +121,6 @@ export class QuiInput extends Mixin(ShadowStylesMixin, ControllerHostMixin, Form
   /** Overrides the generated input id. */
   @Prop() inputId?: string;
   /** The form field name. */
-  /** The form field name. */
   @Prop({ reflect: true }) name?: string;
   /** Placeholder text. */
   @Prop() placeholder?: string;

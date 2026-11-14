@@ -2,6 +2,7 @@ import { describe, expect, h, it, render } from "@stencil/vitest";
 
 import { queryControl, queryPartIn, resolveHost } from "../../../tests/test-utils/component";
 import { expectFocusedDeep } from "../../../tests/test-utils/interactions";
+import { isHTMLFormElement } from "../shared/helpers/dom/dom";
 
 describe("qui-switch", () => {
   it("toggles and emits a boolean", async () => {
@@ -31,6 +32,26 @@ describe("qui-switch", () => {
     await waitForChanges();
 
     await expect(host.getChecked()).resolves.toBe(true);
+  });
+
+  it("reflects its form name and submits through FormData", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-switch name="notify">Enable</qui-switch>
+      </form>,
+    );
+    const form = isHTMLFormElement(root) ? root : root.querySelector("form");
+    if (!isHTMLFormElement(form)) {
+      throw new TypeError("Expected a form");
+    }
+    const host = resolveHost<HTMLQuiSwitchElement>(root, "qui-switch");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    input.click();
+    await waitForChanges();
+
+    expect(host.getAttribute("name")).toBe("notify");
+    expect(new FormData(form).get("notify")).toBe("on");
   });
 
   it("does not toggle when read-only", async () => {

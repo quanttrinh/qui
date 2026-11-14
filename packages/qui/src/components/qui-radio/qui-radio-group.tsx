@@ -64,7 +64,7 @@ export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin, 
   @Prop({ mutable: true }) value?: string;
   /** The initial selected value for an uncontrolled group. */
   @Prop() defaultValue?: string;
-  /** The form field name shared by the radio inputs. */
+  /** The form field name for the group. */
   @Prop({ reflect: true }) name?: string;
   /** Disables the whole group. */
   @Prop() disabled = false;

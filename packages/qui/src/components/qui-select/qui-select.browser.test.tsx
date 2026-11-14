@@ -4,6 +4,7 @@ import { queryPartIn, resolveHost } from "../../../tests/test-utils/component";
 import { settle } from "../../../tests/test-utils/dom-ready";
 import { expectFocusedDeep, pointerDown } from "../../../tests/test-utils/interactions";
 import { queryParts } from "../../../tests/test-utils/shadow";
+import { isHTMLFormElement } from "../shared/helpers/dom/dom";
 import { type OptionItem } from "../shared/helpers/option";
 
 const accounts: OptionItem[] = Array.from({ length: 1000 }, (_entry, index) => ({
@@ -48,7 +49,10 @@ describe("qui-select", () => {
         <qui-select name="account" items={accounts} />
       </form>,
     );
-    const form = root as HTMLFormElement;
+    const form = isHTMLFormElement(root) ? root : root.querySelector("form");
+    if (!isHTMLFormElement(form)) {
+      throw new TypeError("Expected a form");
+    }
     const host = resolveHost<HTMLQuiSelectElement>(root, "qui-select");
     const trigger = queryPartIn<HTMLButtonElement>(host, "trigger");
 
@@ -64,6 +68,38 @@ describe("qui-select", () => {
 
     expect(host.getAttribute("name")).toBe("account");
     expect(new FormData(form).get("account")).toBe("account-2");
+  });
+
+  it("updates the FormData key when the name changes in multiple mode", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-select name="first" multiple items={accounts} />
+      </form>,
+    );
+    const form = isHTMLFormElement(root) ? root : root.querySelector("form");
+    if (!isHTMLFormElement(form)) {
+      throw new TypeError("Expected a form");
+    }
+    const host = resolveHost<HTMLQuiSelectElement>(root, "qui-select");
+    const trigger = queryPartIn<HTMLButtonElement>(host, "trigger");
+
+    trigger.click();
+    await waitForChanges();
+    await settle(50);
+
+    queryParts<HTMLElement>(host, "option")
+      .find((candidate) => candidate.dataset.value === "account-2")
+      ?.click();
+    await waitForChanges();
+
+    expect(new FormData(form).get("first")).toBe("account-2");
+
+    host.name = "second";
+    await waitForChanges();
+
+    expect(host.getAttribute("name")).toBe("second");
+    expect(new FormData(form).get("second")).toBe("account-2");
+    expect(new FormData(form).get("first")).toBeNull();
   });
 
   it("closes when the open trigger is clicked again", async () => {

@@ -68,9 +68,6 @@ function labelsForValues(
   return values.map((value) => labelForValue(items, value)).join(separator);
 }
 
-/** Props that only feed form submission; the template does not read them. */
-const FORM_ONLY_PROPS = new Set(["name"]);
-
 /**
  * MD3 select. Provide options with `qui-option` children or an `items`
  * property. The list and popover are shared with `qui-combobox`.
@@ -187,11 +184,8 @@ export class QuiSelect extends Mixin(
 
   componentDidRender(): void {
     super.componentDidRender();
+    this.form.sync();
     applyFieldAria(this.triggerEl, this.form.fieldApi);
-  }
-
-  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
-    return !FORM_ONLY_PROPS.has(propName);
   }
 
   disconnectedCallback(): void {
@@ -216,6 +210,7 @@ export class QuiSelect extends Mixin(
   }
 
   @Watch("value")
+  @Watch("name")
   private syncForm(): void {
     this.form.sync();
   }
