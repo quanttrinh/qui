@@ -41,8 +41,7 @@ class ContextPartController<
   private unsubscribe?: () => void;
   private teardown?: () => void;
   private stopListening?: () => void;
-  private selection: TSelection | undefined;
-  private hasSelection = false;
+  private selection: { value: TSelection } | undefined;
   private loaded = false;
 
   constructor(host: ReactiveControllerHost, options: ContextPartOptions<TContext, TSelection>) {
@@ -86,7 +85,6 @@ class ContextPartController<
     this.teardown?.();
     this.teardown = undefined;
     this.selection = undefined;
-    this.hasSelection = false;
   };
 
   private readonly notifySelected = (
@@ -95,11 +93,10 @@ class ContextPartController<
   ): void => {
     const { equals = shallowEqual } = this.options;
     const next = select(context);
-    if (this.hasSelection && equals(this.selection as TSelection, next)) {
+    if (this.selection !== undefined && equals(this.selection.value, next)) {
       return;
     }
-    this.selection = next;
-    this.hasSelection = true;
+    this.selection = { value: next };
     this.notify(context);
   };
 
@@ -129,8 +126,7 @@ class ContextPartController<
           this.notify(next);
         });
       } else {
-        this.selection = select(next);
-        this.hasSelection = true;
+        this.selection = { value: select(next) };
         this.unsubscribe = next.subscribe(() => {
           this.notifySelected(next, select);
         });
