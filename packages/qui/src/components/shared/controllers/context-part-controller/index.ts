@@ -23,6 +23,13 @@ interface ContextPartOptions<TContext extends ContextPartSource> {
    * keyed, notifications for other values skip this part.
    */
   getKey?: () => string | undefined;
+  /**
+   * Snapshot of the context values this part renders. When provided, provider
+   * notifications only re-render the part when the snapshot changes.
+   */
+  select?: (context: TContext) => unknown;
+  /** Compare selector snapshots. Defaults to `Object.is`. */
+  equals?: (previous: unknown, next: unknown) => boolean;
 }
 
 /**
@@ -35,6 +42,8 @@ class ContextPartController<TContext extends ContextPartSource> extends Reactive
   private unsubscribe?: () => void;
   private teardown?: () => void;
   private stopListening?: () => void;
+  private selection: unknown;
+  private hasSelection = false;
   private loaded = false;
 
   constructor(host: ReactiveControllerHost, options: ContextPartOptions<TContext>) {
@@ -77,6 +86,23 @@ class ContextPartController<TContext extends ContextPartSource> extends Reactive
     this.unsubscribe = undefined;
     this.teardown?.();
     this.teardown = undefined;
+    this.selection = undefined;
+    this.hasSelection = false;
+  };
+
+  private readonly notifySelected = (context: TContext): void => {
+    const { select, equals = Object.is } = this.options;
+    if (select === undefined) {
+      this.notify(context);
+      return;
+    }
+    const next = select(context);
+    if (this.hasSelection && equals(this.selection, next)) {
+      return;
+    }
+    this.selection = next;
+    this.hasSelection = true;
+    this.notify(context);
   };
 
   private notify(context: TContext): void {
@@ -99,9 +125,17 @@ class ContextPartController<TContext extends ContextPartSource> extends Reactive
     }
     this.teardown = this.options.setup?.(next);
     if (this.options.subscribe !== false) {
-      this.unsubscribe = next.subscribe(() => {
-        this.notify(next);
-      }, this.options.getKey);
+      if (this.options.select === undefined) {
+        this.unsubscribe = next.subscribe(() => {
+          this.notify(next);
+        }, this.options.getKey);
+      } else {
+        this.selection = this.options.select(next);
+        this.hasSelection = true;
+        this.unsubscribe = next.subscribe(() => {
+          this.notifySelected(next);
+        });
+      }
     }
     return true;
   }

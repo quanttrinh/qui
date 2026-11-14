@@ -8,7 +8,6 @@ import {
   type ReactiveControllerHost,
   type TriggerRegistration,
 } from "../shared/controllers";
-import { uniqueValues } from "../shared/helpers/collection";
 
 interface TabsControllerOptions {
   getValue: () => string | undefined;
@@ -40,8 +39,8 @@ export class TabsController extends ControlledControllerBase<string | undefined>
       onChange: options.onChange,
     });
     this.options = options;
-    const onChange = (value?: string): void => {
-      this.requestNotify(value === undefined ? undefined : [value]);
+    const onChange = (): void => {
+      this.requestNotify();
     };
     this.panels = new KeyedHostRegistry({ onChange });
     this.triggers = new RovingFocusRegistry({ onChange });
@@ -110,32 +109,30 @@ export class TabsController extends ControlledControllerBase<string | undefined>
       this.commit(next);
       if (focusChanged && previousFocus !== undefined && previousFocus !== value) {
         // Programmatic selection can move focus without a focus event; notify the old part.
-        this.requestNotify(uniqueValues(previousFocus));
+        this.requestNotify();
       }
       return;
     }
     if (focusChanged) {
       // The root template shows focus-within, so keep rendering for it.
-      this.requestUpdate(uniqueValues(value));
+      this.requestUpdate();
     }
   }
 
   focus(value: string): void {
-    const previous = this.focusState.focusedValue;
     if (this.focusState.focus(value, true)) {
-      this.requestUpdate(uniqueValues(previous, value));
+      this.requestUpdate();
     }
   }
 
   blur(): void {
-    const previous = this.focusState.focusedValue;
     if (this.focusState.blur()) {
-      this.requestUpdate(uniqueValues(previous));
+      this.requestUpdate();
     }
   }
 
-  protected override onValueChanged(previous?: string, next?: string): void {
-    this.requestUpdate(uniqueValues(previous, next));
+  protected override onValueChanged(): void {
+    this.requestUpdate();
   }
 
   move(delta: 1 | -1): void {

@@ -160,6 +160,88 @@ describe("ContextPartController lifecycle", () => {
   });
 });
 
+describe("ContextPartController selector subscriptions", () => {
+  it("notifies only when the selected snapshot changes", () => {
+    const context = createContext("field");
+    const state: SourceState = { current: context };
+    const source = createSource(state);
+    const update = vi.fn((): void => undefined);
+    const part = createPart({
+      context: source,
+      select: () => context.name,
+      update,
+    });
+
+    part.hostWillLoad();
+    expect(update).not.toHaveBeenCalled();
+
+    context.notify();
+    expect(update).not.toHaveBeenCalled();
+
+    context.name = "changed";
+    context.notify();
+    expect(update).toHaveBeenCalledOnce();
+
+    context.notify();
+    expect(update).toHaveBeenCalledOnce();
+    part.hostDisconnected();
+  });
+
+  it("uses a custom equality for selected snapshots", () => {
+    const context = createContext("field");
+    const state: SourceState = { current: context };
+    const source = createSource(state);
+    const update = vi.fn((): void => undefined);
+    const equals = vi.fn((previous: unknown, next: unknown): boolean => {
+      const left = previous as [string, number];
+      const right = next as [string, number];
+      return left[0] === right[0];
+    });
+    let revision = 1;
+    const part = createPart({
+      context: source,
+      select: () => [context.name, revision] as const,
+      equals,
+      update,
+    });
+
+    part.hostWillLoad();
+    revision = 2;
+    context.notify();
+    expect(update).not.toHaveBeenCalled();
+
+    context.name = "changed";
+    context.notify();
+    expect(update).toHaveBeenCalledOnce();
+    part.hostDisconnected();
+  });
+
+  it("recaptures the snapshot after reattaching", () => {
+    const first = createContext("first");
+    const second = createContext("second");
+    const state: SourceState = { current: first };
+    const source = createSource(state);
+    const update = vi.fn((): void => undefined);
+    const part = createPart({
+      context: source,
+      select: () => state.current?.name,
+      update,
+    });
+
+    part.hostWillLoad();
+    part.hostDidLoad();
+    part.hostDisconnected();
+
+    state.current = second;
+    part.hostConnected();
+    expect(update).toHaveBeenCalledOnce();
+
+    second.notify();
+    expect(update).toHaveBeenCalledOnce();
+    part.hostDisconnected();
+  });
+});
+
 describe("ContextPartController provider notifications", () => {
   it("attaches when a provider is registered after the first render", () => {
     const context = createContext("field");

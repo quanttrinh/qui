@@ -17,6 +17,7 @@ import { token } from "#styled-system/tokens";
 import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
 import { setAriaControls } from "../shared/helpers/aria/aria";
 import { dataAttr } from "../shared/helpers/aria/attr";
+import { shallowEqual } from "../shared/helpers/collection";
 import { isHTMLElement } from "../shared/helpers/dom/dom";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { focusRingInset } from "../shared/styles";
@@ -160,7 +161,14 @@ export class QuiTabTrigger extends Mixin(ShadowStylesMixin, ControllerHostMixin)
 
   protected readonly contextPart = new ContextPartController(this, {
     context: tabsContext,
-    getKey: () => this.value,
+    select: (tabs) => [
+      tabs.isSelected(this.value),
+      tabs.isFocused(this.value),
+      tabs.variant(),
+      tabs.orientation(),
+      tabs.textDirection(),
+    ],
+    equals: shallowEqual,
   });
 
   private get tabs(): TabsContext | undefined {
