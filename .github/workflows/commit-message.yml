@@ -31,8 +31,3 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: bash scripts/check-commit-message.sh "$PR_TITLE"
 
-      - name: Skip title validation
-        if: >-
-          ${{ github.event.pull_request.user.login == 'renovate[bot]' ||
-              contains(github.event.pull_request.labels.*.name, 'skip-pr-title-check') }}
-        run: echo "::notice::Skipping PR title validation for Renovate or labeled PR"
