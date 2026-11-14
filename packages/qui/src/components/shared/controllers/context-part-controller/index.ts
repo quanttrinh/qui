@@ -3,7 +3,7 @@ import { ReactiveControllerBase, type ReactiveControllerHost } from "../reactive
 
 /** A context object that can notify a subscribed part when it changes. */
 interface ContextPartSource {
-  subscribe: (listener: () => void, key?: () => string | undefined) => () => void;
+  subscribe: (listener: () => void) => () => void;
 }
 
 interface ContextPartOptions<TContext extends ContextPartSource> {
@@ -18,11 +18,6 @@ interface ContextPartOptions<TContext extends ContextPartSource> {
   update?: (context: TContext) => void;
   /** Whether to re-render on context changes. Defaults to `true`. */
   subscribe?: boolean;
-  /**
-   * The value this part cares about. When the provider's listener store is
-   * keyed, notifications for other values skip this part.
-   */
-  getKey?: () => string | undefined;
   /**
    * Snapshot of the context values this part renders. When provided, provider
    * notifications only re-render the part when the snapshot changes.
@@ -128,7 +123,7 @@ class ContextPartController<TContext extends ContextPartSource> extends Reactive
       if (this.options.select === undefined) {
         this.unsubscribe = next.subscribe(() => {
           this.notify(next);
-        }, this.options.getKey);
+        });
       } else {
         this.selection = this.options.select(next);
         this.hasSelection = true;

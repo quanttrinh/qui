@@ -16,7 +16,6 @@ Reactive controller. Extends `ReactiveControllerBase`. Extended by
 | `setup`     | `(context) => (() => void) \| undefined` (optional) | Side effect after attach; returns teardown   |
 | `update`    | `(context) => void` (optional)                      | Custom notification handler; default renders |
 | `subscribe` | `boolean` (optional)                                | Set `false` to skip state subscriptions      |
-| `getKey`    | `() => string \| undefined` (optional)              | Part value for scoped notifications          |
 | `select`    | `(context) => unknown` (optional)                   | Snapshot of context values the part renders  |
 | `equals`    | `(previous, next) => boolean` (optional)            | Snapshot comparison; defaults to `Object.is` |
 
@@ -40,11 +39,11 @@ Reactive controller. Extends `ReactiveControllerBase`. Extended by
 - Attach is idempotent: consuming the same context again does nothing.
 - `start()` subscribes to availability through the context store, so parts
   upgrade correctly even when they connect before their provider exists.
-- `subscribe(listener, key?)` lets keyed `ListenerStore` providers skip parts
-  whose value did not change. The key is read at notification time.
-- With `select`, the part subscribes without a key and compares snapshots
-  itself. This lets providers call `notify()` without computing changed keys.
-  Return primitives, or pass `equals` (e.g. `shallowEqual`) for arrays.
-- `select` takes precedence over `getKey`.
+- With `select`, the part compares snapshots itself. This lets providers call
+  `notify()` without computing changed keys. Return primitives, or pass
+  `equals` (e.g. `shallowEqual`) for arrays.
+- Without `select`, every provider notification re-renders the part.
+- Include everything the part reads, including values used by post-render sync
+  such as ids and registration lookups, not just rendered attributes.
 - When `update` is omitted, notifications call `requestUpdate()` on the host;
   custom handlers (e.g. dialog attributes) can avoid a render entirely.

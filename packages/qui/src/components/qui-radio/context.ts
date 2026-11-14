@@ -35,7 +35,7 @@ export interface RadioGroupContext {
   inputId: (value: string) => string;
   controlId: (value: string) => string;
   labelId: (value: string) => string;
-  subscribe: (listener: () => void, key?: () => string | undefined) => () => void;
+  subscribe: (listener: () => void) => () => void;
 }
 
 export const radioGroupContext = createContextStore<RadioGroupContext>();

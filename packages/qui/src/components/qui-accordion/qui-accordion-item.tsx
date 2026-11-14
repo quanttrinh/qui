@@ -65,6 +65,7 @@ export class QuiAccordionItem extends Mixin(ShadowStylesMixin, ControllerHostMix
       this.isDisabled(accordion),
       accordion.orientation(),
       accordion.textDirection(),
+      accordion.itemId(this.value),
     ],
     equals: shallowEqual,
     setup: (accordion): (() => void) => {
@@ -97,9 +98,9 @@ export class QuiAccordionItem extends Mixin(ShadowStylesMixin, ControllerHostMix
       ...accordion,
       item: () => this.item(),
       isItemDisabled: () => this.isDisabled(accordion),
-      subscribe: (listener, key) => {
+      subscribe: (listener) => {
         const stopItem = this.listeners.subscribe(listener);
-        const stopAccordion = accordion.subscribe(listener, key);
+        const stopAccordion = accordion.subscribe(listener);
         return () => {
           stopItem();
           stopAccordion();

@@ -70,7 +70,15 @@ export class QuiTabPanel extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
 
   protected readonly contextPart = new ContextPartController(this, {
     context: tabsContext,
-    select: (tabs) => [tabs.isSelected(this.value), tabs.orientation(), tabs.textDirection()],
+    select: (tabs) => [
+      tabs.isSelected(this.value),
+      tabs.orientation(),
+      tabs.textDirection(),
+      tabs.panelId(this.value),
+      tabs.triggerId(this.value),
+      tabs.listId(),
+      tabs.getTrigger(this.value),
+    ],
     equals: shallowEqual,
   });
 

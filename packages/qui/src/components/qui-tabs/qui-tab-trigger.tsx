@@ -167,6 +167,10 @@ export class QuiTabTrigger extends Mixin(ShadowStylesMixin, ControllerHostMixin)
       tabs.variant(),
       tabs.orientation(),
       tabs.textDirection(),
+      tabs.triggerId(this.value),
+      tabs.listId(),
+      tabs.panelId(this.value),
+      tabs.getPanel(this.value),
     ],
     equals: shallowEqual,
   });

@@ -16,6 +16,7 @@ import { token } from "#styled-system/tokens";
 
 import { ContextPartController } from "../shared/controllers";
 import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
+import { shallowEqual } from "../shared/helpers/collection";
 import { isHTMLInputElement } from "../shared/helpers/dom/dom";
 import { focusElement } from "../shared/helpers/dom/focus";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
@@ -108,7 +109,25 @@ export class QuiRadio extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
 
   protected readonly contextPart = new ContextPartController(this, {
     context: radioGroupContext,
-    getKey: () => this.value,
+    select: (group) => {
+      const state = group.itemState(this.item());
+      return [
+        state.checked,
+        state.disabled,
+        state.invalid,
+        state.focused,
+        state.focusVisible,
+        group.orientation(),
+        group.textDirection(),
+        group.isReadOnly(),
+        group.rootId(),
+        group.itemId(this.value),
+        group.inputId(this.value),
+        group.controlId(this.value),
+        group.labelId(this.value),
+      ];
+    },
+    equals: shallowEqual,
   });
   private inputEl?: HTMLInputElement;
   private registeredInput?: HTMLInputElement;

@@ -37,7 +37,7 @@ to every registered controller:
 
 Controllers can request work in two ways:
 
-- `requestUpdate(keys?)` — renders the host and notifies context subscribers.
+- `requestUpdate()` — renders the host and notifies context subscribers.
 - `requestNotify(keys?)` — notifies context subscribers **without** rendering
   the host. Used by components whose root template only reads props.
 

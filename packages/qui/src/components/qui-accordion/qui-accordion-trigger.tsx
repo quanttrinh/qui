@@ -82,6 +82,10 @@ export class QuiAccordionTrigger extends Mixin(ShadowStylesMixin, ControllerHost
       item.isItemDisabled(),
       item.orientation(),
       item.textDirection(),
+      item.triggerId(item.item().value),
+      item.contentId(item.item().value),
+      item.rootId(),
+      item.getContent(item.item().value),
     ],
     equals: shallowEqual,
   });
