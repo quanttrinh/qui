@@ -472,3 +472,14 @@ describe("qui-textarea field colors", () => {
     expect(getComputedStyle(textarea, "::placeholder").color).toBe("rgb(10, 11, 12)");
   });
 });
+
+describe("qui-textarea attribute reflection", () => {
+  it("reflects a changed name to the host attribute", async () => {
+    const { root, setProps } = await render(<qui-textarea />);
+    const host = resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea");
+
+    await setProps({ name: "bio" });
+
+    expect(host.getAttribute("name")).toBe("bio");
+  });
+});

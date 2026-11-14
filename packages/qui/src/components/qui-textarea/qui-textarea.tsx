@@ -42,8 +42,8 @@ export interface TextareaValueDetails {
   value: string;
 }
 
-/** Props applied directly to the native textarea; the template does not read them. */
-const IMPERATIVE_PROPS = new Set(["value", "name"]);
+/** Props applied imperatively or through form association; the template does not read them. */
+const IMPERATIVE_PROPS = new Set(["value"]);
 
 /**
  * A multi-line text input with optional auto-growth and a character counter.

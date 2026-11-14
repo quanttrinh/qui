@@ -32,5 +32,6 @@ None — notifications are synchronous and caller-driven.
   visited, listeners removed before their turn are skipped, errors propagate
   synchronously.
 - A listener is identified by function identity; subscribing the same function
-  twice collapses to one registration.
+  twice collapses to one registration, and a later key replaces the earlier
+  key. Use distinct listener closures for different keys.
 - Controllers build key sets with `uniqueValues(...)`.

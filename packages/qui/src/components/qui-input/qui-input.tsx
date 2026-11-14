@@ -72,7 +72,7 @@ export interface InputValueDetails {
   unmaskedValue: string;
 }
 
-/** Props applied directly to the native input; the template does not read them. */
+/** Props applied imperatively or through form association; the template does not read them. */
 const IMPERATIVE_PROPS = new Set(["value", "name"]);
 
 /**
