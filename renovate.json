@@ -17,6 +17,18 @@
       "enabled": false
     },
     {
+      "description": "Framework packages follow the major version pinned by consumers",
+      "matchPackageNames": [
+        "react",
+        "react-dom",
+        "@types/react",
+        "@types/react-dom",
+        "preact",
+        "solid-js"
+      ],
+      "enabled": false
+    },
+    {
       "description": "Expose the update type as a label for the auto-approve workflow",
       "matchUpdateTypes": ["major"],
       "addLabels": ["update-type:major"]
