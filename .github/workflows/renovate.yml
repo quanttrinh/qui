@@ -15,10 +15,9 @@ jobs:
     if: github.actor == 'renovate[bot]'
     runs-on: ubuntu-slim
     permissions:
-      contents: write
+      contents: read
       pull-requests: read
     outputs:
-      changeset_present: ${{ steps.check.outputs.changeset_present }}
       valid: ${{ steps.validate.outputs.valid }}
       auto_approve: ${{ steps.bump.outputs.auto_approve }}
     steps:
@@ -128,25 +127,14 @@ jobs:
           done
           echo "valid=true" >> "$GITHUB_OUTPUT"
 
-      - name: Check if changeset commit is already the latest
-        id: check
-        if: steps.validate.outputs.valid == 'true'
-        run: |
-          if git log -1 --format='%s' | grep -q '^chore: add changeset'; then
-            echo "changeset_present=true" >> $GITHUB_OUTPUT
-          else
-            echo "changeset_present=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Determine update type
         id: bump
         if: steps.validate.outputs.valid == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
           set -euo pipefail
-          labels="$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name')"
+          labels="$(jq -r '.[]' <<< "$LABELS")"
           type=patch
           auto_approve=false
           if grep -qx 'update-type:major' <<< "$labels"; then
@@ -161,102 +149,9 @@ jobs:
           echo "type=$type" >> "$GITHUB_OUTPUT"
           echo "auto_approve=$auto_approve" >> "$GITHUB_OUTPUT"
 
-      - name: Generate changeset fragment
-        id: changeset
-        if: steps.validate.outputs.valid == 'true'
-        env:
-          BASE: ${{ github.event.pull_request.base.sha }}
-          BUMP: ${{ steps.bump.outputs.type }}
-          HEAD_REF: ${{ github.head_ref }}
-          FILES: ${{ steps.filter.outputs.allowed_files }}
-        run: |
-          set -euo pipefail
-          BRANCH_SAFE=$(echo "$HEAD_REF" | tr '/' '-')
-          FRAGMENT_PATH=".changeset/${BRANCH_SAFE}.md"
-          rm -f "$FRAGMENT_PATH"
-          python3 - "$BASE" "$FILES" "$BUMP" "$FRAGMENT_PATH" << 'PYEOF'
-          import json, subprocess, sys
-
-          base_sha, files_json, bump, fragment_path = sys.argv[1:5]
-          try:
-              files = json.loads(files_json) if files_json else []
-          except json.JSONDecodeError:
-              files = []
-          manifests = [
-              path for path in files
-              if path == "package.json"
-              or (path.startswith("packages/") and path.endswith("/package.json"))
-          ]
-
-          releases = []
-          summary = []
-          for path in manifests:
-              try:
-                  base = json.loads(subprocess.check_output(["git", "show", f"{base_sha}:{path}"]))
-              except subprocess.CalledProcessError:
-                  base = {}
-              with open(path) as fh:
-                  head = json.load(fh)
-              name = head.get("name")
-              if not isinstance(name, str) or head.get("private") is True:
-                  continue
-              changed = []
-              releases_changed = False
-              for section in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies", "resolutions"):
-                  for dep, new in head.get(section, {}).items():
-                      old = base.get(section, {}).get(dep)
-                      if old != new:
-                          changed.append(f"- `{path}`: `{dep}`: `{old}` -> `{new}`")
-                          if section in ("dependencies", "optionalDependencies", "peerDependencies", "resolutions"):
-                              releases_changed = True
-              if releases_changed:
-                  releases.append(name)
-              summary.extend(changed)
-
-          releases = sorted(set(releases))
-          summary = list(dict.fromkeys(summary))
-          if not releases:
-              print("No publishable package dependency changes.")
-              sys.exit(0)
-
-          with open(fragment_path, "w") as fh:
-              fh.write("---\n")
-              for name in releases:
-                  fh.write(f'"{name}": {bump}\n')
-              fh.write("---\n\nDependency updates:\n\n")
-              fh.write("\n".join(summary))
-              fh.write("\n")
-          print(f"Created {fragment_path} for {', '.join(releases)}")
-          PYEOF
-          if [ -f "$FRAGMENT_PATH" ]; then
-            echo "created=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "created=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Setup git
-        if: steps.validate.outputs.valid == 'true' && steps.changeset.outputs.created == 'true'
-        uses: ./.github/actions/setup-git-bot
-
-      - name: Commit and push if changed
-        if: steps.validate.outputs.valid == 'true' && steps.changeset.outputs.created == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HEAD_REF: ${{ github.head_ref }}
-        run: |
-          git add .changeset/
-          if git diff --cached --exit-code > /dev/null; then
-            echo "Fragment unchanged, skipping."
-          else
-            git commit -m "chore: add changeset for dependency updates"
-            # checkout runs with persist-credentials: false, so authenticate
-            # this one push explicitly instead of storing the token on disk.
-            git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${HEAD_REF}"
-          fi
-
   review:
     needs: manage
-    if: github.actor == 'renovate[bot]' && needs.manage.outputs.changeset_present == 'false' && needs.manage.outputs.valid == 'true'
+    if: github.actor == 'renovate[bot]' && needs.manage.outputs.valid == 'true'
     permissions:
       contents: write
       actions: write

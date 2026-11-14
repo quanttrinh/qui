@@ -2,7 +2,7 @@ name: Pages
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, closed]
+    types: [opened, synchronize, reopened, closed, labeled, unlabeled]
     paths:
       - 'packages/**'
       - 'tooling/**'
@@ -30,7 +30,10 @@ concurrency:
 
 jobs:
   pr-build:
-    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action != 'closed' &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-pages-build')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -102,7 +105,10 @@ jobs:
 
   pr-deploy:
     needs: pr-build
-    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action != 'closed' &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-pages-build')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -373,7 +379,10 @@ jobs:
 
   pr-deploy-pages:
     needs: pr-deploy
-    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action != 'closed' &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-pages-build')
     permissions:
       contents: read
       pages: write
@@ -382,7 +391,10 @@ jobs:
 
   pr-preview-comment:
     needs: pr-deploy-pages
-    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action != 'closed' &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-pages-build')
     runs-on: ubuntu-slim
     permissions:
       contents: read

@@ -2,6 +2,10 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
   "rangeStrategy": "bump",
+  "addLabels": ["skip-pr-title-check", "skip-pages-build"],
+  "vulnerabilityAlerts": {
+    "enabled": true
+  },
   "semanticCommits": "enabled",
   "semanticCommitType": "chore",
   "semanticCommitScope": "deps",
@@ -13,6 +17,18 @@
         "@quanttrinh/qui",
         "@quanttrinh/qui-server",
         "@quanttrinh/qui-unplugin"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Framework packages follow the major version pinned by consumers",
+      "matchPackageNames": [
+        "react",
+        "react-dom",
+        "@types/react",
+        "@types/react-dom",
+        "preact",
+        "solid-js"
       ],
       "enabled": false
     },
