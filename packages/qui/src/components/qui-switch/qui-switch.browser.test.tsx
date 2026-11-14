@@ -72,8 +72,8 @@ describe("qui-switch colors", () => {
     const control = queryPartIn(host, "control");
     const thumb = queryPartIn(host, "thumb");
     const label = queryPartIn(host, "label");
-    control.style.transition = "none";
-    thumb.style.transition = "none";
+    control.style.setProperty("transition", "none", "important");
+    thumb.style.setProperty("transition", "none", "important");
 
     host.style.setProperty("--qui-switch-checked-track-color", "rgb(1, 2, 3)");
     host.style.setProperty("--qui-switch-checked-thumb-color", "rgb(4, 5, 6)");

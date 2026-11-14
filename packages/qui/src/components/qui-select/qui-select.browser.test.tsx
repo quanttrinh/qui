@@ -79,12 +79,13 @@ describe("qui-select field colors", () => {
     );
     const host = resolveHost<HTMLQuiSelectElement>(root, "qui-select");
     const trigger = queryPartIn<HTMLButtonElement>(host, "trigger");
-    trigger.style.transition = "none";
+    trigger.style.setProperty("transition", "none", "important");
 
     host.style.setProperty("--qui-field-container-color", "rgb(1, 2, 3)");
     host.style.setProperty("--qui-field-outline-color", "rgb(4, 5, 6)");
     host.style.setProperty("--qui-field-text-color", "rgb(7, 8, 9)");
     host.style.setProperty("--qui-field-error-color", "rgb(10, 11, 12)");
+    await waitForChanges();
 
     expect(getComputedStyle(trigger).backgroundColor).toBe("rgb(1, 2, 3)");
     expect(getComputedStyle(trigger).borderTopColor).toBe("rgb(4, 5, 6)");

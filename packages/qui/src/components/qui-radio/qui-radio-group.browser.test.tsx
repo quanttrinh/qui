@@ -221,7 +221,7 @@ describe("qui-radio colors", () => {
     const radioHost = queryHost(root, "qui-radio");
     const control = queryPartIn(radioHost, "control");
     const label = queryPartIn(radioHost, "label");
-    control.style.transition = "none";
+    control.style.setProperty("transition", "none", "important");
 
     root.style.setProperty("--qui-radio-checked-color", "rgb(1, 2, 3)");
     root.style.setProperty("--qui-radio-label-color", "rgb(4, 5, 6)");
@@ -238,7 +238,7 @@ describe("qui-radio colors", () => {
       </qui-radio-group>,
     );
     const control = queryPartIn(queryHost(root, "qui-radio"), "control");
-    control.style.transition = "none";
+    control.style.setProperty("transition", "none", "important");
 
     root.style.setProperty("--qui-radio-outline-color", "rgb(20, 21, 22)");
 

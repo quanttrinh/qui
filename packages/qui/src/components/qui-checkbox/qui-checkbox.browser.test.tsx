@@ -147,7 +147,7 @@ describe("qui-checkbox colors", () => {
     const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
     const control = queryPartIn(host, "control");
     const label = queryPartIn(host, "label");
-    control.style.transition = "none";
+    control.style.setProperty("transition", "none", "important");
 
     host.style.setProperty("--qui-checkbox-checked-color", "rgb(1, 2, 3)");
     host.style.setProperty("--qui-checkbox-checked-text-color", "rgb(4, 5, 6)");
@@ -164,7 +164,7 @@ describe("qui-checkbox colors", () => {
     const { root } = await render(<qui-checkbox>Accept</qui-checkbox>);
     const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
     const control = queryPartIn(host, "control");
-    control.style.transition = "none";
+    control.style.setProperty("transition", "none", "important");
 
     host.style.setProperty("--qui-checkbox-outline-color", "rgb(20, 21, 22)");
 

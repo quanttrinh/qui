@@ -352,7 +352,7 @@ describe("qui-tabs colors", () => {
     const indicator = queryPartIn(triggerHost, "indicator");
     const list = queryPartIn(listHost, "list");
     const panel = queryPartIn(panelHost, "panel");
-    trigger.style.transition = "none";
+    trigger.style.setProperty("transition", "none", "important");
 
     tabsHost.style.setProperty("--qui-tabs-label-selected-color", "rgb(1, 2, 3)");
     tabsHost.style.setProperty("--qui-tabs-indicator-color", "rgb(4, 5, 6)");

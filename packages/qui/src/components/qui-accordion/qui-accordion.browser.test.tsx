@@ -326,7 +326,7 @@ describe("qui-accordion colors", () => {
     const trigger = queryPartIn<HTMLButtonElement>(triggerHost, "trigger");
     const indicator = queryPartIn(triggerHost, "indicator");
     const content = queryPartIn(contentHost, "content");
-    trigger.style.transition = "none";
+    trigger.style.setProperty("transition", "none", "important");
 
     setAccordionColors(accordionHost);
 
