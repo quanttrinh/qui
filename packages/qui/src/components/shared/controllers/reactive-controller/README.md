@@ -21,12 +21,12 @@ None.
 | `ReactiveControllerHost.addController(controller)`    | Registers a controller; connects it if the host is connected |
 | `ReactiveControllerHost.removeController(controller)` | Unregisters a controller; disconnects it if connected        |
 | `ReactiveControllerHost.requestUpdate()`              | Schedules a host render                                      |
-| `ReactiveControllerHost.notifyUpdate?(keys?)`         | Notifies context subscribers without rendering               |
+| `ReactiveControllerHost.notifyUpdate?()`              | Notifies context subscribers without rendering               |
 | `ReactiveController`                                  | Optional host lifecycle hooks                                |
 | `host` (protected)                                    | The host instance                                            |
 | `hostElement` (protected getter)                      | `host.hostElement`                                           |
 | `requestUpdate()` (protected)                         | Delegates to `host.requestUpdate`                            |
-| `requestNotify(keys?)` (protected)                    | Uses `host.notifyUpdate`, falling back to `requestUpdate`    |
+| `requestNotify()` (protected)                         | Uses `host.notifyUpdate`, falling back to `requestUpdate`    |
 
 ## Lifecycle
 

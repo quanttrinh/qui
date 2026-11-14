@@ -31,6 +31,10 @@ function expectItemLinked(item: AccordionItemParts): void {
   expectLinked(item.content, item.triggerHost, "labelledby");
 }
 
+function renderCount(element: HTMLElement): number {
+  return getComponentSpies(element)?.lifecycle.render?.mock.calls.length ?? 0;
+}
+
 describe("qui-accordion", () => {
   it("expands an item and emits the new values", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(
@@ -275,27 +279,63 @@ describe("qui-accordion render scoping", () => {
           components: {
             "qui-accordion": { lifecycle: ["render"] },
             "qui-accordion-item": { lifecycle: ["render"] },
+            "qui-accordion-trigger": { lifecycle: ["render"] },
+            "qui-accordion-content": { lifecycle: ["render"] },
           },
         },
       },
     );
     const parts = items(root);
+    const itemHosts = [...root.querySelectorAll<HTMLElement>("qui-accordion-item")];
+    const triggerHosts = [...root.querySelectorAll<HTMLElement>("qui-accordion-trigger")];
+    const contentHosts = [...root.querySelectorAll<HTMLElement>("qui-accordion-content")];
     const rootRenders = (): number => spies?.lifecycle.render?.mock.calls.length ?? 0;
-    const itemRenders = (): number[] =>
-      [...root.querySelectorAll("qui-accordion-item")].map(
-        (item) => getComponentSpies(item)?.lifecycle.render?.mock.calls.length ?? 0,
-      );
     const baselineRoot = rootRenders();
-    const baselineItems = itemRenders();
+    const baselineItems = itemHosts.map((host) => renderCount(host));
+    const baselineTriggers = triggerHosts.map((host) => renderCount(host));
+    const baselineContents = contentHosts.map((host) => renderCount(host));
 
     parts[1].trigger.click();
     await waitForChanges();
 
     expect(rootRenders()).toBe(baselineRoot);
-    const deltas = itemRenders().map((count, index) => count - (baselineItems[index] ?? 0));
-    expect(deltas[0]).toBe(0);
-    expect(deltas[1]).toBeGreaterThan(0);
-    expect(deltas[2]).toBe(0);
+    const itemDeltas = itemHosts.map(
+      (host, index) => renderCount(host) - (baselineItems[index] ?? 0),
+    );
+    const triggerDeltas = triggerHosts.map(
+      (host, index) => renderCount(host) - (baselineTriggers[index] ?? 0),
+    );
+    const contentDeltas = contentHosts.map(
+      (host, index) => renderCount(host) - (baselineContents[index] ?? 0),
+    );
+    expect(itemDeltas).toEqual([0, expect.any(Number), 0]);
+    expect(itemDeltas[1]).toBeGreaterThan(0);
+    expect(triggerDeltas).toEqual([0, expect.any(Number), 0]);
+    expect(triggerDeltas[1]).toBeGreaterThan(0);
+    expect(contentDeltas).toEqual([0, expect.any(Number), 0]);
+    expect(contentDeltas[1]).toBeGreaterThan(0);
+  });
+
+  it("updates aria links when a trigger registers after the content", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-accordion>
+        <qui-accordion-item value="one">
+          <qui-accordion-content>One content</qui-accordion-content>
+        </qui-accordion-item>
+      </qui-accordion>,
+    );
+    const itemHost = queryHost(root, "qui-accordion-item");
+    const contentHost = queryHost(itemHost, "qui-accordion-content");
+    const triggerHost = document.createElement("qui-accordion-trigger");
+    triggerHost.textContent = "One";
+    itemHost.prepend(triggerHost);
+
+    await waitForChanges();
+
+    const trigger = queryPartIn<HTMLButtonElement>(triggerHost, "trigger");
+    const content = queryPartIn<HTMLDivElement>(contentHost, "content");
+    expectLinked(trigger, contentHost, "controls");
+    expectLinked(content, triggerHost, "labelledby");
   });
 });
 

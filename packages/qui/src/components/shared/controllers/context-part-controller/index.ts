@@ -1,4 +1,5 @@
 import { type ContextSource } from "../../context/store";
+import { shallowEqual } from "../../helpers/collection";
 import { ReactiveControllerBase, type ReactiveControllerHost } from "../reactive-controller";
 
 /** A context object that can notify a subscribed part when it changes. */
@@ -23,7 +24,7 @@ interface ContextPartOptions<TContext extends ContextPartSource> {
    * notifications only re-render the part when the snapshot changes.
    */
   select?: (context: TContext) => unknown;
-  /** Compare selector snapshots. Defaults to `Object.is`. */
+  /** Compare selector snapshots. Defaults to `shallowEqual`. */
   equals?: (previous: unknown, next: unknown) => boolean;
 }
 
@@ -86,7 +87,7 @@ class ContextPartController<TContext extends ContextPartSource> extends Reactive
   };
 
   private readonly notifySelected = (context: TContext): void => {
-    const { select, equals = Object.is } = this.options;
+    const { select, equals = shallowEqual } = this.options;
     if (select === undefined) {
       this.notify(context);
       return;

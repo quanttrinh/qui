@@ -10,14 +10,14 @@ Reactive controller. Extends `ReactiveControllerBase`. Extended by
 
 ## Options
 
-| Option      | Type                                                | Description                                  |
-| ----------- | --------------------------------------------------- | -------------------------------------------- |
-| `context`   | `ContextSource<TContext>`                           | Context store to consume                     |
-| `setup`     | `(context) => (() => void) \| undefined` (optional) | Side effect after attach; returns teardown   |
-| `update`    | `(context) => void` (optional)                      | Custom notification handler; default renders |
-| `subscribe` | `boolean` (optional)                                | Set `false` to skip state subscriptions      |
-| `select`    | `(context) => unknown` (optional)                   | Snapshot of context values the part renders  |
-| `equals`    | `(previous, next) => boolean` (optional)            | Snapshot comparison; defaults to `Object.is` |
+| Option      | Type                                                | Description                                     |
+| ----------- | --------------------------------------------------- | ----------------------------------------------- |
+| `context`   | `ContextSource<TContext>`                           | Context store to consume                        |
+| `setup`     | `(context) => (() => void) \| undefined` (optional) | Side effect after attach; returns teardown      |
+| `update`    | `(context) => void` (optional)                      | Custom notification handler; default renders    |
+| `subscribe` | `boolean` (optional)                                | Set `false` to skip state subscriptions         |
+| `select`    | `(context) => unknown` (optional)                   | Snapshot of context values the part renders     |
+| `equals`    | `(previous, next) => boolean` (optional)            | Snapshot comparison; defaults to `shallowEqual` |
 
 ## API
 
