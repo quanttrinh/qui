@@ -28,6 +28,7 @@ export function setColors(colors: Readonly<Record<ColorRole, string>>, target?: 
 /**
  * Builds the requested Material scheme and writes its colors onto an element.
  * Returns the resolved colors so callers can reuse them without recomputing.
+ * Outside a DOM environment the colors are returned without being applied.
  */
 export function applyTheme(
   options: ThemeOptions = {},
