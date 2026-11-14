@@ -65,6 +65,7 @@ export class QuiAccordionItem extends Mixin(ShadowStylesMixin, ControllerHostMix
       this.isDisabled(accordion),
       accordion.orientation(),
       accordion.textDirection(),
+      accordion.itemId(this.value),
     ],
     equals: shallowEqual,
     setup: (accordion): (() => void) => {
