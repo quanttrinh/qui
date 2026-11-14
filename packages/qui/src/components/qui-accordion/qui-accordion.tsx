@@ -16,10 +16,9 @@ import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 import { token } from "#styled-system/tokens";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
 import { createListenerStore } from "../shared/controllers";
 import { nextId } from "../shared/helpers/dom/id";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { clearAccordion, provideAccordion, type AccordionContext } from "./accordion-context";
 import { AccordionController } from "./controller";
 
@@ -54,7 +53,7 @@ export interface AccordionValueChangeDetails {
   styleUrl: resolveVar(styleUrls.quiAccordion),
   shadow: true,
 })
-export class QuiAccordion extends Mixin(ControllerHostMixin) {
+export class QuiAccordion extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiAccordionElement;
 
   /** Whether multiple items may be expanded at once. */
@@ -138,7 +137,6 @@ export class QuiAccordion extends Mixin(ControllerHostMixin) {
       this.idBase = this.host.id || this.generatedId;
     }
     provideAccordion(this.host, this.context);
-    ensureShadowStylesheet(this.host);
   }
 
   componentWillLoad(): void {

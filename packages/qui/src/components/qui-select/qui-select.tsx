@@ -16,7 +16,6 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
 import { UnfoldMoreIcon } from "../qui-icon/icons";
 import { quiOptionSource } from "../qui-option/option-source";
 import {
@@ -38,7 +37,12 @@ import {
   renderOptionRow,
   type OptionItem,
 } from "../shared/helpers/option";
-import { ControllerHostMixin, FormControlMixin, OptionControlMixin } from "../shared/mixins";
+import {
+  ControllerHostMixin,
+  FormControlMixin,
+  OptionControlMixin,
+  ShadowStylesMixin,
+} from "../shared/mixins";
 import { selectStyles as styles } from "./styles";
 
 /** A select option. */
@@ -78,7 +82,12 @@ const FORM_ONLY_PROPS = new Set(["name"]);
   shadow: true,
   formAssociated: true,
 })
-export class QuiSelect extends Mixin(ControllerHostMixin, FormControlMixin, OptionControlMixin) {
+export class QuiSelect extends Mixin(
+  ShadowStylesMixin,
+  ControllerHostMixin,
+  FormControlMixin,
+  OptionControlMixin,
+) {
   @Element() host!: HTMLQuiSelectElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -174,11 +183,6 @@ export class QuiSelect extends Mixin(ControllerHostMixin, FormControlMixin, Opti
   constructor() {
     super();
     this.form.setControl(this.fieldControl);
-  }
-
-  connectedCallback(): void {
-    super.connectedCallback();
-    ensureShadowStylesheet(this.host);
   }
 
   componentDidRender(): void {

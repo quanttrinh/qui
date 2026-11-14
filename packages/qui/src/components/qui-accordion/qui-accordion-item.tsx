@@ -16,7 +16,7 @@ import { token } from "#styled-system/tokens";
 
 import { ContextPartController, createListenerStore } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import {
   clearAccordionItem,
   consumeAccordion,
@@ -46,7 +46,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiAccordionItem),
   shadow: true,
 })
-export class QuiAccordionItem extends Mixin(ControllerHostMixin) {
+export class QuiAccordionItem extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiAccordionItemElement;
 
   /** The value that identifies this item. */

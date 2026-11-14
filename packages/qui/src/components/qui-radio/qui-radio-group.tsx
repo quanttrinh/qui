@@ -17,12 +17,11 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
 import { createListenerStore, FormController, type FormValidity } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { nextId } from "../shared/helpers/dom/id";
 import { applyFieldAria, type FieldControlHandle } from "../shared/helpers/field";
-import { ControllerHostMixin, FormControlMixin } from "../shared/mixins";
+import { ControllerHostMixin, FormControlMixin, ShadowStylesMixin } from "../shared/mixins";
 import {
   clearRadioGroup,
   provideRadioGroup,
@@ -57,7 +56,7 @@ const styles = {
   shadow: true,
   formAssociated: true,
 })
-export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin) {
+export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin, ShadowStylesMixin) {
   @Element() host!: HTMLQuiRadioGroupElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -185,7 +184,6 @@ export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin) 
       this.idBase = this.host.id || this.generatedId;
     }
     provideRadioGroup(this.host, this.context);
-    ensureShadowStylesheet(this.host);
   }
 
   componentWillLoad(): void {

@@ -1,9 +1,9 @@
-import { resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
+import { ShadowStylesMixin } from "../shared/mixins";
 
 const styles = {
   host: css({ display: "block" }),
@@ -26,12 +26,8 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiDialogActions),
   shadow: true,
 })
-export class QuiDialogActions {
+export class QuiDialogActions extends Mixin(ShadowStylesMixin) {
   @Element() host!: HTMLElement;
-
-  connectedCallback(): void {
-    ensureShadowStylesheet(this.host);
-  }
 
   render(): VNode {
     return (

@@ -7,7 +7,7 @@ import { token } from "#styled-system/tokens";
 import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { arrowDelta, edgeKey } from "../shared/helpers/dom/keyboard";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { consumeTabs, type TabsContext } from "./context";
 
 const styles = {
@@ -36,7 +36,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiTabList),
   shadow: true,
 })
-export class QuiTabList extends Mixin(ControllerHostMixin) {
+export class QuiTabList extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiTabListElement;
 
   protected readonly contextPart = new ContextPartController(this, {

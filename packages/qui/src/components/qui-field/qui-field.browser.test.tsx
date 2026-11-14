@@ -277,6 +277,21 @@ describe("qui-field label behavior", () => {
     }
   });
 
+  it("links the shared stylesheet into styled part shadow roots", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-field id="field">
+        <qui-field-label>Label</qui-field-label>
+        <qui-input />
+        <qui-field-helper-text>Helper</qui-field-helper-text>
+      </qui-field>,
+    );
+
+    await waitForChanges();
+
+    const labelHost = queryHost(root, "qui-field-label");
+    expect(shadowOf(labelHost).querySelector("link[data-qui-styles]")).not.toBeNull();
+  });
+
   it("propagates disabled and read-only state to its control", async () => {
     const { root, waitForChanges } = await render(
       <qui-field id="field" disabled readOnly>

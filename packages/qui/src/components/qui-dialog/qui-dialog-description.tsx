@@ -5,7 +5,7 @@ import { css } from "#styled-system/css";
 import { token } from "#styled-system/tokens";
 
 import { ContextPartController } from "../shared/controllers";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { consumeDialog, type DialogContext } from "./context";
 
 const styles = {
@@ -26,7 +26,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiDialogDescription),
   shadow: true,
 })
-export class QuiDialogDescription extends Mixin(ControllerHostMixin) {
+export class QuiDialogDescription extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiDialogDescriptionElement;
 
   protected readonly contextPart = new ContextPartController(this, {

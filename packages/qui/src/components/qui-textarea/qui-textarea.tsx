@@ -18,14 +18,13 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
 import { FormController, type FormValidity } from "../shared/controllers";
 import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
 import { isHTMLTextAreaElement } from "../shared/helpers/dom/dom";
 import { focusElement } from "../shared/helpers/dom/focus";
 import { nextId } from "../shared/helpers/dom/id";
 import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
-import { ControllerHostMixin, FormControlMixin } from "../shared/mixins";
+import { ControllerHostMixin, FormControlMixin, ShadowStylesMixin } from "../shared/mixins";
 import { styles } from "./styles";
 
 function pixels(value: string): number {
@@ -55,7 +54,7 @@ const IMPERATIVE_PROPS = new Set(["value"]);
   shadow: true,
   formAssociated: true,
 })
-export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
+export class QuiTextarea extends Mixin(ShadowStylesMixin, ControllerHostMixin, FormControlMixin) {
   @Element() host!: HTMLQuiTextareaElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -159,7 +158,6 @@ export class QuiTextarea extends Mixin(ControllerHostMixin, FormControlMixin) {
   connectedCallback(): void {
     super.connectedCallback();
     this.syncAutoResize();
-    ensureShadowStylesheet(this.host);
   }
 
   componentDidRender(): void {

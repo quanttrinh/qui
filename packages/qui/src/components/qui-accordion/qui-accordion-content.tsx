@@ -7,7 +7,7 @@ import { token } from "#styled-system/tokens";
 import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
 import { setAriaControls, setAriaLabelledBy } from "../shared/helpers/aria/aria";
 import { dataAttr } from "../shared/helpers/aria/attr";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { consumeAccordionItem, type AccordionItemContext } from "./accordion-context";
 import { type AccordionTriggerRegistration } from "./controller";
 
@@ -50,7 +50,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiAccordionContent),
   shadow: true,
 })
-export class QuiAccordionContent extends Mixin(ControllerHostMixin) {
+export class QuiAccordionContent extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiAccordionContentElement;
 
   private contentEl?: HTMLElement;

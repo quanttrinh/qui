@@ -18,7 +18,6 @@ import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 import { token } from "#styled-system/tokens";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
 import { CheckIcon, RemoveIcon } from "../qui-icon/icons";
 import {
   CheckableController,
@@ -30,7 +29,7 @@ import { dataAttr } from "../shared/helpers/aria/attr";
 import { focusElement } from "../shared/helpers/dom/focus";
 import { nextId } from "../shared/helpers/dom/id";
 import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
-import { ControllerHostMixin, FormControlMixin } from "../shared/mixins";
+import { ControllerHostMixin, FormControlMixin, ShadowStylesMixin } from "../shared/mixins";
 import { focusRing, requiredIndicatorStyle } from "../shared/styles";
 
 /** Props that only feed form submission; the template does not read them. */
@@ -113,7 +112,7 @@ const styles = {
   shadow: true,
   formAssociated: true,
 })
-export class QuiCheckbox extends Mixin(ControllerHostMixin, FormControlMixin) {
+export class QuiCheckbox extends Mixin(ShadowStylesMixin, ControllerHostMixin, FormControlMixin) {
   @Element() host!: HTMLQuiCheckboxElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -192,7 +191,6 @@ export class QuiCheckbox extends Mixin(ControllerHostMixin, FormControlMixin) {
   connectedCallback(): void {
     super.connectedCallback();
     this.checkable.setInput(this.inputEl);
-    ensureShadowStylesheet(this.host);
   }
 
   componentDidRender(): void {

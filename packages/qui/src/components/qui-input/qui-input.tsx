@@ -20,14 +20,13 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { cx } from "#styled-system/css";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
 import { FormController, type FormValidity } from "../shared/controllers";
 import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
 import { isHTMLInputElement, isHTMLSlotElement } from "../shared/helpers/dom/dom";
 import { focusElement } from "../shared/helpers/dom/focus";
 import { nextId } from "../shared/helpers/dom/id";
 import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
-import { ControllerHostMixin, FormControlMixin } from "../shared/mixins";
+import { ControllerHostMixin, FormControlMixin, ShadowStylesMixin } from "../shared/mixins";
 import { type TextCase } from "./case";
 import { renderNumberStepper, renderPasswordToggle } from "./input-controls";
 import { filterNumericOrDecimalInput } from "./input-filter";
@@ -89,7 +88,7 @@ const IMPERATIVE_PROPS = new Set(["value", "name"]);
   shadow: true,
   formAssociated: true,
 })
-export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
+export class QuiInput extends Mixin(ShadowStylesMixin, ControllerHostMixin, FormControlMixin) {
   @Element() host!: HTMLQuiInputElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -221,7 +220,6 @@ export class QuiInput extends Mixin(ControllerHostMixin, FormControlMixin) {
 
   connectedCallback(): void {
     super.connectedCallback();
-    ensureShadowStylesheet(this.host);
     this.syncMaskito();
   }
 

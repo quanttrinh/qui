@@ -1,10 +1,10 @@
-import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 import { token } from "#styled-system/tokens";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
+import { ShadowStylesMixin } from "../shared/mixins";
 
 export type CardVariant = "elevated" | "filled" | "outlined";
 
@@ -67,15 +67,11 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiCard),
   shadow: true,
 })
-export class QuiCard {
+export class QuiCard extends Mixin(ShadowStylesMixin) {
   @Element() host!: HTMLElement;
 
   /** The visual style. */
   @Prop() variant: CardVariant = "elevated";
-
-  connectedCallback(): void {
-    ensureShadowStylesheet(this.host);
-  }
 
   render(): VNode {
     return (

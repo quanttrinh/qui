@@ -1,4 +1,5 @@
 import {
+  Mixin,
   Build,
   Component,
   Element,
@@ -17,8 +18,8 @@ import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 import { token } from "#styled-system/tokens";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
 import { isHTMLElement } from "../shared/helpers/dom/dom";
+import { ShadowStylesMixin } from "../shared/mixins";
 
 /** Emitted when the popover asks its owner to close it. */
 export interface PopoverDismissEvent {
@@ -149,7 +150,7 @@ function placePopover(
   styleUrl: resolveVar(styleUrls.quiPopover),
   shadow: true,
 })
-export class QuiPopover {
+export class QuiPopover extends Mixin(ShadowStylesMixin) {
   @Element() host!: HTMLElement;
 
   /** Whether the popover is visible. */
@@ -186,10 +187,6 @@ export class QuiPopover {
   private visible = false;
   private frame?: number;
   private sizeObserver?: ResizeObserver;
-
-  connectedCallback(): void {
-    ensureShadowStylesheet(this.host);
-  }
 
   componentDidRender(): void {
     this.sync();

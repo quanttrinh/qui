@@ -4,7 +4,7 @@ import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
 import { ContextPartController } from "../shared/controllers";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { dialogButtonBase } from "../shared/styles";
 import { consumeDialog, type DialogContext } from "./context";
 
@@ -26,7 +26,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiDialogTrigger),
   shadow: true,
 })
-export class QuiDialogTrigger extends Mixin(ControllerHostMixin) {
+export class QuiDialogTrigger extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiDialogTriggerElement;
 
   /** Disables the trigger. */

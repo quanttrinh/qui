@@ -10,7 +10,7 @@ import { setAriaControls } from "../shared/helpers/aria/aria";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { isHTMLElement } from "../shared/helpers/dom/dom";
 import { arrowDelta, edgeKey } from "../shared/helpers/dom/keyboard";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { focusRingInset } from "../shared/styles";
 import { consumeAccordionItem, type AccordionItemContext } from "./accordion-context";
 
@@ -64,7 +64,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiAccordionTrigger),
   shadow: true,
 })
-export class QuiAccordionTrigger extends Mixin(ControllerHostMixin) {
+export class QuiAccordionTrigger extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiAccordionTriggerElement;
 
   private triggerEl?: HTMLButtonElement;

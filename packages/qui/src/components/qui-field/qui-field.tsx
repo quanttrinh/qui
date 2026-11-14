@@ -12,10 +12,9 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
 import { FieldController } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { fieldStyles } from "./styles";
 
 /** Props that only feed the field context; the template ignores them. */
@@ -35,7 +34,7 @@ const RENDER_INDEPENDENT_PROPS = new Set(["required"]);
   styleUrl: resolveVar(styleUrls.quiField),
   shadow: true,
 })
-export class QuiField extends Mixin(ControllerHostMixin) {
+export class QuiField extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiFieldElement;
 
   /** Base id used to derive the field part ids. Defaults to the host id. */
@@ -73,11 +72,6 @@ export class QuiField extends Mixin(ControllerHostMixin) {
     isReadOnly: () => this.readOnly,
     isRequired: () => this.required,
   });
-
-  connectedCallback(): void {
-    super.connectedCallback();
-    ensureShadowStylesheet(this.host);
-  }
 
   @Watch("fieldId")
   @Watch("rootId")

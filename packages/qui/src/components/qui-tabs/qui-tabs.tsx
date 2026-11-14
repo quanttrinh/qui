@@ -15,11 +15,10 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
 import { createListenerStore } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { nextId } from "../shared/helpers/dom/id";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { clearTabs, provideTabs, type TabsContext, type TabsVariant } from "./context";
 import { TabsController } from "./controller";
 
@@ -55,7 +54,7 @@ export interface TabsValueChangeDetails {
   styleUrl: resolveVar(styleUrls.quiTabs),
   shadow: true,
 })
-export class QuiTabs extends Mixin(ControllerHostMixin) {
+export class QuiTabs extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiTabsElement;
 
   /** The controlled selected tab value. */
@@ -147,7 +146,6 @@ export class QuiTabs extends Mixin(ControllerHostMixin) {
       this.idBase = this.host.id || this.generatedId;
     }
     provideTabs(this.host, this.context);
-    ensureShadowStylesheet(this.host);
   }
 
   componentWillLoad(): void {

@@ -1,10 +1,10 @@
-import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
+import { Mixin, resolveVar, Component, Element, h, Host, Prop, type VNode } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 import { token } from "#styled-system/tokens";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
+import { ShadowStylesMixin } from "../shared/mixins";
 import { focusRing } from "../shared/styles";
 
 export type ButtonVariant = "filled" | "tonal" | "elevated" | "outlined" | "text";
@@ -96,7 +96,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiButton),
   shadow: true,
 })
-export class QuiButton {
+export class QuiButton extends Mixin(ShadowStylesMixin) {
   @Element() host!: HTMLElement;
 
   /** The visual style. */
@@ -119,10 +119,6 @@ export class QuiButton {
   @Prop() download?: string;
   /** Native button type. */
   @Prop() type: "button" | "submit" | "reset" = "button";
-
-  connectedCallback(): void {
-    ensureShadowStylesheet(this.host);
-  }
 
   private get dataProps(): Record<string, string | undefined> {
     return {

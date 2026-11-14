@@ -18,7 +18,7 @@ import { ContextPartController, RegistrationReconciler } from "../shared/control
 import { setAriaControls } from "../shared/helpers/aria/aria";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { isHTMLElement } from "../shared/helpers/dom/dom";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { focusRingInset } from "../shared/styles";
 import { consumeTabs, type TabsContext, type TabsVariant } from "./context";
 
@@ -145,7 +145,7 @@ function renderIndicator(
   styleUrl: resolveVar(styleUrls.quiTabTrigger),
   shadow: true,
 })
-export class QuiTabTrigger extends Mixin(ControllerHostMixin) {
+export class QuiTabTrigger extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiTabTriggerElement;
 
   /** The value linking this trigger to its panel. */

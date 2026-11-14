@@ -10,15 +10,14 @@ Reactive controller. Extends `ReactiveControllerBase`. Extended by
 
 ## Options
 
-| Option      | Type                                                | Description                                         |
-| ----------- | --------------------------------------------------- | --------------------------------------------------- |
-| `key`       | `ContextPartKey`                                    | Context family (`field`, `tabs`, `accordion`, …)    |
-| `consume`   | `(host) => TContext \| undefined`                   | Resolves the nearest provider                       |
-| `setup`     | `(context) => (() => void) \| undefined` (optional) | Side effect after attach; returns teardown          |
-| `update`    | `(context) => void` (optional)                      | Custom notification handler; default renders        |
-| `subscribe` | `boolean` (optional)                                | Set `false` to skip state subscriptions             |
-| `getKey`    | `() => string \| undefined` (optional)              | Part value for scoped notifications                 |
-| `styles`    | `boolean` (optional)                                | Ensure shadow stylesheet on connect; default `true` |
+| Option      | Type                                                | Description                                      |
+| ----------- | --------------------------------------------------- | ------------------------------------------------ |
+| `key`       | `ContextPartKey`                                    | Context family (`field`, `tabs`, `accordion`, …) |
+| `consume`   | `(host) => TContext \| undefined`                   | Resolves the nearest provider                    |
+| `setup`     | `(context) => (() => void) \| undefined` (optional) | Side effect after attach; returns teardown       |
+| `update`    | `(context) => void` (optional)                      | Custom notification handler; default renders     |
+| `subscribe` | `boolean` (optional)                                | Set `false` to skip state subscriptions          |
+| `getKey`    | `() => string \| undefined` (optional)              | Part value for scoped notifications              |
 
 ## API
 
@@ -28,8 +27,8 @@ Reactive controller. Extends `ReactiveControllerBase`. Extended by
 
 ## Lifecycle
 
-- `hostConnected` — starts provider listening, ensures styles, and updates if
-  the context is already attached and loaded.
+- `hostConnected` — starts provider listening and updates if the context is
+  already attached and loaded.
 - `hostWillLoad` — starts provider listening and attaches before first render.
 - `hostDidLoad` — marks loaded and attaches/updates when a provider is present.
 - `hostDisconnected` — stops listening, unsubscribes, runs `setup` teardown, and

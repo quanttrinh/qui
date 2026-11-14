@@ -6,7 +6,7 @@ import { css } from "#styled-system/css";
 import { FieldPartController } from "../shared/controllers";
 import { isElement } from "../shared/helpers/dom/dom";
 import { type FieldApi } from "../shared/helpers/field";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { fieldStyles } from "./styles";
 
 const styles = {
@@ -26,7 +26,7 @@ const INTERACTIVE_DESCENDANT =
   styleUrl: resolveVar(styleUrls.quiFieldLabel),
   shadow: true,
 })
-export class QuiFieldLabel extends Mixin(ControllerHostMixin) {
+export class QuiFieldLabel extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiFieldLabelElement;
 
   protected readonly fieldPart = new FieldPartController(this, { part: "label" });

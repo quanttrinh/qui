@@ -1,4 +1,3 @@
-import { ensureShadowStylesheet } from "../../../../utilities/styles";
 import { onContextProvided, type ContextPartKey } from "../../context/store";
 import { ReactiveControllerBase, type ReactiveControllerHost } from "../reactive-controller";
 
@@ -26,8 +25,6 @@ interface ContextPartOptions<TContext extends ContextPartSource> {
    * keyed, notifications for other values skip this part.
    */
   getKey?: () => string | undefined;
-  /** Whether to ensure the shadow stylesheet on connect. Defaults to `true`. */
-  styles?: boolean;
 }
 
 /**
@@ -38,7 +35,7 @@ class ContextPartController<TContext extends ContextPartSource> extends Reactive
   private readonly options: ContextPartOptions<TContext>;
   private attached: TContext | undefined;
   private unsubscribe?: () => void;
-  private teardown?: (() => void) | undefined;
+  private teardown?: () => void;
   private stopListening?: () => void;
   private loaded = false;
 
@@ -54,9 +51,6 @@ class ContextPartController<TContext extends ContextPartSource> extends Reactive
 
   hostConnected(): void {
     const started = this.start();
-    if (this.options.styles !== false) {
-      ensureShadowStylesheet(this.hostElement);
-    }
     if (started && this.loaded) {
       this.updateAttached();
     }

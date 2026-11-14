@@ -17,7 +17,7 @@ import { token } from "#styled-system/tokens";
 import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
 import { setAriaControls, setAriaLabelledBy } from "../shared/helpers/aria/aria";
 import { dataAttr } from "../shared/helpers/aria/attr";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { focusRing } from "../shared/styles";
 import { consumeTabs, type TabsContext } from "./context";
 import { type TabsTriggerRegistration } from "./controller";
@@ -51,7 +51,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiTabPanel),
   shadow: true,
 })
-export class QuiTabPanel extends Mixin(ControllerHostMixin) {
+export class QuiTabPanel extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiTabPanelElement;
 
   /** The value linking this panel to its trigger. */

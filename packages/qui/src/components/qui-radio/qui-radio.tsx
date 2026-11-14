@@ -18,7 +18,7 @@ import { ContextPartController } from "../shared/controllers";
 import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
 import { isHTMLInputElement } from "../shared/helpers/dom/dom";
 import { focusElement } from "../shared/helpers/dom/focus";
-import { ControllerHostMixin } from "../shared/mixins";
+import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { focusRing } from "../shared/styles";
 import {
   consumeRadioGroup,
@@ -94,7 +94,7 @@ const styles = {
   styleUrl: resolveVar(styleUrls.quiRadio),
   shadow: true,
 })
-export class QuiRadio extends Mixin(ControllerHostMixin) {
+export class QuiRadio extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Element() host!: HTMLQuiRadioElement;
 
   /** The value submitted when this item is selected. */

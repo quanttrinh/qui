@@ -16,7 +16,6 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 
-import { ensureShadowStylesheet } from "../../utilities/styles";
 import { UnfoldMoreIcon } from "../qui-icon/icons";
 import { quiOptionSource } from "../qui-option/option-source";
 import { type PopoverDismissEvent } from "../qui-popover/qui-popover";
@@ -40,7 +39,12 @@ import {
   renderOptionRow,
   type OptionItem,
 } from "../shared/helpers/option";
-import { ControllerHostMixin, FormControlMixin, OptionControlMixin } from "../shared/mixins";
+import {
+  ControllerHostMixin,
+  FormControlMixin,
+  OptionControlMixin,
+  ShadowStylesMixin,
+} from "../shared/mixins";
 import { ComboboxInputController } from "./input-controller";
 import { type ComboboxFilter, type ComboboxFilterMode, type ComboboxOption } from "./model";
 import { comboboxStyles as styles } from "./styles";
@@ -92,7 +96,12 @@ const FORM_ONLY_PROPS = new Set(["name"]);
   shadow: true,
   formAssociated: true,
 })
-export class QuiCombobox extends Mixin(ControllerHostMixin, FormControlMixin, OptionControlMixin) {
+export class QuiCombobox extends Mixin(
+  ShadowStylesMixin,
+  ControllerHostMixin,
+  FormControlMixin,
+  OptionControlMixin,
+) {
   @Element() host!: HTMLQuiComboboxElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -238,11 +247,6 @@ export class QuiCombobox extends Mixin(ControllerHostMixin, FormControlMixin, Op
   constructor() {
     super();
     this.form.setControl(this.fieldControl);
-  }
-
-  connectedCallback(): void {
-    super.connectedCallback();
-    ensureShadowStylesheet(this.host);
   }
 
   componentWillLoad(): void {
