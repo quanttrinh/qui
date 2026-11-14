@@ -18,7 +18,7 @@
     },
     "packages/qui": {
       "name": "@quanttrinh/qui",
-      "version": "0.7.1",
+      "version": "0.8.0",
       "dependencies": {
         "@maskito/core": "^5.6.1",
         "@material/material-color-utilities": "^0.4.0",
@@ -64,10 +64,10 @@
     },
     "packages/server": {
       "name": "@quanttrinh/qui-server",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "dependencies": {
         "entities": "^9.0.0",
-        "parse5": "^8.1.0",
+        "parse5": "^8.1.1",
       },
       "devDependencies": {
         "@types/node": "^26.6.6",
@@ -75,12 +75,12 @@
         "vitest": "^5.1.0",
       },
       "peerDependencies": {
-        "@quanttrinh/qui": "^0.7.1",
+        "@quanttrinh/qui": "^0.8.0",
       },
     },
     "packages/unplugin": {
       "name": "@quanttrinh/qui-unplugin",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "dependencies": {
         "gray-matter": "^4.0.3",
         "magic-string": "^1.4.5",
@@ -95,7 +95,7 @@
         "vitest": "^5.1.0",
       },
       "peerDependencies": {
-        "@quanttrinh/qui": "^0.7.1",
+        "@quanttrinh/qui": "^0.8.0",
       },
     },
   },
