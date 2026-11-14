@@ -1,5 +1,18 @@
 # @quanttrinh/qui-unplugin
 
+## 0.4.1
+
+### Patch Changes
+
+- 8dd28dc: Refresh in-range dependency versions for Stencil, Rollup, PostCSS, parse5, and tooling.
+- Updated dependencies [fa8ecf3]
+- Updated dependencies [fa8ecf3]
+- Updated dependencies [8dd28dc]
+- Updated dependencies [fa8ecf3]
+- Updated dependencies [fa8ecf3]
+- Updated dependencies [fb20013]
+  - @quanttrinh/qui@0.8.0
+
 ## 0.4.0
 
 ### Minor Changes

@@ -1,5 +1,40 @@
 # @quanttrinh/qui
 
+## 0.8.0
+
+### Minor Changes
+
+- fa8ecf3: Add per-component color custom properties across the component library:
+  
+  - `qui-button` — container, label, outline, state-layer, and focus-ring colors.
+  - Field family (`qui-input`, `qui-textarea`, `qui-select`, `qui-combobox`) — shared `--qui-field-*` properties for container, outline, hover outline, text, placeholder, focus ring, focus border, and error border.
+  - `qui-field` — label, helper, and error-text colors.
+  - Option lists (`qui-select`, `qui-combobox`) — listbox, option, highlighted option, selected option, empty state, and indicator colors.
+  - `qui-checkbox`, `qui-switch`, `qui-radio` — checked, outline, thumb, label, error, and focus-ring colors.
+  - `qui-tabs` — label, selected label, indicator, list border, panel text, and focus-ring colors.
+  - `qui-accordion` — container, border, trigger, hover, indicator, content text, and focus-ring colors.
+  - `qui-dialog` — surface, text, title, description, backdrop, and action colors.
+  - `qui-card` — container and border colors.
+  - `qui-popover` — surface and border colors.
+  
+  Every property falls back to the existing Material theme tokens, so existing themes are unchanged.
+- fa8ecf3: Add public live-value getters for form controls: `getValue()` on input, textarea, select, combobox, and radio groups, plus `getChecked()` on checkbox and switch. These return the current uncontrolled or controlled value so consumers no longer need to inspect shadow DOM internals.
+- fb20013: Add a `@quanttrinh/qui/theme` entry point with an `applyTheme()` helper and the existing runtime color helpers.
+  
+  `applyTheme({ source, variant, contrast, dark }, target?)` derives a Material scheme, writes every `--md-sys-color-*` property, and returns the resolved colors for reuse.
+
+### Patch Changes
+
+- fa8ecf3: Document every component and reactive controller in source-adjacent READMEs. Component docs follow a shared template covering tags, usage, properties, events, methods, slots, CSS parts, CSS custom properties, behavior, and related components; controller docs cover role, options, API, lifecycle, and notes. The package README now links to the component index instead of duplicating component-specific guidance.
+- 8dd28dc: Refresh in-range dependency versions for Stencil, Rollup, PostCSS, parse5, and tooling.
+- fa8ecf3: Improve rendering performance across the component library:
+  
+  - Scope context notifications to the values that changed, so accordion items, tabs, and radio groups only re-render affected parts.
+  - Notify context subscribers without re-rendering prop-only container components.
+  - Skip renders for props that only feed child context, native form state, positioning, or platform APIs.
+  - Cache repeated ARIA relationship writes and tab-stop checks.
+  - Avoid redundant auto-resize work and controller-driven registration renders.
+
 ## 0.7.1
 
 ### Patch Changes
