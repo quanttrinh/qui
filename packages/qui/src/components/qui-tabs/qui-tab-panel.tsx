@@ -17,7 +17,6 @@ import { token } from "#styled-system/tokens";
 import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
 import { setAriaControls, setAriaLabelledBy } from "../shared/helpers/aria/aria";
 import { dataAttr } from "../shared/helpers/aria/attr";
-import { shallowEqual } from "../shared/helpers/collection";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { focusRing } from "../shared/styles";
 import { tabsContext, type TabsContext } from "./context";
@@ -70,6 +69,7 @@ export class QuiTabPanel extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
 
   protected readonly contextPart = new ContextPartController(this, {
     context: tabsContext,
+    // Keep in sync with render() and the post-render sync.
     select: (tabs) => [
       tabs.isSelected(this.value),
       tabs.orientation(),
@@ -79,7 +79,6 @@ export class QuiTabPanel extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
       tabs.listId(),
       tabs.getTrigger(this.value),
     ],
-    equals: shallowEqual,
   });
 
   private get tabs(): TabsContext | undefined {

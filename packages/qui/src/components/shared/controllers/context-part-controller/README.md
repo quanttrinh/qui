@@ -40,10 +40,12 @@ Reactive controller. Extends `ReactiveControllerBase`. Extended by
 - `start()` subscribes to availability through the context store, so parts
   upgrade correctly even when they connect before their provider exists.
 - With `select`, the part compares snapshots itself. This lets providers call
-  `notify()` without computing changed keys. Return primitives, or pass
-  `equals` (e.g. `shallowEqual`) for arrays.
+  `notify()` without computing changed keys. The default `equals` handles
+  primitives and flat arrays; pass `equals` for object snapshots.
 - Without `select`, every provider notification re-renders the part.
-- Include everything the part reads, including values used by post-render sync
-  such as ids and registration lookups, not just rendered attributes.
+- `select` must include everything the part reads from the context, including
+  values used by post-render sync such as ids and registration lookups, not
+  just rendered attributes. The cached snapshot is not refreshed by prop-only
+  renders, so a missing context read can leave the UI stale.
 - When `update` is omitted, notifications call `requestUpdate()` on the host;
   custom handlers (e.g. dialog attributes) can avoid a render entirely.

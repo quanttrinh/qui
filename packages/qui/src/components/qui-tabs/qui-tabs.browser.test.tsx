@@ -368,6 +368,8 @@ describe("qui-tabs render scoping", () => {
     const panelDeltas = panelHosts.map(
       (host, index) => renderCount(host) - (baselinePanels[index] ?? 0),
     );
+    // Exact counts lock in that the shared prop produces one scoped pass,
+    // Not a duplicate notification through the provider and part selectors.
     expect(triggerDeltas).toEqual([1, 1, 1]);
     expect(panelDeltas).toEqual([0, 0, 0]);
   });

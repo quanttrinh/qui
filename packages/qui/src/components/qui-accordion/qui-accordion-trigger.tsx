@@ -8,7 +8,6 @@ import { ExpandMoreIcon } from "../qui-icon/icons";
 import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
 import { setAriaControls } from "../shared/helpers/aria/aria";
 import { dataAttr } from "../shared/helpers/aria/attr";
-import { shallowEqual } from "../shared/helpers/collection";
 import { isHTMLElement } from "../shared/helpers/dom/dom";
 import { arrowDelta, edgeKey } from "../shared/helpers/dom/keyboard";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
@@ -76,6 +75,7 @@ export class QuiAccordionTrigger extends Mixin(ShadowStylesMixin, ControllerHost
 
   protected readonly contextPart = new ContextPartController(this, {
     context: accordionItemContext,
+    // Keep in sync with render() and the post-render sync.
     select: (item) => [
       item.isExpanded(item.item().value),
       item.isFocused(item.item().value),
@@ -87,7 +87,6 @@ export class QuiAccordionTrigger extends Mixin(ShadowStylesMixin, ControllerHost
       item.rootId(),
       item.getContent(item.item().value),
     ],
-    equals: shallowEqual,
   });
 
   private get item(): AccordionItemContext | undefined {

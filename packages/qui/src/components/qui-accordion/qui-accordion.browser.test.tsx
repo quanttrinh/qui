@@ -308,12 +308,15 @@ describe("qui-accordion render scoping", () => {
     const contentDeltas = contentHosts.map(
       (host, index) => renderCount(host) - (baselineContents[index] ?? 0),
     );
-    expect(itemDeltas).toEqual([0, expect.any(Number), 0]);
+    expect(itemDeltas[0]).toBe(0);
     expect(itemDeltas[1]).toBeGreaterThan(0);
-    expect(triggerDeltas).toEqual([0, expect.any(Number), 0]);
+    expect(itemDeltas[2]).toBe(0);
+    expect(triggerDeltas[0]).toBe(0);
     expect(triggerDeltas[1]).toBeGreaterThan(0);
-    expect(contentDeltas).toEqual([0, expect.any(Number), 0]);
+    expect(triggerDeltas[2]).toBe(0);
+    expect(contentDeltas[0]).toBe(0);
     expect(contentDeltas[1]).toBeGreaterThan(0);
+    expect(contentDeltas[2]).toBe(0);
   });
 
   it("updates aria links when a trigger registers after the content", async () => {

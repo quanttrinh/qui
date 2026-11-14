@@ -7,7 +7,6 @@ import { token } from "#styled-system/tokens";
 import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
 import { setAriaControls, setAriaLabelledBy } from "../shared/helpers/aria/aria";
 import { dataAttr } from "../shared/helpers/aria/attr";
-import { shallowEqual } from "../shared/helpers/collection";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { accordionItemContext, type AccordionItemContext } from "./accordion-context";
 import { type AccordionTriggerRegistration } from "./controller";
@@ -61,6 +60,7 @@ export class QuiAccordionContent extends Mixin(ShadowStylesMixin, ControllerHost
 
   protected readonly contextPart = new ContextPartController(this, {
     context: accordionItemContext,
+    // Keep in sync with render() and the post-render sync.
     select: (item) => [
       item.isExpanded(item.item().value),
       item.isFocused(item.item().value),
@@ -71,7 +71,6 @@ export class QuiAccordionContent extends Mixin(ShadowStylesMixin, ControllerHost
       item.triggerId(item.item().value),
       item.getTrigger(item.item().value),
     ],
-    equals: shallowEqual,
   });
 
   private get item(): AccordionItemContext | undefined {

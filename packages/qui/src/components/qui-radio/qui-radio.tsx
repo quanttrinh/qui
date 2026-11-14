@@ -16,7 +16,6 @@ import { token } from "#styled-system/tokens";
 
 import { ContextPartController } from "../shared/controllers";
 import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
-import { shallowEqual } from "../shared/helpers/collection";
 import { isHTMLInputElement } from "../shared/helpers/dom/dom";
 import { focusElement } from "../shared/helpers/dom/focus";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
@@ -109,6 +108,7 @@ export class QuiRadio extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
 
   protected readonly contextPart = new ContextPartController(this, {
     context: radioGroupContext,
+    // Keep in sync with render() and the post-render sync.
     select: (group) => {
       const state = group.itemState(this.item());
       return [
@@ -127,7 +127,6 @@ export class QuiRadio extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
         group.labelId(this.value),
       ];
     },
-    equals: shallowEqual,
   });
   private inputEl?: HTMLInputElement;
   private registeredInput?: HTMLInputElement;

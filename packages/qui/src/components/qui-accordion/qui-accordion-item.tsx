@@ -16,7 +16,6 @@ import { token } from "#styled-system/tokens";
 
 import { ContextPartController, createListenerStore } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";
-import { shallowEqual } from "../shared/helpers/collection";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import {
   clearAccordionItem,
@@ -59,6 +58,7 @@ export class QuiAccordionItem extends Mixin(ShadowStylesMixin, ControllerHostMix
 
   protected readonly contextPart = new ContextPartController(this, {
     context: accordionContext,
+    // Keep in sync with render() and the post-render sync.
     select: (accordion) => [
       accordion.isExpanded(this.value),
       accordion.isFocused(this.value),
@@ -67,7 +67,6 @@ export class QuiAccordionItem extends Mixin(ShadowStylesMixin, ControllerHostMix
       accordion.textDirection(),
       accordion.itemId(this.value),
     ],
-    equals: shallowEqual,
     setup: (accordion): (() => void) => {
       provideAccordionItem(this.host, this.context(accordion));
       return () => {
