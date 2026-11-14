@@ -1,5 +1,17 @@
 # @quanttrinh/qui-server
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies [fa8ecf3]
+- Updated dependencies [fa8ecf3]
+- Updated dependencies [8dd28dc]
+- Updated dependencies [fa8ecf3]
+- Updated dependencies [fa8ecf3]
+- Updated dependencies [fb20013]
+  - @quanttrinh/qui@0.8.0
+
 ## 0.1.1
 
 ### Patch Changes
