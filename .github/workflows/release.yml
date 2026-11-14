@@ -52,77 +52,10 @@ jobs:
           set -euo pipefail
           BASE="$(git log --format=%H --grep='^chore: version packages' -n 1)"
           if [ -z "$BASE" ]; then
-            BASE="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
+            echo "::notice::No version commit found; skipping dependency changesets."
+            exit 0
           fi
-          python3 - "$BASE" HEAD "$HEAD_SHA" << 'PYEOF'
-          import json, re, subprocess, sys
-          from pathlib import Path
-
-          base, head, head_sha = sys.argv[1:4]
-          version_re = re.compile(r"\d+\.\d+\.\d+")
-          sections = ("dependencies", "optionalDependencies", "peerDependencies", "resolutions")
-
-          changed_files = subprocess.check_output(
-              ["git", "diff", "--name-only", base, head, "--", "package.json", "packages/"],
-              text=True,
-          ).splitlines()
-          manifests = [
-              path for path in changed_files
-              if path == "package.json" or (path.startswith("packages/") and path.endswith("/package.json"))
-          ]
-
-          releases = {}
-          summary = []
-          for path in manifests:
-              try:
-                  old_text = subprocess.check_output(["git", "show", f"{base}:{path}"], text=True)
-                  old = json.loads(old_text)
-              except subprocess.CalledProcessError:
-                  continue
-
-              new = json.loads(Path(path).read_text())
-              name = new.get("name")
-              if not isinstance(name, str) or new.get("private") is True:
-                  continue
-
-              bump = None
-              for section in sections:
-                  for dep, new_range in new.get(section, {}).items():
-                      old_range = old.get(section, {}).get(dep)
-                      if old_range == new_range:
-                          continue
-                      summary.append(f"- `{dep}`: `{old_range}` -> `{new_range}`")
-                      old_version = version_re.search(str(old_range))
-                      new_version = version_re.search(str(new_range))
-                      update = "patch"
-                      if old_version and new_version:
-                          old_parts = tuple(map(int, old_version.group().split(".")))
-                          new_parts = tuple(map(int, new_version.group().split(".")))
-                          if old_parts[0] != new_parts[0]:
-                              update = "major"
-                          elif old_parts[1] != new_parts[1]:
-                              update = "minor"
-                      rank = {"patch": 0, "minor": 1, "major": 2}
-                      if bump is None or rank[update] > rank[bump]:
-                          bump = update
-
-              if bump is not None:
-                  releases[name] = bump
-
-          if not releases:
-              print("No publishable dependency changes since the last version commit.")
-              sys.exit(0)
-
-          fragment = Path(".changeset") / f"renovate-deps-{head_sha[:12]}.md"
-          lines = ["---"]
-          for name, bump in sorted(releases.items()):
-              lines.append(f'"{name}": {bump}')
-          lines.extend(["---", "", "Dependency updates:", ""])
-          lines.extend(dict.fromkeys(summary))
-          lines.append("")
-          fragment.write_text("\n".join(lines))
-          print(f"Created {fragment} for {', '.join(sorted(releases))}")
-          PYEOF
+          bun packages/qui/tooling/scripts/generate-release-changeset.ts "$BASE" "$HEAD_SHA"
 
       - name: Create Release Pull Request or Publish
         uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2

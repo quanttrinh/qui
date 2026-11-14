@@ -3,6 +3,9 @@
   "extends": ["config:recommended"],
   "rangeStrategy": "bump",
   "addLabels": ["skip-pr-title-check", "skip-pages-build"],
+  "vulnerabilityAlerts": {
+    "enabled": true
+  },
   "semanticCommits": "enabled",
   "semanticCommitType": "chore",
   "semanticCommitScope": "deps",

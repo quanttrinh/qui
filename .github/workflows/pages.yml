@@ -222,10 +222,7 @@ jobs:
           push_with_retry
 
   pr-cleanup:
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.action == 'closed' &&
-      !contains(github.event.pull_request.labels.*.name, 'skip-pages-build')
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-slim
     permissions:
       contents: write
@@ -431,10 +428,7 @@ jobs:
 
   pr-cleanup-pages:
     needs: pr-cleanup
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.action == 'closed' &&
-      !contains(github.event.pull_request.labels.*.name, 'skip-pages-build')
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
     permissions:
       contents: read
       pages: write

@@ -131,10 +131,10 @@ jobs:
         id: bump
         if: steps.validate.outputs.valid == 'true'
         env:
-          LABELS: ${{ join(github.event.pull_request.labels.*.name, '\n') }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
           set -euo pipefail
-          labels="$LABELS"
+          labels="$(jq -r '.[]' <<< "$LABELS")"
           type=patch
           auto_approve=false
           if grep -qx 'update-type:major' <<< "$labels"; then
