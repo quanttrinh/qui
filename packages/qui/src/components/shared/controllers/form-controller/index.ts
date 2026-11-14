@@ -1,7 +1,6 @@
 import { Build } from "@stencil/core";
 
-import { onContextProvided } from "../../context";
-import { consumeField, type FieldApi } from "../../helpers/field/context";
+import { fieldContext, type FieldApi } from "../../helpers/field/context";
 import { type FieldControlHandle } from "../../helpers/field/registry";
 import { ReactiveControllerBase, type ReactiveControllerHost } from "../reactive-controller";
 
@@ -221,7 +220,7 @@ export class FormController extends ReactiveControllerBase {
   }
 
   private listenForField(): void {
-    this.stopListening ??= onContextProvided("field", this.hostElement, () => {
+    this.stopListening ??= fieldContext.onProvided(this.hostElement, () => {
       if (this.attach()) {
         this.options.onChange?.();
         this.requestUpdate();
@@ -230,7 +229,7 @@ export class FormController extends ReactiveControllerBase {
   }
 
   private attach(): boolean {
-    const field = consumeField(this.hostElement);
+    const field = fieldContext.consume(this.hostElement);
     if (field === this.field) {
       return false;
     }

@@ -5,7 +5,7 @@ import { css } from "#styled-system/css";
 
 import { ShadowStylesMixin } from "../shared/mixins";
 import { dialogButtonBase } from "../shared/styles";
-import { consumeDialog } from "./context";
+import { dialogContext } from "./context";
 
 const styles = {
   host: css({ display: "inline-block" }),
@@ -35,7 +35,7 @@ export class QuiDialogClose extends Mixin(ShadowStylesMixin) {
           part="close"
           type="button"
           onClick={() => {
-            consumeDialog(this.host)?.requestClose();
+            dialogContext.consume(this.host)?.requestClose();
           }}
         >
           <slot />

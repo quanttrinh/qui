@@ -1,15 +1,46 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { notifyContextChanged, onContextProvided } from "../../context/store";
+import { type ContextSource } from "../../context/store";
 import { type ReactiveControllerHost } from "../reactive-controller";
 import { ContextPartController, type ContextPartOptions, type ContextPartSource } from "./index";
 
-const KEY = "field";
+interface TestContext extends ContextPartSource {
+  name: string;
+  notify: () => void;
+  listenerCount: () => number;
+}
 
-function createContext() {
+interface SourceState {
+  current?: TestContext;
+}
+
+function createContext(name: string): TestContext {
   const listeners = new Set<() => void>();
   return {
+    name,
     subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    notify: () => {
+      for (const listener of listeners) {
+        listener();
+      }
+    },
+    listenerCount: () => listeners.size,
+  };
+}
+
+function createSource(state: SourceState): ContextSource<TestContext> & {
+  notify: () => void;
+  listenerCount: () => number;
+} {
+  const listeners = new Set<() => void>();
+  return {
+    consume: () => state.current,
+    onProvided: (_host, listener) => {
       listeners.add(listener);
       return () => {
         listeners.delete(listener);
@@ -44,19 +75,12 @@ function createPart<TContext extends ContextPartSource>(
   return new ContextPartController(host, options);
 }
 
-async function flush(): Promise<void> {
-  await Promise.resolve();
-}
-
 describe("ContextPartController lifecycle", () => {
   it("attaches, subscribes, and detaches", () => {
-    const context = createContext();
+    const context = createContext("field");
+    const state: SourceState = { current: context };
     const update = vi.fn((): void => undefined);
-    const part = createPart({
-      key: KEY,
-      consume: () => context,
-      update,
-    });
+    const part = createPart({ context: createSource(state), update });
 
     part.hostWillLoad();
     expect(part.context).toBe(context);
@@ -74,14 +98,11 @@ describe("ContextPartController lifecycle", () => {
   });
 
   it("runs setup and teardown around the subscription", () => {
-    const context = createContext();
+    const context = createContext("field");
+    const state: SourceState = { current: context };
     const teardown = vi.fn();
     const setup = vi.fn(() => teardown);
-    const part = createPart({
-      key: KEY,
-      consume: () => context,
-      setup,
-    });
+    const part = createPart({ context: createSource(state), setup });
 
     part.hostWillLoad();
     expect(setup).toHaveBeenCalledWith(context);
@@ -90,12 +111,9 @@ describe("ContextPartController lifecycle", () => {
   });
 
   it("retries once after render when the context was not available", () => {
-    const context = createContext();
-    const state: { current?: ReturnType<typeof createContext> } = {};
-    const part = createPart({
-      key: KEY,
-      consume: () => state.current,
-    });
+    const context = createContext("field");
+    const state: SourceState = {};
+    const part = createPart({ context: createSource(state) });
 
     part.hostWillLoad();
     expect(part.context).toBeUndefined();
@@ -108,15 +126,11 @@ describe("ContextPartController lifecycle", () => {
   });
 
   it("reattaches and re-renders after a reconnect with a new provider", () => {
-    const first = createContext();
-    const second = createContext();
-    const state: { current?: ReturnType<typeof createContext> } = { current: first };
+    const first = createContext("first");
+    const second = createContext("second");
+    const state: SourceState = { current: first };
     const update = vi.fn((): void => undefined);
-    const part = createPart({
-      key: KEY,
-      consume: () => state.current,
-      update,
-    });
+    const part = createPart({ context: createSource(state), update });
 
     part.hostWillLoad();
     part.hostDidLoad();
@@ -133,14 +147,10 @@ describe("ContextPartController lifecycle", () => {
   });
 
   it("can skip the subscription for one-shot consumers", () => {
-    const context = createContext();
+    const context = createContext("field");
+    const state: SourceState = { current: context };
     const update = vi.fn((): void => undefined);
-    const part = createPart({
-      key: KEY,
-      consume: () => context,
-      subscribe: false,
-      update,
-    });
+    const part = createPart({ context: createSource(state), subscribe: false, update });
 
     part.hostWillLoad();
     context.notify();
@@ -151,88 +161,55 @@ describe("ContextPartController lifecycle", () => {
 });
 
 describe("ContextPartController provider notifications", () => {
-  it("attaches when a provider is registered after the first render", async () => {
-    const context = createContext();
-    const state: { current?: ReturnType<typeof createContext> } = {};
+  it("attaches when a provider is registered after the first render", () => {
+    const context = createContext("field");
+    const state: SourceState = {};
+    const source = createSource(state);
     const update = vi.fn((): void => undefined);
-    const part = createPart({
-      key: KEY,
-      consume: () => state.current,
-      update,
-    });
+    const part = createPart({ context: source, update });
 
     part.hostWillLoad();
     part.hostDidLoad();
     expect(part.context).toBeUndefined();
 
     state.current = context;
-    notifyContextChanged(KEY);
-    await flush();
+    source.notify();
 
     expect(part.context).toBe(context);
     expect(update).toHaveBeenCalledOnce();
     expect(context.listenerCount()).toBe(1);
 
-    notifyContextChanged(KEY);
-    await flush();
+    source.notify();
     expect(update).toHaveBeenCalledOnce();
     expect(context.listenerCount()).toBe(1);
     part.hostDisconnected();
   });
 
-  it("stops listening after disconnect", async () => {
-    const context = createContext();
-    const state: { current?: ReturnType<typeof createContext> } = { current: context };
-    const part = createPart({
-      key: KEY,
-      consume: () => state.current,
-    });
+  it("stops listening after disconnect", () => {
+    const context = createContext("field");
+    const state: SourceState = { current: context };
+    const source = createSource(state);
+    const part = createPart({ context: source });
 
     part.hostWillLoad();
     part.hostDisconnected();
-    state.current = createContext();
-    notifyContextChanged(KEY);
-    await flush();
+    expect(source.listenerCount()).toBe(0);
 
+    state.current = createContext("replacement");
+    source.notify();
     expect(part.context).toBeUndefined();
   });
 
-  it("ignores notifications for other provider keys", async () => {
-    const context = createContext();
-    const state: { current?: ReturnType<typeof createContext> } = {};
-    const part = createPart({
-      key: KEY,
-      consume: () => state.current,
-    });
-
-    part.hostWillLoad();
-    state.current = context;
-    notifyContextChanged("dialog");
-    await flush();
-
-    expect(part.context).toBeUndefined();
-
-    notifyContextChanged(KEY);
-    await flush();
-    expect(part.context).toBe(context);
-    part.hostDisconnected();
-  });
-
-  it("updates one-shot consumers when their provider appears", async () => {
-    const context = createContext();
-    const state: { current?: ReturnType<typeof createContext> } = {};
+  it("updates one-shot consumers when their provider appears", () => {
+    const context = createContext("field");
+    const state: SourceState = {};
+    const source = createSource(state);
     const update = vi.fn((): void => undefined);
-    const part = createPart({
-      key: KEY,
-      consume: () => state.current,
-      subscribe: false,
-      update,
-    });
+    const part = createPart({ context: source, subscribe: false, update });
 
     part.hostWillLoad();
     state.current = context;
-    notifyContextChanged(KEY);
-    await flush();
+    source.notify();
 
     expect(part.context).toBe(context);
     expect(update).toHaveBeenCalledOnce();
@@ -240,65 +217,20 @@ describe("ContextPartController provider notifications", () => {
     part.hostDisconnected();
   });
 
-  it("keeps a newer listener set when an old unsubscribe runs twice", async () => {
-    const stale = onContextProvided(
-      KEY,
-      createHost(),
-      vi.fn((): void => undefined),
-    );
-    stale();
-    const listener = vi.fn((): void => undefined);
-    const unsubscribe = onContextProvided(KEY, createHost(), listener);
-
-    stale();
-    notifyContextChanged(KEY);
-    await flush();
-
-    expect(listener).toHaveBeenCalledOnce();
-    unsubscribe();
-  });
-
-  it("coalesces notifications for the same provider key", async () => {
-    const context = createContext();
-    const state: { current?: ReturnType<typeof createContext> } = {};
-    const consume = vi.fn(() => state.current);
-    const part = createPart({
-      key: KEY,
-      consume,
-    });
-
-    part.hostWillLoad();
-    state.current = context;
-    consume.mockClear();
-
-    notifyContextChanged(KEY);
-    notifyContextChanged(KEY);
-    notifyContextChanged(KEY);
-    await flush();
-
-    expect(consume).toHaveBeenCalledOnce();
-    expect(part.context).toBe(context);
-    part.hostDisconnected();
-  });
-
-  it("replaces the context and tears down the previous one", async () => {
-    const first = createContext();
-    const second = createContext();
-    const state: { current?: ReturnType<typeof createContext> } = { current: first };
+  it("replaces the context and tears down the previous one", () => {
+    const first = createContext("first");
+    const second = createContext("second");
+    const state: SourceState = { current: first };
+    const source = createSource(state);
     const teardown = vi.fn();
     const setup = vi.fn(() => teardown);
-    const part = createPart({
-      key: KEY,
-      consume: () => state.current,
-      setup,
-    });
+    const part = createPart({ context: source, setup });
 
     part.hostWillLoad();
     expect(first.listenerCount()).toBe(1);
 
     state.current = second;
-    notifyContextChanged(KEY);
-    await flush();
+    source.notify();
 
     expect(part.context).toBe(second);
     expect(teardown).toHaveBeenCalledOnce();
@@ -308,21 +240,17 @@ describe("ContextPartController provider notifications", () => {
     part.hostDisconnected();
   });
 
-  it("detaches when the provider disappears", async () => {
-    const context = createContext();
-    const state: { current?: ReturnType<typeof createContext> } = { current: context };
+  it("detaches when the provider disappears", () => {
+    const context = createContext("field");
+    const state: SourceState = { current: context };
+    const source = createSource(state);
     const teardown = vi.fn();
     const setup = vi.fn(() => teardown);
-    const part = createPart({
-      key: KEY,
-      consume: () => state.current,
-      setup,
-    });
+    const part = createPart({ context: source, setup });
 
     part.hostWillLoad();
     state.current = undefined;
-    notifyContextChanged(KEY);
-    await flush();
+    source.notify();
 
     expect(part.context).toBeUndefined();
     expect(teardown).toHaveBeenCalledOnce();

@@ -43,22 +43,10 @@ export interface AccordionItemContext extends AccordionContext {
   isItemDisabled: () => boolean;
 }
 
-const {
-  provide: provideAccordion,
-  clear: clearAccordion,
-  consume: consumeAccordion,
-} = createContextStore<AccordionContext>("accordion");
-const {
-  provide: provideAccordionItem,
-  clear: clearAccordionItem,
-  consume: consumeAccordionItem,
-} = createContextStore<AccordionItemContext>("accordion-item");
+export const accordionContext = createContextStore<AccordionContext>();
+export const accordionItemContext = createContextStore<AccordionItemContext>();
 
-export {
-  clearAccordion,
-  clearAccordionItem,
-  consumeAccordion,
-  consumeAccordionItem,
-  provideAccordion,
-  provideAccordionItem,
-};
+const { provide: provideAccordion, clear: clearAccordion } = accordionContext;
+const { provide: provideAccordionItem, clear: clearAccordionItem } = accordionItemContext;
+
+export { clearAccordion, clearAccordionItem, provideAccordion, provideAccordionItem };

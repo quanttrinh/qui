@@ -21,7 +21,7 @@ import { focusElement } from "../shared/helpers/dom/focus";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { focusRing } from "../shared/styles";
 import {
-  consumeRadioGroup,
+  radioGroupContext,
   type RadioGroupContext,
   type RadioItem,
   type RadioItemState,
@@ -107,8 +107,7 @@ export class QuiRadio extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   @Prop() label?: string;
 
   protected readonly contextPart = new ContextPartController(this, {
-    key: "radio-group",
-    consume: consumeRadioGroup,
+    context: radioGroupContext,
     getKey: () => this.value,
   });
   private inputEl?: HTMLInputElement;

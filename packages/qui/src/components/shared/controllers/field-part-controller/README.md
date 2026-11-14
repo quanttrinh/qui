@@ -34,7 +34,6 @@ provider retry, subscription, and teardown.
 - `label`, `helper-text`, and `error-text` register the host with the field so
   it can target them with ARIA; each component owns its rendered id.
   `required-indicator` is presentational only.
-- The context key is fixed to `"field"` and consumption always uses
-  `consumeField`.
+- Consumption always uses the shared `fieldContext` store.
 - Because it subscribes to field state, a part re-renders when `disabled`,
   `invalid`, or registration targets change.

@@ -20,7 +20,7 @@ import { dataAttr } from "../shared/helpers/aria/attr";
 import { isHTMLElement } from "../shared/helpers/dom/dom";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { focusRingInset } from "../shared/styles";
-import { consumeTabs, type TabsContext, type TabsVariant } from "./context";
+import { tabsContext, type TabsContext, type TabsVariant } from "./context";
 
 const styles = {
   host: css({ display: "contents" }),
@@ -159,8 +159,7 @@ export class QuiTabTrigger extends Mixin(ShadowStylesMixin, ControllerHostMixin)
   private readonly registration = new RegistrationReconciler();
 
   protected readonly contextPart = new ContextPartController(this, {
-    key: "tabs",
-    consume: consumeTabs,
+    context: tabsContext,
     getKey: () => this.value,
   });
 

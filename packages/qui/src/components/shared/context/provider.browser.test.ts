@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  accordionContext,
+  accordionItemContext,
   clearAccordion,
   clearAccordionItem,
-  consumeAccordion,
-  consumeAccordionItem,
   provideAccordion,
   provideAccordionItem,
   type AccordionContext,
@@ -12,24 +12,24 @@ import {
 } from "../../qui-accordion/accordion-context";
 import {
   clearDialog,
-  consumeDialog,
+  dialogContext,
   provideDialog,
   type DialogContext,
 } from "../../qui-dialog/context";
 import {
   clearRadioGroup,
-  consumeRadioGroup,
+  radioGroupContext,
   provideRadioGroup,
   type RadioGroupContext,
 } from "../../qui-radio/context";
-import { clearTabs, consumeTabs, provideTabs, type TabsContext } from "../../qui-tabs/context";
+import { clearTabs, provideTabs, tabsContext, type TabsContext } from "../../qui-tabs/context";
 import {
   ContextPartController,
   FormController,
   type ContextPartOptions,
   type ContextPartSource,
 } from "../controllers";
-import { clearField, consumeField, provideField, type FieldApi } from "../helpers/field";
+import { clearField, fieldContext, provideField, type FieldApi } from "../helpers/field";
 
 function createFieldApi(): FieldApi {
   return {
@@ -155,8 +155,7 @@ describe("context provider notifications", () => {
     const field = createFieldApi();
     const update = vi.fn((): void => undefined);
     const part = createPart(consumer, {
-      key: "field",
-      consume: consumeField,
+      context: fieldContext,
       update,
     });
 
@@ -234,8 +233,7 @@ describe("context provider notifications", () => {
     const teardown = vi.fn();
     const setup = vi.fn(() => teardown);
     const part = createPart(consumer, {
-      key: "field",
-      consume: consumeField,
+      context: fieldContext,
       setup,
     });
 
@@ -262,8 +260,7 @@ describe("late providers for other context families", () => {
     const { provider, consumer } = createTree();
     const tabs = createTabsContext();
     const part = createPart(consumer, {
-      key: "tabs",
-      consume: consumeTabs,
+      context: tabsContext,
     });
 
     part.hostWillLoad();
@@ -281,8 +278,7 @@ describe("late providers for other context families", () => {
     const { provider, consumer } = createTree();
     const group = createRadioGroupContext();
     const part = createPart(consumer, {
-      key: "radio-group",
-      consume: consumeRadioGroup,
+      context: radioGroupContext,
     });
 
     part.hostWillLoad();
@@ -300,8 +296,7 @@ describe("late providers for other context families", () => {
     const { provider, consumer } = createTree();
     const dialog = createDialogContext();
     const part = createPart(consumer, {
-      key: "dialog",
-      consume: consumeDialog,
+      context: dialogContext,
     });
 
     part.hostWillLoad();
@@ -333,8 +328,7 @@ function createAccordionTree(values: string[]): {
     host.append(itemHost);
 
     const itemPart = createPart(itemHost, {
-      key: "accordion",
-      consume: consumeAccordion,
+      context: accordionContext,
       setup: (accordion: AccordionContext) => {
         provideAccordionItem(itemHost, createItemContext(accordion, value));
         return () => {
@@ -343,8 +337,7 @@ function createAccordionTree(values: string[]): {
       },
     });
     const contentPart = createPart(contentHost, {
-      key: "accordion-item",
-      consume: consumeAccordionItem,
+      context: accordionItemContext,
     });
 
     itemPart.hostWillLoad();

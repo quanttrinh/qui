@@ -1,4 +1,4 @@
-import { onContextProvided, type ContextPartKey } from "../../context/store";
+import { type ContextSource } from "../../context/store";
 import { ReactiveControllerBase, type ReactiveControllerHost } from "../reactive-controller";
 
 /** A context object that can notify a subscribed part when it changes. */
@@ -7,10 +7,8 @@ interface ContextPartSource {
 }
 
 interface ContextPartOptions<TContext extends ContextPartSource> {
-  /** The provider key to listen for while waiting to attach. */
-  key: ContextPartKey;
-  /** Finds the nearest matching ancestor context. */
-  consume: (host: HTMLElement) => TContext | undefined;
+  /** The context family to consume. */
+  context: ContextSource<TContext>;
   /** Optional side effect when a context is attached. Returns a teardown. */
   setup?: (context: TContext) => (() => void) | undefined;
   /**
@@ -90,7 +88,7 @@ class ContextPartController<TContext extends ContextPartSource> extends Reactive
   }
 
   private attach(): boolean {
-    const next = this.options.consume(this.hostElement);
+    const next = this.options.context.consume(this.hostElement);
     if (next === this.attached) {
       return false;
     }
@@ -123,11 +121,7 @@ class ContextPartController<TContext extends ContextPartSource> extends Reactive
   };
 
   private start(): boolean {
-    this.stopListening ??= onContextProvided(
-      this.options.key,
-      this.hostElement,
-      this.handleProvided,
-    );
+    this.stopListening ??= this.options.context.onProvided(this.hostElement, this.handleProvided);
     return this.attach();
   }
 }

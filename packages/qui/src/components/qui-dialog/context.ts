@@ -31,10 +31,8 @@ export interface DialogContext extends DialogHostRegistration {
   subscribe: (listener: () => void) => () => void;
 }
 
-const {
-  provide: provideDialog,
-  clear: clearDialog,
-  consume: consumeDialog,
-} = createContextStore<DialogContext>("dialog");
+export const dialogContext = createContextStore<DialogContext>();
 
-export { clearDialog, consumeDialog, provideDialog };
+const { provide: provideDialog, clear: clearDialog } = dialogContext;
+
+export { clearDialog, provideDialog };

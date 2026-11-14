@@ -8,7 +8,7 @@ import { ContextPartController, RegistrationReconciler } from "../shared/control
 import { setAriaControls, setAriaLabelledBy } from "../shared/helpers/aria/aria";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
-import { consumeAccordionItem, type AccordionItemContext } from "./accordion-context";
+import { accordionItemContext, type AccordionItemContext } from "./accordion-context";
 import { type AccordionTriggerRegistration } from "./controller";
 
 const styles = {
@@ -59,8 +59,7 @@ export class QuiAccordionContent extends Mixin(ShadowStylesMixin, ControllerHost
   private readonly registration = new RegistrationReconciler();
 
   protected readonly contextPart = new ContextPartController(this, {
-    key: "accordion-item",
-    consume: consumeAccordionItem,
+    context: accordionItemContext,
     getKey: () => this.item?.item().value,
   });
 

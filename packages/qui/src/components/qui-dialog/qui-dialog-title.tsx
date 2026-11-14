@@ -6,7 +6,7 @@ import { token } from "#styled-system/tokens";
 
 import { ContextPartController } from "../shared/controllers";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
-import { consumeDialog, type DialogContext } from "./context";
+import { dialogContext, type DialogContext } from "./context";
 
 const styles = {
   host: css({ display: "block" }),
@@ -31,8 +31,7 @@ export class QuiDialogTitle extends Mixin(ShadowStylesMixin, ControllerHostMixin
   @Element() host!: HTMLQuiDialogTitleElement;
 
   protected readonly contextPart = new ContextPartController(this, {
-    key: "dialog",
-    consume: consumeDialog,
+    context: dialogContext,
     setup: (dialog): (() => void) => dialog.registerTitle(this.host),
     subscribe: false,
   });
