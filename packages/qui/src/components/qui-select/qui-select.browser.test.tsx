@@ -19,7 +19,7 @@ describe("qui-select", () => {
     );
     const spy = spyOnEvent("valuechange");
     const host = resolveHost<HTMLQuiSelectElement>(root, "qui-select");
-    const trigger = queryPartIn<HTMLButtonElement>(root, "trigger");
+    const trigger = queryPartIn<HTMLButtonElement>(host, "trigger");
 
     trigger.click();
     await waitForChanges();
@@ -40,6 +40,30 @@ describe("qui-select", () => {
     expect(spy.lastEvent?.detail).toMatchObject({ value: ["account-2"] });
     expect(queryPartIn(root, "trigger").textContent).toContain("Account 0002");
     await expect(host.getValue()).resolves.toEqual(["account-2"]);
+  });
+
+  it("reflects its form name and submits selected values", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-select name="account" items={accounts} />
+      </form>,
+    );
+    const form = root as HTMLFormElement;
+    const host = resolveHost<HTMLQuiSelectElement>(root, "qui-select");
+    const trigger = queryPartIn<HTMLButtonElement>(host, "trigger");
+
+    trigger.click();
+    await waitForChanges();
+    await settle(50);
+
+    const option = queryParts<HTMLElement>(host, "option").find(
+      (candidate) => candidate.dataset.value === "account-2",
+    );
+    option?.click();
+    await waitForChanges();
+
+    expect(host.getAttribute("name")).toBe("account");
+    expect(new FormData(form).get("account")).toBe("account-2");
   });
 
   it("closes when the open trigger is clicked again", async () => {

@@ -43,6 +43,25 @@ describe("qui-checkbox", () => {
     await expect(host.getChecked()).resolves.toBe(true);
   });
 
+  it("reflects its form name and submits through FormData", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-checkbox name="consent" value="yes">
+          Check me
+        </qui-checkbox>
+      </form>,
+    );
+    const form = root as HTMLFormElement;
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    input.click();
+    await waitForChanges();
+
+    expect(host.getAttribute("name")).toBe("consent");
+    expect(new FormData(form).get("consent")).toBe("yes");
+  });
+
   it("renders a required indicator and exposes aria-required", async () => {
     const { root, waitForChanges } = await render(<qui-checkbox required>Check me</qui-checkbox>);
 

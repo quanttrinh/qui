@@ -43,7 +43,7 @@ const OptionControlMixin = (Base: MixedInCtor): MixedInCtor<OptionControlMixinIn
     /** The initial selected values. Property-only. */
     @Prop({ attribute: null }) defaultValue?: string[];
     /** The form field name. */
-    @Prop() name?: string;
+    @Prop({ reflect: true }) name?: string;
     /** Disables the control. */
     @Prop() disabled = false;
     /** Marks the control invalid. */

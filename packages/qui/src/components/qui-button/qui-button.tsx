@@ -120,6 +120,27 @@ export class QuiButton extends Mixin(ShadowStylesMixin) {
   /** Native button type. */
   @Prop() type: "button" | "submit" | "reset" = "button";
 
+  private readonly handleNativeClick = (event: MouseEvent): void => {
+    if (this.disabled) {
+      event.preventDefault();
+      return;
+    }
+
+    const form = this.host.closest("form");
+
+    if (form === null) {
+      return;
+    }
+
+    if (this.type === "submit") {
+      event.preventDefault();
+      form.requestSubmit();
+    } else if (this.type === "reset") {
+      event.preventDefault();
+      form.reset();
+    }
+  };
+
   private get dataProps(): Record<string, string | undefined> {
     return {
       "data-scope": "button",
@@ -161,6 +182,7 @@ export class QuiButton extends Mixin(ShadowStylesMixin) {
             type={this.type}
             disabled={this.disabled}
             aria-label={this.label === "" ? undefined : this.label}
+            onClick={this.handleNativeClick}
           >
             <slot />
           </button>

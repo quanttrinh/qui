@@ -257,3 +257,25 @@ describe("qui-input field colors", () => {
     expect(getComputedStyle(control).borderTopColor).toBe("rgb(13, 14, 15)");
   });
 });
+
+describe("qui-input form integration", () => {
+  it("reflects its form name and submits through FormData", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-input name="email" />
+      </form>,
+    );
+    const form = isHTMLFormElement(root) ? root : root.querySelector("form");
+    if (!isHTMLFormElement(form)) {
+      throw new TypeError("Expected a form");
+    }
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    typeInto(input, "test@example.com");
+    await waitForChanges();
+
+    expect(host.getAttribute("name")).toBe("email");
+    expect(new FormData(form).get("email")).toBe("test@example.com");
+  });
+});

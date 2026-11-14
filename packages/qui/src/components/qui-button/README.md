@@ -131,6 +131,8 @@ after `::part()` (e.g. `::part(button)[data-variant="tonal"]`) are not matched.
 - Anchor mode keeps button styling but drops the default underline and inherits
   the host font.
 - Disabled anchors get `aria-disabled` and are not activatable.
+- `type="submit"` and `type="reset"` operate on the surrounding light-DOM form,
+  even though the native button lives inside the component's shadow root.
 
 ## Related
 

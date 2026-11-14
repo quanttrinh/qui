@@ -131,7 +131,7 @@ export class QuiCheckbox extends Mixin(ShadowStylesMixin, ControllerHostMixin, F
   /** Makes the control read-only. */
   @Prop() readOnly = false;
   /** The form field name. */
-  @Prop() name?: string;
+  @Prop({ reflect: true }) name?: string;
   /** The form field value. */
   @Prop() value?: string;
   /** Plain-text label fallback when no slot content is supplied. */

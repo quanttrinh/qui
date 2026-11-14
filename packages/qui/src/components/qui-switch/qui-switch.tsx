@@ -144,7 +144,7 @@ export class QuiSwitch extends Mixin(ShadowStylesMixin, ControllerHostMixin, For
   /** Makes the control read-only. */
   @Prop() readOnly = false;
   /** The form field name. */
-  @Prop() name?: string;
+  @Prop({ reflect: true }) name?: string;
   /** The form field value. */
   @Prop() value?: string;
   /** Plain-text label fallback when no slot content is supplied. */

@@ -1,6 +1,6 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryPartIn } from "../../../tests/test-utils/component";
+import { queryPartIn, resolveHost } from "../../../tests/test-utils/component";
 
 describe("qui-button", () => {
   it("renders variant, size, and icon-only state", async () => {
@@ -55,6 +55,47 @@ describe("qui-button", () => {
     const { root } = await render(<qui-button disabled>Save</qui-button>);
     const button = queryPartIn<HTMLButtonElement>(root, "button");
     expect(button.disabled).toBe(true);
+  });
+
+  it("submits the surrounding form", async () => {
+    let submissions = 0;
+    const { root, waitForChanges } = await render(
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          submissions += 1;
+        }}
+      >
+        <qui-button type="submit">Save</qui-button>
+      </form>,
+    );
+    const host = resolveHost<HTMLQuiButtonElement>(root, "qui-button");
+    const button = queryPartIn<HTMLButtonElement>(host, "button");
+
+    button.click();
+    await waitForChanges();
+
+    expect(submissions).toBe(1);
+  });
+
+  it("resets the surrounding form", async () => {
+    let resets = 0;
+    const { root, waitForChanges } = await render(
+      <form
+        onReset={() => {
+          resets += 1;
+        }}
+      >
+        <qui-button type="reset">Reset</qui-button>
+      </form>,
+    );
+    const host = resolveHost<HTMLQuiButtonElement>(root, "qui-button");
+    const button = queryPartIn<HTMLButtonElement>(host, "button");
+
+    button.click();
+    await waitForChanges();
+
+    expect(resets).toBe(1);
   });
 });
 
