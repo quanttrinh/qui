@@ -351,7 +351,7 @@ describe("qui-field colors", () => {
     const inputHost = queryHost(root, "qui-input");
     const control = queryPartIn(inputHost, "control");
     const input = queryPartIn<HTMLInputElement>(inputHost, "input");
-    control.style.transition = "none";
+    control.style.setProperty("transition", "none", "important");
 
     root.style.setProperty("--qui-field-container-color", "rgb(10, 11, 12)");
     root.style.setProperty("--qui-field-text-color", "rgb(13, 14, 15)");

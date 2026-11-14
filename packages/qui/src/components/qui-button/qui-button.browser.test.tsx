@@ -62,7 +62,7 @@ describe("qui-button theming", () => {
   it("overrides container and label colors per host", async () => {
     const { root, waitForChanges } = await render(<qui-button>Save</qui-button>);
     const button = queryPartIn<HTMLButtonElement>(root, "button");
-    button.style.transition = "none";
+    button.style.setProperty("transition", "none", "important");
 
     root.style.setProperty("--qui-button-container-color", "rgb(1, 2, 3)");
     root.style.setProperty("--qui-button-label-color", "rgb(4, 5, 6)");

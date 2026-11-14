@@ -115,13 +115,14 @@ describe("qui-combobox field colors", () => {
     const host = resolveHost<HTMLQuiComboboxElement>(root, "qui-combobox");
     const control = queryPartIn(host, "control");
     const input = queryPartIn<HTMLInputElement>(host, "input");
-    control.style.transition = "none";
+    control.style.setProperty("transition", "none", "important");
 
     host.style.setProperty("--qui-field-container-color", "rgb(1, 2, 3)");
     host.style.setProperty("--qui-field-outline-color", "rgb(4, 5, 6)");
     host.style.setProperty("--qui-field-text-color", "rgb(7, 8, 9)");
     host.style.setProperty("--qui-field-placeholder-color", "rgb(10, 11, 12)");
     host.style.setProperty("--qui-field-error-color", "rgb(13, 14, 15)");
+    await waitForChanges();
 
     expect(getComputedStyle(control).backgroundColor).toBe("rgb(1, 2, 3)");
     expect(getComputedStyle(control).borderTopColor).toBe("rgb(4, 5, 6)");
