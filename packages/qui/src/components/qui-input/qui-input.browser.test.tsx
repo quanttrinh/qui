@@ -251,6 +251,7 @@ describe("qui-input field colors", () => {
     expect(getComputedStyle(input).color).toBe("rgb(7, 8, 9)");
     expect(getComputedStyle(input, "::placeholder").color).toBe("rgb(10, 11, 12)");
 
+    host.style.setProperty("--qui-field-outline-hover-color", "rgb(13, 14, 15)");
     host.invalid = true;
     await waitForChanges();
     expect(getComputedStyle(control).borderTopColor).toBe("rgb(13, 14, 15)");

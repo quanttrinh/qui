@@ -92,6 +92,7 @@ describe("qui-select field colors", () => {
     expect(getComputedStyle(trigger).borderTopColor).toBe("rgb(4, 5, 6)");
     expect(getComputedStyle(trigger).color).toBe("rgb(7, 8, 9)");
 
+    host.style.setProperty("--qui-field-outline-hover-color", "rgb(10, 11, 12)");
     host.invalid = true;
     await waitForChanges();
     expect(getComputedStyle(trigger).borderTopColor).toBe("rgb(10, 11, 12)");
