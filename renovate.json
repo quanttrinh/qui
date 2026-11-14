@@ -2,7 +2,6 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
   "rangeStrategy": "bump",
-  "gitIgnoredAuthors": ["github-actions[bot]@users.noreply.github.com"],
   "addLabels": ["skip-pr-title-check", "skip-pages-build"],
   "semanticCommits": "enabled",
   "semanticCommitType": "chore",
