@@ -15,10 +15,9 @@ jobs:
     if: github.actor == 'renovate[bot]'
     runs-on: ubuntu-slim
     permissions:
-      contents: write
+      contents: read
       pull-requests: read
     outputs:
-      changeset_present: ${{ steps.check.outputs.changeset_present }}
       valid: ${{ steps.validate.outputs.valid }}
       auto_approve: ${{ steps.bump.outputs.auto_approve }}
     steps:
@@ -128,25 +127,14 @@ jobs:
           done
           echo "valid=true" >> "$GITHUB_OUTPUT"
 
-      - name: Check if changeset commit is already the latest
-        id: check
-        if: steps.validate.outputs.valid == 'true'
-        run: |
-          if git log -1 --format='%s' | grep -q '^chore: add changeset'; then
-            echo "changeset_present=true" >> $GITHUB_OUTPUT
-          else
-            echo "changeset_present=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Determine update type
         id: bump
         if: steps.validate.outputs.valid == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, '\n') }}
         run: |
           set -euo pipefail
-          labels="$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name')"
+          labels="$LABELS"
           type=patch
           auto_approve=false
           if grep -qx 'update-type:major' <<< "$labels"; then
@@ -163,7 +151,7 @@ jobs:
 
   review:
     needs: manage
-    if: github.actor == 'renovate[bot]' && needs.manage.outputs.changeset_present == 'false' && needs.manage.outputs.valid == 'true'
+    if: github.actor == 'renovate[bot]' && needs.manage.outputs.valid == 'true'
     permissions:
       contents: write
       actions: write
