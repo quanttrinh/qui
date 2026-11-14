@@ -83,6 +83,7 @@ describe("qui-select field colors", () => {
 
     host.style.setProperty("--qui-field-container-color", "rgb(1, 2, 3)");
     host.style.setProperty("--qui-field-outline-color", "rgb(4, 5, 6)");
+    host.style.setProperty("--qui-field-outline-hover-color", "rgb(4, 5, 6)");
     host.style.setProperty("--qui-field-text-color", "rgb(7, 8, 9)");
     host.style.setProperty("--qui-field-error-color", "rgb(10, 11, 12)");
     await waitForChanges();
