@@ -1,5 +1,16 @@
 # @quanttrinh/qui-server
 
+## 0.1.3
+
+### Patch Changes
+
+- Dependency updates:
+  
+  - `packages/server/package.json`: `parse5`: `^8.1.0` -> `^8.1.1`
+- Updated dependencies [19bf1b7]
+- Updated dependencies [7657d5f]
+  - @quanttrinh/qui@0.9.0
+
 ## 0.1.2
 
 ### Patch Changes
