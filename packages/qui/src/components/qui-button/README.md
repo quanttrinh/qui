@@ -56,23 +56,23 @@ None.
 
 ## CSS custom properties
 
-| Property                         | Default            | Description                       |
-| -------------------------------- | ------------------ | --------------------------------- |
-| `--qui-button-container-color`   | variant-dependent  | Background color                  |
-| `--qui-button-label-color`       | variant-dependent  | Text and icon color               |
-| `--qui-button-outline-color`     | `--colors-outline` | Border color for outlined buttons |
-| `--qui-button-state-layer-color` | `currentColor`     | Hover/active/focus overlay tint   |
-| `--qui-button-focus-ring-color`  | `--colors-primary` | Focus ring color                  |
+| Property                         | Default                  | Description                       |
+| -------------------------------- | ------------------------ | --------------------------------- |
+| `--qui-button-container-color`   | variant-dependent        | Background color                  |
+| `--qui-button-label-color`       | variant-dependent        | Text and icon color               |
+| `--qui-button-outline-color`     | `--md-sys-color-outline` | Border color for outlined buttons |
+| `--qui-button-state-layer-color` | `currentColor`           | Hover/active/focus overlay tint   |
+| `--qui-button-focus-ring-color`  | `--md-sys-color-primary` | Focus ring color                  |
 
 Variant defaults:
 
-| Variant    | Container                        | Label                             |
-| ---------- | -------------------------------- | --------------------------------- |
-| `filled`   | `--colors-primary`               | `--colors-on-primary`             |
-| `tonal`    | `--colors-secondary-container`   | `--colors-on-secondary-container` |
-| `elevated` | `--colors-surface-container-low` | `--colors-primary`                |
-| `outlined` | `transparent`                    | `--colors-primary`                |
-| `text`     | `transparent`                    | `--colors-primary`                |
+| Variant    | Container                              | Label                                   |
+| ---------- | -------------------------------------- | --------------------------------------- |
+| `filled`   | `--md-sys-color-primary`               | `--md-sys-color-on-primary`             |
+| `tonal`    | `--md-sys-color-secondary-container`   | `--md-sys-color-on-secondary-container` |
+| `elevated` | `--md-sys-color-surface-container-low` | `--md-sys-color-primary`                |
+| `outlined` | `transparent`                          | `--md-sys-color-primary`                |
+| `text`     | `transparent`                          | `--md-sys-color-primary`                |
 
 Set the properties on the host or an ancestor:
 

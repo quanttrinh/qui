@@ -14,8 +14,8 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
-import { token } from "../../../styled-system/tokens";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { createListenerStore } from "../shared/controllers";
 import { nextId } from "../shared/helpers/dom/id";

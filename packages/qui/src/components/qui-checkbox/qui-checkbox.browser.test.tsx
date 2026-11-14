@@ -159,4 +159,15 @@ describe("qui-checkbox colors", () => {
     expect(getComputedStyle(control).color).toBe("rgb(4, 5, 6)");
     expect(getComputedStyle(label).color).toBe("rgb(7, 8, 9)");
   });
+
+  it("applies the unchecked outline color", async () => {
+    const { root } = await render(<qui-checkbox>Accept</qui-checkbox>);
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+    const control = queryPartIn(host, "control");
+    control.style.transition = "none";
+
+    host.style.setProperty("--qui-checkbox-outline-color", "rgb(20, 21, 22)");
+
+    expect(getComputedStyle(control).borderTopColor).toBe("rgb(20, 21, 22)");
+  });
 });

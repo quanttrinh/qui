@@ -27,7 +27,8 @@
   "types": "./dist/types/index.d.ts",
   "imports": {
     "#styled-system/css": "./styled-system/css/index.js",
-    "#qui-style-url": "./styled-system/style-urls/index.js"
+    "#qui-style-url": "./styled-system/style-urls/index.js",
+    "#styled-system/tokens": "./styled-system/tokens/index.js"
   },
   "exports": {
     ".": {

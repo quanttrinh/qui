@@ -1,6 +1,5 @@
 import { css } from "#styled-system/css";
-
-import { token } from "../../../styled-system/tokens";
+import { token } from "#styled-system/tokens";
 
 export const fieldStyles = {
   host: css({ display: "block" }),

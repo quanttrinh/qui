@@ -1,4 +1,5 @@
-import { token } from "../../../../styled-system/tokens";
+import { token } from "#styled-system/tokens";
+
 import { type SystemStyleObject } from "../../../../styled-system/types";
 
 /** The bordered surface shared by text fields and field-like triggers. */

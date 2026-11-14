@@ -230,4 +230,18 @@ describe("qui-radio colors", () => {
     expect(getComputedStyle(control).borderTopColor).toBe("rgb(1, 2, 3)");
     expect(getComputedStyle(label).color).toBe("rgb(4, 5, 6)");
   });
+
+  it("applies the unchecked outline color", async () => {
+    const { root } = await render(
+      <qui-radio-group>
+        <qui-radio value="one">One</qui-radio>
+      </qui-radio-group>,
+    );
+    const control = queryPartIn(queryHost(root, "qui-radio"), "control");
+    control.style.transition = "none";
+
+    root.style.setProperty("--qui-radio-outline-color", "rgb(20, 21, 22)");
+
+    expect(getComputedStyle(control).borderTopColor).toBe("rgb(20, 21, 22)");
+  });
 });

@@ -2,8 +2,8 @@ import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@sten
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
-import { token } from "../../../styled-system/tokens";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 
 export type CardVariant = "elevated" | "filled" | "outlined";

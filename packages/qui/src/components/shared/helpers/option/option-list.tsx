@@ -1,8 +1,8 @@
 import { h, type VNode } from "@stencil/core";
 
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
-import { token } from "../../../../../styled-system/tokens";
 import { CheckIcon } from "../../../qui-icon/icons";
 import { type PopoverDismissEvent } from "../../../qui-popover/qui-popover";
 import { type ListEntry, type ListWindow } from "../list-window/model";

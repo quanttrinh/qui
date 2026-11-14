@@ -16,8 +16,8 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
-import { token } from "../../../styled-system/tokens";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { CheckIcon, RemoveIcon } from "../qui-icon/icons";
 import {

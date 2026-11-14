@@ -299,6 +299,14 @@ describe("qui-accordion render scoping", () => {
   });
 });
 
+function setAccordionColors(host: HTMLElement): void {
+  host.style.setProperty("--qui-accordion-container-color", "rgb(1, 2, 3)");
+  host.style.setProperty("--qui-accordion-border-color", "rgb(4, 5, 6)");
+  host.style.setProperty("--qui-accordion-trigger-color", "rgb(7, 8, 9)");
+  host.style.setProperty("--qui-accordion-indicator-color", "rgb(10, 11, 12)");
+  host.style.setProperty("--qui-accordion-content-text-color", "rgb(13, 14, 15)");
+}
+
 describe("qui-accordion colors", () => {
   it("applies container, trigger, indicator, and content color custom properties", async () => {
     const { root } = await render(
@@ -310,22 +318,21 @@ describe("qui-accordion colors", () => {
       </qui-accordion>,
     );
     const accordionHost = root;
+    const itemHost = queryHost(root, "qui-accordion-item");
     const triggerHost = queryHost(root, "qui-accordion-trigger");
     const contentHost = queryHost(root, "qui-accordion-content");
     const container = queryPartIn(accordionHost, "root");
+    const item = queryPartIn(itemHost, "item");
     const trigger = queryPartIn<HTMLButtonElement>(triggerHost, "trigger");
     const indicator = queryPartIn(triggerHost, "indicator");
     const content = queryPartIn(contentHost, "content");
     trigger.style.transition = "none";
 
-    accordionHost.style.setProperty("--qui-accordion-container-color", "rgb(1, 2, 3)");
-    accordionHost.style.setProperty("--qui-accordion-border-color", "rgb(4, 5, 6)");
-    accordionHost.style.setProperty("--qui-accordion-trigger-color", "rgb(7, 8, 9)");
-    accordionHost.style.setProperty("--qui-accordion-indicator-color", "rgb(10, 11, 12)");
-    accordionHost.style.setProperty("--qui-accordion-content-text-color", "rgb(13, 14, 15)");
+    setAccordionColors(accordionHost);
 
     expect(getComputedStyle(container).backgroundColor).toBe("rgb(1, 2, 3)");
     expect(getComputedStyle(container).borderTopColor).toBe("rgb(4, 5, 6)");
+    expect(getComputedStyle(item).borderBlockEndColor).toBe("rgb(4, 5, 6)");
     expect(getComputedStyle(trigger).color).toBe("rgb(7, 8, 9)");
     expect(getComputedStyle(indicator).color).toBe("rgb(10, 11, 12)");
     expect(getComputedStyle(content).color).toBe("rgb(13, 14, 15)");

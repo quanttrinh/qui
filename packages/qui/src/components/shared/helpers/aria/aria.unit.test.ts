@@ -69,6 +69,22 @@ describe("ARIA host-targeting helpers", () => {
       expect(fallback.hasAttribute(attribute)).toBe(false);
     });
 
+    it(`re-applies ${property} after an external clear`, () => {
+      const fallback = createReflectionElement(false);
+      const fallbackTarget = fakeTarget("fallback");
+      set(fallback, [fallbackTarget]);
+      fallback.removeAttribute(attribute);
+      set(fallback, [fallbackTarget]);
+      expect(fallback.getAttribute(attribute)).toBe("fallback");
+
+      const supported = createReflectionElement(true);
+      const supportedTarget = fakeTarget("supported");
+      set(supported, [supportedTarget]);
+      Reflect.set(supported, property, []);
+      set(supported, [supportedTarget]);
+      expect(supported[property]).toEqual([supportedTarget]);
+    });
+
     it(`skips redundant ${property} assignments`, () => {
       const element = createReflectionElement(false);
       const target = fakeTarget("target");

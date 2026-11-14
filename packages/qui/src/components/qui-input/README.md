@@ -72,8 +72,10 @@ visibility. Inside `qui-field`, it inherits field ids and state.
 
 ## Slots
 
-| Tag | Slot | Description |
-| --- | ---- | ----------- |
+| Tag         | Slot     | Description                                  |
+| ----------- | -------- | -------------------------------------------- |
+| `qui-input` | `prefix` | Content rendered at the start of the control |
+| `qui-input` | `suffix` | Content rendered at the end of the control   |
 
 ## CSS parts
 

@@ -2,8 +2,8 @@ import { resolveVar, Component, Element, h, Host, Prop, type VNode } from "@sten
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
-import { token } from "../../../styled-system/tokens";
 import { ensureShadowStylesheet } from "../../utilities/styles";
 import { focusRing } from "../shared/styles";
 
@@ -32,7 +32,7 @@ const styles = {
       pos: "absolute",
       inset: "0",
       zIndex: "-1",
-      bgColor: `var(--qui-button-state-layer-color, ${token("colors.current")})`,
+      bgColor: "var(--qui-button-state-layer-color, currentColor)",
       opacity: 0,
       pointerEvents: "none",
       transition: "opacity 150ms",
@@ -66,13 +66,13 @@ const styles = {
     },
     "&[data-variant=elevated]:hover:not(:disabled):not([aria-disabled=true])": { shadow: "md" },
     "&[data-variant=outlined]": {
-      bgColor: `var(--qui-button-container-color, ${token("colors.transparent")})`,
+      bgColor: "var(--qui-button-container-color, transparent)",
       color: `var(--qui-button-label-color, ${token("colors.primary")})`,
       borderWidth: "1px",
       borderColor: `var(--qui-button-outline-color, ${token("colors.outline")})`,
     },
     "&[data-variant=text]": {
-      bgColor: `var(--qui-button-container-color, ${token("colors.transparent")})`,
+      bgColor: "var(--qui-button-container-color, transparent)",
       color: `var(--qui-button-label-color, ${token("colors.primary")})`,
     },
 

@@ -183,6 +183,7 @@ describe("qui-dialog", () => {
   it("clears and restores description ARIA when the description changes", async () => {
     const { root, waitForChanges } = await render(
       <qui-dialog open>
+        <qui-dialog-trigger>Open</qui-dialog-trigger>
         <qui-dialog-content>
           <qui-dialog-title>Title</qui-dialog-title>
           <qui-dialog-description>Description</qui-dialog-description>
@@ -359,7 +360,7 @@ describe("qui-dialog scroll behavior", () => {
 
 describe("qui-dialog render scoping", () => {
   it("skips the root when a context prop changes", async () => {
-    const { spies, setProps } = await render(
+    const { root, spies, setProps } = await render(
       <qui-dialog>
         <qui-dialog-content>
           <qui-dialog-title>Title</qui-dialog-title>
@@ -381,13 +382,24 @@ describe("qui-dialog render scoping", () => {
     await setProps({ preventScroll: true });
 
     expect(rootRenders()).toBe(baseline);
+    expect(queryDialog(root)).toHaveAttribute("role", "alertdialog");
   });
 });
+
+function setDialogColors(host: HTMLElement): void {
+  host.style.setProperty("--qui-dialog-surface-color", "rgb(1, 2, 3)");
+  host.style.setProperty("--qui-dialog-text-color", "rgb(4, 5, 6)");
+  host.style.setProperty("--qui-dialog-title-color", "rgb(7, 8, 9)");
+  host.style.setProperty("--qui-dialog-description-color", "rgb(10, 11, 12)");
+  host.style.setProperty("--qui-dialog-backdrop-color", "rgb(13, 14, 15)");
+  host.style.setProperty("--qui-dialog-action-color", "rgb(16, 17, 18)");
+}
 
 describe("qui-dialog colors", () => {
   it("applies surface, title, and description color custom properties", async () => {
     const { root } = await render(
       <qui-dialog open>
+        <qui-dialog-trigger>Open</qui-dialog-trigger>
         <qui-dialog-content>
           <qui-dialog-title>Title</qui-dialog-title>
           <qui-dialog-description>Description</qui-dialog-description>
@@ -395,20 +407,22 @@ describe("qui-dialog colors", () => {
       </qui-dialog>,
     );
     const contentHost = queryHost(root, "qui-dialog-content");
+    const triggerHost = queryHost(root, "qui-dialog-trigger");
     const titleHost = queryHost(root, "qui-dialog-title");
     const descriptionHost = queryHost(root, "qui-dialog-description");
+    const dialog = queryDialog(root);
+    const trigger = queryPartIn(triggerHost, "trigger");
     const surface = queryPartIn(contentHost, "content");
     const title = queryPartIn(titleHost, "title");
     const description = queryPartIn(descriptionHost, "description");
 
-    root.style.setProperty("--qui-dialog-surface-color", "rgb(1, 2, 3)");
-    root.style.setProperty("--qui-dialog-text-color", "rgb(4, 5, 6)");
-    root.style.setProperty("--qui-dialog-title-color", "rgb(7, 8, 9)");
-    root.style.setProperty("--qui-dialog-description-color", "rgb(10, 11, 12)");
+    setDialogColors(root);
 
     expect(getComputedStyle(surface).backgroundColor).toBe("rgb(1, 2, 3)");
     expect(getComputedStyle(surface).color).toBe("rgb(4, 5, 6)");
     expect(getComputedStyle(title).color).toBe("rgb(7, 8, 9)");
     expect(getComputedStyle(description).color).toBe("rgb(10, 11, 12)");
+    expect(getComputedStyle(dialog, "::backdrop").backgroundColor).toBe("rgb(13, 14, 15)");
+    expect(getComputedStyle(trigger).color).toBe("rgb(16, 17, 18)");
   });
 });

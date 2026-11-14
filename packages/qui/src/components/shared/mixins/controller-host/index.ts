@@ -66,7 +66,11 @@ const ControllerHostMixin = (Base: MixedInCtor): MixedInCtor<ControllerHostMixin
     }
 
     notifyUpdate(keys?: Iterable<string>): void {
-      this.onRequestUpdate?.(keys);
+      if (this.onRequestUpdate === undefined) {
+        forceUpdate(this.hostElement);
+        return;
+      }
+      this.onRequestUpdate(keys);
     }
 
     /** Runs after a controller requests a render or notification. */

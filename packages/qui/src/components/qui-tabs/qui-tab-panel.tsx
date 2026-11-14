@@ -12,8 +12,8 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
-import { token } from "../../../styled-system/tokens";
 import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
 import { setAriaControls, setAriaLabelledBy } from "../shared/helpers/aria/aria";
 import { dataAttr } from "../shared/helpers/aria/attr";

@@ -740,11 +740,11 @@ change also needs to notify context subscribers.
 
 Providers whose root template only reads props can notify without rendering:
 `requestNotify()` calls `notifyUpdate()` on the host, which runs
-`onRequestUpdate()` without `forceUpdate()` (hosts that only implement
-`requestUpdate()` fall back to a render). Listener stores accept a key getter
-per subscriber, and `ContextPartController` forwards its `getKey` option, so
-notifying with `uniqueValues(...)` re-renders only the parts whose value
-changed instead of every part in the subtree.
+`onRequestUpdate()` without `forceUpdate()`. Hosts with no notification hook
+render instead. Listener stores accept a key getter per subscriber, and
+`ContextPartController` forwards its `getKey` option, so notifying with
+`uniqueValues(...)` re-renders only the parts whose value changed instead of
+every part in the subtree.
 
 ## Implementation notes
 

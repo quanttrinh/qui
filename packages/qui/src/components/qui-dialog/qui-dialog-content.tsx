@@ -12,8 +12,8 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
-import { token } from "../../../styled-system/tokens";
 import { ContextPartController } from "../shared/controllers";
 import { ControllerHostMixin } from "../shared/mixins";
 import { consumeDialog, type DialogContext, type DialogControl } from "./context";

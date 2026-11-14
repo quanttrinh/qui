@@ -12,8 +12,8 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
-import { token } from "../../../styled-system/tokens";
 import { ContextPartController, createListenerStore } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { ControllerHostMixin } from "../shared/mixins";

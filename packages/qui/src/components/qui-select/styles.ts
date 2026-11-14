@@ -1,6 +1,6 @@
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
-import { token } from "../../../styled-system/tokens";
 import { fieldSurface, focusRingFlush } from "../shared/styles";
 
 export const selectStyles = {

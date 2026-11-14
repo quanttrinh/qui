@@ -12,8 +12,8 @@ import {
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
+import { token } from "#styled-system/tokens";
 
-import { token } from "../../../styled-system/tokens";
 import { ContextPartController } from "../shared/controllers";
 import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
 import { isHTMLInputElement } from "../shared/helpers/dom/dom";

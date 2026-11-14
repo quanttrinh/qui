@@ -45,7 +45,7 @@ None.
   field.
 - `requestUpdate` renders through `forceUpdate`, so it bypasses Stencil's
   `componentShouldUpdate`. Use it only for state the host template reads.
-- `requestNotify` is for context providers whose root template is prop-only.
+- `requestNotify` is for context providers whose root template is prop-only. If the host implements `notifyUpdate` but no `onRequestUpdate`, `ControllerHostMixin` renders instead, so notifications are never silently dropped.
 - `hostConnected?()` is declared on the base as a type anchor because all
   `ReactiveController` members are optional; this keeps `this` assignable when
   registering.

@@ -143,6 +143,18 @@ describe("createListenerStore", () => {
     expect(listener).toHaveBeenCalledOnce();
   });
 
+  it("skips keyed listeners whose key is undefined for scoped notifications", () => {
+    const store = createListenerStore();
+    const listener = vi.fn((): void => undefined);
+    store.subscribe(listener, () => undefined);
+
+    store.notify(["one"]);
+    expect(listener).not.toHaveBeenCalled();
+
+    store.notify();
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
   it("notifies every listener when keys are omitted", () => {
     const store = createListenerStore();
     const keyed = vi.fn((): void => undefined);

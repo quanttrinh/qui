@@ -52,14 +52,14 @@ export abstract class ControlledControllerBase<TValue> extends ReactiveControlle
     this.current = initial;
   }
 
-  /** Restores the initial value without notifying. */
+  /** Restores the initial value without emitting a change event. */
   reset(): void {
     const previous = this.value;
     this.current = this.copy(this.initial);
     this.onValueChanged(previous, this.current);
   }
 
-  /** Restores an external value without notifying. */
+  /** Restores an external value without emitting a change event. */
   restore(value: TValue): void {
     const previous = this.value;
     this.current = this.copy(value);
