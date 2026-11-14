@@ -17,7 +17,7 @@ function parentElement(node: Element): Element | undefined {
 }
 
 /** Whether `node` is `ancestor` or lives inside its subtree, across shadow roots. */
-function hasChangedProvider(node: Element, providers: Set<Element | undefined>): boolean {
+function hasChangedProvider(node: Element, providers: Set<Element>): boolean {
   let current: Element | undefined = node;
   while (current !== undefined) {
     if (providers.has(current)) {
@@ -81,7 +81,7 @@ export interface ContextStore<TContext> extends ContextSource<TContext> {
 class ContextStoreImpl<TContext> implements ContextStore<TContext> {
   private readonly contexts = new WeakMap<Element, TContext>();
   private readonly listeners = new Set<ContextListener>();
-  private readonly pendingProviders = new Set<Element | undefined>();
+  private readonly pendingProviders = new Set<Element>();
 
   readonly provide = (host: Element, context: TContext): void => {
     this.contexts.set(host, context);
@@ -116,7 +116,7 @@ class ContextStoreImpl<TContext> implements ContextStore<TContext> {
     };
   };
 
-  private schedule(provider: Element | undefined): void {
+  private schedule(provider: Element): void {
     if (Build.isServer) {
       return;
     }
@@ -141,10 +141,9 @@ class ContextStoreImpl<TContext> implements ContextStore<TContext> {
     }
   };
 
-  private notifyProviders(providers: Set<Element | undefined>, state: NotificationState): void {
-    const notifyAll = providers.has(undefined);
+  private notifyProviders(providers: Set<Element>, state: NotificationState): void {
     for (const entry of this.listeners) {
-      if (!state.notified.has(entry) && (notifyAll || hasChangedProvider(entry.host, providers))) {
+      if (!state.notified.has(entry) && hasChangedProvider(entry.host, providers)) {
         state.notified.add(entry);
         try {
           entry.notify();

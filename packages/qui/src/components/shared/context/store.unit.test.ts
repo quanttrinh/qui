@@ -151,4 +151,56 @@ describe("createContextStore", () => {
     unsubscribeFirst();
     unsubscribeSecond();
   });
+
+  it("coalesces repeated changes for the same provider into one notification", async () => {
+    const store = createContextStore<TestContext>();
+    const provider = new FakeElement();
+    const consumer = childOf(provider);
+    const listener = vi.fn((): void => undefined);
+    const unsubscribe = store.onProvided(asHost(consumer), listener);
+
+    store.provide(asHost(provider), { name: "first" });
+    store.provide(asHost(provider), { name: "second" });
+    store.clear(asHost(provider));
+    await flush();
+
+    expect(listener).toHaveBeenCalledOnce();
+    unsubscribe();
+  });
+
+  it("treats unsubscribing more than once as a no-op", async () => {
+    const store = createContextStore<TestContext>();
+    const provider = new FakeElement();
+    const consumer = childOf(provider);
+    const listener = vi.fn((): void => undefined);
+    const unsubscribe = store.onProvided(asHost(consumer), listener);
+
+    unsubscribe();
+    unsubscribe();
+
+    store.provide(asHost(provider), { name: "late" });
+    await flush();
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("does not notify consumers belonging to another store", async () => {
+    const store = createContextStore<TestContext>();
+    const otherStore = createContextStore<TestContext>();
+    const provider = new FakeElement();
+    const consumer = childOf(provider);
+    const listener = vi.fn((): void => undefined);
+    const otherListener = vi.fn((): void => undefined);
+    const unsubscribe = store.onProvided(asHost(consumer), listener);
+    const unsubscribeOther = otherStore.onProvided(asHost(consumer), otherListener);
+
+    store.provide(asHost(provider), { name: "first" });
+    await flush();
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(otherListener).not.toHaveBeenCalled();
+
+    unsubscribe();
+    unsubscribeOther();
+  });
 });
