@@ -1,13 +1,9 @@
 # syntax=docker/dockerfile:1
-
-FROM scratch AS build-scripts
-COPY scripts/install-bun.sh /scripts/install-bun.sh
-COPY scripts/lib/download.sh /scripts/lib/download.sh
-COPY scripts/lib/env.sh /scripts/lib/env.sh
-COPY scripts/tools/bun.env /scripts/tools/bun.env
-
-
 FROM dhi.io/debian-base:trixie-dev
+
+ARG USERNAME=dev
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
 
 ENV LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
@@ -26,11 +22,19 @@ RUN /sbin/ldconfig \
    ncurses-base \
    ncurses-bin \
    ncurses-term \
+   sudo \
  && rm -rf /var/lib/apt/lists/*
 
-RUN usermod --shell "$(command -v zsh)" "$(id -un)"
-
-RUN --mount=type=bind,from=build-scripts,source=/scripts,target=/tmp/build-scripts \
+RUN --mount=type=bind,source=/scripts,target=/tmp/build-scripts \
     bash /tmp/build-scripts/install-bun.sh
+
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m -s "$(command -v zsh)" $USERNAME \
+    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME
+
+RUN echo 'PROMPT="%n:%~%# "' >> /etc/zsh/zshrc
+
+USER $USERNAME
 
 CMD ["/bin/zsh"]
