@@ -33,7 +33,7 @@ jobs:
     if: >-
       github.event_name == 'pull_request' &&
       github.event.action != 'closed' &&
-      github.event.pull_request.user.login != 'renovate[bot]'
+      !contains(github.event.pull_request.labels.*.name, 'skip-pages-build')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -108,7 +108,7 @@ jobs:
     if: >-
       github.event_name == 'pull_request' &&
       github.event.action != 'closed' &&
-      github.event.pull_request.user.login != 'renovate[bot]'
+      !contains(github.event.pull_request.labels.*.name, 'skip-pages-build')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -225,7 +225,7 @@ jobs:
     if: >-
       github.event_name == 'pull_request' &&
       github.event.action == 'closed' &&
-      github.event.pull_request.user.login != 'renovate[bot]'
+      !contains(github.event.pull_request.labels.*.name, 'skip-pages-build')
     runs-on: ubuntu-slim
     permissions:
       contents: write
@@ -385,7 +385,7 @@ jobs:
     if: >-
       github.event_name == 'pull_request' &&
       github.event.action != 'closed' &&
-      github.event.pull_request.user.login != 'renovate[bot]'
+      !contains(github.event.pull_request.labels.*.name, 'skip-pages-build')
     permissions:
       contents: read
       pages: write
@@ -397,7 +397,7 @@ jobs:
     if: >-
       github.event_name == 'pull_request' &&
       github.event.action != 'closed' &&
-      github.event.pull_request.user.login != 'renovate[bot]'
+      !contains(github.event.pull_request.labels.*.name, 'skip-pages-build')
     runs-on: ubuntu-slim
     permissions:
       contents: read
@@ -434,7 +434,7 @@ jobs:
     if: >-
       github.event_name == 'pull_request' &&
       github.event.action == 'closed' &&
-      github.event.pull_request.user.login != 'renovate[bot]'
+      !contains(github.event.pull_request.labels.*.name, 'skip-pages-build')
     permissions:
       contents: read
       pages: write
