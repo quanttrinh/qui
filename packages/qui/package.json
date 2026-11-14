@@ -57,6 +57,10 @@
       "types": "./dist/utilities/styles/index.d.ts",
       "default": "./dist/utilities/styles/index.js"
     },
+    "./theme": {
+      "types": "./dist/utilities/theme/index.d.ts",
+      "default": "./dist/utilities/theme/index.js"
+    },
     "./shared/*": {
       "types": "./dist/shared/*.d.ts",
       "default": "./dist/shared/*.js"

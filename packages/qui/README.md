@@ -608,6 +608,23 @@ document-only and should not be part of the marked component/app stylesheet.
 import "@quanttrinh/qui/theme.css";
 ```
 
+To derive and apply a Material scheme at runtime, use the theme entry point.
+`applyTheme()` writes every `--md-sys-color-*` property and returns the resolved
+colors:
+
+```ts
+import { applyTheme, clearColors } from "@quanttrinh/qui/theme";
+
+applyTheme({ source: "#3e802b", variant: "tonalSpot", dark: true });
+
+// Return to the stylesheet-provided theme
+clearColors();
+```
+
+`applyTheme()` writes through the CSSOM (`style.setProperty`), not inline
+`<style>` elements or `style` attributes, so it works with strict `style-src`
+and `style-src-attr` policies.
+
 ```ts
 // vite.config.ts
 export default defineConfig({
@@ -654,6 +671,7 @@ Published entry points:
 | `@quanttrinh/qui/hydrate`      | SSR/SSG renderer                      |
 | `@quanttrinh/qui/ssr`          | Document and shadow stylesheet helper |
 | `@quanttrinh/qui/runtime`      | Client stylesheet configuration       |
+| `@quanttrinh/qui/theme`        | Runtime color scheme helpers          |
 | `@quanttrinh/qui/theme.css`    | Theme custom properties               |
 | `@quanttrinh/qui/styles.css`   | Component CSS                         |
 | `@quanttrinh/qui/panda/*`      | Panda manifest, preset and build info |
