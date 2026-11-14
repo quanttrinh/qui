@@ -1,4 +1,4 @@
-export { clearColors, setColors } from "./apply";
+export { applyTheme, clearColors, setColors } from "./apply";
 export {
   DEFAULT_CONTRAST,
   DEFAULT_SOURCE,
