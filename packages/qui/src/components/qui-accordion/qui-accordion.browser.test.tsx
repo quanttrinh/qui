@@ -255,6 +255,57 @@ describe("qui-accordion prop updates", () => {
 
     expect(part.dataset.orientation).toBe("horizontal");
   });
+
+  it("skips the root for every context-only prop", async () => {
+    const { setProps, spies } = await render(
+      <qui-accordion>
+        <qui-accordion-item value="one">
+          <qui-accordion-trigger>One</qui-accordion-trigger>
+          <qui-accordion-content>One content</qui-accordion-content>
+        </qui-accordion-item>
+      </qui-accordion>,
+      {
+        spyOn: {
+          components: {
+            "qui-accordion": { lifecycle: ["render"] },
+          },
+        },
+      },
+    );
+    const rootRenders = (): number => spies?.lifecycle.render?.mock.calls.length ?? 0;
+    const baseline = rootRenders();
+
+    await setProps({ multiple: true });
+    await setProps({ collapsible: true });
+    await setProps({ value: ["one"] });
+    await setProps({ disabled: true });
+
+    expect(rootRenders()).toBe(baseline);
+  });
+
+  it("skips the root when a context-only prop changes", async () => {
+    const { setProps, spies } = await render(
+      <qui-accordion>
+        <qui-accordion-item value="one">
+          <qui-accordion-trigger>One</qui-accordion-trigger>
+          <qui-accordion-content>One content</qui-accordion-content>
+        </qui-accordion-item>
+      </qui-accordion>,
+      {
+        spyOn: {
+          components: {
+            "qui-accordion": { lifecycle: ["render"] },
+          },
+        },
+      },
+    );
+    const rootRenders = (): number => spies?.lifecycle.render?.mock.calls.length ?? 0;
+    const baseline = rootRenders();
+
+    await setProps({ multiple: true });
+
+    expect(rootRenders()).toBe(baseline);
+  });
 });
 
 describe("qui-accordion render scoping", () => {

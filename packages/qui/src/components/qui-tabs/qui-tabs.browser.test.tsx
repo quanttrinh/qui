@@ -1,7 +1,7 @@
 import { describe, expect, getComponentSpies, h, it, render } from "@stencil/vitest";
 
 import { expectLinked } from "../../../tests/test-utils/aria";
-import { queryHost, queryPartIn } from "../../../tests/test-utils/component";
+import { queryHost, queryPartIn, resolveHost } from "../../../tests/test-utils/component";
 import { nextFrame } from "../../../tests/test-utils/dom-ready";
 import { expectFocusedDeep, pressKey } from "../../../tests/test-utils/interactions";
 
@@ -286,6 +286,59 @@ describe("qui-tabs controlled behavior", () => {
     await waitForChanges();
     expectFocusedDeep(buttons[0]);
     expect(buttons[0]).toHaveAttribute("aria-selected", "true");
+  });
+});
+
+describe("qui-tabs prop updates", () => {
+  it("skips the root for every context-only prop", async () => {
+    const { spies, setProps } = await render(
+      <qui-tabs defaultValue="one">
+        <qui-tab-list>
+          <qui-tab-trigger value="one">One</qui-tab-trigger>
+        </qui-tab-list>
+        <qui-tab-panel value="one">One panel</qui-tab-panel>
+      </qui-tabs>,
+      {
+        spyOn: {
+          components: {
+            "qui-tabs": { lifecycle: ["render"] },
+          },
+        },
+      },
+    );
+    const rootRenders = (): number => spies?.lifecycle.render?.mock.calls.length ?? 0;
+    const baseline = rootRenders();
+
+    await setProps({ value: "one" });
+    await setProps({ activationMode: "manual" });
+    await setProps({ loopFocus: false });
+    await setProps({ deselectable: true });
+
+    expect(rootRenders()).toBe(baseline);
+  });
+
+  it("renders a template prop changed while disconnected", async () => {
+    const { root, waitForChanges } = await render(
+      <qui-tabs defaultValue="one">
+        <qui-tab-list>
+          <qui-tab-trigger value="one">One</qui-tab-trigger>
+        </qui-tab-list>
+        <qui-tab-panel value="one">One panel</qui-tab-panel>
+      </qui-tabs>,
+    );
+    const part = queryPartIn(root, "root");
+    const parent = root.parentElement;
+
+    expect(part.dataset.orientation).toBe("horizontal");
+
+    root.remove();
+    resolveHost<HTMLQuiTabsElement>(root, "qui-tabs").orientation = "vertical";
+    await waitForChanges();
+
+    parent?.append(root);
+    await waitForChanges();
+
+    expect(part.dataset.orientation).toBe("vertical");
   });
 });
 

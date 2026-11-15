@@ -21,7 +21,12 @@ import { createListenerStore, FormController, type FormValidity } from "../share
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { nextId } from "../shared/helpers/dom/id";
 import { applyFieldAria, type FieldControlHandle } from "../shared/helpers/field";
-import { ControllerHostMixin, FormControlMixin, ShadowStylesMixin } from "../shared/mixins";
+import {
+  ContextProviderMixin,
+  ControllerHostMixin,
+  FormControlMixin,
+  ShadowStylesMixin,
+} from "../shared/mixins";
 import {
   clearRadioGroup,
   provideRadioGroup,
@@ -30,9 +35,6 @@ import {
   type RadioItemState,
 } from "./context";
 import { RadioGroupController } from "./controller";
-
-/** Props that only feed the child context, so the root template ignores them. */
-const CONTEXT_ONLY_PROPS = new Set(["value"]);
 
 const styles = {
   host: css({ display: "block" }),
@@ -56,7 +58,12 @@ const styles = {
   shadow: true,
   formAssociated: true,
 })
-export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin, ShadowStylesMixin) {
+export class QuiRadioGroup extends Mixin(
+  ControllerHostMixin,
+  FormControlMixin,
+  ShadowStylesMixin,
+  ContextProviderMixin,
+) {
   @Element() host!: HTMLQuiRadioGroupElement;
   @AttachInternals() internals!: ElementInternals;
 
@@ -217,26 +224,34 @@ export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin, 
     return this.controller.value;
   }
 
-  @Watch("value")
+  // Every prop read by the root template must be listed here.
   @Watch("disabled")
   @Watch("invalid")
   @Watch("required")
   @Watch("readOnly")
   @Watch("orientation")
   @Watch("textDirection")
-  private syncGroup(): void {
+  private renderRoot(): void {
+    this.form.sync();
+    this.requestUpdate();
+  }
+
+  @Watch("value")
+  private syncContext(): void {
     this.form.sync();
     this.listeners.notify();
   }
 
   @Watch("name")
   private syncName(): void {
+    // The root never renders `name`, so reflect it without scheduling a render.
+    if (this.name === undefined) {
+      this.host.removeAttribute("name");
+    } else {
+      this.host.setAttribute("name", this.name);
+    }
     this.form.sync();
     this.listeners.notify();
-  }
-
-  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
-    return !CONTEXT_ONLY_PROPS.has(propName);
   }
 
   private get rootId(): string {

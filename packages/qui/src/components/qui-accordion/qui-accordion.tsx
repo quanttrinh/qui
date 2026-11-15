@@ -18,12 +18,9 @@ import { token } from "#styled-system/tokens";
 
 import { createListenerStore } from "../shared/controllers";
 import { nextId } from "../shared/helpers/dom/id";
-import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
+import { ContextProviderMixin, ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { clearAccordion, provideAccordion, type AccordionContext } from "./accordion-context";
 import { AccordionController } from "./controller";
-
-/** Props that only feed the child context, so the root template ignores them. */
-const CONTEXT_ONLY_PROPS = new Set(["multiple", "collapsible", "value", "disabled"]);
 
 const styles = {
   host: css({ display: "block" }),
@@ -53,7 +50,11 @@ export interface AccordionValueChangeDetails {
   styleUrl: resolveVar(styleUrls.quiAccordion),
   shadow: true,
 })
-export class QuiAccordion extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
+export class QuiAccordion extends Mixin(
+  ShadowStylesMixin,
+  ControllerHostMixin,
+  ContextProviderMixin,
+) {
   @Element() host!: HTMLQuiAccordionElement;
 
   /** Whether multiple items may be expanded at once. */
@@ -151,20 +152,19 @@ export class QuiAccordion extends Mixin(ShadowStylesMixin, ControllerHostMixin) 
     this.listeners.clear();
   }
 
+  // Every prop read by the root template must be listed here.
+  @Watch("orientation")
+  @Watch("textDirection")
+  private renderRoot(): void {
+    this.requestUpdate();
+  }
+
   @Watch("multiple")
   @Watch("collapsible")
   @Watch("value")
   @Watch("disabled")
-  @Watch("orientation")
-  @Watch("textDirection")
   private syncContext(): void {
-    // Stencil re-renders on every prop change. `componentShouldUpdate` skips the root render.
-    // These props affect every part, so context subscribers are notified without keys.
     this.listeners.notify();
-  }
-
-  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
-    return !CONTEXT_ONLY_PROPS.has(propName);
   }
 
   private get rootId(): string {
