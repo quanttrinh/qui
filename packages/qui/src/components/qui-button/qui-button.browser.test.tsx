@@ -229,6 +229,53 @@ describe("qui-button form association", () => {
     expect(outerSubmissions).toBe(0);
   });
 
+  it("ignores a form attribute that does not resolve to a form", async () => {
+    let submissions = 0;
+    const { root, waitForChanges } = await render(
+      <div>
+        <div id="not-a-form" />
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            submissions += 1;
+          }}
+        >
+          <qui-button form="not-a-form" type="submit">
+            Save
+          </qui-button>
+        </form>
+      </div>,
+    );
+    const host = resolveHost<HTMLQuiButtonElement>(root, "qui-button");
+    const button = queryPartIn<HTMLButtonElement>(host, "button");
+
+    button.click();
+    await waitForChanges();
+
+    expect(submissions).toBe(0);
+  });
+
+  it("keeps a type=button inert inside a form", async () => {
+    let submissions = 0;
+    const { root, waitForChanges } = await render(
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          submissions += 1;
+        }}
+      >
+        <qui-button>Save</qui-button>
+      </form>,
+    );
+    const host = resolveHost<HTMLQuiButtonElement>(root, "qui-button");
+    const button = queryPartIn<HTMLButtonElement>(host, "button");
+
+    button.click();
+    await waitForChanges();
+
+    expect(submissions).toBe(0);
+  });
+
   it("ignores an empty form attribute", async () => {
     let submissions = 0;
     const { root, waitForChanges } = await render(

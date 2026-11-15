@@ -45,6 +45,12 @@ describe("qui-radio-group", () => {
 
     expect(group.getAttribute("name")).toBe("backupPlan");
     expect(new FormData(form).get("backupPlan")).toBe("free");
+
+    group.name = undefined;
+    await waitForChanges();
+
+    expect(group.hasAttribute("name")).toBe(false);
+    expect(new FormData(form).get("backupPlan")).toBeNull();
   });
 
   it("returns the live value for uncontrolled selection", async () => {

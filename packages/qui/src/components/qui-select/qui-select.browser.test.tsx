@@ -67,6 +67,13 @@ describe("qui-select", () => {
 
     expect(host.getAttribute("name")).toBe("account");
     expect(new FormData(form).get("account")).toBe("account-2");
+
+    host.name = "renamed";
+    await waitForChanges();
+
+    expect(host.getAttribute("name")).toBe("renamed");
+    expect(new FormData(form).get("renamed")).toBe("account-2");
+    expect(new FormData(form).get("account")).toBeNull();
   });
 
   it("updates the FormData key when the name changes in multiple mode", async () => {
@@ -100,6 +107,12 @@ describe("qui-select", () => {
     expect(host.getAttribute("name")).toBe("second");
     expect(new FormData(form).get("second")).toBe("account-2");
     expect(new FormData(form).get("first")).toBeNull();
+
+    host.name = undefined;
+    await waitForChanges();
+
+    expect(host.hasAttribute("name")).toBe(false);
+    expect(new FormData(form).get("second")).toBeNull();
   });
 
   it("closes when the open trigger is clicked again", async () => {

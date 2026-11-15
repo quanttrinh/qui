@@ -231,12 +231,6 @@ export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin, 
 
   @Watch("name")
   private syncName(): void {
-    if (this.name === undefined) {
-      this.host.removeAttribute("name");
-    } else {
-      this.host.setAttribute("name", this.name);
-    }
-
     this.form.sync();
     this.listeners.notify();
   }

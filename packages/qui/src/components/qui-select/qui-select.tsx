@@ -209,12 +209,8 @@ export class QuiSelect extends Mixin(
   }
 
   @Watch("value")
-  private syncForm(): void {
-    this.form.sync();
-  }
-
   @Watch("name")
-  private syncName(): void {
+  private syncForm(): void {
     this.form.sync();
   }
 

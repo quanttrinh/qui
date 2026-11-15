@@ -52,7 +52,7 @@ export function queryControl<TElement extends Element = Element>(
   return control;
 }
 
-/** Resolves the form element containing `root`, or throws. */
+/** Resolves `root` when it is a form, otherwise its first descendant form. */
 export function resolveForm(root: HTMLElement): HTMLFormElement {
   if (root instanceof HTMLFormElement) {
     return root;
