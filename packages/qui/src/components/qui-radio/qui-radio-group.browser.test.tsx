@@ -265,8 +265,8 @@ describe("qui-radio-group render scoping", () => {
     expect(deltas[2]).toBeGreaterThan(0);
   });
 
-  it("skips the root when value changes", async () => {
-    const { spies, setProps } = await render(
+  it("re-renders the root when a template prop changes", async () => {
+    const { root, setProps, spies } = await render(
       <qui-radio-group name="plan" defaultValue="pro">
         <qui-radio value="free">Free</qui-radio>
         <qui-radio value="pro">Pro</qui-radio>
@@ -279,12 +279,53 @@ describe("qui-radio-group render scoping", () => {
         },
       },
     );
+    const part = queryPartIn(root, "root");
     const rootRenders = (): number => spies?.lifecycle.render?.mock.calls.length ?? 0;
     const baseline = rootRenders();
 
-    await setProps({ value: "free" });
+    expect(part.dataset.orientation).toBe("vertical");
+
+    await setProps({ orientation: "horizontal" });
+
+    expect(rootRenders()).toBeGreaterThan(baseline);
+    expect(part.dataset.orientation).toBe("horizontal");
+  });
+
+  it("skips the root while reflecting value and name changes", async () => {
+    const { root, spies, waitForChanges } = await render(
+      <form>
+        <qui-radio-group name="plan" defaultValue="pro">
+          <qui-radio value="free">Free</qui-radio>
+          <qui-radio value="pro">Pro</qui-radio>
+        </qui-radio-group>
+      </form>,
+      {
+        spyOn: {
+          components: {
+            "qui-radio-group": { lifecycle: ["render"] },
+          },
+        },
+      },
+    );
+    const group = resolveHost<HTMLQuiRadioGroupElement>(root, "qui-radio-group");
+    const form = root as HTMLFormElement;
+    const rootRenders = (): number => spies?.lifecycle.render?.mock.calls.length ?? 0;
+    const baseline = rootRenders();
+
+    group.value = "free";
+    group.name = "billing";
+    await waitForChanges();
 
     expect(rootRenders()).toBe(baseline);
+    expect(group.getAttribute("name")).toBe("billing");
+    expect(new FormData(form).get("billing")).toBe("free");
+
+    group.name = undefined;
+    await waitForChanges();
+
+    expect(rootRenders()).toBe(baseline);
+    expect(group.hasAttribute("name")).toBe(false);
+    expect(new FormData(form).get("billing")).toBeNull();
   });
 });
 
