@@ -275,5 +275,11 @@ describe("qui-input form integration", () => {
 
     expect(host.getAttribute("name")).toBe("email");
     expect(new FormData(form).get("email")).toBe("test@example.com");
+
+    host.name = "backupEmail";
+    await waitForChanges();
+
+    expect(host.getAttribute("name")).toBe("backupEmail");
+    expect(new FormData(form).get("backupEmail")).toBe("test@example.com");
   });
 });

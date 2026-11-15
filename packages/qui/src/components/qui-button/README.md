@@ -140,9 +140,8 @@ after `::part()` (e.g. `::part(button)[data-variant="tonal"]`) are not matched.
   light-DOM click handler can cancel it with `preventDefault()`.
 - `SubmitEvent.submitter` is `null` for form submissions triggered this way,
   because the shadow button is not the browser's form submitter.
-- Pressing Enter in a text field does not implicitly submit a form whose only
-  submit control is `qui-button`, because the shadow button has no form owner.
-  Add a native submit button if implicit Enter submission is required.
+- `qui-button` is not a default button for implicit Enter submission. Add a
+  native submit button inside the form if that behavior is required.
 
 ## Related
 

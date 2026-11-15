@@ -66,6 +66,40 @@ describe("qui-combobox", () => {
     expect(new FormData(form).get("account")).toBe("account-2");
   });
 
+  it("updates the FormData key when the name changes in multiple mode", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-combobox name="first" multiple items={accounts} />
+      </form>,
+    );
+    const form = resolveForm(root);
+    const host = resolveHost<HTMLQuiComboboxElement>(root, "qui-combobox");
+    const input = queryPartIn<HTMLInputElement>(host, "input");
+
+    input.click();
+    await waitForChanges();
+    typeInto(input, "Two");
+    await waitForChanges();
+
+    const option = queryParts<HTMLElement>(host, "option").find(
+      (candidate) => candidate.dataset.value === "account-2",
+    );
+    if (option === undefined) {
+      throw new Error("Expected account-2 to be rendered");
+    }
+    option.click();
+    await waitForChanges();
+
+    expect(new FormData(form).get("first")).toBe("account-2");
+
+    host.name = "second";
+    await waitForChanges();
+
+    expect(host.getAttribute("name")).toBe("second");
+    expect(new FormData(form).get("second")).toBe("account-2");
+    expect(new FormData(form).get("first")).toBeNull();
+  });
+
   it("stays open when the trigger is clicked after focusing the input", async () => {
     const { root, waitForChanges } = await render(
       <qui-combobox items={accounts} placeholder="Search accounts" />,

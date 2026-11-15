@@ -53,6 +53,12 @@ describe("qui-switch", () => {
 
     expect(host.getAttribute("name")).toBe("notify");
     expect(new FormData(form).get("notify")).toBe("on");
+
+    host.name = "alerts";
+    await waitForChanges();
+
+    expect(host.getAttribute("name")).toBe("alerts");
+    expect(new FormData(form).get("alerts")).toBe("on");
   });
 
   it("does not toggle when read-only", async () => {

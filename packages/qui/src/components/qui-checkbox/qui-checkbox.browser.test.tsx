@@ -65,6 +65,12 @@ describe("qui-checkbox", () => {
 
     expect(host.getAttribute("name")).toBe("consent");
     expect(new FormData(form).get("consent")).toBe("yes");
+
+    host.name = "agreement";
+    await waitForChanges();
+
+    expect(host.getAttribute("name")).toBe("agreement");
+    expect(new FormData(form).get("agreement")).toBe("yes");
   });
 
   it("renders a required indicator and exposes aria-required", async () => {

@@ -56,7 +56,9 @@ describe("qui-button", () => {
     const button = queryPartIn<HTMLButtonElement>(root, "button");
     expect(button.disabled).toBe(true);
   });
+});
 
+describe("qui-button form integration", () => {
   it("submits the surrounding form", async () => {
     let submissions = 0;
     const { root, waitForChanges } = await render(
@@ -76,6 +78,121 @@ describe("qui-button", () => {
     await waitForChanges();
 
     expect(submissions).toBe(1);
+  });
+
+  it("does not submit when disabled", async () => {
+    let submissions = 0;
+    const { root, waitForChanges } = await render(
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          submissions += 1;
+        }}
+      >
+        <qui-button type="submit" disabled>
+          Save
+        </qui-button>
+      </form>,
+    );
+    const host = resolveHost<HTMLQuiButtonElement>(root, "qui-button");
+    const button = queryPartIn<HTMLButtonElement>(host, "button");
+
+    button.click();
+    await waitForChanges();
+
+    expect(submissions).toBe(0);
+  });
+
+  it("lets a click handler cancel reset", async () => {
+    let resets = 0;
+    const { root, waitForChanges } = await render(
+      <form
+        onReset={() => {
+          resets += 1;
+        }}
+      >
+        <qui-button
+          type="reset"
+          onClick={(event) => {
+            event.preventDefault();
+          }}
+        >
+          Reset
+        </qui-button>
+      </form>,
+    );
+    const host = resolveHost<HTMLQuiButtonElement>(root, "qui-button");
+    const button = queryPartIn<HTMLButtonElement>(host, "button");
+
+    button.click();
+    await waitForChanges();
+
+    expect(resets).toBe(0);
+  });
+
+  it("lets a click handler cancel submission", async () => {
+    let submissions = 0;
+    const { root, waitForChanges } = await render(
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          submissions += 1;
+        }}
+      >
+        <qui-button
+          type="submit"
+          onClick={(event) => {
+            event.preventDefault();
+          }}
+        >
+          Save
+        </qui-button>
+      </form>,
+    );
+    const host = resolveHost<HTMLQuiButtonElement>(root, "qui-button");
+    const button = queryPartIn<HTMLButtonElement>(host, "button");
+
+    button.click();
+    await waitForChanges();
+
+    expect(submissions).toBe(0);
+  });
+
+  it("resets the surrounding form", async () => {
+    let resets = 0;
+    const { root, waitForChanges } = await render(
+      <form
+        onReset={() => {
+          resets += 1;
+        }}
+      >
+        <qui-button type="reset">Reset</qui-button>
+      </form>,
+    );
+    const host = resolveHost<HTMLQuiButtonElement>(root, "qui-button");
+    const button = queryPartIn<HTMLButtonElement>(host, "button");
+
+    button.click();
+    await waitForChanges();
+
+    expect(resets).toBe(1);
+  });
+});
+
+describe("qui-button form association", () => {
+  it("is a no-op without a form owner", async () => {
+    const { root, waitForChanges } = await render(
+      <div>
+        <qui-button type="submit">Save</qui-button>
+      </div>,
+    );
+    const host = resolveHost<HTMLQuiButtonElement>(root, "qui-button");
+    const button = queryPartIn<HTMLButtonElement>(host, "button");
+
+    expect(() => {
+      button.click();
+    }).not.toThrow();
+    await waitForChanges();
   });
 
   it("uses the form attribute with native precedence", async () => {
@@ -135,54 +252,6 @@ describe("qui-button", () => {
     await waitForChanges();
 
     expect(submissions).toBe(0);
-  });
-
-  it("lets a click handler cancel submission", async () => {
-    let submissions = 0;
-    const { root, waitForChanges } = await render(
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          submissions += 1;
-        }}
-      >
-        <qui-button
-          type="submit"
-          onClick={(event) => {
-            event.preventDefault();
-          }}
-        >
-          Save
-        </qui-button>
-      </form>,
-    );
-    const host = resolveHost<HTMLQuiButtonElement>(root, "qui-button");
-    const button = queryPartIn<HTMLButtonElement>(host, "button");
-
-    button.click();
-    await waitForChanges();
-
-    expect(submissions).toBe(0);
-  });
-
-  it("resets the surrounding form", async () => {
-    let resets = 0;
-    const { root, waitForChanges } = await render(
-      <form
-        onReset={() => {
-          resets += 1;
-        }}
-      >
-        <qui-button type="reset">Reset</qui-button>
-      </form>,
-    );
-    const host = resolveHost<HTMLQuiButtonElement>(root, "qui-button");
-    const button = queryPartIn<HTMLButtonElement>(host, "button");
-
-    button.click();
-    await waitForChanges();
-
-    expect(resets).toBe(1);
   });
 });
 

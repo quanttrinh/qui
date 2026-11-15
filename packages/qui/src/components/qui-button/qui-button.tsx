@@ -119,7 +119,7 @@ export class QuiButton extends Mixin(ShadowStylesMixin) {
   @Prop() download?: string;
   /** Native button type. */
   @Prop() type: "button" | "submit" | "reset" = "button";
-  /** Associates the button with a form by id when it is not nested in one. */
+  /** Associates the button with a form by id; takes precedence over an ancestor form. */
   @Prop() form?: string;
 
   private formOwner(): HTMLFormElement | null {
@@ -128,7 +128,13 @@ export class QuiButton extends Mixin(ShadowStylesMixin) {
         return null;
       }
 
-      const owner = this.host.ownerDocument.querySelector(`#${CSS.escape(this.form)}`);
+      const root = this.host.getRootNode();
+
+      if (!(root instanceof Document || root instanceof ShadowRoot)) {
+        return null;
+      }
+
+      const owner = root.querySelector(`#${CSS.escape(this.form)}`);
 
       return owner instanceof HTMLFormElement ? owner : null;
     }
@@ -137,21 +143,17 @@ export class QuiButton extends Mixin(ShadowStylesMixin) {
   }
 
   private readonly handleNativeClick = (event: MouseEvent): void => {
-    const { type } = this;
-
-    if (type !== "submit" && type !== "reset") {
-      return;
-    }
-
-    const form = this.formOwner();
-
-    if (form === null) {
-      return;
-    }
-
     // Wait for light-DOM click handlers so their preventDefault() can cancel the implicit submit/reset.
     queueMicrotask(() => {
-      if (event.defaultPrevented) {
+      const { type } = this;
+
+      if (event.defaultPrevented || (type !== "submit" && type !== "reset")) {
+        return;
+      }
+
+      const form = this.formOwner();
+
+      if (form === null) {
         return;
       }
 

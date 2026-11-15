@@ -39,6 +39,12 @@ describe("qui-radio-group", () => {
     expect(spy).toHaveReceivedEventDetail({ value: "free" });
     expect(queryPartIn(items[0], "root")).toHaveAttribute("data-state", "checked");
     expect(new FormData(form).get("plan")).toBe("free");
+
+    group.name = "backupPlan";
+    await waitForChanges();
+
+    expect(group.getAttribute("name")).toBe("backupPlan");
+    expect(new FormData(form).get("backupPlan")).toBe("free");
   });
 
   it("returns the live value for uncontrolled selection", async () => {
@@ -253,7 +259,7 @@ describe("qui-radio-group render scoping", () => {
     expect(deltas[2]).toBeGreaterThan(0);
   });
 
-  it("skips the root when value or name changes", async () => {
+  it("skips the root when value changes", async () => {
     const { spies, setProps } = await render(
       <qui-radio-group name="plan" defaultValue="pro">
         <qui-radio value="free">Free</qui-radio>
@@ -271,7 +277,6 @@ describe("qui-radio-group render scoping", () => {
     const baseline = rootRenders();
 
     await setProps({ value: "free" });
-    await setProps({ name: "billing" });
 
     expect(rootRenders()).toBe(baseline);
   });
