@@ -32,9 +32,6 @@ import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
 import { ControllerHostMixin, FormControlMixin, ShadowStylesMixin } from "../shared/mixins";
 import { focusRing } from "../shared/styles";
 
-/** Props that only feed form submission; the template does not read them. */
-const FORM_ONLY_PROPS = new Set(["name"]);
-
 const styles = {
   host: css({ display: "inline-flex" }),
   root: css({
@@ -144,7 +141,7 @@ export class QuiSwitch extends Mixin(ShadowStylesMixin, ControllerHostMixin, For
   /** Makes the control read-only. */
   @Prop() readOnly = false;
   /** The form field name. */
-  @Prop() name?: string;
+  @Prop({ reflect: true }) name?: string;
   /** The form field value. */
   @Prop() value?: string;
   /** Plain-text label fallback when no slot content is supplied. */
@@ -210,10 +207,6 @@ export class QuiSwitch extends Mixin(ShadowStylesMixin, ControllerHostMixin, For
     applyFieldAria(this.inputEl, this.form.fieldApi, {
       labelledBy: this.labelEl === undefined ? [] : [this.labelEl],
     });
-  }
-
-  componentShouldUpdate(_newValue: unknown, _oldValue: unknown, propName: string): boolean {
-    return !FORM_ONLY_PROPS.has(propName);
   }
 
   /** Moves focus to the internal native input. */

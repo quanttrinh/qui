@@ -33,6 +33,7 @@ anchor when `href` is set; otherwise a native `<button>`.
 | `qui-button` | `rel`      | `rel`       | `string`                          | —          | Anchor relationship                                             |
 | `qui-button` | `download` | `download`  | `string`                          | —          | Anchor download hint                                            |
 | `qui-button` | `type`     | `type`      | `"button" \| "submit" \| "reset"` | `"button"` | Native button type                                              |
+| `qui-button` | `form`     | `form`      | `string`                          | —          | Associates the button with a form by id, like a native button   |
 
 ## Events
 
@@ -131,6 +132,16 @@ after `::part()` (e.g. `::part(button)[data-variant="tonal"]`) are not matched.
 - Anchor mode keeps button styling but drops the default underline and inherits
   the host font.
 - Disabled anchors get `aria-disabled` and are not activatable.
+- `type="submit"` and `type="reset"` operate on the associated light-DOM
+  form, even though the native button lives inside the component's shadow root.
+  The `form` attribute takes precedence over an ancestor form, matching native
+  button behavior.
+- The submit/reset action runs in a microtask after the click event, so a
+  light-DOM click handler can cancel it with `preventDefault()`.
+- `SubmitEvent.submitter` is `null` for form submissions triggered this way,
+  because the shadow button is not the browser's form submitter.
+- `qui-button` is not a default button for implicit Enter submission. Add a
+  native submit button inside the form if that behavior is required.
 
 ## Related
 

@@ -32,7 +32,7 @@ import {
 import { RadioGroupController } from "./controller";
 
 /** Props that only feed the child context, so the root template ignores them. */
-const CONTEXT_ONLY_PROPS = new Set(["value", "name"]);
+const CONTEXT_ONLY_PROPS = new Set(["value"]);
 
 const styles = {
   host: css({ display: "block" }),
@@ -64,8 +64,8 @@ export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin, 
   @Prop({ mutable: true }) value?: string;
   /** The initial selected value for an uncontrolled group. */
   @Prop() defaultValue?: string;
-  /** The form field name shared by the radio inputs. */
-  @Prop() name?: string;
+  /** The form field name for the group. */
+  @Prop({ reflect: true }) name?: string;
   /** Disables the whole group. */
   @Prop() disabled = false;
   /** Marks the whole group invalid. */
@@ -218,7 +218,6 @@ export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin, 
   }
 
   @Watch("value")
-  @Watch("name")
   @Watch("disabled")
   @Watch("invalid")
   @Watch("required")
@@ -226,6 +225,12 @@ export class QuiRadioGroup extends Mixin(ControllerHostMixin, FormControlMixin, 
   @Watch("orientation")
   @Watch("textDirection")
   private syncGroup(): void {
+    this.form.sync();
+    this.listeners.notify();
+  }
+
+  @Watch("name")
+  private syncName(): void {
     this.form.sync();
     this.listeners.notify();
   }

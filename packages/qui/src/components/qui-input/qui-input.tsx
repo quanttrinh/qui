@@ -72,7 +72,7 @@ export interface InputValueDetails {
 }
 
 /** Props applied imperatively or through form association; the template does not read them. */
-const IMPERATIVE_PROPS = new Set(["value", "name"]);
+const IMPERATIVE_PROPS = new Set(["value"]);
 
 /**
  * A single-line input with optional masks, number stepping, and a password
@@ -121,7 +121,7 @@ export class QuiInput extends Mixin(ShadowStylesMixin, ControllerHostMixin, Form
   /** Overrides the generated input id. */
   @Prop() inputId?: string;
   /** The form field name. */
-  @Prop() name?: string;
+  @Prop({ reflect: true }) name?: string;
   /** Placeholder text. */
   @Prop() placeholder?: string;
   /** Autocomplete hint. */

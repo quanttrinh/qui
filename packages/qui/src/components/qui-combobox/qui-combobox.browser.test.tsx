@@ -1,6 +1,6 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryPartIn, resolveHost } from "../../../tests/test-utils/component";
+import { queryPartIn, resolveForm, resolveHost } from "../../../tests/test-utils/component";
 import { settle } from "../../../tests/test-utils/dom-ready";
 import { expectFocusedDeep, pointerDown, typeInto } from "../../../tests/test-utils/interactions";
 import { queryParts } from "../../../tests/test-utils/shadow";
@@ -36,6 +36,81 @@ describe("qui-combobox", () => {
     expect(spy.lastEvent?.detail).toMatchObject({ value: ["account-2"] });
     expect(input.value).toBe("Account Two");
     await expect(host.getValue()).resolves.toEqual(["account-2"]);
+  });
+
+  it("reflects its form name and submits selected values", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-combobox name="account" items={accounts} />
+      </form>,
+    );
+    const form = resolveForm(root);
+    const host = resolveHost<HTMLQuiComboboxElement>(root, "qui-combobox");
+    const input = queryPartIn<HTMLInputElement>(host, "input");
+
+    input.click();
+    await waitForChanges();
+    typeInto(input, "Two");
+    await waitForChanges();
+
+    const option = queryParts<HTMLElement>(host, "option").find(
+      (candidate) => candidate.dataset.value === "account-2",
+    );
+    if (option === undefined) {
+      throw new Error("Expected account-2 to be rendered");
+    }
+    option.click();
+    await waitForChanges();
+
+    expect(host.getAttribute("name")).toBe("account");
+    expect(new FormData(form).get("account")).toBe("account-2");
+
+    host.name = "renamed";
+    await waitForChanges();
+
+    expect(host.getAttribute("name")).toBe("renamed");
+    expect(new FormData(form).get("renamed")).toBe("account-2");
+    expect(new FormData(form).get("account")).toBeNull();
+  });
+
+  it("updates the FormData key when the name changes in multiple mode", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-combobox name="first" multiple items={accounts} />
+      </form>,
+    );
+    const form = resolveForm(root);
+    const host = resolveHost<HTMLQuiComboboxElement>(root, "qui-combobox");
+    const input = queryPartIn<HTMLInputElement>(host, "input");
+
+    input.click();
+    await waitForChanges();
+    typeInto(input, "Two");
+    await waitForChanges();
+
+    const option = queryParts<HTMLElement>(host, "option").find(
+      (candidate) => candidate.dataset.value === "account-2",
+    );
+    if (option === undefined) {
+      throw new Error("Expected account-2 to be rendered");
+    }
+    option.click();
+    await waitForChanges();
+
+    expect(new FormData(form).get("first")).toBe("account-2");
+
+    host.name = "second";
+    await waitForChanges();
+
+    expect(host.getAttribute("name")).toBe("second");
+    expect(new FormData(form).get("second")).toBe("account-2");
+    expect(new FormData(form).get("first")).toBeNull();
+
+    host.name = undefined;
+    await waitForChanges();
+
+    expect(host.hasAttribute("name")).toBe(false);
+    expect(new FormData(form).get("second")).toBeNull();
   });
 
   it("stays open when the trigger is clicked after focusing the input", async () => {

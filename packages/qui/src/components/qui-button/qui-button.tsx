@@ -119,6 +119,51 @@ export class QuiButton extends Mixin(ShadowStylesMixin) {
   @Prop() download?: string;
   /** Native button type. */
   @Prop() type: "button" | "submit" | "reset" = "button";
+  /** Associates the button with a form by id; takes precedence over an ancestor form. */
+  @Prop() form?: string;
+
+  private formOwner(): HTMLFormElement | null {
+    if (this.form !== undefined) {
+      if (this.form.length === 0) {
+        return null;
+      }
+
+      const root = this.host.getRootNode();
+
+      if (!(root instanceof Document || root instanceof ShadowRoot)) {
+        return null;
+      }
+
+      const owner = root.querySelector(`#${CSS.escape(this.form)}`);
+
+      return owner instanceof HTMLFormElement ? owner : null;
+    }
+
+    return this.host.closest("form");
+  }
+
+  private readonly handleNativeClick = (event: MouseEvent): void => {
+    // Wait for light-DOM click handlers so their preventDefault() can cancel the implicit submit/reset.
+    queueMicrotask(() => {
+      const { type } = this;
+
+      if (event.defaultPrevented || (type !== "submit" && type !== "reset")) {
+        return;
+      }
+
+      const form = this.formOwner();
+
+      if (form === null) {
+        return;
+      }
+
+      if (type === "submit") {
+        form.requestSubmit();
+      } else {
+        form.reset();
+      }
+    });
+  };
 
   private get dataProps(): Record<string, string | undefined> {
     return {
@@ -161,6 +206,7 @@ export class QuiButton extends Mixin(ShadowStylesMixin) {
             type={this.type}
             disabled={this.disabled}
             aria-label={this.label === "" ? undefined : this.label}
+            onClick={this.handleNativeClick}
           >
             <slot />
           </button>

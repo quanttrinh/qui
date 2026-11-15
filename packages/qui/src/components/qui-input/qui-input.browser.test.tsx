@@ -1,9 +1,13 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryControl, queryPartIn, resolveHost } from "../../../tests/test-utils/component";
+import {
+  queryControl,
+  queryPartIn,
+  resolveForm,
+  resolveHost,
+} from "../../../tests/test-utils/component";
 import { nextFrame, waitForShadowStyles } from "../../../tests/test-utils/dom-ready";
 import { expectFocusedDeep, typeInto } from "../../../tests/test-utils/interactions";
-import { isHTMLFormElement } from "../shared/helpers/dom/dom";
 
 function queryVisibilityTrigger(host: Element): HTMLButtonElement {
   return queryControl<HTMLButtonElement>(host, "[data-part=visibility-trigger]");
@@ -69,10 +73,7 @@ describe("qui-input", () => {
         <qui-input name="code" inputPattern={String.raw`\d+`} value="abc" />
       </form>,
     );
-    const form = isHTMLFormElement(root) ? root : root.querySelector("form");
-    if (!isHTMLFormElement(form)) {
-      throw new TypeError("Expected a form");
-    }
+    const form = resolveForm(root);
     const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
 
     expect(form.checkValidity()).toBe(false);
@@ -255,5 +256,30 @@ describe("qui-input field colors", () => {
     host.invalid = true;
     await waitForChanges();
     expect(getComputedStyle(control).borderTopColor).toBe("rgb(13, 14, 15)");
+  });
+});
+
+describe("qui-input form integration", () => {
+  it("reflects its form name and submits through FormData", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-input name="email" />
+      </form>,
+    );
+    const form = resolveForm(root);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    typeInto(input, "test@example.com");
+    await waitForChanges();
+
+    expect(host.getAttribute("name")).toBe("email");
+    expect(new FormData(form).get("email")).toBe("test@example.com");
+
+    host.name = "backupEmail";
+    await waitForChanges();
+
+    expect(host.getAttribute("name")).toBe("backupEmail");
+    expect(new FormData(form).get("backupEmail")).toBe("test@example.com");
   });
 });

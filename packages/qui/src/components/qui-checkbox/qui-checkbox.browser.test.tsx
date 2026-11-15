@@ -1,6 +1,11 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryControl, queryPartIn, resolveHost } from "../../../tests/test-utils/component";
+import {
+  queryControl,
+  queryPartIn,
+  resolveForm,
+  resolveHost,
+} from "../../../tests/test-utils/component";
 import { waitForShadowStyles } from "../../../tests/test-utils/dom-ready";
 import { expectFocusedDeep } from "../../../tests/test-utils/interactions";
 
@@ -41,6 +46,31 @@ describe("qui-checkbox", () => {
     await waitForChanges();
 
     await expect(host.getChecked()).resolves.toBe(true);
+  });
+
+  it("reflects its form name and submits through FormData", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-checkbox name="consent" value="yes">
+          Check me
+        </qui-checkbox>
+      </form>,
+    );
+    const form = resolveForm(root);
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    input.click();
+    await waitForChanges();
+
+    expect(host.getAttribute("name")).toBe("consent");
+    expect(new FormData(form).get("consent")).toBe("yes");
+
+    host.name = "agreement";
+    await waitForChanges();
+
+    expect(host.getAttribute("name")).toBe("agreement");
+    expect(new FormData(form).get("agreement")).toBe("yes");
   });
 
   it("renders a required indicator and exposes aria-required", async () => {
