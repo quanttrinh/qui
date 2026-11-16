@@ -1,7 +1,7 @@
 import { type FormValidity } from "../shared/controllers";
 import { numberValidity, type NumberConstraints } from "./number-mask";
 
-export interface InputValidityOptions {
+interface InputValidityOptions {
   readonly element?: HTMLInputElement;
   readonly invalid: boolean;
   readonly required: boolean;
@@ -10,7 +10,7 @@ export interface InputValidityOptions {
   readonly allowPartialNumber?: boolean;
 }
 
-export interface InputValidityKeyOptions {
+interface InputValidityKeyOptions {
   readonly element?: HTMLInputElement;
   readonly inputType: string;
   readonly inputPattern?: string;
