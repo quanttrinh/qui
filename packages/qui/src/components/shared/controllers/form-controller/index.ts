@@ -69,6 +69,8 @@ function formValue(
 
 // FormData compares entries for opt-in multi-value controls.
 // Built-in controls return strings or null, but FormData is supported too.
+// File values compare by identity, and a mutated FormData instance is not
+// Detected; custom getFormValue() implementations should return new values.
 function sameFormValue(
   previous: string | File | FormData | null,
   next: string | File | FormData | null,
@@ -90,6 +92,7 @@ function sameFormValue(
   );
 }
 
+// Only true flags affect validity; false and undefined are equivalent.
 function activeFlags(flags: ValidityStateFlags): string {
   return Object.entries(flags)
     .filter(([, value]) => value === true)

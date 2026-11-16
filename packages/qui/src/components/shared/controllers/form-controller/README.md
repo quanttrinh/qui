@@ -49,6 +49,8 @@ Reactive controller. Extends `ReactiveControllerBase`.
 - `sync()` compares the form value, restore state, validity flags, message, and
   validation anchor against the last applied state. Any change, including a
   late validation anchor, triggers a fresh `setFormValue()` / `setValidity()`.
+- `reset()` and `restore()` do not force a write when the resulting state is
+  identical to the applied state; the control still re-applies its own value.
 - Disabled controls submit `null` and report no validity. `sync()` is a no-op
   during SSR.
 - `FormControlMixin` forwards `formResetCallback`, `formDisabledCallback`, and
