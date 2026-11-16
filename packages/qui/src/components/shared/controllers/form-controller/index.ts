@@ -16,8 +16,6 @@ export interface FormState {
   name: string | undefined;
   multiple: boolean;
   values: readonly string[];
-  /** Overrides the derived submit value, e.g. null for an unchecked checkbox. */
-  formValue?: string | File | FormData | null;
   validationElement?: HTMLElement | undefined;
 }
 
@@ -65,12 +63,9 @@ function parseRestoredValues(state: string | File | FormData | null): string[] |
   }
 }
 
-function resolveFormValue(state: FormState): string | File | FormData | null {
-  if (state.formValue !== undefined) {
-    return state.formValue;
-  }
+function resolveFormValue(state: FormState): string | FormData | null {
   if (!state.multiple) {
-    return state.values[0] ?? "";
+    return state.values.length === 0 ? null : (state.values[0] ?? null);
   }
   const data = new FormData();
   if (state.name !== undefined) {

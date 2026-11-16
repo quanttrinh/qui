@@ -155,7 +155,6 @@ export class QuiCheckbox extends Mixin(ShadowStylesMixin, ControllerHostMixin, F
       name: this.name,
       multiple: false,
       values: this.checkable.isChecked ? [this.value ?? "on"] : [],
-      formValue: this.checkable.isChecked ? (this.value ?? "on") : null,
       validationElement: this.inputEl,
     }),
     validity: ({ required, invalid }) => this.validity(required, invalid),
@@ -168,6 +167,8 @@ export class QuiCheckbox extends Mixin(ShadowStylesMixin, ControllerHostMixin, F
       this.checkable.reset();
     },
     onRestore: (values): void => {
+      // Restore state is the controller's values array.
+      // A non-empty array means the control was checked.
       const checked = values.length > 0;
       this.checked = checked;
       this.checkable.restore(checked);

@@ -116,8 +116,7 @@ export class QuiRadioGroup extends Mixin(
       return {
         name: this.name,
         multiple: false,
-        values: value ? [value] : [],
-        formValue: value ?? null,
+        values: value === undefined ? [] : [value],
         validationElement: this.validationElement(),
       };
     },
@@ -131,8 +130,7 @@ export class QuiRadioGroup extends Mixin(
       this.controller.reset();
     },
     onRestore: (values): void => {
-      const restored = values.at(0);
-      const value = restored === "" ? undefined : restored;
+      const value = values.at(0);
       this.value = value;
       this.controller.restore(value);
     },

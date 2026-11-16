@@ -135,3 +135,77 @@ describe("FormController field control registration", () => {
     controller.hostDisconnected();
   });
 });
+
+function createSyncController(): {
+  controller: FormController;
+  setFormValue: ReturnType<typeof vi.fn>;
+  setValidity: ReturnType<typeof vi.fn>;
+  setDisabled: (value: boolean) => void;
+  setValues: (values: string[]) => void;
+  setElement: (element: HTMLElement | undefined) => void;
+} {
+  let disabled = false;
+  let values: string[] = [];
+  let element: HTMLElement | undefined;
+  const setFormValue = vi.fn();
+  const setValidity = vi.fn();
+  const controller = new FormController(
+    createTestControllerHost(new FakeElement() as unknown as HTMLElement),
+    {
+      internals: () => ({ setFormValue, setValidity }) as unknown as ElementInternals,
+      state: () => ({ name: "test", multiple: false, values, validationElement: element }),
+      disabled: () => disabled,
+      readOnly: () => false,
+      required: () => false,
+      invalid: () => false,
+      onReset: (): void => undefined,
+      onRestore: (): void => undefined,
+    },
+  );
+  return {
+    controller,
+    setFormValue,
+    setValidity,
+    setDisabled: (value): void => {
+      disabled = value;
+    },
+    setValues: (next): void => {
+      values = next;
+    },
+    setElement: (next): void => {
+      element = next;
+    },
+  };
+}
+
+describe("FormController sync", () => {
+  it("writes the form value only when its inputs change", () => {
+    const { controller, setFormValue, setDisabled, setValues } = createSyncController();
+
+    controller.sync();
+    expect(setFormValue).toHaveBeenCalledTimes(1);
+
+    controller.sync();
+    expect(setFormValue).toHaveBeenCalledTimes(1);
+
+    setValues(["next"]);
+    controller.sync();
+    expect(setFormValue).toHaveBeenCalledTimes(2);
+
+    setDisabled(true);
+    controller.sync();
+    expect(setFormValue).toHaveBeenCalledTimes(3);
+  });
+
+  it("writes validity on every sync, including a late anchor", () => {
+    const { controller, setValidity, setElement } = createSyncController();
+    const element = new FakeElement() as unknown as HTMLElement;
+
+    controller.sync();
+    setElement(element);
+    controller.sync();
+
+    expect(setValidity).toHaveBeenCalledTimes(2);
+    expect(setValidity).toHaveBeenLastCalledWith({}, undefined, element);
+  });
+});

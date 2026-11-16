@@ -283,6 +283,21 @@ describe("qui-input form integration", () => {
     expect(new FormData(form).get("backupEmail")).toBe("test@example.com");
   });
 
+  it("restores form state", async () => {
+    const { root, waitForChanges } = await render(<qui-input />);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+    const restore = Reflect.get(host, "formStateRestoreCallback") as (state: string) => void;
+
+    restore.call(host, JSON.stringify(["restored"]));
+    await waitForChanges();
+    expect(input.value).toBe("restored");
+
+    restore.call(host, JSON.stringify([""]));
+    await waitForChanges();
+    expect(input.value).toBe("");
+  });
+
   it("focuses the native input when required by a wrapping qui-field", async () => {
     const { root, waitForChanges } = await render(
       <form>
