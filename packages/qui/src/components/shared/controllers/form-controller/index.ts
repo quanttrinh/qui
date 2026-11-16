@@ -109,7 +109,6 @@ function sameValues(previous: readonly string[], next: readonly string[]): boole
 interface AppliedFormState {
   value: string | File | FormData | null;
   values: readonly string[];
-  state: string;
   flags: ValidityStateFlags;
   message?: string | undefined;
   element?: HTMLElement | undefined;
@@ -216,7 +215,6 @@ export class FormController extends ReactiveControllerBase {
     this.applied = {
       value,
       values: [...values],
-      state,
       flags: { ...validity.flags },
       message: validity.message,
       element: validity.element,

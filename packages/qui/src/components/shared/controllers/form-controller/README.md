@@ -28,9 +28,9 @@ Reactive controller. Extends `ReactiveControllerBase`.
 | `isDisabled` / `isReadOnly` / `isRequired` / `isInvalid` | Field value when present, otherwise host prop             |
 | `setControl(handle)`                                     | Registers the control's focus/click handle with the field |
 | `setDisabled(disabled)`                                  | Form-disabled path: notify, request render, sync          |
-| `reset()`                                                | Clears signature, runs `onReset`, syncs                   |
+| `reset()`                                                | Runs `onReset`, then syncs                                |
 | `restore(state)`                                         | Parses JSON string state, runs `onRestore`, syncs         |
-| `sync()`                                                 | Writes form value/validity when the signature changed     |
+| `sync()`                                                 | Writes when the applied form state or validity changed    |
 
 ## Lifecycle
 
