@@ -1,4 +1,5 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
+import { userEvent } from "vitest/browser";
 
 import {
   queryControl,
@@ -175,6 +176,26 @@ describe("qui-checkbox", () => {
 
     expect(form.reportValidity()).toBe(false);
     expectFocusedDeep(input);
+  });
+
+  it("keeps the visual control hoverable and clickable through the overlay", async () => {
+    const { root, waitForChanges } = await render(<qui-checkbox>Accept</qui-checkbox>);
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+    const control = queryPartIn(host, "control");
+    const input = queryControl<HTMLInputElement>(host, "input");
+    control.style.setProperty("transition", "none", "important");
+    host.style.setProperty("--qui-checkbox-hover-outline-color", "rgb(30, 31, 32)");
+
+    await userEvent.hover(control);
+
+    expect(getComputedStyle(control).borderTopColor).toBe("rgb(30, 31, 32)");
+
+    await userEvent.click(control);
+    await waitForChanges();
+
+    expect(input.checked).toBe(true);
+
+    await userEvent.unhover(control);
   });
 
   it("focuses the internal native input", async () => {

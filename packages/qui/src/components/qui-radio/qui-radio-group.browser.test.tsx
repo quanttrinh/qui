@@ -115,7 +115,9 @@ describe("qui-radio-group", () => {
       expect(queryControl<HTMLInputElement>(item, "input").disabled).toBe(true);
     }
   });
+});
 
+describe("qui-radio-group validation", () => {
   it("focuses the first enabled radio from constraint validation", async () => {
     const { root, waitForChanges } = await render(
       <form>
@@ -132,6 +134,59 @@ describe("qui-radio-group", () => {
 
     expect(form.reportValidity()).toBe(false);
     expectFocusedDeep(input);
+  });
+
+  it("focuses the selected radio from constraint validation", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-radio-group name="plan" value="pro" invalid>
+          <qui-radio value="free">Free</qui-radio>
+          <qui-radio value="pro">Pro</qui-radio>
+        </qui-radio-group>
+      </form>,
+    );
+    await waitForChanges();
+
+    const form = resolveForm(root);
+    const input = queryControl<HTMLInputElement>(radioItems(root)[1], "input");
+
+    expect(form.reportValidity()).toBe(false);
+    expectFocusedDeep(input);
+  });
+
+  it("skips a disabled first radio during constraint validation", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-radio-group name="plan" required>
+          <qui-radio value="free" disabled>
+            Free
+          </qui-radio>
+          <qui-radio value="pro">Pro</qui-radio>
+        </qui-radio-group>
+      </form>,
+    );
+    await waitForChanges();
+
+    const form = resolveForm(root);
+    const input = queryControl<HTMLInputElement>(radioItems(root)[1], "input");
+
+    expect(form.reportValidity()).toBe(false);
+    expectFocusedDeep(input);
+  });
+
+  it("falls back to the focusable group root when no radios are registered", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-radio-group name="plan" required />
+      </form>,
+    );
+    await waitForChanges();
+
+    const form = resolveForm(root);
+    const group = resolveHost<HTMLQuiRadioGroupElement>(root, "qui-radio-group");
+
+    expect(form.reportValidity()).toBe(false);
+    expectFocusedDeep(queryPartIn(group, "root"));
   });
 
   it("focuses the selected radio input", async () => {

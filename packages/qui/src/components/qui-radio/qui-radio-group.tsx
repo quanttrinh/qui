@@ -124,8 +124,7 @@ export class QuiRadioGroup extends Mixin(
     getReadOnly: (): boolean => this.readOnly,
     getRequired: (): boolean => this.required,
     getInvalid: (): boolean => this.invalid,
-    getValidationElement: (): HTMLElement | undefined =>
-      this.controller.validationInput() ?? this.rootEl,
+    getValidationElement: (): HTMLElement | undefined => this.validationElement(),
     getFormValue: (): string | null => {
       const { value } = this.controller;
       if (value) {
@@ -167,8 +166,14 @@ export class QuiRadioGroup extends Mixin(
     blur: (): void => {
       this.controller.blur();
     },
-    registerInput: (value: string, input: HTMLInputElement): (() => void) =>
-      this.controller.registerInput(value, input),
+    registerInput: (value: string, input: HTMLInputElement): (() => void) => {
+      const unregister = this.controller.registerInput(value, input);
+      this.form.sync();
+      return (): void => {
+        unregister();
+        this.form.sync();
+      };
+    },
     rootId: (): string => this.rootId,
     itemId: (value: string): string => this.itemId(value),
     inputId: (value: string): string => this.inputId(value),
@@ -291,23 +296,30 @@ export class QuiRadioGroup extends Mixin(
       return {
         flags: { valueMissing: true },
         message: "Please select an option.",
-        element: this.controller.validationInput() ?? this.rootEl,
+        element: this.validationElement(),
       };
     }
     if (this.form.isInvalid) {
       return {
         flags: { customError: true },
         message: "Invalid value",
-        element: this.controller.validationInput() ?? this.rootEl,
+        element: this.validationElement(),
       };
     }
     return { flags: {} };
   }
 
+  /** Anchor validation on a focusable radio so `reportValidity()` can focus it. */
+  private validationElement(): HTMLElement | undefined {
+    return this.controller.validationInput() ?? this.rootEl;
+  }
+
   private signature(): string {
     return `${this.name ?? ""}\u0001${this.controller.value ?? ""}\u0001${
-      this.form.isRequired ? 1 : 0
-    }\u0001${this.form.isInvalid ? 1 : 0}\u0001${this.form.isDisabled ? 1 : 0}`;
+      this.validationElement()?.id ?? ""
+    }\u0001${this.form.isRequired ? 1 : 0}\u0001${this.form.isInvalid ? 1 : 0}\u0001${
+      this.form.isDisabled ? 1 : 0
+    }`;
   }
 
   render(): VNode {
