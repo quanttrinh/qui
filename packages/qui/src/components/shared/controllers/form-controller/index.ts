@@ -168,9 +168,14 @@ export class FormController extends ReactiveControllerBase {
     // Always include controller-owned state.
     // Components with a custom signature for native validity still need
     // Disabled/read-only changes to invalidate the cached form value.
+    // The validation anchor is part of the signature.
+    // This refreshes native validity when the anchor appears after
+    // Field context attachment, before the native element has rendered.
     const signature = `${this.options.getSignature?.() ?? this.signatureFor()}\u0001${
       this.isDisabled ? 1 : 0
-    }\u0001${this.isReadOnly ? 1 : 0}\u0001${this.isRequired ? 1 : 0}\u0001${this.isInvalid ? 1 : 0}`;
+    }\u0001${this.isReadOnly ? 1 : 0}\u0001${this.isRequired ? 1 : 0}\u0001${
+      this.isInvalid ? 1 : 0
+    }\u0001${this.options.getValidationElement()?.id ?? ""}`;
     if (signature === this.signature) {
       return;
     }

@@ -159,7 +159,9 @@ describe("qui-checkbox", () => {
     expect(spy).toHaveReceivedEventDetail({ checked: true });
     expect(queryPartIn(host, "root")).toHaveAttribute("data-state", "indeterminate");
   });
+});
 
+describe("qui-checkbox validation and interaction", () => {
   it("focuses the native input from constraint validation", async () => {
     const { root, waitForChanges } = await render(
       <form>
@@ -196,6 +198,24 @@ describe("qui-checkbox", () => {
     expect(input.checked).toBe(true);
 
     await userEvent.unhover(control);
+  });
+
+  it("focuses the native input when required by a wrapping qui-field", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-field required>
+          <qui-checkbox name="consent">Check me</qui-checkbox>
+        </qui-field>
+      </form>,
+    );
+    await waitForChanges();
+
+    const form = resolveForm(root);
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(form.reportValidity()).toBe(false);
+    expectFocusedDeep(input);
   });
 
   it("focuses the internal native input", async () => {

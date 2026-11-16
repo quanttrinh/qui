@@ -319,10 +319,8 @@ export class QuiRadioGroup extends Mixin(
 
   private signature(): string {
     return `${this.name ?? ""}\u0001${this.controller.value ?? ""}\u0001${
-      this.validationElement()?.id ?? ""
-    }\u0001${this.form.isRequired ? 1 : 0}\u0001${this.form.isInvalid ? 1 : 0}\u0001${
-      this.form.isDisabled ? 1 : 0
-    }`;
+      this.form.isRequired ? 1 : 0
+    }\u0001${this.form.isInvalid ? 1 : 0}\u0001${this.form.isDisabled ? 1 : 0}`;
   }
 
   render(): VNode {
