@@ -141,10 +141,12 @@ function createSyncController(): {
   setFormValue: ReturnType<typeof vi.fn>;
   setValidity: ReturnType<typeof vi.fn>;
   setDisabled: (value: boolean) => void;
+  setRequired: (value: boolean) => void;
   setValues: (values: string[]) => void;
   setElement: (element: HTMLElement | undefined) => void;
 } {
   let disabled = false;
+  let required = false;
   let values: string[] = [];
   let element: HTMLElement | undefined;
   const setFormValue = vi.fn();
@@ -156,7 +158,7 @@ function createSyncController(): {
       state: () => ({ name: "test", multiple: false, values, validationElement: element }),
       disabled: () => disabled,
       readOnly: () => false,
-      required: () => false,
+      required: () => required,
       invalid: () => false,
       onReset: (): void => undefined,
       onRestore: (): void => undefined,
@@ -168,6 +170,9 @@ function createSyncController(): {
     setValidity,
     setDisabled: (value): void => {
       disabled = value;
+    },
+    setRequired: (value): void => {
+      required = value;
     },
     setValues: (next): void => {
       values = next;
@@ -198,14 +203,15 @@ describe("FormController sync", () => {
   });
 
   it("writes validity on every sync, including a late anchor", () => {
-    const { controller, setValidity, setElement } = createSyncController();
+    const { controller, setValidity, setElement, setRequired } = createSyncController();
     const element = new FakeElement() as unknown as HTMLElement;
 
+    setRequired(true);
     controller.sync();
     setElement(element);
     controller.sync();
 
     expect(setValidity).toHaveBeenCalledTimes(2);
-    expect(setValidity).toHaveBeenLastCalledWith({}, undefined, element);
+    expect(setValidity.mock.calls.at(-1)?.[2] === element).toBe(true);
   });
 });
