@@ -30,7 +30,7 @@ Reactive controller. Extends `ReactiveControllerBase`.
 | `setDisabled(disabled)`                                  | Form-disabled path: notify, request render, sync          |
 | `reset()`                                                | Runs `onReset`, then syncs                                |
 | `restore(state)`                                         | Parses JSON string state, runs `onRestore`, syncs         |
-| `sync()`                                                 | Writes when the applied form state or validity changed    |
+| `sync()`                                                 | Writes the current form value and validity                |
 
 ## Lifecycle
 
@@ -38,19 +38,15 @@ Reactive controller. Extends `ReactiveControllerBase`.
 - `hostConnected` — re-discovers/re-registers; renders when a field attaches
   after load.
 - `hostDidLoad` — performs the first sync.
-- `hostDidRender` — re-syncs; compares the applied form state and skips writes
-  when nothing changed.
+- `hostDidRender` — re-syncs the current form value and validity.
 - `hostDisconnected` — unsubscribes and unregisters the control.
 
 ## Notes
 
 - Field state wins over the control's own props, so a disabled field disables
   all controls.
-- `sync()` compares the form value, restore state, validity flags, message, and
-  validation anchor against the last applied state. Any change, including a
-  late validation anchor, triggers a fresh `setFormValue()` / `setValidity()`.
-- `reset()` and `restore()` do not force a write when the resulting state is
-  identical to the applied state; the control still re-applies its own value.
+- `sync()` always calls `setFormValue()` and `setValidity()`. Both are
+  idempotent, so this stays simple and keeps a late validation anchor correct.
 - Disabled controls submit `null` and report no validity. `sync()` is a no-op
   during SSR.
 - `FormControlMixin` forwards `formResetCallback`, `formDisabledCallback`, and

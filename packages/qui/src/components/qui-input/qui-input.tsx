@@ -508,11 +508,7 @@ export class QuiInput extends Mixin(ShadowStylesMixin, ControllerHostMixin, Form
       focused: this.inputFocused,
     });
 
-    if (
-      this.validityResult !== undefined &&
-      this.validityKey === key &&
-      (this.validityResult.element === undefined || this.validityResult.element === this.inputEl)
-    ) {
+    if (this.validityResult !== undefined && this.validityKey === key) {
       return this.validityResult;
     }
 

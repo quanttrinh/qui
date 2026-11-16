@@ -67,56 +67,6 @@ function formValue(
   return data;
 }
 
-// FormData compares entries for opt-in multi-value controls.
-// Built-in controls return strings or null, but FormData is supported too.
-// File values compare by identity, and a mutated FormData instance is not
-// Detected; custom getFormValue() implementations should return new values.
-function sameFormValue(
-  previous: string | File | FormData | null,
-  next: string | File | FormData | null,
-): boolean {
-  if (previous === next) {
-    return true;
-  }
-  if (!(previous instanceof FormData) || !(next instanceof FormData)) {
-    return false;
-  }
-  const previousEntries = [...previous.entries()];
-  const nextEntries = [...next.entries()];
-  return (
-    previousEntries.length === nextEntries.length &&
-    previousEntries.every(
-      ([key, value], index) =>
-        key === nextEntries[index]?.[0] && Object.is(value, nextEntries[index]?.[1]),
-    )
-  );
-}
-
-// Only true flags affect validity; false and undefined are equivalent.
-function activeFlags(flags: ValidityStateFlags): string {
-  return Object.entries(flags)
-    .filter(([, value]) => value === true)
-    .map(([key]) => key)
-    .toSorted()
-    .join(",");
-}
-
-function sameFlags(previous: ValidityStateFlags, next: ValidityStateFlags): boolean {
-  return activeFlags(previous) === activeFlags(next);
-}
-
-function sameValues(previous: readonly string[], next: readonly string[]): boolean {
-  return previous.length === next.length && previous.every((value, index) => value === next[index]);
-}
-
-interface AppliedFormState {
-  value: string | File | FormData | null;
-  values: readonly string[];
-  flags: ValidityStateFlags;
-  message?: string | undefined;
-  element?: HTMLElement | undefined;
-}
-
 /**
  * Form/field behaviour shared by every form-associated control: `qui-field`
  * integration, form value, validity, reset, and state restoration.
@@ -130,7 +80,6 @@ export class FormController extends ReactiveControllerBase {
   private unsubscribe?: () => void;
   private stopListening?: () => void;
   private formDisabled = false;
-  private applied?: AppliedFormState;
 
   constructor(host: ReactiveControllerHost, options: FormControllerOptions) {
     super(host);
@@ -199,31 +148,10 @@ export class FormController extends ReactiveControllerBase {
     const validity = this.isDisabled
       ? { flags: {} }
       : (this.options.getValidity?.() ?? this.validity());
-
-    // Compare the data actually written, not a hand-built signature.
-    // Anchors are compared too because one can appear after the first sync.
-    // This happens when a field context attaches and the element renders.
-    if (
-      this.applied !== undefined &&
-      sameFormValue(this.applied.value, value) &&
-      sameValues(this.applied.values, values) &&
-      sameFlags(this.applied.flags, validity.flags) &&
-      this.applied.message === validity.message &&
-      this.applied.element === validity.element
-    ) {
-      return;
-    }
-
-    const state = JSON.stringify(values);
-    this.applied = {
-      value,
-      values: [...values],
-      flags: { ...validity.flags },
-      message: validity.message,
-      element: validity.element,
-    };
     const internals = this.options.getInternals();
-    internals.setFormValue(value, state);
+    // Both calls are idempotent, so writing them on every sync is safe.
+    // This also keeps a late validation anchor correct without a cache.
+    internals.setFormValue(value, JSON.stringify(values));
     internals.setValidity(validity.flags, validity.message, validity.element);
   }
 
