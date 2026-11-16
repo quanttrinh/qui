@@ -142,6 +142,7 @@ function createSyncController(): {
   setValidity: ReturnType<typeof vi.fn>;
   setDisabled: (value: boolean) => void;
   setRequired: (value: boolean) => void;
+  setInvalid: (value: boolean) => void;
   setName: (value: string) => void;
   setMultiple: (value: boolean) => void;
   setValues: (values: string[]) => void;
@@ -149,6 +150,7 @@ function createSyncController(): {
 } {
   let disabled = false;
   let required = false;
+  let invalid = false;
   let name = "test";
   let multiple = false;
   let values: string[] = [];
@@ -163,7 +165,7 @@ function createSyncController(): {
       disabled: () => disabled,
       readOnly: () => false,
       required: () => required,
-      invalid: () => false,
+      invalid: () => invalid,
       onReset: (): void => undefined,
       onRestore: (): void => undefined,
     },
@@ -177,6 +179,9 @@ function createSyncController(): {
     },
     setRequired: (value): void => {
       required = value;
+    },
+    setInvalid: (value): void => {
+      invalid = value;
     },
     setName: (value): void => {
       name = value;
@@ -232,5 +237,28 @@ describe("FormController sync", () => {
 
     expect(setValidity).toHaveBeenCalledTimes(2);
     expect(setValidity.mock.calls.at(-1)?.[2] === element).toBe(true);
+  });
+
+  it("prefers invalid over required in default validity", () => {
+    const { controller, setInvalid, setRequired, setValidity } = createSyncController();
+
+    setRequired(true);
+    setInvalid(true);
+    controller.sync();
+
+    expect(setValidity.mock.calls.at(-1)?.[0]).toEqual({ customError: true });
+  });
+
+  it("does not rewrite an unchanged value after reset or restore", () => {
+    const { controller, setFormValue, setValidity } = createSyncController();
+
+    controller.sync();
+    expect(setFormValue).toHaveBeenCalledTimes(1);
+
+    controller.reset();
+    controller.restore(JSON.stringify([]));
+
+    expect(setFormValue).toHaveBeenCalledTimes(1);
+    expect(setValidity).toHaveBeenCalledTimes(3);
   });
 });

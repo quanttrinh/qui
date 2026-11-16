@@ -130,6 +130,7 @@ export class QuiSelect extends Mixin(
       this.window.scrollToStart();
     },
     onRestore: (values): void => {
+      // Selection state owns a mutable array.
       this.selection.restore([...values]);
     },
   });

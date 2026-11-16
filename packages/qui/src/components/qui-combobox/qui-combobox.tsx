@@ -172,6 +172,7 @@ export class QuiCombobox extends Mixin(
       );
     },
     onRestore: (values): void => {
+      // Selection state owns a mutable array.
       this.selection.restore([...values]);
       this.input.setTextSilently(
         displayValueFor(this.source.items, this.selection.selected, this.multiple),

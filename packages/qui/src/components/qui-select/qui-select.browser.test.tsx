@@ -43,7 +43,12 @@ describe("qui-select", () => {
   });
 
   it("restores form state and clears an empty selection", async () => {
-    const { root, waitForChanges } = await render(<qui-select items={accounts} />);
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-select name="account" items={accounts} />
+      </form>,
+    );
+    const form = resolveForm(root);
     const host = resolveHost<HTMLQuiSelectElement>(root, "qui-select");
     const restore = Reflect.get(host, "formStateRestoreCallback") as (state: string) => void;
 
@@ -54,6 +59,7 @@ describe("qui-select", () => {
     restore.call(host, JSON.stringify([]));
     await waitForChanges();
     await expect(host.getValue()).resolves.toEqual([]);
+    expect(new FormData(form).has("account")).toBe(false);
   });
 
   it("restores multiple selections", async () => {

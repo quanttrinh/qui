@@ -43,11 +43,6 @@ export interface FormControllerOptions {
   onChange?: () => void;
 }
 
-/** `ElementInternals.setFormValue()` uses null to clear the value. */
-function clearedFormValue(): string | File | FormData | null {
-  return null;
-}
-
 /** Reads the JSON values array written by `setFormValue()`. */
 function parseRestoredValues(state: string | File | FormData | null): string[] | undefined {
   if (typeof state !== "string") {
@@ -176,7 +171,7 @@ export class FormController extends ReactiveControllerBase {
     const internals = this.options.internals();
 
     if (!shallowEqual(this.appliedValueKey, valueKey)) {
-      const value = disabled ? clearedFormValue() : resolveFormValue(form);
+      const value = disabled ? null : resolveFormValue(form);
       // Restore state is JSON so empty and missing values stay distinct.
       // This matters for empty inputs and unchecked checkboxes.
       internals.setFormValue(value, JSON.stringify(form.values));
