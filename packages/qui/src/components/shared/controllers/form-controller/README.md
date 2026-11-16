@@ -19,7 +19,6 @@ Reactive controller. Extends `ReactiveControllerBase`.
 | `onChange`                                                   | `() => void` (optional)                               | Field state changed                             |
 | `getFormValue`                                               | `() => string \| File \| FormData \| null` (optional) | Overrides default form value                    |
 | `getValidity`                                                | `() => FormValidity` (optional)                       | Overrides default validity                      |
-| `getSignature`                                               | `() => string` (optional)                             | Overrides the change signature                  |
 
 ## API
 

@@ -133,7 +133,6 @@ export class QuiRadioGroup extends Mixin(
       return null;
     },
     getValidity: (): FormValidity => this.validity(),
-    getSignature: (): string => this.signature(),
     onReset: (): void => {
       this.value = this.controller.initialValue;
       this.controller.reset();
@@ -315,12 +314,6 @@ export class QuiRadioGroup extends Mixin(
   /** Anchor validation on a focusable radio so `reportValidity()` can focus it. */
   private validationElement(): HTMLElement | undefined {
     return this.controller.validationInput() ?? this.rootEl;
-  }
-
-  private signature(): string {
-    return `${this.name ?? ""}\u0001${this.controller.value ?? ""}\u0001${
-      this.form.isRequired ? 1 : 0
-    }\u0001${this.form.isInvalid ? 1 : 0}\u0001${this.form.isDisabled ? 1 : 0}`;
   }
 
   render(): VNode {

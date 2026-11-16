@@ -161,7 +161,6 @@ export class QuiCheckbox extends Mixin(ShadowStylesMixin, ControllerHostMixin, F
     getValidationElement: (): HTMLElement | undefined => this.inputEl,
     getFormValue: (): string | null => (this.checkable.isChecked ? (this.value ?? "on") : null),
     getValidity: (): FormValidity => this.validity(),
-    getSignature: (): string => this.signature(),
     onReset: (): void => {
       this.checked = this.checkable.initialChecked;
       this.checkable.reset();
@@ -269,12 +268,6 @@ export class QuiCheckbox extends Mixin(ShadowStylesMixin, ControllerHostMixin, F
       };
     }
     return { flags: {} };
-  }
-
-  private signature(): string {
-    return `${this.name ?? ""}\u0001${this.checkable.isChecked ? 1 : 0}\u0001${
-      this.value ?? ""
-    }\u0001${this.form.isRequired ? 1 : 0}\u0001${this.form.isInvalid ? 1 : 0}`;
   }
 
   render(): VNode {

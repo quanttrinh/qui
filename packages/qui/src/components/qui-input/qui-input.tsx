@@ -30,11 +30,7 @@ import { ControllerHostMixin, FormControlMixin, ShadowStylesMixin } from "../sha
 import { type TextCase } from "./case";
 import { renderNumberStepper, renderPasswordToggle } from "./input-controls";
 import { filterNumericOrDecimalInput } from "./input-filter";
-import {
-  resolveInputFormSignature,
-  resolveInputValidity,
-  resolveInputValidityKey,
-} from "./input-validity";
+import { resolveInputValidity, resolveInputValidityKey } from "./input-validity";
 import { hasConfiguredMask, resolveInputMaskConfig, type InputMaskConfig } from "./mask-config";
 import { resolveNumberSeparators, type NumberSeparators } from "./number-separators";
 import { NumberStepper, type NumberConstraints } from "./number-stepper";
@@ -195,7 +191,6 @@ export class QuiInput extends Mixin(ShadowStylesMixin, ControllerHostMixin, Form
     getValidationElement: (): HTMLElement | undefined => this.inputEl,
     getFormValue: (): string => this.inputEl?.value ?? "",
     getValidity: (): FormValidity => this.inputValidity,
-    getSignature: (): string => this.formSignature(),
     onReset: (): void => {
       this.value = this.initialValue;
       this.applyValue(this.initialValue);
@@ -527,15 +522,6 @@ export class QuiInput extends Mixin(ShadowStylesMixin, ControllerHostMixin, Form
     this.validityKey = key;
     this.validityResult = validity;
     return validity;
-  }
-
-  private formSignature(): string {
-    return resolveInputFormSignature({
-      element: this.inputEl,
-      required: this.form.isRequired,
-      invalid: this.form.isInvalid,
-      validity: this.inputValidity,
-    });
   }
 
   private readonly handleInput = (event: Event): void => {

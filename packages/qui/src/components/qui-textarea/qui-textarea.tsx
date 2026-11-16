@@ -124,7 +124,6 @@ export class QuiTextarea extends Mixin(ShadowStylesMixin, ControllerHostMixin, F
     getValidationElement: (): HTMLElement | undefined => this.textareaEl,
     getFormValue: (): string => this.textareaEl?.value ?? "",
     getValidity: (): FormValidity => this.validity(),
-    getSignature: (): string => this.formSignature(),
     onReset: (): void => {
       this.value = this.initialValue;
       this.applyValue(this.initialValue);
@@ -301,13 +300,6 @@ export class QuiTextarea extends Mixin(ShadowStylesMixin, ControllerHostMixin, F
       message: element.validationMessage,
       element,
     };
-  }
-
-  private formSignature(): string {
-    const element = this.textareaEl;
-    return `${element?.value ?? ""}\u0001${this.form.isRequired ? 1 : 0}\u0001${
-      this.form.isInvalid ? 1 : 0
-    }\u0001${element?.validity.valid ? 1 : 0}\u0001${element?.validationMessage ?? ""}`;
   }
 
   private readonly handleInput = (event: Event): void => {

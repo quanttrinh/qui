@@ -22,13 +22,6 @@ export interface InputValidityKeyOptions {
   readonly focused: boolean;
 }
 
-export interface InputFormSignatureOptions {
-  readonly element?: HTMLInputElement;
-  readonly required: boolean;
-  readonly invalid: boolean;
-  readonly validity: FormValidity;
-}
-
 function nativeValidityKey(element?: HTMLInputElement): string {
   const native = element?.validity;
   if (native === undefined) {
@@ -78,14 +71,6 @@ export function resolveInputValidityKey({
     String(numberConstraints?.step ?? ""),
     focused ? "focused" : "blurred",
   ].join("\u0000");
-}
-
-function activeFlags(validity: FormValidity): string {
-  return Object.entries(validity.flags)
-    .filter(([, value]) => value === true)
-    .map(([flag]) => flag)
-    .toSorted()
-    .join(",");
 }
 
 function mergeNumberFlags(
@@ -144,14 +129,4 @@ export function resolveInputValidity({
     message: number?.message ?? element.validationMessage,
     element,
   };
-}
-
-/** Builds the cached signature used by `FormController`. */
-export function resolveInputFormSignature({
-  element,
-  required,
-  invalid,
-  validity,
-}: InputFormSignatureOptions): string {
-  return `${element?.value ?? ""}\u0001${required ? 1 : 0}\u0001${invalid ? 1 : 0}\u0001${activeFlags(validity)}\u0001${validity.message ?? ""}`;
 }
