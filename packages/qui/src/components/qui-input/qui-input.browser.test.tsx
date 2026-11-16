@@ -282,4 +282,23 @@ describe("qui-input form integration", () => {
     expect(host.getAttribute("name")).toBe("backupEmail");
     expect(new FormData(form).get("backupEmail")).toBe("test@example.com");
   });
+
+  it("focuses the native input when required by a wrapping qui-field", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-field required>
+          <qui-input name="email" />
+        </qui-field>
+      </form>,
+    );
+    await waitForChanges();
+
+    const form = resolveForm(root);
+    const host = resolveHost<HTMLQuiInputElement>(root, "qui-input");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(host.matches(":invalid")).toBe(true);
+    expect(form.reportValidity()).toBe(false);
+    expectFocusedDeep(input);
+  });
 });

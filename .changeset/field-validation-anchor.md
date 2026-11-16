@@ -4,5 +4,6 @@
 
 Keep field-required controls focusable when native validation runs.
 
-- Apply form value and validity on every form sync instead of caching a string signature, so late validation anchors and native validity changes are always reflected.
-- Cover a checkbox whose `required` state comes from a wrapping `qui-field`.
+- Compare the form state actually applied to `ElementInternals` instead of caching a string signature, so late validation anchors and native validity changes are always reflected.
+- Remove the internal `FormControllerOptions.getSignature` hook. It was not exported from the package entry point.
+- Cover field-required checkbox and input controls whose validity anchor appears after the first sync.

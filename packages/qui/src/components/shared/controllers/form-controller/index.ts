@@ -67,6 +67,52 @@ function formValue(
   return data;
 }
 
+function sameFormValue(
+  previous: string | File | FormData | null,
+  next: string | File | FormData | null,
+): boolean {
+  if (previous === next) {
+    return true;
+  }
+  if (!(previous instanceof FormData) || !(next instanceof FormData)) {
+    return false;
+  }
+  const previousEntries = [...previous.entries()];
+  const nextEntries = [...next.entries()];
+  return (
+    previousEntries.length === nextEntries.length &&
+    previousEntries.every(
+      ([key, value], index) =>
+        key === nextEntries[index]?.[0] && Object.is(value, nextEntries[index]?.[1]),
+    )
+  );
+}
+
+const VALIDITY_FLAG_KEYS: readonly (keyof ValidityStateFlags)[] = [
+  "badInput",
+  "customError",
+  "patternMismatch",
+  "rangeOverflow",
+  "rangeUnderflow",
+  "stepMismatch",
+  "tooLong",
+  "tooShort",
+  "typeMismatch",
+  "valueMissing",
+];
+
+function sameFlags(previous: ValidityStateFlags, next: ValidityStateFlags): boolean {
+  return VALIDITY_FLAG_KEYS.every((key) => previous[key] === next[key]);
+}
+
+interface AppliedFormState {
+  value: string | File | FormData | null;
+  state: string;
+  flags: ValidityStateFlags;
+  message?: string | undefined;
+  element?: HTMLElement | undefined;
+}
+
 /**
  * Form/field behaviour shared by every form-associated control: `qui-field`
  * integration, form value, validity, reset, and state restoration.
@@ -80,6 +126,7 @@ export class FormController extends ReactiveControllerBase {
   private unsubscribe?: () => void;
   private stopListening?: () => void;
   private formDisabled = false;
+  private applied?: AppliedFormState;
 
   constructor(host: ReactiveControllerHost, options: FormControllerOptions) {
     super(host);
@@ -140,15 +187,38 @@ export class FormController extends ReactiveControllerBase {
     if (Build.isServer) {
       return;
     }
-    const internals = this.options.getInternals();
     const value = this.isDisabled
       ? clearedFormValue()
       : (this.options.getFormValue?.() ??
         formValue(this.options.getName(), this.options.getMultiple(), this.options.getValue()));
-    internals.setFormValue(value, JSON.stringify(this.options.getValue()));
+    const state = JSON.stringify(this.options.getValue());
     const validity = this.isDisabled
       ? { flags: {} }
       : (this.options.getValidity?.() ?? this.validity());
+
+    // Compare the data actually written, not a hand-built signature.
+    // Anchors are compared too because one can appear after the first sync.
+    // This happens when a field context attaches and the element renders.
+    if (
+      this.applied !== undefined &&
+      sameFormValue(this.applied.value, value) &&
+      this.applied.state === state &&
+      sameFlags(this.applied.flags, validity.flags) &&
+      this.applied.message === validity.message &&
+      this.applied.element === validity.element
+    ) {
+      return;
+    }
+
+    this.applied = {
+      value,
+      state,
+      flags: validity.flags,
+      message: validity.message,
+      element: validity.element,
+    };
+    const internals = this.options.getInternals();
+    internals.setFormValue(value, state);
     internals.setValidity(validity.flags, validity.message, validity.element);
   }
 

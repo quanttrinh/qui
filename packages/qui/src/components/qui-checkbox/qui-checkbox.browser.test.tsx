@@ -161,7 +161,7 @@ describe("qui-checkbox", () => {
   });
 });
 
-describe("qui-checkbox validation and interaction", () => {
+describe("qui-checkbox interaction and validation", () => {
   it("focuses the native input from constraint validation", async () => {
     const { root, waitForChanges } = await render(
       <form>
@@ -214,6 +214,8 @@ describe("qui-checkbox validation and interaction", () => {
     const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
     const input = queryControl<HTMLInputElement>(host, "input");
 
+    expect(input).toHaveAttribute("aria-required", "true");
+    expect(host.matches(":invalid")).toBe(true);
     expect(form.reportValidity()).toBe(false);
     expectFocusedDeep(input);
   });
