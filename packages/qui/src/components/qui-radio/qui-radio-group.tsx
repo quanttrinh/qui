@@ -110,37 +110,27 @@ export class QuiRadioGroup extends Mixin(
     },
   });
   protected readonly form = new FormController(this, {
-    getInternals: (): ElementInternals => this.internals,
-    getName: (): string | undefined => this.name,
-    getMultiple: (): boolean => false,
-    getValue: (): readonly string[] => {
+    internals: (): ElementInternals => this.internals,
+    state: () => {
       const { value } = this.controller;
-      if (value) {
-        return [value];
-      }
-      return [];
+      return {
+        name: this.name,
+        multiple: false,
+        values: value === undefined ? [] : [value],
+        validationElement: this.validationElement(),
+      };
     },
-    getDisabled: (): boolean => this.disabled,
-    getReadOnly: (): boolean => this.readOnly,
-    getRequired: (): boolean => this.required,
-    getInvalid: (): boolean => this.invalid,
-    getValidationElement: (): HTMLElement | undefined => this.validationElement(),
-    getFormValue: (): string | null => {
-      const { value } = this.controller;
-      if (value) {
-        return value;
-      }
-      return null;
-    },
-    getValidity: (): FormValidity => this.validity(),
-    getSignature: (): string => this.signature(),
+    validity: ({ required, invalid }) => this.validity(required, invalid),
+    disabled: (): boolean => this.disabled,
+    readOnly: (): boolean => this.readOnly,
+    required: (): boolean => this.required,
+    invalid: (): boolean => this.invalid,
     onReset: (): void => {
       this.value = this.controller.initialValue;
       this.controller.reset();
     },
-    onRestore: (values: string[]): void => {
-      const restored = values.at(0);
-      const value = restored === "" ? undefined : restored;
+    onRestore: (values): void => {
+      const value = values.at(0);
       this.value = value;
       this.controller.restore(value);
     },
@@ -294,18 +284,18 @@ export class QuiRadioGroup extends Mixin(
     };
   }
 
-  private validity(): FormValidity {
-    if (this.form.isRequired && this.controller.value === undefined) {
-      return {
-        flags: { valueMissing: true },
-        message: "Please select an option.",
-        element: this.validationElement(),
-      };
-    }
-    if (this.form.isInvalid) {
+  private validity(required: boolean, invalid: boolean): FormValidity {
+    if (invalid) {
       return {
         flags: { customError: true },
         message: "Invalid value",
+        element: this.validationElement(),
+      };
+    }
+    if (required && this.controller.value === undefined) {
+      return {
+        flags: { valueMissing: true },
+        message: "Please select an option.",
         element: this.validationElement(),
       };
     }
@@ -315,14 +305,6 @@ export class QuiRadioGroup extends Mixin(
   /** Anchor validation on a focusable radio so `reportValidity()` can focus it. */
   private validationElement(): HTMLElement | undefined {
     return this.controller.validationInput() ?? this.rootEl;
-  }
-
-  private signature(): string {
-    return `${this.name ?? ""}\u0001${this.controller.value ?? ""}\u0001${
-      this.validationElement()?.id ?? ""
-    }\u0001${this.form.isRequired ? 1 : 0}\u0001${this.form.isInvalid ? 1 : 0}\u0001${
-      this.form.isDisabled ? 1 : 0
-    }`;
   }
 
   render(): VNode {

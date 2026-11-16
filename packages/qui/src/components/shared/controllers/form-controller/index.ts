@@ -1,5 +1,6 @@
 import { Build } from "@stencil/core";
 
+import { shallowEqual } from "../../helpers/equality";
 import { fieldContext, type FieldApi } from "../../helpers/field/context";
 import { type FieldControlHandle } from "../../helpers/field/registry";
 import { ReactiveControllerBase, type ReactiveControllerHost } from "../reactive-controller";
@@ -10,31 +11,39 @@ export interface FormValidity {
   element?: HTMLElement;
 }
 
+/** The current form value and its focusable validation anchor. */
+export interface FormState {
+  name: string | undefined;
+  multiple: boolean;
+  values: readonly string[];
+  validationElement?: HTMLElement | undefined;
+}
+
+/** Field-resolved control state passed to custom validity builders. */
+export interface ResolvedFormState {
+  required: boolean;
+  invalid: boolean;
+}
+
 export interface FormControllerOptions {
-  getInternals: () => ElementInternals;
-  getName: () => string | undefined;
-  getMultiple: () => boolean;
-  getValue: () => readonly string[];
-  getDisabled: () => boolean;
-  getReadOnly: () => boolean;
-  getRequired: () => boolean;
-  getInvalid: () => boolean;
-  /** Validation anchor; must be focusable so `reportValidity()` can focus it. */
-  getValidationElement: () => HTMLElement | undefined;
+  internals: () => ElementInternals;
+  /** Current value and validation anchor. */
+  state: () => FormState;
+  /** Resolved field flags for custom validity builders. */
+  validity?: (state: ResolvedFormState, form: FormState) => FormValidity;
+  disabled: () => boolean;
+  readOnly: () => boolean;
+  required: () => boolean;
+  invalid: () => boolean;
   /** Resets the component-owned value state. */
   onReset: () => void;
   /** Applies values restored from form state. */
-  onRestore: (values: string[]) => void;
+  onRestore: (values: readonly string[]) => void;
   /** Called when field/disabled state changes, e.g. to refresh machine props. */
   onChange?: () => void;
-  /** Overrides the default string/FormData value for the form. */
-  getFormValue?: () => string | File | FormData | null;
-  /** Overrides the default required/invalid validity rules. */
-  getValidity?: () => FormValidity;
-  /** Overrides the default value/name/multiple signature. */
-  getSignature?: () => string;
 }
 
+/** Reads the JSON values array written by `setFormValue()`. */
 function parseRestoredValues(state: string | File | FormData | null): string[] | undefined {
   if (typeof state !== "string") {
     return undefined;
@@ -47,46 +56,35 @@ function parseRestoredValues(state: string | File | FormData | null): string[] |
   }
 }
 
-/** `ElementInternals.setFormValue()` uses null to clear the value. */
-function clearedFormValue(): string | File | FormData | null {
-  return null;
-}
-
-function formValue(
-  name: string | undefined,
-  multiple: boolean,
-  values: readonly string[],
-): string | FormData {
-  if (!multiple) {
-    return values[0] ?? "";
+function resolveFormValue(state: FormState): string | FormData | null {
+  if (!state.multiple) {
+    return state.values.length === 0 ? null : (state.values[0] ?? null);
   }
   const data = new FormData();
-  if (name !== undefined) {
-    for (const value of values) {
-      data.append(name, value);
+  if (state.name !== undefined) {
+    for (const value of state.values) {
+      data.append(state.name, value);
     }
   }
   return data;
 }
 
-interface FormSignatureOptions {
-  name: string | undefined;
-  multiple: boolean;
-  disabled: boolean;
-  required: boolean;
-  invalid: boolean;
-  values: readonly string[];
-}
-
-function formSignature({
-  name,
-  multiple,
-  disabled,
-  required,
-  invalid,
-  values,
-}: FormSignatureOptions): string {
-  return `${name ?? ""}\u0001${multiple}\u0001${disabled}\u0001${required}\u0001${invalid}\u0001${values.join("\u0000")}`;
+function defaultValidity(state: ResolvedFormState, form: FormState): FormValidity {
+  if (state.invalid) {
+    return {
+      flags: { customError: true },
+      message: "Invalid value",
+      element: form.validationElement,
+    };
+  }
+  if (state.required && form.values.length === 0) {
+    return {
+      flags: { valueMissing: true },
+      message: "Please select an option.",
+      element: form.validationElement,
+    };
+  }
+  return { flags: {} };
 }
 
 /**
@@ -102,7 +100,7 @@ export class FormController extends ReactiveControllerBase {
   private unsubscribe?: () => void;
   private stopListening?: () => void;
   private formDisabled = false;
-  private signature = "";
+  private appliedValueKey?: readonly (string | boolean | undefined)[];
 
   constructor(host: ReactiveControllerHost, options: FormControllerOptions) {
     super(host);
@@ -114,19 +112,19 @@ export class FormController extends ReactiveControllerBase {
   }
 
   get isDisabled(): boolean {
-    return this.formDisabled || (this.field?.disabled() ?? this.options.getDisabled());
+    return this.formDisabled || (this.field?.disabled() ?? this.options.disabled());
   }
 
   get isReadOnly(): boolean {
-    return this.field?.readOnly() ?? this.options.getReadOnly();
+    return this.field?.readOnly() ?? this.options.readOnly();
   }
 
   get isRequired(): boolean {
-    return this.field?.required() ?? this.options.getRequired();
+    return this.field?.required() ?? this.options.required();
   }
 
   get isInvalid(): boolean {
-    return this.field?.invalid() ?? this.options.getInvalid();
+    return this.field?.invalid() ?? this.options.invalid();
   }
 
   /**
@@ -146,7 +144,6 @@ export class FormController extends ReactiveControllerBase {
   }
 
   reset(): void {
-    this.signature = "";
     this.options.onReset();
     this.sync();
   }
@@ -156,7 +153,6 @@ export class FormController extends ReactiveControllerBase {
     if (values === undefined) {
       return;
     }
-    this.signature = "";
     this.options.onRestore(values);
     this.sync();
   }
@@ -165,25 +161,28 @@ export class FormController extends ReactiveControllerBase {
     if (Build.isServer) {
       return;
     }
-    // Always include controller-owned state.
-    // Components with a custom signature for native validity still need
-    // Disabled/read-only changes to invalidate the cached form value.
-    const signature = `${this.options.getSignature?.() ?? this.signatureFor()}\u0001${
-      this.isDisabled ? 1 : 0
-    }\u0001${this.isReadOnly ? 1 : 0}\u0001${this.isRequired ? 1 : 0}\u0001${this.isInvalid ? 1 : 0}`;
-    if (signature === this.signature) {
-      return;
+    const disabled = this.isDisabled;
+    const resolved: ResolvedFormState = {
+      required: this.isRequired,
+      invalid: this.isInvalid,
+    };
+    const form = this.options.state();
+    const valueKey = [disabled, form.name, form.multiple, ...form.values] as const;
+    const internals = this.options.internals();
+
+    if (!shallowEqual(this.appliedValueKey, valueKey)) {
+      const value = disabled ? null : resolveFormValue(form);
+      // Restore state is JSON so empty and missing values stay distinct.
+      // This matters for empty inputs and unchecked checkboxes.
+      internals.setFormValue(value, JSON.stringify(form.values));
+      this.appliedValueKey = valueKey;
     }
-    this.signature = signature;
-    const internals = this.options.getInternals();
-    const value = this.isDisabled
-      ? clearedFormValue()
-      : (this.options.getFormValue?.() ??
-        formValue(this.options.getName(), this.options.getMultiple(), this.options.getValue()));
-    internals.setFormValue(value, JSON.stringify(this.options.getValue()));
-    const validity = this.isDisabled
+
+    // Validity writes are cheap and idempotent, so apply them on every sync.
+    // This keeps late validation anchors and native validity current.
+    const validity = disabled
       ? { flags: {} }
-      : (this.options.getValidity?.() ?? this.validity());
+      : (this.options.validity?.(resolved, form) ?? defaultValidity(resolved, form));
     internals.setValidity(validity.flags, validity.message, validity.element);
   }
 
@@ -237,11 +236,9 @@ export class FormController extends ReactiveControllerBase {
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     this.field = field;
-    this.signature = "";
     this.registerControl();
     if (field !== undefined) {
       this.unsubscribe = field.subscribe(() => {
-        this.signature = "";
         this.options.onChange?.();
         this.requestUpdate();
         this.sync();
@@ -257,38 +254,5 @@ export class FormController extends ReactiveControllerBase {
     if (this.field !== undefined && this.control !== undefined) {
       this.unregisterControl = this.field.registerControl(this.control);
     }
-  }
-
-  private signatureFor(): string {
-    return formSignature({
-      name: this.options.getName(),
-      multiple: this.options.getMultiple(),
-      disabled: this.isDisabled,
-      required: this.isRequired,
-      invalid: this.isInvalid,
-      values: this.options.getValue(),
-    });
-  }
-
-  private validity(): FormValidity {
-    if (this.isDisabled) {
-      return { flags: {} };
-    }
-    const values = this.options.getValue();
-    if (this.isRequired && values.length === 0) {
-      return {
-        flags: { valueMissing: true },
-        message: "Please select an option.",
-        element: this.options.getValidationElement(),
-      };
-    }
-    if (this.isInvalid) {
-      return {
-        flags: { customError: true },
-        message: "Invalid value",
-        element: this.options.getValidationElement(),
-      };
-    }
-    return { flags: {} };
   }
 }

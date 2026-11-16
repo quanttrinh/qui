@@ -99,6 +99,40 @@ describe("qui-switch", () => {
     expectFocusedDeep(input);
   });
 
+  it("focuses the native input when required by a wrapping qui-field", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-field required>
+          <qui-switch name="consent">Enable</qui-switch>
+        </qui-field>
+      </form>,
+    );
+    await waitForChanges();
+
+    const form = resolveForm(root);
+    const host = resolveHost<HTMLQuiSwitchElement>(root, "qui-switch");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(host.matches(":invalid")).toBe(true);
+    expect(form.reportValidity()).toBe(false);
+    expectFocusedDeep(input);
+  });
+
+  it("restores checked state from form state", async () => {
+    const { root, waitForChanges } = await render(<qui-switch value="on">Enable</qui-switch>);
+    const host = resolveHost<HTMLQuiSwitchElement>(root, "qui-switch");
+    const input = queryControl<HTMLInputElement>(host, "input");
+    const restore = Reflect.get(host, "formStateRestoreCallback") as (state: string) => void;
+
+    restore.call(host, JSON.stringify(["on"]));
+    await waitForChanges();
+    expect(input.checked).toBe(true);
+
+    restore.call(host, JSON.stringify([]));
+    await waitForChanges();
+    expect(input.checked).toBe(false);
+  });
+
   it("focuses the internal native input", async () => {
     const { root, waitForChanges } = await render(<qui-switch>Enable</qui-switch>);
     const host = resolveHost<HTMLQuiSwitchElement>(root, "qui-switch");

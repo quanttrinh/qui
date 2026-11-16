@@ -3,6 +3,7 @@ import { userEvent } from "vitest/browser";
 
 import {
   queryControl,
+  queryHost,
   queryPartIn,
   resolveForm,
   resolveHost,
@@ -159,7 +160,9 @@ describe("qui-checkbox", () => {
     expect(spy).toHaveReceivedEventDetail({ checked: true });
     expect(queryPartIn(host, "root")).toHaveAttribute("data-state", "indeterminate");
   });
+});
 
+describe("qui-checkbox interaction and validation", () => {
   it("focuses the native input from constraint validation", async () => {
     const { root, waitForChanges } = await render(
       <form>
@@ -196,6 +199,74 @@ describe("qui-checkbox", () => {
     expect(input.checked).toBe(true);
 
     await userEvent.unhover(control);
+  });
+
+  it("focuses the native input when required by a wrapping qui-field", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-field required>
+          <qui-checkbox name="consent">Check me</qui-checkbox>
+        </qui-field>
+      </form>,
+    );
+    await waitForChanges();
+
+    const form = resolveForm(root);
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(input).toHaveAttribute("aria-required", "true");
+    expect(host.matches(":invalid")).toBe(true);
+    expect(form.reportValidity()).toBe(false);
+    expectFocusedDeep(input);
+  });
+
+  it("clears validity when the field requirement is removed or disabled", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-field required>
+          <qui-checkbox name="consent">Check me</qui-checkbox>
+        </qui-field>
+      </form>,
+    );
+    await waitForChanges();
+
+    const form = resolveForm(root);
+    const field = queryHost<HTMLQuiFieldElement>(root, "qui-field");
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+
+    expect(host.matches(":invalid")).toBe(true);
+
+    field.required = false;
+    await waitForChanges();
+
+    expect(host.matches(":invalid")).toBe(false);
+    expect(form.reportValidity()).toBe(true);
+
+    field.required = true;
+    await waitForChanges();
+    expect(host.matches(":invalid")).toBe(true);
+
+    host.setAttribute("disabled", "");
+    await waitForChanges();
+
+    expect(host.matches(":invalid")).toBe(false);
+    expect(form.reportValidity()).toBe(true);
+  });
+
+  it("restores checked state from form state", async () => {
+    const { root, waitForChanges } = await render(<qui-checkbox value="on">Check me</qui-checkbox>);
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+    const input = queryControl<HTMLInputElement>(host, "input");
+    const restore = Reflect.get(host, "formStateRestoreCallback") as (state: string) => void;
+
+    restore.call(host, JSON.stringify([]));
+    await waitForChanges();
+    expect(input.checked).toBe(false);
+
+    restore.call(host, JSON.stringify(["on"]));
+    await waitForChanges();
+    expect(input.checked).toBe(true);
   });
 
   it("focuses the internal native input", async () => {

@@ -36,7 +36,13 @@ export {
   type MoveIndexOptions,
   type TriggerRegistration,
 } from "./roving-focus";
-export { FormController, type FormControllerOptions, type FormValidity } from "./form-controller";
+export {
+  FormController,
+  type FormControllerOptions,
+  type FormState,
+  type FormValidity,
+  type ResolvedFormState,
+} from "./form-controller";
 export { ListWindowController } from "./list-window-controller";
 export {
   OptionListNavigationController,

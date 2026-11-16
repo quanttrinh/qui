@@ -152,15 +152,17 @@ export class QuiCombobox extends Mixin(
   private readonly listId = `${this.generatedId}-listbox`;
   private readonly fieldControl = createFieldControl(() => this.inputEl);
   protected readonly form = new FormController(this, {
-    getInternals: (): ElementInternals => this.internals,
-    getName: (): string | undefined => this.name,
-    getMultiple: (): boolean => this.multiple,
-    getValue: (): string[] => this.selection.selected,
-    getDisabled: (): boolean => this.disabled,
-    getReadOnly: (): boolean => this.readOnly,
-    getRequired: (): boolean => this.required,
-    getInvalid: (): boolean => this.invalid,
-    getValidationElement: (): HTMLElement | undefined => this.inputEl,
+    internals: (): ElementInternals => this.internals,
+    state: () => ({
+      name: this.name,
+      multiple: this.multiple,
+      values: this.selection.selected,
+      validationElement: this.inputEl,
+    }),
+    disabled: (): boolean => this.disabled,
+    readOnly: (): boolean => this.readOnly,
+    required: (): boolean => this.required,
+    invalid: (): boolean => this.invalid,
     onReset: (): void => {
       this.selection.reset();
       this.navigation.closeMenu("reset");
@@ -169,8 +171,9 @@ export class QuiCombobox extends Mixin(
         displayValueFor(this.source.items, this.selection.selected, this.multiple),
       );
     },
-    onRestore: (values: string[]): void => {
-      this.selection.restore(values);
+    onRestore: (values): void => {
+      // Selection state owns a mutable array.
+      this.selection.restore([...values]);
       this.input.setTextSilently(
         displayValueFor(this.source.items, this.selection.selected, this.multiple),
       );

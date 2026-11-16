@@ -150,24 +150,25 @@ export class QuiCheckbox extends Mixin(ShadowStylesMixin, ControllerHostMixin, F
     },
   });
   protected readonly form = new FormController(this, {
-    getInternals: (): ElementInternals => this.internals,
-    getName: (): string | undefined => this.name,
-    getMultiple: (): boolean => false,
-    getValue: (): readonly string[] => (this.checkable.isChecked ? [this.value ?? "on"] : []),
-    getDisabled: (): boolean => this.disabled,
-    getReadOnly: (): boolean => this.readOnly,
-    getRequired: (): boolean => this.required,
-    getInvalid: (): boolean => this.invalid,
-    getValidationElement: (): HTMLElement | undefined => this.inputEl,
-    getFormValue: (): string | null => (this.checkable.isChecked ? (this.value ?? "on") : null),
-    getValidity: (): FormValidity => this.validity(),
-    getSignature: (): string => this.signature(),
+    internals: (): ElementInternals => this.internals,
+    state: () => ({
+      name: this.name,
+      multiple: false,
+      values: this.checkable.isChecked ? [this.value ?? "on"] : [],
+      validationElement: this.inputEl,
+    }),
+    validity: ({ required, invalid }) => this.validity(required, invalid),
+    disabled: (): boolean => this.disabled,
+    readOnly: (): boolean => this.readOnly,
+    required: (): boolean => this.required,
+    invalid: (): boolean => this.invalid,
     onReset: (): void => {
       this.checked = this.checkable.initialChecked;
       this.checkable.reset();
     },
-    onRestore: (values: string[]): void => {
-      const checked = this.checkable.normalize(values.at(0)) ?? false;
+    onRestore: (values): void => {
+      // Restore state is the controller's values array.
+      const checked = values.includes(this.value ?? "on");
       this.checked = checked;
       this.checkable.restore(checked);
     },
@@ -253,28 +254,22 @@ export class QuiCheckbox extends Mixin(ShadowStylesMixin, ControllerHostMixin, F
     return props;
   }
 
-  private validity(): FormValidity {
-    if (this.form.isRequired && !this.checkable.isChecked) {
-      return {
-        flags: { valueMissing: true },
-        message: "Please check this box if you want to proceed.",
-        element: this.inputEl,
-      };
-    }
-    if (this.form.isInvalid) {
+  private validity(required: boolean, invalid: boolean): FormValidity {
+    if (invalid) {
       return {
         flags: { customError: true },
         message: "Invalid value",
         element: this.inputEl,
       };
     }
+    if (required && !this.checkable.isChecked) {
+      return {
+        flags: { valueMissing: true },
+        message: "Please check this box if you want to proceed.",
+        element: this.inputEl,
+      };
+    }
     return { flags: {} };
-  }
-
-  private signature(): string {
-    return `${this.name ?? ""}\u0001${this.checkable.isChecked ? 1 : 0}\u0001${
-      this.value ?? ""
-    }\u0001${this.form.isRequired ? 1 : 0}\u0001${this.form.isInvalid ? 1 : 0}`;
   }
 
   render(): VNode {

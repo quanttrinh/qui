@@ -38,6 +38,22 @@ describe("qui-combobox", () => {
     await expect(host.getValue()).resolves.toEqual(["account-2"]);
   });
 
+  it("restores form state and clears an empty selection", async () => {
+    const { root, waitForChanges } = await render(<qui-combobox items={accounts} />);
+    const host = resolveHost<HTMLQuiComboboxElement>(root, "qui-combobox");
+    const input = queryPartIn<HTMLInputElement>(root, "input");
+    const restore = Reflect.get(host, "formStateRestoreCallback") as (state: string) => void;
+
+    restore.call(host, JSON.stringify(["account-2"]));
+    await waitForChanges();
+    await expect(host.getValue()).resolves.toEqual(["account-2"]);
+    expect(input.value).toBe("Account Two");
+
+    restore.call(host, JSON.stringify([]));
+    await waitForChanges();
+    await expect(host.getValue()).resolves.toEqual([]);
+  });
+
   it("reflects its form name and submits selected values", async () => {
     const { root, waitForChanges } = await render(
       <form>

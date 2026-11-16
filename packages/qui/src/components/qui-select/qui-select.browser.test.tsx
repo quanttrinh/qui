@@ -42,6 +42,40 @@ describe("qui-select", () => {
     await expect(host.getValue()).resolves.toEqual(["account-2"]);
   });
 
+  it("restores form state and clears an empty selection", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-select name="account" items={accounts} />
+      </form>,
+    );
+    const form = resolveForm(root);
+    const host = resolveHost<HTMLQuiSelectElement>(root, "qui-select");
+    const restore = Reflect.get(host, "formStateRestoreCallback") as (state: string) => void;
+
+    restore.call(host, JSON.stringify(["account-2"]));
+    await waitForChanges();
+    await expect(host.getValue()).resolves.toEqual(["account-2"]);
+
+    restore.call(host, JSON.stringify([]));
+    await waitForChanges();
+    await expect(host.getValue()).resolves.toEqual([]);
+    expect(new FormData(form).has("account")).toBe(false);
+  });
+
+  it("restores multiple selections", async () => {
+    const { root, waitForChanges } = await render(<qui-select multiple items={accounts} />);
+    const host = resolveHost<HTMLQuiSelectElement>(root, "qui-select");
+    const restore = Reflect.get(host, "formStateRestoreCallback") as (state: string) => void;
+
+    restore.call(host, JSON.stringify(["account-1", "account-3"]));
+    await waitForChanges();
+    await expect(host.getValue()).resolves.toEqual(["account-1", "account-3"]);
+
+    restore.call(host, JSON.stringify([]));
+    await waitForChanges();
+    await expect(host.getValue()).resolves.toEqual([]);
+  });
+
   it("reflects its form name and submits selected values", async () => {
     const { root, waitForChanges } = await render(
       <form>

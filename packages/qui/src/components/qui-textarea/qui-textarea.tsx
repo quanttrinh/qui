@@ -110,26 +110,26 @@ export class QuiTextarea extends Mixin(ShadowStylesMixin, ControllerHostMixin, F
   private readonly counterId = nextId("qui-textarea-counter");
   private readonly fieldControl = createFieldControl(() => this.textareaEl);
   protected readonly form = new FormController(this, {
-    getInternals: (): ElementInternals => this.internals,
-    getName: (): string | undefined => this.name,
-    getMultiple: (): boolean => false,
-    getValue: (): readonly string[] => {
+    internals: (): ElementInternals => this.internals,
+    state: () => {
       const value = this.textareaEl?.value;
-      return value === undefined ? [] : [value];
+      return {
+        name: this.name,
+        multiple: false,
+        values: value === undefined ? [] : [value],
+        validationElement: this.textareaEl,
+      };
     },
-    getDisabled: (): boolean => this.disabled,
-    getReadOnly: (): boolean => this.readOnly,
-    getRequired: (): boolean => this.required,
-    getInvalid: (): boolean => this.invalid,
-    getValidationElement: (): HTMLElement | undefined => this.textareaEl,
-    getFormValue: (): string => this.textareaEl?.value ?? "",
-    getValidity: (): FormValidity => this.validity(),
-    getSignature: (): string => this.formSignature(),
+    validity: ({ required, invalid }) => this.validity(required, invalid),
+    disabled: (): boolean => this.disabled,
+    readOnly: (): boolean => this.readOnly,
+    required: (): boolean => this.required,
+    invalid: (): boolean => this.invalid,
     onReset: (): void => {
       this.value = this.initialValue;
       this.applyValue(this.initialValue);
     },
-    onRestore: (values: string[]): void => {
+    onRestore: (values): void => {
       const value = values.at(0) ?? "";
       this.value = value;
       this.applyValue(value);
@@ -266,15 +266,15 @@ export class QuiTextarea extends Mixin(ShadowStylesMixin, ControllerHostMixin, F
     this.scheduleAutoResize();
   }
 
-  private validity(): FormValidity {
+  private validity(required: boolean, invalid: boolean): FormValidity {
     const element = this.textareaEl;
     if (element === undefined) {
       return { flags: {} };
     }
-    if (this.form.isInvalid) {
+    if (invalid) {
       return { flags: { customError: true }, message: "Invalid value", element };
     }
-    if (this.form.isRequired && element.value === "") {
+    if (required && element.value === "") {
       return {
         flags: { valueMissing: true },
         message: "Please fill out this field.",
@@ -301,13 +301,6 @@ export class QuiTextarea extends Mixin(ShadowStylesMixin, ControllerHostMixin, F
       message: element.validationMessage,
       element,
     };
-  }
-
-  private formSignature(): string {
-    const element = this.textareaEl;
-    return `${element?.value ?? ""}\u0001${this.form.isRequired ? 1 : 0}\u0001${
-      this.form.isInvalid ? 1 : 0
-    }\u0001${element?.validity.valid ? 1 : 0}\u0001${element?.validationMessage ?? ""}`;
   }
 
   private readonly handleInput = (event: Event): void => {

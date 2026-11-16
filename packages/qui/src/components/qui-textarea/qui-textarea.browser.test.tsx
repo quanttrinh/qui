@@ -1,6 +1,11 @@
 import { describe, expect, h, it, render } from "@stencil/vitest";
 
-import { queryControl, queryPartIn, resolveHost } from "../../../tests/test-utils/component";
+import {
+  queryControl,
+  queryPartIn,
+  resolveForm,
+  resolveHost,
+} from "../../../tests/test-utils/component";
 import { nextFrame, waitForShadowStyles } from "../../../tests/test-utils/dom-ready";
 import { expectFocusedDeep, typeInto } from "../../../tests/test-utils/interactions";
 import { deepQuery, queryInside } from "../../../tests/test-utils/shadow";
@@ -200,6 +205,27 @@ describe("qui-textarea", () => {
 
     expect(textarea.disabled).toBe(true);
     expect(textarea.readOnly).toBe(true);
+  });
+});
+
+describe("qui-textarea form integration", () => {
+  it("focuses the native textarea when required by a wrapping qui-field", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-field required>
+          <qui-textarea name="notes" />
+        </qui-field>
+      </form>,
+    );
+    await waitForChanges();
+
+    const form = resolveForm(root);
+    const host = resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea");
+    const textarea = queryControl<HTMLTextAreaElement>(host, "textarea");
+
+    expect(host.matches(":invalid")).toBe(true);
+    expect(form.reportValidity()).toBe(false);
+    expectFocusedDeep(textarea);
   });
 });
 
