@@ -35,10 +35,10 @@ export interface FormControllerOptions {
   state: () => FormState;
   /** Resolved field flags for custom validity builders. */
   validity?: (state: ResolvedFormState, form: FormState) => FormValidity;
-  getDisabled: () => boolean;
-  getReadOnly: () => boolean;
-  getRequired: () => boolean;
-  getInvalid: () => boolean;
+  disabled: () => boolean;
+  readOnly: () => boolean;
+  required: () => boolean;
+  invalid: () => boolean;
   /** Resets the component-owned value state. */
   onReset: () => void;
   /** Applies values restored from form state. */
@@ -122,19 +122,19 @@ export class FormController extends ReactiveControllerBase {
   }
 
   get isDisabled(): boolean {
-    return this.formDisabled || (this.field?.disabled() ?? this.options.getDisabled());
+    return this.formDisabled || (this.field?.disabled() ?? this.options.disabled());
   }
 
   get isReadOnly(): boolean {
-    return this.field?.readOnly() ?? this.options.getReadOnly();
+    return this.field?.readOnly() ?? this.options.readOnly();
   }
 
   get isRequired(): boolean {
-    return this.field?.required() ?? this.options.getRequired();
+    return this.field?.required() ?? this.options.required();
   }
 
   get isInvalid(): boolean {
-    return this.field?.invalid() ?? this.options.getInvalid();
+    return this.field?.invalid() ?? this.options.invalid();
   }
 
   /**

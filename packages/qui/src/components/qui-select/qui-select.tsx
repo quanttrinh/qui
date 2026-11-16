@@ -120,10 +120,10 @@ export class QuiSelect extends Mixin(
       values: this.selection.selected,
       validationElement: this.triggerEl,
     }),
-    getDisabled: (): boolean => this.disabled,
-    getReadOnly: (): boolean => this.readOnly,
-    getRequired: (): boolean => this.required,
-    getInvalid: (): boolean => this.invalid,
+    disabled: (): boolean => this.disabled,
+    readOnly: (): boolean => this.readOnly,
+    required: (): boolean => this.required,
+    invalid: (): boolean => this.invalid,
     onReset: (): void => {
       this.selection.reset();
       this.navigation.closeMenu("reset");

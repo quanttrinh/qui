@@ -49,10 +49,10 @@ function createController(host: FakeElement): FormController {
   const controller = new FormController(createTestControllerHost(host as unknown as HTMLElement), {
     internals: () => internals,
     state: () => ({ name: "test", multiple: false, values: [] }),
-    getDisabled: () => false,
-    getReadOnly: () => false,
-    getRequired: () => false,
-    getInvalid: () => false,
+    disabled: () => false,
+    readOnly: () => false,
+    required: () => false,
+    invalid: () => false,
     onReset: (): void => undefined,
     onRestore: (): void => undefined,
   });
