@@ -1,5 +1,6 @@
 import { Build } from "@stencil/core";
 
+import { shallowEqual } from "../../helpers/equality";
 import { fieldContext, type FieldApi } from "../../helpers/field/context";
 import { type FieldControlHandle } from "../../helpers/field/registry";
 import { ReactiveControllerBase, type ReactiveControllerHost } from "../reactive-controller";
@@ -27,7 +28,11 @@ export interface FormControllerOptions {
   onRestore: (values: string[]) => void;
   /** Called when field/disabled state changes, e.g. to refresh machine props. */
   onChange?: () => void;
-  /** Overrides the default string/FormData value for the form. */
+  /**
+   * Overrides the default string/FormData value for the form.
+   * Must derive from name, multiple, disabled, and getValue so the
+   * shallow value guard stays accurate.
+   */
   getFormValue?: () => string | File | FormData | null;
   /** Overrides the default required/invalid validity rules. */
   getValidity?: () => FormValidity;
@@ -67,30 +72,6 @@ function formValue(
   return data;
 }
 
-// FormData needs entry comparison for opt-in multi-value controls.
-// Callers must return a fresh FormData when its contents change; File values
-// Compare by identity. Built-in controls return strings or null.
-function sameFormValue(
-  previous: string | File | FormData | null,
-  next: string | File | FormData | null,
-): boolean {
-  if (previous === next) {
-    return true;
-  }
-  if (!(previous instanceof FormData) || !(next instanceof FormData)) {
-    return false;
-  }
-  const previousEntries = [...previous.entries()];
-  const nextEntries = [...next.entries()];
-  return (
-    previousEntries.length === nextEntries.length &&
-    previousEntries.every(
-      ([key, value], index) =>
-        key === nextEntries[index]?.[0] && Object.is(value, nextEntries[index]?.[1]),
-    )
-  );
-}
-
 /**
  * Form/field behaviour shared by every form-associated control: `qui-field`
  * integration, form value, validity, reset, and state restoration.
@@ -104,7 +85,7 @@ export class FormController extends ReactiveControllerBase {
   private unsubscribe?: () => void;
   private stopListening?: () => void;
   private formDisabled = false;
-  private appliedValue?: string | File | FormData | null;
+  private appliedValueKey?: readonly (string | boolean | undefined)[];
 
   constructor(host: ReactiveControllerHost, options: FormControllerOptions) {
     super(host);
@@ -165,21 +146,25 @@ export class FormController extends ReactiveControllerBase {
     if (Build.isServer) {
       return;
     }
+    const name = this.options.getName();
+    const multiple = this.options.getMultiple();
     const values = this.options.getValue();
-    const value = this.isDisabled
-      ? clearedFormValue()
-      : (this.options.getFormValue?.() ??
-        formValue(this.options.getName(), this.options.getMultiple(), values));
+    const valueKey = [this.isDisabled, name, multiple, ...values] as const;
+    const internals = this.options.getInternals();
+
+    if (!shallowEqual(this.appliedValueKey, valueKey)) {
+      const value = this.isDisabled
+        ? clearedFormValue()
+        : (this.options.getFormValue?.() ?? formValue(name, multiple, values));
+      internals.setFormValue(value, JSON.stringify(values));
+      this.appliedValueKey = valueKey;
+    }
+
+    // Validity writes are cheap and idempotent, so apply them on every sync.
+    // This keeps late validation anchors and native validity current.
     const validity = this.isDisabled
       ? { flags: {} }
       : (this.options.getValidity?.() ?? this.validity());
-    const internals = this.options.getInternals();
-    if (this.appliedValue === undefined || !sameFormValue(this.appliedValue, value)) {
-      internals.setFormValue(value, JSON.stringify(values));
-      this.appliedValue = value;
-    }
-    // Validity writes are cheap and idempotent, so apply them on every sync.
-    // This keeps late validation anchors and native validity current.
     internals.setValidity(validity.flags, validity.message, validity.element);
   }
 

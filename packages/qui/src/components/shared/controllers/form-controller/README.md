@@ -30,7 +30,7 @@ Reactive controller. Extends `ReactiveControllerBase`.
 | `setDisabled(disabled)`                                  | Form-disabled path: notify, request render, sync          |
 | `reset()`                                                | Runs `onReset`, then syncs                                |
 | `restore(state)`                                         | Parses JSON string state, runs `onRestore`, syncs         |
-| `sync()`                                                 | Writes form value when changed, and validity              |
+| `sync()`                                                 | Writes form value when raw inputs change, plus validity   |
 
 ## Lifecycle
 
@@ -45,9 +45,10 @@ Reactive controller. Extends `ReactiveControllerBase`.
 
 - Field state wins over the control's own props, so a disabled field disables
   all controls.
-- `sync()` writes the form value only when it changed, but always writes
-  validity. `setValidity()` is cheap and idempotent, which keeps a late
-  validation anchor correct without a separate change signature.
+- `sync()` uses `shallowEqual` on the raw value inputs (disabled, name,
+  multiple, values) to skip `setFormValue()` when nothing changed. Validity is
+  always written because `setValidity()` is cheap and idempotent, which keeps
+  late validation anchors correct.
 - Disabled controls submit `null` and report no validity. `sync()` is a no-op
   during SSR.
 - `FormControlMixin` forwards `formResetCallback`, `formDisabledCallback`, and
