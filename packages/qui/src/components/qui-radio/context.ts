@@ -30,6 +30,8 @@ export interface RadioGroupContext {
   focus: (value: string, focusVisible: boolean) => void;
   blur: () => void;
   registerInput: (value: string, input: HTMLInputElement) => () => void;
+  /** Refreshes form validity when an item's disabled state changes. */
+  refreshValidation: () => void;
   rootId: () => string;
   itemId: (value: string) => string;
   inputId: (value: string) => string;

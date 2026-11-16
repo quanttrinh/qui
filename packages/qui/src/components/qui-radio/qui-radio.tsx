@@ -125,6 +125,7 @@ export class QuiRadio extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   private registeredInput?: HTMLInputElement;
   private registeredValue?: string;
   private unregisterInput?: () => void;
+  private validationDisabled?: boolean;
 
   private get group(): RadioGroupContext | undefined {
     return this.contextPart.context;
@@ -134,6 +135,10 @@ export class QuiRadio extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
     const checked = this.group?.itemState(this.item()).checked ?? false;
     if (this.inputEl !== undefined && this.inputEl.checked !== checked) {
       this.inputEl.checked = checked;
+    }
+    if (this.validationDisabled !== this.disabled) {
+      this.validationDisabled = this.disabled;
+      this.group?.refreshValidation();
     }
     const { group } = this;
     if (

@@ -174,6 +174,9 @@ export class QuiRadioGroup extends Mixin(
         this.form.sync();
       };
     },
+    refreshValidation: (): void => {
+      this.form.sync();
+    },
     rootId: (): string => this.rootId,
     itemId: (value: string): string => this.itemId(value),
     inputId: (value: string): string => this.inputId(value),
