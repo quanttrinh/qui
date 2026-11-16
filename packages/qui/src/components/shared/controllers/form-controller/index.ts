@@ -52,15 +52,17 @@ function clearedFormValue(): string | File | FormData | null {
   return null;
 }
 
-/** Reads the restore state written by `setFormValue()`. */
+/** Reads the JSON values array written by `setFormValue()`. */
 function parseRestoredValues(state: string | File | FormData | null): string[] | undefined {
-  if (typeof state === "string") {
-    return [state];
+  if (typeof state !== "string") {
+    return undefined;
   }
-  if (state instanceof FormData) {
-    return [...state.values()].map((value) => (typeof value === "string" ? value : value.name));
+  try {
+    const value: unknown = JSON.parse(state);
+    return Array.isArray(value) ? value.map(String) : undefined;
+  } catch {
+    return undefined;
   }
-  return undefined;
 }
 
 function resolveFormValue(state: FormState): string | File | FormData | null {
@@ -183,9 +185,9 @@ export class FormController extends ReactiveControllerBase {
 
     if (!shallowEqual(this.appliedValueKey, valueKey)) {
       const value = resolved.disabled ? clearedFormValue() : resolveFormValue(form);
-      // The value doubles as restore state.
-      // Strings stay strings; multi-value controls restore from FormData entries.
-      internals.setFormValue(value, value ?? "");
+      // Restore state is JSON so empty and missing values stay distinct.
+      // This matters for empty inputs and unchecked checkboxes.
+      internals.setFormValue(value, JSON.stringify(form.values));
       this.appliedValueKey = valueKey;
     }
 

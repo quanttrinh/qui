@@ -63,8 +63,9 @@ for example an unchecked checkbox that must submit `null`.
   multiple, values) to skip `setFormValue()` when nothing changed. Validity is
   always written because `setValidity()` is cheap and idempotent, which keeps
   late validation anchors correct.
-- The submitted value doubles as the restore state. Single-value controls
-  restore from a string; multi-value controls restore from `FormData` entries.
+- Restore state is a JSON-encoded values array. This keeps "no values" and
+  "one empty value" distinct, which matters for unchecked checkboxes and empty
+  single selects.
 - Disabled controls submit `null` and report no validity. `sync()` is a no-op
   during SSR.
 - `FormControlMixin` forwards `formResetCallback`, `formDisabledCallback`, and

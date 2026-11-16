@@ -118,6 +118,21 @@ describe("qui-switch", () => {
     expectFocusedDeep(input);
   });
 
+  it("restores checked state from form state", async () => {
+    const { root, waitForChanges } = await render(<qui-switch value="on">Enable</qui-switch>);
+    const host = resolveHost<HTMLQuiSwitchElement>(root, "qui-switch");
+    const input = queryControl<HTMLInputElement>(host, "input");
+    const restore = Reflect.get(host, "formStateRestoreCallback") as (state: string) => void;
+
+    restore.call(host, JSON.stringify(["on"]));
+    await waitForChanges();
+    expect(input.checked).toBe(true);
+
+    restore.call(host, JSON.stringify([]));
+    await waitForChanges();
+    expect(input.checked).toBe(false);
+  });
+
   it("focuses the internal native input", async () => {
     const { root, waitForChanges } = await render(<qui-switch>Enable</qui-switch>);
     const host = resolveHost<HTMLQuiSwitchElement>(root, "qui-switch");

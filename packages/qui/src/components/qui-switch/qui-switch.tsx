@@ -180,7 +180,7 @@ export class QuiSwitch extends Mixin(ShadowStylesMixin, ControllerHostMixin, For
       this.checkable.reset();
     },
     onRestore: (values): void => {
-      const checked = this.checkable.normalize(values.at(0)) === true;
+      const checked = values.length > 0;
       this.checked = checked;
       this.checkable.restore(checked);
     },

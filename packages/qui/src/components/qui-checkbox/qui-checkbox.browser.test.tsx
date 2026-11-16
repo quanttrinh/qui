@@ -254,6 +254,21 @@ describe("qui-checkbox interaction and validation", () => {
     expect(form.reportValidity()).toBe(true);
   });
 
+  it("restores checked state from form state", async () => {
+    const { root, waitForChanges } = await render(<qui-checkbox value="on">Check me</qui-checkbox>);
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+    const input = queryControl<HTMLInputElement>(host, "input");
+    const restore = Reflect.get(host, "formStateRestoreCallback") as (state: string) => void;
+
+    restore.call(host, JSON.stringify([]));
+    await waitForChanges();
+    expect(input.checked).toBe(false);
+
+    restore.call(host, JSON.stringify(["on"]));
+    await waitForChanges();
+    expect(input.checked).toBe(true);
+  });
+
   it("focuses the internal native input", async () => {
     const { root, waitForChanges } = await render(<qui-checkbox>Check me</qui-checkbox>);
     const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");

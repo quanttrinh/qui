@@ -168,7 +168,7 @@ export class QuiCheckbox extends Mixin(ShadowStylesMixin, ControllerHostMixin, F
       this.checkable.reset();
     },
     onRestore: (values): void => {
-      const checked = this.checkable.normalize(values.at(0)) ?? false;
+      const checked = values.length > 0;
       this.checked = checked;
       this.checkable.restore(checked);
     },
