@@ -4,6 +4,6 @@
 
 Keep field-required controls focusable when native validation runs.
 
-- Apply the form value and validity on every sync. Both `ElementInternals` calls are idempotent, so late validation anchors and native validity changes need no cache or signature.
+- Write the form value only when it changes, and always write validity. This keeps the hot path cheap while applying late validation anchors and native validity changes without a signature.
 - Remove the internal `FormControllerOptions.getSignature` hook. It was not exported from the package entry point.
 - Cover field-required checkbox, input, switch, and textarea controls whose validity anchor appears after the first sync.

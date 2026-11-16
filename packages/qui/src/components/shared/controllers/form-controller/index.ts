@@ -67,6 +67,30 @@ function formValue(
   return data;
 }
 
+// FormData needs entry comparison for opt-in multi-value controls.
+// Callers must return a fresh FormData when its contents change; File values
+// Compare by identity. Built-in controls return strings or null.
+function sameFormValue(
+  previous: string | File | FormData | null,
+  next: string | File | FormData | null,
+): boolean {
+  if (previous === next) {
+    return true;
+  }
+  if (!(previous instanceof FormData) || !(next instanceof FormData)) {
+    return false;
+  }
+  const previousEntries = [...previous.entries()];
+  const nextEntries = [...next.entries()];
+  return (
+    previousEntries.length === nextEntries.length &&
+    previousEntries.every(
+      ([key, value], index) =>
+        key === nextEntries[index]?.[0] && Object.is(value, nextEntries[index]?.[1]),
+    )
+  );
+}
+
 /**
  * Form/field behaviour shared by every form-associated control: `qui-field`
  * integration, form value, validity, reset, and state restoration.
@@ -80,6 +104,7 @@ export class FormController extends ReactiveControllerBase {
   private unsubscribe?: () => void;
   private stopListening?: () => void;
   private formDisabled = false;
+  private appliedValue?: string | File | FormData | null;
 
   constructor(host: ReactiveControllerHost, options: FormControllerOptions) {
     super(host);
@@ -149,9 +174,12 @@ export class FormController extends ReactiveControllerBase {
       ? { flags: {} }
       : (this.options.getValidity?.() ?? this.validity());
     const internals = this.options.getInternals();
-    // Both calls are idempotent, so writing them on every sync is safe.
-    // This also keeps a late validation anchor correct without a cache.
-    internals.setFormValue(value, JSON.stringify(values));
+    if (this.appliedValue === undefined || !sameFormValue(this.appliedValue, value)) {
+      internals.setFormValue(value, JSON.stringify(values));
+      this.appliedValue = value;
+    }
+    // Validity writes are cheap and idempotent, so apply them on every sync.
+    // This keeps late validation anchors and native validity current.
     internals.setValidity(validity.flags, validity.message, validity.element);
   }
 
