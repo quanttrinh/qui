@@ -363,7 +363,7 @@ describe("qui-textarea form state", () => {
     const host = resolveHost<HTMLQuiTextareaElement>(root, "qui-textarea");
     const restore = Reflect.get(host, "formStateRestoreCallback") as (state: string) => void;
 
-    restore.call(host, JSON.stringify(["restored"]));
+    restore.call(host, "restored");
     await waitForChanges();
     expect(textarea.value).toBe("restored");
   });

@@ -177,25 +177,26 @@ export class QuiInput extends Mixin(ShadowStylesMixin, ControllerHostMixin, Form
   private readonly generatedId = nextId("qui-input");
   private readonly fieldControl = createFieldControl(() => this.inputEl);
   protected readonly form = new FormController(this, {
-    getInternals: (): ElementInternals => this.internals,
-    getName: (): string | undefined => this.name,
-    getMultiple: (): boolean => false,
-    getValue: (): readonly string[] => {
+    internals: (): ElementInternals => this.internals,
+    state: () => {
       const value = this.inputEl?.value;
-      return value === undefined ? [] : [value];
+      return {
+        name: this.name,
+        multiple: false,
+        values: value === undefined ? [] : [value],
+        validationElement: this.inputEl,
+      };
     },
+    validity: ({ required, invalid }) => this.inputValidity(required, invalid),
     getDisabled: (): boolean => this.disabled,
     getReadOnly: (): boolean => this.readOnly,
     getRequired: (): boolean => this.required,
     getInvalid: (): boolean => this.invalid,
-    getValidationElement: (): HTMLElement | undefined => this.inputEl,
-    getFormValue: (): string => this.inputEl?.value ?? "",
-    getValidity: (): FormValidity => this.inputValidity,
     onReset: (): void => {
       this.value = this.initialValue;
       this.applyValue(this.initialValue);
     },
-    onRestore: (values: string[]): void => {
+    onRestore: (values): void => {
       const value = values.at(0) ?? "";
       this.value = value;
       this.applyValue(value);
@@ -495,15 +496,15 @@ export class QuiInput extends Mixin(ShadowStylesMixin, ControllerHostMixin, Form
     this.form.sync();
   }
 
-  private get inputValidity(): FormValidity {
+  private inputValidity(required: boolean, invalid: boolean): FormValidity {
     const key = resolveInputValidityKey({
       element: this.inputEl,
       inputType: this.inputType,
       inputPattern: this.inputPattern,
       minLength: this.minLength,
       maxLength: this.maxLength,
-      invalid: this.form.isInvalid,
-      required: this.form.isRequired,
+      invalid,
+      required,
       numberConstraints: this.isNumber ? this.numberConstraints : undefined,
       focused: this.inputFocused,
     });
@@ -514,8 +515,8 @@ export class QuiInput extends Mixin(ShadowStylesMixin, ControllerHostMixin, Form
 
     const validity = resolveInputValidity({
       element: this.inputEl,
-      invalid: this.form.isInvalid,
-      required: this.form.isRequired,
+      invalid,
+      required,
       numberConstraints: this.isNumber ? this.numberConstraints : undefined,
       allowPartialNumber: this.isNumber && this.inputFocused,
     });

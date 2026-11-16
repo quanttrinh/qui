@@ -162,22 +162,24 @@ export class QuiSwitch extends Mixin(ShadowStylesMixin, ControllerHostMixin, For
     },
   });
   protected readonly form = new FormController(this, {
-    getInternals: (): ElementInternals => this.internals,
-    getName: (): string | undefined => this.name,
-    getMultiple: (): boolean => false,
-    getValue: (): readonly string[] => (this.checkable.isChecked ? [this.value ?? "on"] : []),
+    internals: (): ElementInternals => this.internals,
+    state: () => ({
+      name: this.name,
+      multiple: false,
+      values: this.checkable.isChecked ? [this.value ?? "on"] : [],
+      formValue: this.checkable.isChecked ? (this.value ?? "on") : null,
+      validationElement: this.inputEl,
+    }),
+    validity: ({ required, invalid }) => this.validity(required, invalid),
     getDisabled: (): boolean => this.disabled,
     getReadOnly: (): boolean => this.readOnly,
     getRequired: (): boolean => this.required,
     getInvalid: (): boolean => this.invalid,
-    getValidationElement: (): HTMLElement | undefined => this.inputEl,
-    getFormValue: (): string | null => (this.checkable.isChecked ? (this.value ?? "on") : null),
-    getValidity: (): FormValidity => this.validity(),
     onReset: (): void => {
       this.checked = this.checkable.initialChecked === true;
       this.checkable.reset();
     },
-    onRestore: (values: string[]): void => {
+    onRestore: (values): void => {
       const checked = this.checkable.normalize(values.at(0)) === true;
       this.checked = checked;
       this.checkable.restore(checked);
@@ -264,15 +266,15 @@ export class QuiSwitch extends Mixin(ShadowStylesMixin, ControllerHostMixin, For
     return props;
   }
 
-  private validity(): FormValidity {
-    if (this.form.isRequired && !this.checkable.isChecked) {
+  private validity(required: boolean, invalid: boolean): FormValidity {
+    if (required && !this.checkable.isChecked) {
       return {
         flags: { valueMissing: true },
         message: "Please check this box if you want to proceed.",
         element: this.inputEl,
       };
     }
-    if (this.form.isInvalid) {
+    if (invalid) {
       return {
         flags: { customError: true },
         message: "Invalid value",

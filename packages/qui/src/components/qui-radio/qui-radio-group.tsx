@@ -110,34 +110,27 @@ export class QuiRadioGroup extends Mixin(
     },
   });
   protected readonly form = new FormController(this, {
-    getInternals: (): ElementInternals => this.internals,
-    getName: (): string | undefined => this.name,
-    getMultiple: (): boolean => false,
-    getValue: (): readonly string[] => {
+    internals: (): ElementInternals => this.internals,
+    state: () => {
       const { value } = this.controller;
-      if (value) {
-        return [value];
-      }
-      return [];
+      return {
+        name: this.name,
+        multiple: false,
+        values: value ? [value] : [],
+        formValue: value ?? null,
+        validationElement: this.validationElement(),
+      };
     },
+    validity: ({ required, invalid }) => this.validity(required, invalid),
     getDisabled: (): boolean => this.disabled,
     getReadOnly: (): boolean => this.readOnly,
     getRequired: (): boolean => this.required,
     getInvalid: (): boolean => this.invalid,
-    getValidationElement: (): HTMLElement | undefined => this.validationElement(),
-    getFormValue: (): string | null => {
-      const { value } = this.controller;
-      if (value) {
-        return value;
-      }
-      return null;
-    },
-    getValidity: (): FormValidity => this.validity(),
     onReset: (): void => {
       this.value = this.controller.initialValue;
       this.controller.reset();
     },
-    onRestore: (values: string[]): void => {
+    onRestore: (values): void => {
       const restored = values.at(0);
       const value = restored === "" ? undefined : restored;
       this.value = value;
@@ -293,15 +286,15 @@ export class QuiRadioGroup extends Mixin(
     };
   }
 
-  private validity(): FormValidity {
-    if (this.form.isRequired && this.controller.value === undefined) {
+  private validity(required: boolean, invalid: boolean): FormValidity {
+    if (required && this.controller.value === undefined) {
       return {
         flags: { valueMissing: true },
         message: "Please select an option.",
         element: this.validationElement(),
       };
     }
-    if (this.form.isInvalid) {
+    if (invalid) {
       return {
         flags: { customError: true },
         message: "Invalid value",

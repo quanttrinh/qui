@@ -47,15 +47,12 @@ function createController(host: FakeElement): FormController {
   const setValidity = vi.fn();
   const internals = { setFormValue, setValidity } as unknown as ElementInternals;
   const controller = new FormController(createTestControllerHost(host as unknown as HTMLElement), {
-    getInternals: () => internals,
-    getName: () => "test",
-    getMultiple: () => false,
-    getValue: () => [],
+    internals: () => internals,
+    state: () => ({ name: "test", multiple: false, values: [] }),
     getDisabled: () => false,
     getReadOnly: () => false,
     getRequired: () => false,
     getInvalid: () => false,
-    getValidationElement: () => undefined,
     onReset: (): void => undefined,
     onRestore: (): void => undefined,
   });

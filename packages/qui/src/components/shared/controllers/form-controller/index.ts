@@ -11,43 +11,40 @@ export interface FormValidity {
   element?: HTMLElement;
 }
 
+/** The current form value and its focusable validation anchor. */
+export interface FormState {
+  name: string | undefined;
+  multiple: boolean;
+  values: readonly string[];
+  /** Overrides the derived submit value, e.g. null for an unchecked checkbox. */
+  formValue?: string | File | FormData | null;
+  validationElement?: HTMLElement | undefined;
+}
+
+/** Field-resolved control state passed to custom validity builders. */
+export interface ResolvedFormState {
+  disabled: boolean;
+  readOnly: boolean;
+  required: boolean;
+  invalid: boolean;
+}
+
 export interface FormControllerOptions {
-  getInternals: () => ElementInternals;
-  getName: () => string | undefined;
-  getMultiple: () => boolean;
-  getValue: () => readonly string[];
+  internals: () => ElementInternals;
+  /** Current value and validation anchor. */
+  state: () => FormState;
+  /** Resolved field flags for custom validity builders. */
+  validity?: (state: ResolvedFormState, form: FormState) => FormValidity;
   getDisabled: () => boolean;
   getReadOnly: () => boolean;
   getRequired: () => boolean;
   getInvalid: () => boolean;
-  /** Validation anchor; must be focusable so `reportValidity()` can focus it. */
-  getValidationElement: () => HTMLElement | undefined;
   /** Resets the component-owned value state. */
   onReset: () => void;
   /** Applies values restored from form state. */
-  onRestore: (values: string[]) => void;
+  onRestore: (values: readonly string[]) => void;
   /** Called when field/disabled state changes, e.g. to refresh machine props. */
   onChange?: () => void;
-  /**
-   * Overrides the default string/FormData value for the form.
-   * Must derive from name, multiple, disabled, and getValue so the
-   * shallow value guard stays accurate.
-   */
-  getFormValue?: () => string | File | FormData | null;
-  /** Overrides the default required/invalid validity rules. */
-  getValidity?: () => FormValidity;
-}
-
-function parseRestoredValues(state: string | File | FormData | null): string[] | undefined {
-  if (typeof state !== "string") {
-    return undefined;
-  }
-  try {
-    const value: unknown = JSON.parse(state);
-    return Array.isArray(value) ? value.map(String) : undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 /** `ElementInternals.setFormValue()` uses null to clear the value. */
@@ -55,21 +52,49 @@ function clearedFormValue(): string | File | FormData | null {
   return null;
 }
 
-function formValue(
-  name: string | undefined,
-  multiple: boolean,
-  values: readonly string[],
-): string | FormData {
-  if (!multiple) {
-    return values[0] ?? "";
+/** Reads the restore state written by `setFormValue()`. */
+function parseRestoredValues(state: string | File | FormData | null): string[] | undefined {
+  if (typeof state === "string") {
+    return [state];
+  }
+  if (state instanceof FormData) {
+    return [...state.values()].map((value) => (typeof value === "string" ? value : value.name));
+  }
+  return undefined;
+}
+
+function resolveFormValue(state: FormState): string | File | FormData | null {
+  if (state.formValue !== undefined) {
+    return state.formValue;
+  }
+  if (!state.multiple) {
+    return state.values[0] ?? "";
   }
   const data = new FormData();
-  if (name !== undefined) {
-    for (const value of values) {
-      data.append(name, value);
+  if (state.name !== undefined) {
+    for (const value of state.values) {
+      data.append(state.name, value);
     }
   }
   return data;
+}
+
+function defaultValidity(state: ResolvedFormState, form: FormState): FormValidity {
+  if (state.required && form.values.length === 0) {
+    return {
+      flags: { valueMissing: true },
+      message: "Please select an option.",
+      element: form.validationElement,
+    };
+  }
+  if (state.invalid) {
+    return {
+      flags: { customError: true },
+      message: "Invalid value",
+      element: form.validationElement,
+    };
+  }
+  return { flags: {} };
 }
 
 /**
@@ -146,25 +171,29 @@ export class FormController extends ReactiveControllerBase {
     if (Build.isServer) {
       return;
     }
-    const name = this.options.getName();
-    const multiple = this.options.getMultiple();
-    const values = this.options.getValue();
-    const valueKey = [this.isDisabled, name, multiple, ...values] as const;
-    const internals = this.options.getInternals();
+    const resolved: ResolvedFormState = {
+      disabled: this.isDisabled,
+      readOnly: this.isReadOnly,
+      required: this.isRequired,
+      invalid: this.isInvalid,
+    };
+    const form = this.options.state();
+    const valueKey = [resolved.disabled, form.name, form.multiple, ...form.values] as const;
+    const internals = this.options.internals();
 
     if (!shallowEqual(this.appliedValueKey, valueKey)) {
-      const value = this.isDisabled
-        ? clearedFormValue()
-        : (this.options.getFormValue?.() ?? formValue(name, multiple, values));
-      internals.setFormValue(value, JSON.stringify(values));
+      const value = resolved.disabled ? clearedFormValue() : resolveFormValue(form);
+      // The value doubles as restore state.
+      // Strings stay strings; multi-value controls restore from FormData entries.
+      internals.setFormValue(value, value ?? "");
       this.appliedValueKey = valueKey;
     }
 
     // Validity writes are cheap and idempotent, so apply them on every sync.
     // This keeps late validation anchors and native validity current.
-    const validity = this.isDisabled
+    const validity = resolved.disabled
       ? { flags: {} }
-      : (this.options.getValidity?.() ?? this.validity());
+      : (this.options.validity?.(resolved, form) ?? defaultValidity(resolved, form));
     internals.setValidity(validity.flags, validity.message, validity.element);
   }
 
@@ -236,27 +265,5 @@ export class FormController extends ReactiveControllerBase {
     if (this.field !== undefined && this.control !== undefined) {
       this.unregisterControl = this.field.registerControl(this.control);
     }
-  }
-
-  private validity(): FormValidity {
-    if (this.isDisabled) {
-      return { flags: {} };
-    }
-    const values = this.options.getValue();
-    if (this.isRequired && values.length === 0) {
-      return {
-        flags: { valueMissing: true },
-        message: "Please select an option.",
-        element: this.options.getValidationElement(),
-      };
-    }
-    if (this.isInvalid) {
-      return {
-        flags: { customError: true },
-        message: "Invalid value",
-        element: this.options.getValidationElement(),
-      };
-    }
-    return { flags: {} };
   }
 }

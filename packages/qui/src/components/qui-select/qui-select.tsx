@@ -113,22 +113,24 @@ export class QuiSelect extends Mixin(
   private readonly listId = `${this.generatedId}-listbox`;
   private readonly fieldControl = createFieldControl(() => this.triggerEl);
   protected readonly form = new FormController(this, {
-    getInternals: (): ElementInternals => this.internals,
-    getName: (): string | undefined => this.name,
-    getMultiple: (): boolean => this.multiple,
-    getValue: (): string[] => this.selection.selected,
+    internals: (): ElementInternals => this.internals,
+    state: () => ({
+      name: this.name,
+      multiple: this.multiple,
+      values: this.selection.selected,
+      validationElement: this.triggerEl,
+    }),
     getDisabled: (): boolean => this.disabled,
     getReadOnly: (): boolean => this.readOnly,
     getRequired: (): boolean => this.required,
     getInvalid: (): boolean => this.invalid,
-    getValidationElement: (): HTMLElement | undefined => this.triggerEl,
     onReset: (): void => {
       this.selection.reset();
       this.navigation.closeMenu("reset");
       this.window.scrollToStart();
     },
-    onRestore: (values: string[]): void => {
-      this.selection.restore(values);
+    onRestore: (values): void => {
+      this.selection.restore([...values]);
     },
   });
 
