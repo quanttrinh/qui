@@ -56,6 +56,20 @@ describe("qui-select", () => {
     await expect(host.getValue()).resolves.toEqual([]);
   });
 
+  it("restores multiple selections", async () => {
+    const { root, waitForChanges } = await render(<qui-select multiple items={accounts} />);
+    const host = resolveHost<HTMLQuiSelectElement>(root, "qui-select");
+    const restore = Reflect.get(host, "formStateRestoreCallback") as (state: string) => void;
+
+    restore.call(host, JSON.stringify(["account-1", "account-3"]));
+    await waitForChanges();
+    await expect(host.getValue()).resolves.toEqual(["account-1", "account-3"]);
+
+    restore.call(host, JSON.stringify([]));
+    await waitForChanges();
+    await expect(host.getValue()).resolves.toEqual([]);
+  });
+
   it("reflects its form name and submits selected values", async () => {
     const { root, waitForChanges } = await render(
       <form>

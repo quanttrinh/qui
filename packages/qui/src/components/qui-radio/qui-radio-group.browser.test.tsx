@@ -78,6 +78,30 @@ describe("qui-radio-group", () => {
     expect(new FormData(form).get("plan")).toBe("");
   });
 
+  it("restores empty and non-empty selections distinctly", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-radio-group name="plan">
+          <qui-radio value="">None</qui-radio>
+          <qui-radio value="pro">Pro</qui-radio>
+        </qui-radio-group>
+      </form>,
+    );
+    await waitForChanges();
+
+    const form = resolveForm(root);
+    const group = resolveHost<HTMLQuiRadioGroupElement>(root, "qui-radio-group");
+    const restore = Reflect.get(group, "formStateRestoreCallback") as (state: string) => void;
+
+    restore.call(group, JSON.stringify([""]));
+    await waitForChanges();
+    expect(new FormData(form).get("plan")).toBe("");
+
+    restore.call(group, JSON.stringify([]));
+    await waitForChanges();
+    expect(new FormData(form).has("plan")).toBe(false);
+  });
+
   it("returns the live value for uncontrolled selection", async () => {
     const { root, waitForChanges } = await render(
       <qui-radio-group name="plan" defaultValue="pro">

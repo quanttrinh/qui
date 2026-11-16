@@ -142,11 +142,15 @@ function createSyncController(): {
   setValidity: ReturnType<typeof vi.fn>;
   setDisabled: (value: boolean) => void;
   setRequired: (value: boolean) => void;
+  setName: (value: string) => void;
+  setMultiple: (value: boolean) => void;
   setValues: (values: string[]) => void;
   setElement: (element: HTMLElement | undefined) => void;
 } {
   let disabled = false;
   let required = false;
+  let name = "test";
+  let multiple = false;
   let values: string[] = [];
   let element: HTMLElement | undefined;
   const setFormValue = vi.fn();
@@ -155,7 +159,7 @@ function createSyncController(): {
     createTestControllerHost(new FakeElement() as unknown as HTMLElement),
     {
       internals: () => ({ setFormValue, setValidity }) as unknown as ElementInternals,
-      state: () => ({ name: "test", multiple: false, values, validationElement: element }),
+      state: () => ({ name, multiple, values, validationElement: element }),
       disabled: () => disabled,
       readOnly: () => false,
       required: () => required,
@@ -174,6 +178,12 @@ function createSyncController(): {
     setRequired: (value): void => {
       required = value;
     },
+    setName: (value): void => {
+      name = value;
+    },
+    setMultiple: (value): void => {
+      multiple = value;
+    },
     setValues: (next): void => {
       values = next;
     },
@@ -185,7 +195,8 @@ function createSyncController(): {
 
 describe("FormController sync", () => {
   it("writes the form value only when its inputs change", () => {
-    const { controller, setFormValue, setDisabled, setValues } = createSyncController();
+    const { controller, setFormValue, setDisabled, setMultiple, setName, setValues } =
+      createSyncController();
 
     controller.sync();
     expect(setFormValue).toHaveBeenCalledTimes(1);
@@ -197,9 +208,17 @@ describe("FormController sync", () => {
     controller.sync();
     expect(setFormValue).toHaveBeenCalledTimes(2);
 
-    setDisabled(true);
+    setName("other");
     controller.sync();
     expect(setFormValue).toHaveBeenCalledTimes(3);
+
+    setMultiple(true);
+    controller.sync();
+    expect(setFormValue).toHaveBeenCalledTimes(4);
+
+    setDisabled(true);
+    controller.sync();
+    expect(setFormValue).toHaveBeenCalledTimes(5);
   });
 
   it("writes validity on every sync, including a late anchor", () => {

@@ -285,17 +285,17 @@ export class QuiRadioGroup extends Mixin(
   }
 
   private validity(required: boolean, invalid: boolean): FormValidity {
-    if (required && this.controller.value === undefined) {
-      return {
-        flags: { valueMissing: true },
-        message: "Please select an option.",
-        element: this.validationElement(),
-      };
-    }
     if (invalid) {
       return {
         flags: { customError: true },
         message: "Invalid value",
+        element: this.validationElement(),
+      };
+    }
+    if (required && this.controller.value === undefined) {
+      return {
+        flags: { valueMissing: true },
+        message: "Please select an option.",
         element: this.validationElement(),
       };
     }

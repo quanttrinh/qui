@@ -14,25 +14,25 @@ interface FormState {
     name: string | undefined;
     multiple: boolean;
     values: readonly string[];
-    formValue?: string | File | FormData | null;
     validationElement?: HTMLElement;
 }
 ```
 
 `state()` is the single source of truth for the submitted value and validation
-anchor. Empty values submit `null`; otherwise a single-value control submits
-`values[0]` and a multi-value control submits `FormData`.
+anchor. An empty values array submits nothing; otherwise a single-value control
+submits `values[0]` and a multi-value control submits `FormData`. An empty
+string value still submits an empty entry.
 
 ## Options
 
-| Option                                                       | Type                                       | Description                                     |
-| ------------------------------------------------------------ | ------------------------------------------ | ----------------------------------------------- |
-| `internals`                                                  | `() => ElementInternals`                   | Host internals                                  |
-| `state`                                                      | `() => FormState`                          | Current value and validation anchor             |
-| `validity`                                                   | `(state, form) => FormValidity` (optional) | Custom validity; defaults to required/invalid   |
-| `getDisabled` / `getReadOnly` / `getRequired` / `getInvalid` | `() => boolean`                            | Host-level state used when no field is attached |
-| `onReset` / `onRestore`                                      | callbacks                                  | Component-owned state updates                   |
-| `onChange`                                                   | `() => void` (optional)                    | Field state changed                             |
+| Option                                           | Type                                       | Description                                     |
+| ------------------------------------------------ | ------------------------------------------ | ----------------------------------------------- |
+| `internals`                                      | `() => ElementInternals`                   | Host internals                                  |
+| `state`                                          | `() => FormState`                          | Current value and validation anchor             |
+| `validity`                                       | `(state, form) => FormValidity` (optional) | Custom validity; defaults to required/invalid   |
+| `disabled` / `readOnly` / `required` / `invalid` | `() => boolean`                            | Host-level state used when no field is attached |
+| `onReset` / `onRestore`                          | callbacks                                  | Component-owned state updates                   |
+| `onChange`                                       | `() => void` (optional)                    | Field state changed                             |
 
 ## API
 

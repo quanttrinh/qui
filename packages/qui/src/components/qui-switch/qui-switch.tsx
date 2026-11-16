@@ -180,8 +180,7 @@ export class QuiSwitch extends Mixin(ShadowStylesMixin, ControllerHostMixin, For
     },
     onRestore: (values): void => {
       // Restore state is the controller's values array.
-      // A non-empty array means the control was checked.
-      const checked = values.length > 0;
+      const checked = values.includes(this.value ?? "on");
       this.checked = checked;
       this.checkable.restore(checked);
     },
@@ -268,17 +267,17 @@ export class QuiSwitch extends Mixin(ShadowStylesMixin, ControllerHostMixin, For
   }
 
   private validity(required: boolean, invalid: boolean): FormValidity {
-    if (required && !this.checkable.isChecked) {
-      return {
-        flags: { valueMissing: true },
-        message: "Please check this box if you want to proceed.",
-        element: this.inputEl,
-      };
-    }
     if (invalid) {
       return {
         flags: { customError: true },
         message: "Invalid value",
+        element: this.inputEl,
+      };
+    }
+    if (required && !this.checkable.isChecked) {
+      return {
+        flags: { valueMissing: true },
+        message: "Please check this box if you want to proceed.",
         element: this.inputEl,
       };
     }

@@ -21,8 +21,6 @@ export interface FormState {
 
 /** Field-resolved control state passed to custom validity builders. */
 export interface ResolvedFormState {
-  disabled: boolean;
-  readOnly: boolean;
   required: boolean;
   invalid: boolean;
 }
@@ -77,17 +75,17 @@ function resolveFormValue(state: FormState): string | FormData | null {
 }
 
 function defaultValidity(state: ResolvedFormState, form: FormState): FormValidity {
-  if (state.required && form.values.length === 0) {
-    return {
-      flags: { valueMissing: true },
-      message: "Please select an option.",
-      element: form.validationElement,
-    };
-  }
   if (state.invalid) {
     return {
       flags: { customError: true },
       message: "Invalid value",
+      element: form.validationElement,
+    };
+  }
+  if (state.required && form.values.length === 0) {
+    return {
+      flags: { valueMissing: true },
+      message: "Please select an option.",
       element: form.validationElement,
     };
   }
@@ -168,18 +166,17 @@ export class FormController extends ReactiveControllerBase {
     if (Build.isServer) {
       return;
     }
+    const disabled = this.isDisabled;
     const resolved: ResolvedFormState = {
-      disabled: this.isDisabled,
-      readOnly: this.isReadOnly,
       required: this.isRequired,
       invalid: this.isInvalid,
     };
     const form = this.options.state();
-    const valueKey = [resolved.disabled, form.name, form.multiple, ...form.values] as const;
+    const valueKey = [disabled, form.name, form.multiple, ...form.values] as const;
     const internals = this.options.internals();
 
     if (!shallowEqual(this.appliedValueKey, valueKey)) {
-      const value = resolved.disabled ? clearedFormValue() : resolveFormValue(form);
+      const value = disabled ? clearedFormValue() : resolveFormValue(form);
       // Restore state is JSON so empty and missing values stay distinct.
       // This matters for empty inputs and unchecked checkboxes.
       internals.setFormValue(value, JSON.stringify(form.values));
@@ -188,7 +185,7 @@ export class FormController extends ReactiveControllerBase {
 
     // Validity writes are cheap and idempotent, so apply them on every sync.
     // This keeps late validation anchors and native validity current.
-    const validity = resolved.disabled
+    const validity = disabled
       ? { flags: {} }
       : (this.options.validity?.(resolved, form) ?? defaultValidity(resolved, form));
     internals.setValidity(validity.flags, validity.message, validity.element);
