@@ -161,7 +161,7 @@
     "playwright": "^1.65.1",
     "postcss": "^8.5.33",
     "preact": "^11",
-    "rollup": "^4.68.3",
+    "rollup": "^4.68.4",
     "solid-js": "^1",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vitest": "^5.1.0"
