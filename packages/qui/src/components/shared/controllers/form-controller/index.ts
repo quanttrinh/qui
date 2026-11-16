@@ -19,6 +19,7 @@ export interface FormControllerOptions {
   getReadOnly: () => boolean;
   getRequired: () => boolean;
   getInvalid: () => boolean;
+  /** Validation anchor; must be focusable so `reportValidity()` can focus it. */
   getValidationElement: () => HTMLElement | undefined;
   /** Resets the component-owned value state. */
   onReset: () => void;

@@ -14,7 +14,7 @@ Reactive controller. Extends `ReactiveControllerBase`.
 | `getInternals`                                               | `() => ElementInternals`                              | Host internals                                  |
 | `getName` / `getMultiple` / `getValue`                       | Value source                                          | Form value inputs                               |
 | `getDisabled` / `getReadOnly` / `getRequired` / `getInvalid` | `() => boolean`                                       | Host-level state used when no field is attached |
-| `getValidationElement`                                       | `() => HTMLElement \| undefined`                      | Element reported with validity                  |
+| `getValidationElement`                                       | `() => HTMLElement \| undefined`                      | Focusable element reported with validity        |
 | `onReset` / `onRestore`                                      | callbacks                                             | Component-owned state updates                   |
 | `onChange`                                                   | `() => void` (optional)                               | Field state changed                             |
 | `getFormValue`                                               | `() => string \| File \| FormData \| null` (optional) | Overrides default form value                    |

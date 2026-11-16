@@ -49,14 +49,19 @@ export class RadioGroupController extends ControlledControllerBase<string | unde
     return this.inputs.register(value, input);
   }
 
+  /** Return the selected radio, falling back to the first enabled radio. */
+  validationInput(): HTMLInputElement | undefined {
+    const selected = this.value === undefined ? undefined : this.inputs.get(this.value);
+    return (
+      (selected !== undefined && !selected.disabled && selected.isConnected
+        ? selected
+        : undefined) ?? this.inputs.values().find((input) => !input.disabled && input.isConnected)
+    );
+  }
+
   /** Focus the selected radio, falling back to the first enabled radio. */
   focusInput(options?: FocusOptions): void {
-    const selected = this.value === undefined ? undefined : this.inputs.get(this.value);
-    const target =
-      selected !== undefined && !selected.disabled && selected.isConnected
-        ? selected
-        : this.inputs.values().find((input) => !input.disabled && input.isConnected);
-    target?.focus(options);
+    this.validationInput()?.focus(options);
   }
 
   focus(value: string, focusVisible: boolean): void {

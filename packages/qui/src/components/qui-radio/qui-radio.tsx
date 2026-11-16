@@ -19,7 +19,7 @@ import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
 import { isHTMLInputElement } from "../shared/helpers/dom/dom";
 import { focusElement } from "../shared/helpers/dom/focus";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
-import { focusRing } from "../shared/styles";
+import { focusableInputOverlay, focusRing } from "../shared/styles";
 import {
   radioGroupContext,
   type RadioGroupContext,
@@ -30,6 +30,7 @@ import {
 const styles = {
   host: css({ display: "block" }),
   item: css({
+    pos: "relative",
     display: "flex",
     alignItems: "center",
     gap: "2",
@@ -72,16 +73,8 @@ const styles = {
     fontWeight: "medium",
     color: `var(--qui-radio-label-color, ${token("colors.onSurface")})`,
   }),
-  input: css({
-    pos: "absolute",
-    w: "1px",
-    h: "1px",
-    p: "0",
-    overflow: "hidden",
-    clip: "rect(0, 0, 0, 0)",
-    whiteSpace: "nowrap",
-    borderWidth: "0",
-  }),
+  // oxlint-disable-next-line @pandacss/no-margin-properties -- the shared overlay resets native input margins.
+  input: css(focusableInputOverlay),
 };
 
 /**
@@ -132,6 +125,7 @@ export class QuiRadio extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
   private registeredInput?: HTMLInputElement;
   private registeredValue?: string;
   private unregisterInput?: () => void;
+  private validationDisabled?: boolean;
 
   private get group(): RadioGroupContext | undefined {
     return this.contextPart.context;
@@ -141,6 +135,10 @@ export class QuiRadio extends Mixin(ShadowStylesMixin, ControllerHostMixin) {
     const checked = this.group?.itemState(this.item()).checked ?? false;
     if (this.inputEl !== undefined && this.inputEl.checked !== checked) {
       this.inputEl.checked = checked;
+    }
+    if (this.validationDisabled !== this.disabled) {
+      this.validationDisabled = this.disabled;
+      this.group?.refreshValidation();
     }
     const { group } = this;
     if (

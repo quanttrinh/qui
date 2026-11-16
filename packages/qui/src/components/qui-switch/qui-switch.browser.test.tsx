@@ -81,6 +81,24 @@ describe("qui-switch", () => {
     expect(spy).toHaveReceivedEventTimes(1);
   });
 
+  it("focuses the native input from constraint validation", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-switch name="consent" required>
+          Enable
+        </qui-switch>
+      </form>,
+    );
+    await waitForChanges();
+
+    const form = resolveForm(root);
+    const host = resolveHost<HTMLQuiSwitchElement>(root, "qui-switch");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(form.reportValidity()).toBe(false);
+    expectFocusedDeep(input);
+  });
+
   it("focuses the internal native input", async () => {
     const { root, waitForChanges } = await render(<qui-switch>Enable</qui-switch>);
     const host = resolveHost<HTMLQuiSwitchElement>(root, "qui-switch");
