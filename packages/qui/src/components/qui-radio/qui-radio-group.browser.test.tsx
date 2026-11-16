@@ -4,8 +4,10 @@ import {
   queryControl,
   queryHost,
   queryPartIn,
+  resolveForm,
   resolveHost,
 } from "../../../tests/test-utils/component";
+import { expectFocusedDeep } from "../../../tests/test-utils/interactions";
 import { shadowOf } from "../../../tests/test-utils/shadow";
 
 function radioItems(root: HTMLElement): HTMLElement[] {
@@ -112,6 +114,24 @@ describe("qui-radio-group", () => {
     for (const item of radioItems(root)) {
       expect(queryControl<HTMLInputElement>(item, "input").disabled).toBe(true);
     }
+  });
+
+  it("focuses the first enabled radio from constraint validation", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-radio-group name="plan" required>
+          <qui-radio value="free">Free</qui-radio>
+          <qui-radio value="pro">Pro</qui-radio>
+        </qui-radio-group>
+      </form>,
+    );
+    await waitForChanges();
+
+    const form = resolveForm(root);
+    const input = queryControl<HTMLInputElement>(radioItems(root)[0], "input");
+
+    expect(form.reportValidity()).toBe(false);
+    expectFocusedDeep(input);
   });
 
   it("focuses the selected radio input", async () => {

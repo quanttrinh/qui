@@ -30,11 +30,12 @@ import { focusElement } from "../shared/helpers/dom/focus";
 import { nextId } from "../shared/helpers/dom/id";
 import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
 import { ControllerHostMixin, FormControlMixin, ShadowStylesMixin } from "../shared/mixins";
-import { focusRing, requiredIndicatorStyle } from "../shared/styles";
+import { focusableInputOverlay, focusRing, requiredIndicatorStyle } from "../shared/styles";
 
 const styles = {
   host: css({ display: "inline-flex" }),
   root: css({
+    pos: "relative",
     display: "inline-flex",
     alignItems: "center",
     gap: "2",
@@ -86,16 +87,8 @@ const styles = {
     fontWeight: "medium",
     color: `var(--qui-checkbox-label-color, ${token("colors.onSurface")})`,
   }),
-  input: css({
-    pos: "absolute",
-    w: "1px",
-    h: "1px",
-    p: "0",
-    overflow: "hidden",
-    clip: "rect(0, 0, 0, 0)",
-    whiteSpace: "nowrap",
-    borderWidth: "0",
-  }),
+  // oxlint-disable-next-line @pandacss/no-margin-properties -- the shared overlay resets native input margins.
+  input: css(focusableInputOverlay),
 };
 
 /**

@@ -124,7 +124,8 @@ export class QuiRadioGroup extends Mixin(
     getReadOnly: (): boolean => this.readOnly,
     getRequired: (): boolean => this.required,
     getInvalid: (): boolean => this.invalid,
-    getValidationElement: (): HTMLElement | undefined => this.rootEl,
+    getValidationElement: (): HTMLElement | undefined =>
+      this.controller.validationInput() ?? this.rootEl,
     getFormValue: (): string | null => {
       const { value } = this.controller;
       if (value) {
@@ -290,14 +291,14 @@ export class QuiRadioGroup extends Mixin(
       return {
         flags: { valueMissing: true },
         message: "Please select an option.",
-        element: this.rootEl,
+        element: this.controller.validationInput() ?? this.rootEl,
       };
     }
     if (this.form.isInvalid) {
       return {
         flags: { customError: true },
         message: "Invalid value",
-        element: this.rootEl,
+        element: this.controller.validationInput() ?? this.rootEl,
       };
     }
     return { flags: {} };
@@ -318,6 +319,7 @@ export class QuiRadioGroup extends Mixin(
           }}
           id={this.rootId}
           role="radiogroup"
+          tabIndex={-1}
           aria-required={this.form.isRequired ? "true" : undefined}
           aria-disabled={this.form.isDisabled ? "true" : undefined}
           aria-readonly={this.form.isReadOnly ? "true" : undefined}

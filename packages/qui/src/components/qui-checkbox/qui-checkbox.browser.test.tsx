@@ -159,6 +159,24 @@ describe("qui-checkbox", () => {
     expect(queryPartIn(host, "root")).toHaveAttribute("data-state", "indeterminate");
   });
 
+  it("focuses the native input from constraint validation", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-checkbox name="consent" required>
+          Check me
+        </qui-checkbox>
+      </form>,
+    );
+    await waitForChanges();
+
+    const form = resolveForm(root);
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+    const input = queryControl<HTMLInputElement>(host, "input");
+
+    expect(form.reportValidity()).toBe(false);
+    expectFocusedDeep(input);
+  });
+
   it("focuses the internal native input", async () => {
     const { root, waitForChanges } = await render(<qui-checkbox>Check me</qui-checkbox>);
     const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
