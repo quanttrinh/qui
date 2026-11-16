@@ -20,8 +20,8 @@ interface FormState {
 ```
 
 `state()` is the single source of truth for the submitted value and validation
-anchor. `formValue` is only needed when the submit value differs from `values`,
-for example an unchecked checkbox that must submit `null`.
+anchor. Empty values submit `null`; otherwise a single-value control submits
+`values[0]` and a multi-value control submits `FormData`.
 
 ## Options
 
