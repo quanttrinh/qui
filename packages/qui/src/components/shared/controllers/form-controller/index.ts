@@ -67,6 +67,8 @@ function formValue(
   return data;
 }
 
+// FormData compares entries for opt-in multi-value controls.
+// Built-in controls return strings or null, but FormData is supported too.
 function sameFormValue(
   previous: string | File | FormData | null,
   next: string | File | FormData | null,
@@ -88,25 +90,25 @@ function sameFormValue(
   );
 }
 
-const VALIDITY_FLAG_KEYS: readonly (keyof ValidityStateFlags)[] = [
-  "badInput",
-  "customError",
-  "patternMismatch",
-  "rangeOverflow",
-  "rangeUnderflow",
-  "stepMismatch",
-  "tooLong",
-  "tooShort",
-  "typeMismatch",
-  "valueMissing",
-];
+function activeFlags(flags: ValidityStateFlags): string {
+  return Object.entries(flags)
+    .filter(([, value]) => value === true)
+    .map(([key]) => key)
+    .toSorted()
+    .join(",");
+}
 
 function sameFlags(previous: ValidityStateFlags, next: ValidityStateFlags): boolean {
-  return VALIDITY_FLAG_KEYS.every((key) => previous[key] === next[key]);
+  return activeFlags(previous) === activeFlags(next);
+}
+
+function sameValues(previous: readonly string[], next: readonly string[]): boolean {
+  return previous.length === next.length && previous.every((value, index) => value === next[index]);
 }
 
 interface AppliedFormState {
   value: string | File | FormData | null;
+  values: readonly string[];
   state: string;
   flags: ValidityStateFlags;
   message?: string | undefined;
@@ -187,11 +189,11 @@ export class FormController extends ReactiveControllerBase {
     if (Build.isServer) {
       return;
     }
+    const values = this.options.getValue();
     const value = this.isDisabled
       ? clearedFormValue()
       : (this.options.getFormValue?.() ??
-        formValue(this.options.getName(), this.options.getMultiple(), this.options.getValue()));
-    const state = JSON.stringify(this.options.getValue());
+        formValue(this.options.getName(), this.options.getMultiple(), values));
     const validity = this.isDisabled
       ? { flags: {} }
       : (this.options.getValidity?.() ?? this.validity());
@@ -202,7 +204,7 @@ export class FormController extends ReactiveControllerBase {
     if (
       this.applied !== undefined &&
       sameFormValue(this.applied.value, value) &&
-      this.applied.state === state &&
+      sameValues(this.applied.values, values) &&
       sameFlags(this.applied.flags, validity.flags) &&
       this.applied.message === validity.message &&
       this.applied.element === validity.element
@@ -210,10 +212,12 @@ export class FormController extends ReactiveControllerBase {
       return;
     }
 
+    const state = JSON.stringify(values);
     this.applied = {
       value,
+      values: [...values],
       state,
-      flags: validity.flags,
+      flags: { ...validity.flags },
       message: validity.message,
       element: validity.element,
     };

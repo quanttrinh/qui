@@ -3,6 +3,7 @@ import { userEvent } from "vitest/browser";
 
 import {
   queryControl,
+  queryHost,
   queryPartIn,
   resolveForm,
   resolveHost,
@@ -218,6 +219,39 @@ describe("qui-checkbox interaction and validation", () => {
     expect(host.matches(":invalid")).toBe(true);
     expect(form.reportValidity()).toBe(false);
     expectFocusedDeep(input);
+  });
+
+  it("clears validity when the field requirement is removed or disabled", async () => {
+    const { root, waitForChanges } = await render(
+      <form>
+        <qui-field required>
+          <qui-checkbox name="consent">Check me</qui-checkbox>
+        </qui-field>
+      </form>,
+    );
+    await waitForChanges();
+
+    const form = resolveForm(root);
+    const field = queryHost<HTMLQuiFieldElement>(root, "qui-field");
+    const host = resolveHost<HTMLQuiCheckboxElement>(root, "qui-checkbox");
+
+    expect(host.matches(":invalid")).toBe(true);
+
+    field.required = false;
+    await waitForChanges();
+
+    expect(host.matches(":invalid")).toBe(false);
+    expect(form.reportValidity()).toBe(true);
+
+    field.required = true;
+    await waitForChanges();
+    expect(host.matches(":invalid")).toBe(true);
+
+    host.setAttribute("disabled", "");
+    await waitForChanges();
+
+    expect(host.matches(":invalid")).toBe(false);
+    expect(form.reportValidity()).toBe(true);
   });
 
   it("focuses the internal native input", async () => {

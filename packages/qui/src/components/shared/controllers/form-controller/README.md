@@ -38,15 +38,17 @@ Reactive controller. Extends `ReactiveControllerBase`.
 - `hostConnected` — re-discovers/re-registers; renders when a field attaches
   after load.
 - `hostDidLoad` — performs the first sync.
-- `hostDidRender` — re-syncs; the signature makes this a no-op when unchanged.
+- `hostDidRender` — re-syncs; compares the applied form state and skips writes
+  when nothing changed.
 - `hostDisconnected` — unsubscribes and unregisters the control.
 
 ## Notes
 
 - Field state wins over the control's own props, so a disabled field disables
   all controls.
-- `sync()` includes controller-owned disabled/read-only/required/invalid flags
-  in its signature, so custom signatures still refresh validity.
+- `sync()` compares the form value, restore state, validity flags, message, and
+  validation anchor against the last applied state. Any change, including a
+  late validation anchor, triggers a fresh `setFormValue()` / `setValidity()`.
 - Disabled controls submit `null` and report no validity. `sync()` is a no-op
   during SSR.
 - `FormControlMixin` forwards `formResetCallback`, `formDisabledCallback`, and
