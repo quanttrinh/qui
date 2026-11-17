@@ -1,6 +1,6 @@
 {
   "name": "@quanttrinh/qui-unplugin",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Bundler plugin for auto-registering @quanttrinh/qui components",
   "homepage": "https://quanttrinh.github.io/qui/",
   "bugs": {
