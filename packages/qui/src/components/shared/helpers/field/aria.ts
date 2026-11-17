@@ -1,5 +1,6 @@
+import type { FieldApi } from "./context";
+
 import { setAriaDescribedBy, setAriaErrorMessage, setAriaLabelledBy } from "../aria/aria";
-import { type FieldApi } from "./context";
 
 interface FieldAriaOptions {
   /** Additional same-root elements to include, e.g. an internal label or counter. */

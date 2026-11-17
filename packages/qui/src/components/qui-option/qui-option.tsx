@@ -1,4 +1,6 @@
-import { Component, Element, h, Host, Prop, resolveVar, type VNode } from "@stencil/core";
+import type { VNode } from "@stencil/core";
+
+import { Component, Element, h, Host, Prop, resolveVar } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";

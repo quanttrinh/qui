@@ -1,10 +1,12 @@
-import { type MaskitoPreprocessor } from "@maskito/core";
+import type { MaskitoPreprocessor } from "@maskito/core";
 
-import { applyTextCase, type TextCase } from "./case";
+import type { TextCase } from "./case";
+import type { NumericOrDecimalFilterOptions } from "./input-filter";
+
+import { applyTextCase } from "./case";
 import {
   appendAcceptedNumericOrDecimalCharacter,
   filterNumericOrDecimalInput,
-  type NumericOrDecimalFilterOptions,
 } from "./input-filter";
 
 /** Normalizes case before the mask sees the value. */

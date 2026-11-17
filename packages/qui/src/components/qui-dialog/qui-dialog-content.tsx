@@ -1,22 +1,16 @@
-import {
-  Mixin,
-  Build,
-  resolveVar,
-  Component,
-  Element,
-  h,
-  Host,
-  State,
-  type VNode,
-} from "@stencil/core";
+import type { VNode } from "@stencil/core";
+
+import { Mixin, Build, resolveVar, Component, Element, h, Host, State } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 import { token } from "#styled-system/tokens";
 
+import type { DialogContext, DialogControl } from "./context";
+
 import { ContextPartController } from "../shared/controllers";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
-import { dialogContext, type DialogContext, type DialogControl } from "./context";
+import { dialogContext } from "./context";
 import { applyDialogAria } from "./dialog-aria";
 
 const styles = {

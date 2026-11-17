@@ -1,5 +1,6 @@
+import type { DialogHostRegistration } from "./dialog-aria";
+
 import { createContextStore } from "../shared/context";
-import { type DialogHostRegistration } from "./dialog-aria";
 
 export interface DialogIds {
   title: string;

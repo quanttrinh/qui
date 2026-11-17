@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { AccordionContext, AccordionItemContext } from "../../qui-accordion/accordion-context";
+import type { DialogContext } from "../../qui-dialog/context";
+import type { RadioGroupContext } from "../../qui-radio/context";
+import type { TabsContext } from "../../qui-tabs/context";
+import type { ContextPartOptions, ContextPartSource } from "../controllers";
+import type { FieldApi } from "../helpers/field";
+
 import {
   accordionContext,
   accordionItemContext,
@@ -7,29 +14,12 @@ import {
   clearAccordionItem,
   provideAccordion,
   provideAccordionItem,
-  type AccordionContext,
-  type AccordionItemContext,
 } from "../../qui-accordion/accordion-context";
-import {
-  clearDialog,
-  dialogContext,
-  provideDialog,
-  type DialogContext,
-} from "../../qui-dialog/context";
-import {
-  clearRadioGroup,
-  radioGroupContext,
-  provideRadioGroup,
-  type RadioGroupContext,
-} from "../../qui-radio/context";
-import { clearTabs, provideTabs, tabsContext, type TabsContext } from "../../qui-tabs/context";
-import {
-  ContextPartController,
-  FormController,
-  type ContextPartOptions,
-  type ContextPartSource,
-} from "../controllers";
-import { clearField, fieldContext, provideField, type FieldApi } from "../helpers/field";
+import { clearDialog, dialogContext, provideDialog } from "../../qui-dialog/context";
+import { clearRadioGroup, radioGroupContext, provideRadioGroup } from "../../qui-radio/context";
+import { clearTabs, provideTabs, tabsContext } from "../../qui-tabs/context";
+import { ContextPartController, FormController } from "../controllers";
+import { clearField, fieldContext, provideField } from "../helpers/field";
 
 function createFieldApi(): FieldApi {
   return {

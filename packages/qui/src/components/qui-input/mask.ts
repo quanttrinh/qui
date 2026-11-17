@@ -1,4 +1,4 @@
-import { type MaskitoMaskExpression, type MaskitoOptions } from "@maskito/core";
+import type { MaskitoMaskExpression, MaskitoOptions } from "@maskito/core";
 
 /** A compiled mask plus the helper the input needs to report raw values. */
 export interface CompiledMask {

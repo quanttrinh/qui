@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import type { FieldApi } from "../../helpers/field/context";
+import type { FieldControlHandle } from "../../helpers/field/registry";
+
 import { createTestControllerHost } from "../../../../../tests/test-utils/controller-host";
-import { clearField, provideField, type FieldApi } from "../../helpers/field/context";
-import { type FieldControlHandle } from "../../helpers/field/registry";
+import { clearField, provideField } from "../../helpers/field/context";
 import { FormController } from "./index";
 
 function FakeShadowRoot(this: { nodeType: number }): void {

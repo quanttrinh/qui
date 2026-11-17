@@ -1,18 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  createFakeDocument,
-  createHost,
-  type FakeNode,
-  linkHrefs,
-} from "../../../tests/test-utils/fake-dom";
+import type { FakeNode } from "../../../tests/test-utils/fake-dom";
+import type { HydrateRenderOptions } from "./index";
+
+import { createFakeDocument, createHost, linkHrefs } from "../../../tests/test-utils/fake-dom";
 import { SHADOW_STYLES_MARKER, STYLESHEET_ATTRIBUTE } from "../styles";
-import {
-  injectDocumentStylesheet,
-  injectShadowStylesheet,
-  withShadowStylesheet,
-  type HydrateRenderOptions,
-} from "./index";
+import { injectDocumentStylesheet, injectShadowStylesheet, withShadowStylesheet } from "./index";
 
 function markStyled(host: FakeNode): void {
   host.setAttribute(SHADOW_STYLES_MARKER, "");

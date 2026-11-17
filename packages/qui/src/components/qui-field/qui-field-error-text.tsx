@@ -1,10 +1,13 @@
-import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
+import type { VNode } from "@stencil/core";
+
+import { Mixin, resolveVar, Component, Element, h, Host } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
+import type { FieldApi } from "../shared/helpers/field";
+
 import { FieldPartController } from "../shared/controllers";
-import { type FieldApi } from "../shared/helpers/field";
 import { ControllerHostMixin } from "../shared/mixins";
 import { fieldStyles } from "./styles";
 

@@ -1,5 +1,6 @@
+import type { ReactiveControllerHost } from "../reactive-controller";
+
 import { ControlledControllerBase } from "../controlled-controller";
-import { type ReactiveControllerHost } from "../reactive-controller";
 
 /** The checked state shared by checkbox-like controls. */
 export type CheckedState = boolean | "indeterminate";

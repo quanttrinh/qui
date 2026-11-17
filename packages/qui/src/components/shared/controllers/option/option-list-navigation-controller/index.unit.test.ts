@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import type { OptionItem } from "../../../helpers/option/option";
+
 import { createTestControllerHost } from "../../../../../../tests/test-utils/controller-host";
-import { type OptionItem } from "../../../helpers/option/option";
 import { OptionListNavigationController } from "./index";
 
 const items: OptionItem[] = [

@@ -1,5 +1,5 @@
-import { type OptionSourceAdapter } from "../shared/controllers/option";
-import { type OptionItem } from "../shared/helpers/option";
+import type { OptionSourceAdapter } from "../shared/controllers/option";
+import type { OptionItem } from "../shared/helpers/option";
 
 /** A `qui-option` element as read by Select and Combobox. */
 interface OptionElement extends HTMLElement {

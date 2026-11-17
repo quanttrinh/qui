@@ -1,9 +1,18 @@
+import type { TransformResult, UnpluginInstance } from "unplugin";
+
 import { normalizeComponentTags } from "@quanttrinh/qui/internal";
 import { MagicString } from "magic-string";
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { createUnplugin, type TransformResult, type UnpluginInstance } from "unplugin";
+import { createUnplugin } from "unplugin";
+
+import type {
+  QuiPluginOptions,
+  QuiRegistrationOptions,
+  QuiStylesBundleAsset,
+  QuiStylesResolverContext,
+} from "./core";
 
 import {
   componentsFromVirtualModuleId,
@@ -23,10 +32,6 @@ import {
   virtualModuleId,
   VIRTUAL_REGISTRATION_MANIFEST_ID,
   VIRTUAL_STYLES_ID,
-  type QuiPluginOptions,
-  type QuiRegistrationOptions,
-  type QuiStylesBundleAsset,
-  type QuiStylesResolverContext,
 } from "./core";
 import { resolveStylesheetPath } from "./resolve-styles";
 

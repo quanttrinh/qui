@@ -1,11 +1,6 @@
-import {
-  colorRoles,
-  createScheme,
-  cssVariableNames,
-  schemeToColors,
-  type ColorRole,
-  type ThemeOptions,
-} from "./color";
+import type { ColorRole, ThemeOptions } from "./color";
+
+import { colorRoles, createScheme, cssVariableNames, schemeToColors } from "./color";
 
 function defaultTarget(): HTMLElement | undefined {
   return typeof document === "undefined" ? undefined : document.documentElement;

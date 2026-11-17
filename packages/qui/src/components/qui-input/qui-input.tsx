@@ -1,4 +1,7 @@
-import { Maskito, maskitoTransform, type MaskitoOptions } from "@maskito/core";
+import type { MaskitoOptions } from "@maskito/core";
+import type { EventEmitter, VNode } from "@stencil/core";
+
+import { Maskito, maskitoTransform } from "@maskito/core";
 import {
   Mixin,
   Build,
@@ -13,27 +16,30 @@ import {
   Prop,
   State,
   Watch,
-  type EventEmitter,
-  type VNode,
 } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { cx } from "#styled-system/css";
 
-import { FormController, type FormValidity } from "../shared/controllers";
+import type { FormValidity } from "../shared/controllers";
+import type { TextCase } from "./case";
+import type { InputMaskConfig } from "./mask-config";
+import type { NumberSeparators } from "./number-separators";
+import type { NumberConstraints } from "./number-stepper";
+
+import { FormController } from "../shared/controllers";
 import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
 import { isHTMLInputElement, isHTMLSlotElement } from "../shared/helpers/dom/dom";
 import { focusElement } from "../shared/helpers/dom/focus";
 import { nextId } from "../shared/helpers/dom/id";
 import { applyFieldAria, createFieldControl } from "../shared/helpers/field";
 import { ControllerHostMixin, FormControlMixin, ShadowStylesMixin } from "../shared/mixins";
-import { type TextCase } from "./case";
 import { renderNumberStepper, renderPasswordToggle } from "./input-controls";
 import { filterNumericOrDecimalInput } from "./input-filter";
 import { resolveInputValidity, resolveInputValidityKey } from "./input-validity";
-import { hasConfiguredMask, resolveInputMaskConfig, type InputMaskConfig } from "./mask-config";
-import { resolveNumberSeparators, type NumberSeparators } from "./number-separators";
-import { NumberStepper, type NumberConstraints } from "./number-stepper";
+import { hasConfiguredMask, resolveInputMaskConfig } from "./mask-config";
+import { resolveNumberSeparators } from "./number-separators";
+import { NumberStepper } from "./number-stepper";
 import { styles } from "./styles";
 
 /** The input types `qui-input` can render. */

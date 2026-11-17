@@ -1,11 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  moveIndex,
-  RovingFocusRegistry,
-  sameTriggerRegistration,
-  type TriggerRegistration,
-} from "./index";
+import type { TriggerRegistration } from "./index";
+
+import { moveIndex, RovingFocusRegistry, sameTriggerRegistration } from "./index";
 
 interface FakeHost extends HTMLElement {
   order: number;

@@ -1,11 +1,11 @@
+import type { NumberConstraints, StepAvailability } from "./number-mask";
+
 import {
   canStepNumber,
   formatNumber,
   parseNumber,
   stepAvailability,
   stepNumber,
-  type NumberConstraints,
-  type StepAvailability,
 } from "./number-mask";
 
 export type { NumberConstraints } from "./number-mask";

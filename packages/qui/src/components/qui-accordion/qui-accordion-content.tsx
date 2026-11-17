@@ -1,15 +1,19 @@
-import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
+import type { VNode } from "@stencil/core";
+
+import { Mixin, resolveVar, Component, Element, h, Host } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 import { token } from "#styled-system/tokens";
 
+import type { AccordionItemContext } from "./accordion-context";
+import type { AccordionTriggerRegistration } from "./controller";
+
 import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
 import { setAriaControls, setAriaLabelledBy } from "../shared/helpers/aria/aria";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
-import { accordionItemContext, type AccordionItemContext } from "./accordion-context";
-import { type AccordionTriggerRegistration } from "./controller";
+import { accordionItemContext } from "./accordion-context";
 
 const styles = {
   host: css({ display: "block" }),

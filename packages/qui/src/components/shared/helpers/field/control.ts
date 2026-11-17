@@ -1,4 +1,4 @@
-import { type FieldControlHandle } from "./registry";
+import type { FieldControlHandle } from "./registry";
 
 /**
  * Creates a field control handle backed by a lazily resolved focusable element.

@@ -1,6 +1,6 @@
-import { type MixedInCtor } from "@stencil/core";
+import type { MixedInCtor } from "@stencil/core";
 
-import { type FormController } from "../../controllers/form-controller";
+import type { FormController } from "../../controllers/form-controller";
 
 /* oxlint-disable typescript/method-signature-style -- Mixin instance members are methods so subclasses can override them. */
 export interface FormControlMixinInstance {

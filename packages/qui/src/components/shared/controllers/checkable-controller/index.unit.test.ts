@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import type { CheckedState } from "./index";
+
 import { createTestControllerHost } from "../../../../../tests/test-utils/controller-host";
-import { CheckableController, type CheckedState } from "./index";
+import { CheckableController } from "./index";
 
 function createController(options?: {
   checked?: CheckedState;

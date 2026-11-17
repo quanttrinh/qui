@@ -1,6 +1,8 @@
-import { type ContextSource } from "../../context/store";
+import type { ContextSource } from "../../context/store";
+import type { ReactiveControllerHost } from "../reactive-controller";
+
 import { shallowEqual } from "../../helpers/equality";
-import { ReactiveControllerBase, type ReactiveControllerHost } from "../reactive-controller";
+import { ReactiveControllerBase } from "../reactive-controller";
 
 /** A context object that can notify a subscribed part when it changes. */
 interface ContextPartSource {

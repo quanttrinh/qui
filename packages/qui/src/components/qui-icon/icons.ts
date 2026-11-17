@@ -1,4 +1,4 @@
-import { type VNode } from "@stencil/core";
+import type { VNode } from "@stencil/core";
 
 import { renderIconSvg } from "./render-icon";
 

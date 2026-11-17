@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { FakeDocument } from "../../../tests/test-utils/fake-dom";
+
 import {
   createFakeDocument,
   createHost,
   FakeNode,
-  type FakeDocument,
   linkHrefs,
 } from "../../../tests/test-utils/fake-dom";
 

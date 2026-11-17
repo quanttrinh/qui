@@ -1,5 +1,6 @@
+import type { FieldControlHandle } from "./registry";
+
 import { createContextStore } from "../../context";
-import { type FieldControlHandle } from "./registry";
 
 /** Resolved ids for the parts of a field. */
 export interface FieldIds {

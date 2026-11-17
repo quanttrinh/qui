@@ -1,5 +1,6 @@
+import type { AccordionTriggerRegistration } from "./controller";
+
 import { createContextStore } from "../shared/context";
-import { type AccordionTriggerRegistration } from "./controller";
 
 export interface AccordionItem {
   value: string;

@@ -1,7 +1,9 @@
 import { Build } from "@stencil/core";
 
-import { type OptionItem } from "../../../helpers/option/option";
-import { ReactiveControllerBase, type ReactiveControllerHost } from "../../reactive-controller";
+import type { OptionItem } from "../../../helpers/option/option";
+import type { ReactiveControllerHost } from "../../reactive-controller";
+
+import { ReactiveControllerBase } from "../../reactive-controller";
 
 /** DOM-specific half of an option source. Kept outside shared code. */
 export interface OptionSourceAdapter {

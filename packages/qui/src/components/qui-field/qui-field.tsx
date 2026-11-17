@@ -1,14 +1,6 @@
-import {
-  Mixin,
-  resolveVar,
-  Component,
-  Element,
-  h,
-  Host,
-  Prop,
-  Watch,
-  type VNode,
-} from "@stencil/core";
+import type { VNode } from "@stencil/core";
+
+import { Mixin, resolveVar, Component, Element, h, Host, Prop, Watch } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 

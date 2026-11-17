@@ -1,6 +1,7 @@
 import { token } from "#styled-system/tokens";
 
-import { type SystemStyleObject } from "../../../../styled-system/types";
+import type { SystemStyleObject } from "../../../../styled-system/types";
+
 import { focusRing } from "./focus-ring";
 
 /** The shared button treatment for dialog trigger and close controls. */

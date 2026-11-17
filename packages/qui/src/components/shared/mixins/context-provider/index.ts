@@ -1,4 +1,4 @@
-import { type MixedInCtor } from "@stencil/core";
+import type { MixedInCtor } from "@stencil/core";
 
 /* oxlint-disable typescript/method-signature-style -- Mixin instance members are methods so subclasses can override them. */
 export interface ContextProviderMixinInstance {

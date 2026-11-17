@@ -1,12 +1,15 @@
-import { h, type VNode } from "@stencil/core";
+import type { VNode } from "@stencil/core";
+
+import { h } from "@stencil/core";
 
 import { css } from "#styled-system/css";
 import { token } from "#styled-system/tokens";
 
+import type { PopoverDismissEvent } from "../../../qui-popover/qui-popover";
+import type { ListEntry, ListWindow } from "../list-window/model";
+import type { OptionItem, OptionRender, OptionRenderState } from "./option";
+
 import { CheckIcon } from "../../../qui-icon/icons";
-import { type PopoverDismissEvent } from "../../../qui-popover/qui-popover";
-import { type ListEntry, type ListWindow } from "../list-window/model";
-import { type OptionItem, type OptionRender, type OptionRenderState } from "./option";
 
 /** Maximum height of the list panel. */
 export const PANEL_MAX_HEIGHT = 320;

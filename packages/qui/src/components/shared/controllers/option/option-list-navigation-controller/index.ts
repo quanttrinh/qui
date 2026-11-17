@@ -1,5 +1,7 @@
-import { type OptionItem } from "../../../helpers/option/option";
-import { ReactiveControllerBase, type ReactiveControllerHost } from "../../reactive-controller";
+import type { OptionItem } from "../../../helpers/option/option";
+import type { ReactiveControllerHost } from "../../reactive-controller";
+
+import { ReactiveControllerBase } from "../../reactive-controller";
 import { moveIndex } from "../../roving-focus";
 
 interface OptionListNavigationControllerOptions<TItem extends OptionItem> {

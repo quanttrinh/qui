@@ -1,5 +1,8 @@
-import { parseSync, Visitor, type Node } from "oxc-parser";
-import { parseFragment, type DefaultTreeAdapterTypes } from "parse5";
+import type { Node } from "oxc-parser";
+import type { DefaultTreeAdapterTypes } from "parse5";
+
+import { parseSync, Visitor } from "oxc-parser";
+import { parseFragment } from "parse5";
 import { extname } from "pathe";
 
 const TYPESCRIPT_EXTENSIONS = new Set([".cts", ".mts", ".ts"]);

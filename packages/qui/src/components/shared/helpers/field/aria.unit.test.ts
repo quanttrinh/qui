@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { FieldApi } from "./context";
+
 import { createReflectionElement, fakeTarget } from "../../../../../tests/test-utils/fake-aria";
 import { applyFieldAria } from "./aria";
-import { type FieldApi } from "./context";
 
 function createControl(supported: boolean) {
   return createReflectionElement(supported, [

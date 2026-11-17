@@ -1,3 +1,5 @@
+import type { EventEmitter, VNode } from "@stencil/core";
+
 import {
   Mixin,
   resolveVar,
@@ -10,21 +12,16 @@ import {
   Method,
   Prop,
   Watch,
-  type EventEmitter,
-  type VNode,
 } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 import { token } from "#styled-system/tokens";
 
+import type { CheckedState, FormValidity } from "../shared/controllers";
+
 import { CheckIcon, RemoveIcon } from "../qui-icon/icons";
-import {
-  CheckableController,
-  FormController,
-  type CheckedState,
-  type FormValidity,
-} from "../shared/controllers";
+import { CheckableController, FormController } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { focusElement } from "../shared/helpers/dom/focus";
 import { nextId } from "../shared/helpers/dom/id";
