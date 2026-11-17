@@ -1,11 +1,9 @@
-import {
-  ListMetrics,
-  scrollIndexIntoView,
-  type ListMode,
-  type ListWindow,
-} from "../../helpers/list-window/model";
+import type { ListMode, ListWindow } from "../../helpers/list-window/model";
+import type { ReactiveControllerHost } from "../reactive-controller";
+
+import { ListMetrics, scrollIndexIntoView } from "../../helpers/list-window/model";
 import { ListSizeObserver } from "../../helpers/list-window/size-observer";
-import { ReactiveControllerBase, type ReactiveControllerHost } from "../reactive-controller";
+import { ReactiveControllerBase } from "../reactive-controller";
 
 interface ListWindowControllerOptions {
   getEstimateSize: () => number;

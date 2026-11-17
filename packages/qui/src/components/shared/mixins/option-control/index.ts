@@ -1,6 +1,8 @@
-import { type MixedInCtor, Prop } from "@stencil/core";
+import type { MixedInCtor } from "@stencil/core";
 
-import { type OptionItem, type OptionRender } from "../../helpers/option/option";
+import { Prop } from "@stencil/core";
+
+import type { OptionItem, OptionRender } from "../../helpers/option/option";
 
 export interface OptionControlMixinInstance {
   items?: OptionItem[];

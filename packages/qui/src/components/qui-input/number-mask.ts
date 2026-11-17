@@ -1,13 +1,10 @@
-import {
-  maskitoChangeEventPlugin,
-  maskitoInitialCalibrationPlugin,
-  type MaskitoOptions,
-  type MaskitoPostprocessor,
-  type MaskitoPreprocessor,
-} from "@maskito/core";
+import type { MaskitoOptions, MaskitoPostprocessor, MaskitoPreprocessor } from "@maskito/core";
+
+import { maskitoChangeEventPlugin, maskitoInitialCalibrationPlugin } from "@maskito/core";
+
+import type { NumberSeparators } from "./number-separators";
 
 import { appendAcceptedNumericOrDecimalCharacter } from "./input-filter";
-import { type NumberSeparators } from "./number-separators";
 
 export interface NumberMaskOptions {
   readonly allowNegative: boolean;

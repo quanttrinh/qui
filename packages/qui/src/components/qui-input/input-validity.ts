@@ -1,5 +1,7 @@
-import { type FormValidity } from "../shared/controllers";
-import { numberValidity, type NumberConstraints } from "./number-mask";
+import type { FormValidity } from "../shared/controllers";
+import type { NumberConstraints } from "./number-mask";
+
+import { numberValidity } from "./number-mask";
 
 export interface InputValidityOptions {
   readonly element?: HTMLInputElement;

@@ -1,14 +1,12 @@
-import {
-  maskitoChangeEventPlugin,
-  maskitoInitialCalibrationPlugin,
-  type MaskitoOptions,
-  type MaskitoPreprocessor,
-} from "@maskito/core";
+import type { MaskitoOptions, MaskitoPreprocessor } from "@maskito/core";
 
-import { type TextCase } from "./case";
+import { maskitoChangeEventPlugin, maskitoInitialCalibrationPlugin } from "@maskito/core";
+
+import type { TextCase } from "./case";
+import type { NumberSeparators } from "./number-separators";
+
 import { compileMask, extractRawFromMasked } from "./mask";
 import { compileNumberMask } from "./number-mask";
-import { type NumberSeparators } from "./number-separators";
 import { createNumericFilterPreprocessor, createTextCasePreprocessor } from "./preprocessors";
 
 /** Numeric filter modes that also drive Maskito preprocessing. */

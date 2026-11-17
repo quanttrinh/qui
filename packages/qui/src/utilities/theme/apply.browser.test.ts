@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import type { ColorRole } from "./color";
+
 import { applyTheme, clearColors, setColors } from "./apply";
-import { colorRoles, cssVariableNames, type ColorRole } from "./color";
+import { colorRoles, cssVariableNames } from "./color";
 
 function createTarget(): HTMLElement {
   return document.createElement("div");

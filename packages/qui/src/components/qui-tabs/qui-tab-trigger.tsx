@@ -1,18 +1,12 @@
-import {
-  Mixin,
-  resolveVar,
-  Component,
-  Element,
-  h,
-  Host,
-  Prop,
-  Watch,
-  type VNode,
-} from "@stencil/core";
+import type { VNode } from "@stencil/core";
+
+import { Mixin, resolveVar, Component, Element, h, Host, Prop, Watch } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 import { token } from "#styled-system/tokens";
+
+import type { TabsContext, TabsVariant } from "./context";
 
 import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
 import { setAriaControls } from "../shared/helpers/aria/aria";
@@ -20,7 +14,7 @@ import { dataAttr } from "../shared/helpers/aria/attr";
 import { isHTMLElement } from "../shared/helpers/dom/dom";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { focusRingInset } from "../shared/styles";
-import { tabsContext, type TabsContext, type TabsVariant } from "./context";
+import { tabsContext } from "./context";
 
 const styles = {
   host: css({ display: "contents" }),

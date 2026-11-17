@@ -1,6 +1,7 @@
-import { type OptionItem } from "../../../helpers/option/option";
+import type { OptionItem } from "../../../helpers/option/option";
+import type { ReactiveControllerHost } from "../../reactive-controller";
+
 import { ControlledControllerBase } from "../../controlled-controller";
-import { type ReactiveControllerHost } from "../../reactive-controller";
 
 interface OptionSelectionChangeDetails<TItem extends OptionItem> {
   value: string[];

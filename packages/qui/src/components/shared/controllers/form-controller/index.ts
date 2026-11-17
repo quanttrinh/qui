@@ -1,9 +1,12 @@
 import { Build } from "@stencil/core";
 
+import type { FieldApi } from "../../helpers/field/context";
+import type { FieldControlHandle } from "../../helpers/field/registry";
+import type { ReactiveControllerHost } from "../reactive-controller";
+
 import { shallowEqual } from "../../helpers/equality";
-import { fieldContext, type FieldApi } from "../../helpers/field/context";
-import { type FieldControlHandle } from "../../helpers/field/registry";
-import { ReactiveControllerBase, type ReactiveControllerHost } from "../reactive-controller";
+import { fieldContext } from "../../helpers/field/context";
+import { ReactiveControllerBase } from "../reactive-controller";
 
 export interface FormValidity {
   flags: ValidityStateFlags;

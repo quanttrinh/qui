@@ -1,9 +1,11 @@
+import type { Browser, BrowserType, Page } from "playwright";
+
 /// <reference types="node" />
 import { once } from "node:events";
 import { readdir, readFile } from "node:fs/promises";
 import http from "node:http";
 import path from "node:path";
-import { chromium, firefox, webkit, type Browser, type BrowserType, type Page } from "playwright";
+import { chromium, firefox, webkit } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { loadHydrate } from "../../../tests/test-utils/hydrate";

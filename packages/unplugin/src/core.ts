@@ -1,3 +1,6 @@
+import type { QuiStylesHrefValue } from "@quanttrinh/qui/internal";
+import type { DefaultTreeAdapterTypes } from "parse5";
+
 import {
   componentRegistrationModule,
   isPrimaryStylesheetRel,
@@ -6,10 +9,9 @@ import {
   STYLESHEET_ATTRIBUTE,
   stylesheetLinkHtml,
   uniqueHrefs,
-  type QuiStylesHrefValue,
 } from "@quanttrinh/qui/internal";
 import matter from "gray-matter";
-import { parse, type DefaultTreeAdapterTypes } from "parse5";
+import { parse } from "parse5";
 import { extname, normalize } from "pathe";
 
 import { extractComponentsFromJavaScript, extractComponentsFromText } from "./extract";

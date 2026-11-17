@@ -1,4 +1,6 @@
-import { ReactiveControllerBase, type ReactiveControllerHost } from "../reactive-controller";
+import type { ReactiveControllerHost } from "../reactive-controller";
+
+import { ReactiveControllerBase } from "../reactive-controller";
 
 export interface ControlledControllerOptions<TValue> {
   /** The controlled value, or `undefined` when the state is uncontrolled. */

@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { type ContextSource } from "../../context/store";
-import { type ReactiveControllerHost } from "../reactive-controller";
-import { ContextPartController, type ContextPartOptions, type ContextPartSource } from "./index";
+import type { ContextSource } from "../../context/store";
+import type { ReactiveControllerHost } from "../reactive-controller";
+import type { ContextPartOptions, ContextPartSource } from "./index";
+
+import { ContextPartController } from "./index";
 
 interface TestContext extends ContextPartSource {
   name: string;

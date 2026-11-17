@@ -1,3 +1,5 @@
+import type { EventEmitter, VNode } from "@stencil/core";
+
 import {
   Mixin,
   AttachInternals,
@@ -10,15 +12,16 @@ import {
   Prop,
   resolveVar,
   Watch,
-  type EventEmitter,
-  type VNode,
 } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 
+import type { PopoverDismissEvent } from "../qui-popover/qui-popover";
+import type { OptionItem } from "../shared/helpers/option";
+import type { ComboboxFilter, ComboboxFilterMode, ComboboxOption } from "./model";
+
 import { UnfoldMoreIcon } from "../qui-icon/icons";
 import { quiOptionSource } from "../qui-option/option-source";
-import { type PopoverDismissEvent } from "../qui-popover/qui-popover";
 import {
   FormController,
   OptionListNavigationController,
@@ -37,7 +40,6 @@ import {
   listStyles,
   renderOptionList,
   renderOptionRow,
-  type OptionItem,
 } from "../shared/helpers/option";
 import {
   ControllerHostMixin,
@@ -46,7 +48,6 @@ import {
   ShadowStylesMixin,
 } from "../shared/mixins";
 import { ComboboxInputController } from "./input-controller";
-import { type ComboboxFilter, type ComboboxFilterMode, type ComboboxOption } from "./model";
 import { comboboxStyles as styles } from "./styles";
 
 /** Emitted whenever the selected values change. */

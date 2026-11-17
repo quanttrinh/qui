@@ -1,25 +1,17 @@
-import {
-  Mixin,
-  resolveVar,
-  Component,
-  Element,
-  Event,
-  h,
-  Host,
-  Prop,
-  Watch,
-  type EventEmitter,
-  type VNode,
-} from "@stencil/core";
+import type { EventEmitter, VNode } from "@stencil/core";
+
+import { Mixin, resolveVar, Component, Element, Event, h, Host, Prop, Watch } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 import { token } from "#styled-system/tokens";
 
+import type { AccordionContext } from "./accordion-context";
+
 import { createListenerStore } from "../shared/controllers";
 import { nextId } from "../shared/helpers/dom/id";
 import { ContextProviderMixin, ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
-import { clearAccordion, provideAccordion, type AccordionContext } from "./accordion-context";
+import { clearAccordion, provideAccordion } from "./accordion-context";
 import { AccordionController } from "./controller";
 
 const styles = {

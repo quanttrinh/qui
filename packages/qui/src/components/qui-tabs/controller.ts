@@ -1,3 +1,5 @@
+import type { ReactiveControllerHost, TriggerRegistration } from "../shared/controllers";
+
 import {
   ControlledControllerBase,
   FocusState,
@@ -5,8 +7,6 @@ import {
   moveIndex,
   RovingFocusRegistry,
   sameTriggerRegistration,
-  type ReactiveControllerHost,
-  type TriggerRegistration,
 } from "../shared/controllers";
 
 interface TabsControllerOptions {

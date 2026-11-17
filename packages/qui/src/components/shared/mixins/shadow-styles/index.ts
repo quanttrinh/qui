@@ -1,4 +1,4 @@
-import { type MixedInCtor } from "@stencil/core";
+import type { MixedInCtor } from "@stencil/core";
 
 import { ensureShadowStylesheet } from "../../../../utilities/styles";
 

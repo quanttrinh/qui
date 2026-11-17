@@ -1,14 +1,18 @@
-import { Mixin, resolveVar, Component, Element, h, Host, type VNode } from "@stencil/core";
+import type { VNode } from "@stencil/core";
+
+import { Mixin, resolveVar, Component, Element, h, Host } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 import { token } from "#styled-system/tokens";
 
+import type { TabsContext } from "./context";
+
 import { ContextPartController, RegistrationReconciler } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { arrowDelta, edgeKey } from "../shared/helpers/dom/keyboard";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
-import { tabsContext, type TabsContext } from "./context";
+import { tabsContext } from "./context";
 
 const styles = {
   host: css({ display: "block" }),

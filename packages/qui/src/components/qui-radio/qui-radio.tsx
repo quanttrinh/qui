@@ -1,18 +1,12 @@
-import {
-  Mixin,
-  resolveVar,
-  Component,
-  Element,
-  h,
-  Host,
-  Method,
-  Prop,
-  type VNode,
-} from "@stencil/core";
+import type { VNode } from "@stencil/core";
+
+import { Mixin, resolveVar, Component, Element, h, Host, Method, Prop } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 import { token } from "#styled-system/tokens";
+
+import type { RadioGroupContext, RadioItem, RadioItemState } from "./context";
 
 import { ContextPartController } from "../shared/controllers";
 import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
@@ -20,12 +14,7 @@ import { isHTMLInputElement } from "../shared/helpers/dom/dom";
 import { focusElement } from "../shared/helpers/dom/focus";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { focusableInputOverlay, focusRing } from "../shared/styles";
-import {
-  radioGroupContext,
-  type RadioGroupContext,
-  type RadioItem,
-  type RadioItemState,
-} from "./context";
+import { radioGroupContext } from "./context";
 
 const styles = {
   host: css({ display: "block" }),

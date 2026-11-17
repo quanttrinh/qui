@@ -1,3 +1,5 @@
+import type { DynamicColor, DynamicScheme } from "@material/material-color-utilities";
+
 import {
   argbFromHex,
   Hct,
@@ -12,11 +14,11 @@ import {
   SchemeRainbow,
   SchemeTonalSpot,
   SchemeVibrant,
-  type DynamicColor,
-  type DynamicScheme,
 } from "@material/material-color-utilities";
 
-import { colorRoles, type ColorRole } from "./color-roles";
+import type { ColorRole } from "./color-roles";
+
+import { colorRoles } from "./color-roles";
 import { buildRecord } from "./record";
 
 export { colorRoles, cssVariableName, cssVariableNames, type ColorRole } from "./color-roles";

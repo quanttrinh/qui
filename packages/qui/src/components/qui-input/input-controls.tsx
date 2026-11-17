@@ -1,4 +1,6 @@
-import { h, type VNode } from "@stencil/core";
+import type { VNode } from "@stencil/core";
+
+import { h } from "@stencil/core";
 
 import { AddIcon, RemoveIcon, VisibilityIcon, VisibilityOffIcon } from "../qui-icon/icons";
 import { styles } from "./styles";

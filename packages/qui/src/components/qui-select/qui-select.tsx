@@ -1,3 +1,5 @@
+import type { EventEmitter, VNode } from "@stencil/core";
+
 import {
   Mixin,
   AttachInternals,
@@ -10,11 +12,11 @@ import {
   Prop,
   resolveVar,
   Watch,
-  type EventEmitter,
-  type VNode,
 } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
+
+import type { OptionItem } from "../shared/helpers/option";
 
 import { UnfoldMoreIcon } from "../qui-icon/icons";
 import { quiOptionSource } from "../qui-option/option-source";
@@ -35,7 +37,6 @@ import {
   listStyles,
   renderOptionList,
   renderOptionRow,
-  type OptionItem,
 } from "../shared/helpers/option";
 import {
   ControllerHostMixin,

@@ -1,4 +1,4 @@
-import { type SystemStyleObject } from "../../../../styled-system/types";
+import type { SystemStyleObject } from "../../../../styled-system/types";
 
 /**
  * Native input overlay used by checkable controls.

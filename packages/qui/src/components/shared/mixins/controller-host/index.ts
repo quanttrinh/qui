@@ -1,8 +1,10 @@
-import { forceUpdate, type MixedInCtor } from "@stencil/core";
+import type { MixedInCtor } from "@stencil/core";
 
-import {
-  type ReactiveController,
-  type ReactiveControllerHost,
+import { forceUpdate } from "@stencil/core";
+
+import type {
+  ReactiveController,
+  ReactiveControllerHost,
 } from "../../controllers/reactive-controller";
 
 interface ControllerHostElement {

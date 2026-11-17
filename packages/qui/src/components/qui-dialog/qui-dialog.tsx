@@ -1,3 +1,5 @@
+import type { EventEmitter, VNode } from "@stencil/core";
+
 import {
   Build,
   resolveVar,
@@ -9,23 +11,17 @@ import {
   Method,
   Prop,
   Watch,
-  type EventEmitter,
-  type VNode,
 } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
+import type { DialogContext, DialogControl, DialogIds } from "./context";
+
 import { createListenerStore } from "../shared/controllers";
 import { nextId } from "../shared/helpers/dom/id";
 import { lockDocumentScroll } from "../shared/helpers/dom/scroll-lock";
-import {
-  clearDialog,
-  provideDialog,
-  type DialogContext,
-  type DialogControl,
-  type DialogIds,
-} from "./context";
+import { clearDialog, provideDialog } from "./context";
 import { createDialogHostRegistry } from "./dialog-aria";
 
 const styles = {

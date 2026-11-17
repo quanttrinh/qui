@@ -1,4 +1,4 @@
-import { type SystemStyleObject } from "../../../../styled-system/types";
+import type { SystemStyleObject } from "../../../../styled-system/types";
 
 /** The common 2px primary focus ring. */
 export const focusRing: SystemStyleObject = {

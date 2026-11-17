@@ -1,5 +1,6 @@
+import type { TabsTriggerRegistration } from "./controller";
+
 import { createContextStore } from "../shared/context";
-import { type TabsTriggerRegistration } from "./controller";
 
 export type TabsVariant = "primary" | "secondary";
 export type TabsOrientation = "horizontal" | "vertical";

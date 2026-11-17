@@ -1,3 +1,5 @@
+import type { EventEmitter, VNode } from "@stencil/core";
+
 import {
   Mixin,
   resolveVar,
@@ -10,30 +12,26 @@ import {
   Method,
   Prop,
   Watch,
-  type EventEmitter,
-  type VNode,
 } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
-import { createListenerStore, FormController, type FormValidity } from "../shared/controllers";
+import type { FormValidity } from "../shared/controllers";
+import type { FieldControlHandle } from "../shared/helpers/field";
+import type { RadioGroupContext, RadioItem, RadioItemState } from "./context";
+
+import { createListenerStore, FormController } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { nextId } from "../shared/helpers/dom/id";
-import { applyFieldAria, type FieldControlHandle } from "../shared/helpers/field";
+import { applyFieldAria } from "../shared/helpers/field";
 import {
   ContextProviderMixin,
   ControllerHostMixin,
   FormControlMixin,
   ShadowStylesMixin,
 } from "../shared/mixins";
-import {
-  clearRadioGroup,
-  provideRadioGroup,
-  type RadioGroupContext,
-  type RadioItem,
-  type RadioItemState,
-} from "./context";
+import { clearRadioGroup, provideRadioGroup } from "./context";
 import { RadioGroupController } from "./controller";
 
 const styles = {

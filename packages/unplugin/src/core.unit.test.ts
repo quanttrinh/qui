@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { QuiStylesOptions, QuiStylesResolverContext } from "./core";
+
 import {
   componentsFromVirtualModuleId,
   createExternalStylesModule,
@@ -16,8 +18,6 @@ import {
   resolveStylesheetHrefCandidates,
   resolveStylesheetHrefs,
   virtualModuleId,
-  type QuiStylesOptions,
-  type QuiStylesResolverContext,
 } from "./core";
 
 describe("extractComponents", () => {

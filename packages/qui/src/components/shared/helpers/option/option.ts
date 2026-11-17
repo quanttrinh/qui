@@ -1,4 +1,4 @@
-import { type VNode } from "@stencil/core";
+import type { VNode } from "@stencil/core";
 
 export interface OptionItem {
   value: string;

@@ -1,3 +1,5 @@
+import type { EventEmitter, VNode } from "@stencil/core";
+
 import {
   Mixin,
   Build,
@@ -10,8 +12,6 @@ import {
   Prop,
   resolveVar,
   Watch,
-  type EventEmitter,
-  type VNode,
 } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";

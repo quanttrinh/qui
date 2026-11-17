@@ -1,3 +1,5 @@
+import type { EventEmitter, VNode } from "@stencil/core";
+
 import {
   Mixin,
   resolveVar,
@@ -12,13 +14,13 @@ import {
   Prop,
   State,
   Watch,
-  type EventEmitter,
-  type VNode,
 } from "@stencil/core";
 
 import { styleUrls } from "#qui-style-url";
 
-import { FormController, type FormValidity } from "../shared/controllers";
+import type { FormValidity } from "../shared/controllers";
+
+import { FormController } from "../shared/controllers";
 import { ariaAttr, dataAttr } from "../shared/helpers/aria/attr";
 import { isHTMLTextAreaElement } from "../shared/helpers/dom/dom";
 import { focusElement } from "../shared/helpers/dom/focus";
