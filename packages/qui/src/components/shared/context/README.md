@@ -42,12 +42,20 @@ A provider calls `stopImmediatePropagation()` before invoking the callback so
 only the nearest ancestor answers. When `subscribe` is true the callback may be
 called again; the provider passes an `unsubscribe` function as the callback's
 second argument. A provider must not retain callbacks from one-shot requests.
+Subscription callbacks and consumer hosts are held through `WeakRef`s and
+pruned during notification, so a consumer that forgets to unsubscribe cannot
+keep the provider from collecting it.
 
 `context-provider` is a compatible extension used for late providers: a
 document-level coordinator caches requests with `WeakRef`s and re-dispatches
-them when a provider announces itself. `clearContext` also announces
-`available: false` and invokes callbacks with `undefined` to invalidate
-consumers.
+them when a provider announces itself. A request is removed from that cache as
+soon as a provider answers it, so later announcements do not re-deliver it.
+`clearContext` also announces `available: false` and invokes callbacks with
+`undefined` to invalidate consumers.
+
+Repeated requests with the same callback (for example when a pending request is
+re-dispatched) reuse the existing subscription instead of replacing it, so an
+older `unsubscribe` cannot remove a newer subscription.
 
 ## Usage
 

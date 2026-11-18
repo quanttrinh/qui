@@ -127,13 +127,16 @@ class ContextPartController<TContext, TSelection = unknown> extends ReactiveCont
     }
     this.requested = true;
     this.starting = silent;
-    requestContext(
-      this.hostElement,
-      this.options.context,
-      this.handleValue,
-      this.options.subscribe !== false,
-    );
-    this.starting = false;
+    try {
+      requestContext(
+        this.hostElement,
+        this.options.context,
+        this.handleValue,
+        this.options.subscribe !== false,
+      );
+    } finally {
+      this.starting = false;
+    }
   }
 }
 

@@ -7,51 +7,84 @@ import type {
 import { createContextProviderEvent, createContextRequestEvent } from "./protocol";
 
 interface Subscriber {
-  unsubscribe: () => void;
-  host: Element;
-  subscribe: boolean;
+  readonly unsubscribe: () => void;
+  callback: WeakRef<ContextCallback<unknown>>;
+  host: WeakRef<Element>;
 }
 
-/** One provider's value and subscriptions; values are typed at the public API boundary. */
-class ContextSlot {
-  readonly subscribers = new Map<ContextCallback<unknown>, Subscriber>();
+interface ContextSlot {
+  value: unknown;
+  readonly subscribers: Set<Subscriber>;
   readonly controller: AbortController;
   readonly listener: (event: ElementEventMap["context-request"]) => void;
-  private current: unknown;
-
-  constructor(
-    value: unknown,
-    controller: AbortController,
-    listener: (event: ElementEventMap["context-request"]) => void,
-  ) {
-    this.controller = controller;
-    this.listener = listener;
-    this.current = value;
-  }
-
-  get(): unknown {
-    return this.current;
-  }
-
-  set(value: unknown): void {
-    this.current = value;
-  }
 }
 
 const providers = new WeakMap<Element, Map<UnknownContext, ContextSlot>>();
 
+/** Adds or reuses a subscription. */
+function subscribeConsumer(
+  slot: ContextSlot,
+  event: ElementEventMap["context-request"],
+): void {
+  const { callback: subscriber } = event;
+  let entry: Subscriber | undefined;
+  for (const candidate of slot.subscribers) {
+    if (candidate.callback.deref() === subscriber) {
+      entry = candidate;
+      break;
+    }
+  }
+  if (entry === undefined) {
+    const created: Subscriber = {
+      unsubscribe: (): void => {
+        slot.subscribers.delete(created);
+      },
+      callback: new WeakRef(subscriber),
+      host: new WeakRef(event.contextTarget),
+    };
+    entry = created;
+    slot.subscribers.add(created);
+  } else {
+    entry.host = new WeakRef(event.contextTarget);
+  }
+  subscriber(slot.value, entry.unsubscribe);
+}
+
 interface PendingRequest {
-  context: UnknownContext;
   host: WeakRef<Element>;
   callback: WeakRef<ContextCallback<unknown>>;
   subscribe: boolean;
 }
 
 interface RootState {
-  pending: Map<UnknownContext, PendingRequest[]>;
+  pending: Map<UnknownContext, Set<PendingRequest>>;
 }
 
 const roots = new WeakMap<Document, RootState>();
+
+/** Drops an answered request from the late-provider queue. */
+function settlePending(
+  context: UnknownContext,
+  host: Element,
+  // oxlint-disable-next-line promise/prefer-await-to-callbacks -- Callbacks are the protocol contract.
+  callback: ContextCallback<unknown>,
+): void {
+  const document = host.ownerDocument;
+  const state = document === null ? undefined : roots.get(document);
+  const entries = state?.pending.get(context);
+  if (state === undefined || entries === undefined) {
+    return;
+  }
+  for (const entry of entries) {
+    if (entry.host.deref() === host && entry.callback.deref() === callback) {
+      entries.delete(entry);
+      break;
+    }
+  }
+  if (entries.size === 0) {
+    state.pending.delete(context);
+  }
+}
 
 /** Late-provider discovery for one document. */
 function rootFor(target: Document): RootState {
@@ -64,44 +97,54 @@ function rootFor(target: Document): RootState {
 
   target.addEventListener("context-request", (event): void => {
     const host = event.contextTarget;
-    const list = state.pending.get(event.context) ?? [];
-    // Compact dead entries in place; otherwise the list grows forever.
-    let live = 0;
-    for (const entry of list) {
-      if (entry.host.deref() !== undefined && entry.callback.deref() !== undefined) {
-        list[live] = entry;
-        live += 1;
+    let entries = state.pending.get(event.context);
+    if (entries === undefined) {
+      entries = new Set();
+      state.pending.set(event.context, entries);
+    }
+    // Prune collected entries and skip duplicates.
+    for (const entry of entries) {
+      const pendingHost = entry.host.deref();
+      const pendingCallback = entry.callback.deref();
+      if (pendingHost === undefined || pendingCallback === undefined) {
+        entries.delete(entry);
+      } else if (pendingHost === host && pendingCallback === event.callback) {
+        return;
       }
     }
-    list.length = live;
-    const alreadyPending = list.some(
-      (entry) => entry.host.deref() === host && entry.callback.deref() === event.callback,
-    );
-    if (!alreadyPending) {
-      list.push({
-        context: event.context,
-        host: new WeakRef(host),
-        callback: new WeakRef(event.callback),
-        subscribe: event.subscribe,
-      });
-      state.pending.set(event.context, list);
-    }
+    entries.add({
+      host: new WeakRef(host),
+      callback: new WeakRef(event.callback),
+      subscribe: event.subscribe,
+    });
   });
 
   target.addEventListener("context-provider", (event): void => {
     if (!event.available) {
       return;
     }
-    const list = state.pending.get(event.context);
-    if (list === undefined) {
+    const entries = state.pending.get(event.context);
+    if (entries === undefined) {
       return;
     }
-    for (const entry of list) {
-      const host = entry.host.deref();
-      const callback = entry.callback.deref();
-      if (host !== undefined && callback !== undefined) {
-        host.dispatchEvent(createContextRequestEvent(event.context, callback, entry.subscribe, host));
+    // Snapshot: answering mutates the set.
+    // oxlint-disable-next-line unicorn/no-useless-spread -- Snapshot before nested announcements mutate the set.
+    for (const entry of [...entries]) {
+      // A nested announcement may have settled this entry.
+      if (entries.has(entry)) {
+        const host = entry.host.deref();
+        const callback = entry.callback.deref();
+        if (host !== undefined && callback !== undefined) {
+          host.dispatchEvent(
+            createContextRequestEvent(event.context, callback, entry.subscribe, host),
+          );
+        } else {
+          entries.delete(entry);
+        }
       }
+    }
+    if (entries.size === 0) {
+      state.pending.delete(event.context);
     }
   });
 
@@ -114,16 +157,46 @@ function ensureRoot(host: Element): void {
   }
 }
 
-/** Notifies all current subscribers that a provider's state changed. */
+/** Notifies a live subscriber; prunes collected ones. */
+function notifySubscriber(slot: ContextSlot, subscriber: Subscriber, value: unknown): void {
+  const notify = subscriber.callback.deref();
+  const subscriberHost = subscriber.host.deref();
+  if (notify === undefined || subscriberHost === undefined) {
+    // Weak refs keep forgotten consumers collectable.
+    slot.subscribers.delete(subscriber);
+    return;
+  }
+  notify(value, subscriber.unsubscribe);
+}
+
+/** Invalidates a subscriber and requests a fallback provider. */
+function invalidateSubscriber(
+  context: UnknownContext,
+  subscriber: Subscriber,
+): void {
+  const notify = subscriber.callback.deref();
+  const subscriberHost = subscriber.host.deref();
+  if (notify === undefined) {
+    return;
+  }
+  // undefined signals provider removal.
+  notify(undefined);
+  if (subscriberHost !== undefined) {
+    subscriberHost.dispatchEvent(createContextRequestEvent(context, notify, true, subscriberHost));
+  }
+}
+
+/** Notifies subscribers that the provider state changed. */
 export function notifyContext<Value>(host: Element, context: Context<unknown, Value>): void {
   const slot = providers.get(host)?.get(context);
   if (slot === undefined) {
     return;
   }
+  const { value } = slot;
   let firstError: unknown;
-  for (const [notify, subscriber] of slot.subscribers) {
+  for (const subscriber of slot.subscribers) {
     try {
-      notify(slot.get(), subscriber.unsubscribe);
+      notifySubscriber(slot, subscriber, value);
     } catch (error) {
       firstError ??= error;
     }
@@ -143,20 +216,15 @@ export function clearContext<Value>(host: Element, context: Context<unknown, Val
     return;
   }
   byContext.delete(context);
-  // mock-doc (SSR) ignores `signal`, so remove the listener explicitly too.
+  // mock-doc ignores `signal`, so remove the listener explicitly.
   host.removeEventListener("context-request", slot.listener);
   slot.controller.abort();
   const subscribers = [...slot.subscribers];
   slot.subscribers.clear();
   let firstError: unknown;
-  for (const [notify, subscriber] of subscribers) {
+  for (const subscriber of subscribers) {
     try {
-      // Extension: undefined signals provider removal.
-      notify(undefined);
-      // Let consumers fall back to a more distant provider of the same context.
-      subscriber.host.dispatchEvent(
-        createContextRequestEvent(context, notify, subscriber.subscribe, subscriber.host),
-      );
+      invalidateSubscriber(context, subscriber);
     } catch (error) {
       firstError ??= error;
     }
@@ -170,6 +238,23 @@ export function clearContext<Value>(host: Element, context: Context<unknown, Val
       ? firstError
       : new Error("Context provider cleanup failed", { cause: firstError });
   }
+}
+
+/** Updates an existing slot; returns false when the provider has no slot. */
+function publishValue<Value>(
+  host: Element,
+  context: Context<unknown, Value>,
+  value: Value,
+): boolean {
+  const slot = providers.get(host)?.get(context);
+  if (slot === undefined) {
+    return false;
+  }
+  if (!Object.is(slot.value, value)) {
+    slot.value = value;
+    notifyContext(host, context);
+  }
+  return true;
 }
 
 /** Provider-side handle for updating or retiring a context. */
@@ -190,7 +275,9 @@ export function provideContext<Value>(
 ): ContextProviderHandle<Value> {
   const handle: ContextProviderHandle<Value> = {
     setValue: (next: Value): void => {
-      provideContext(host, context, next);
+      if (!publishValue(host, context, next)) {
+        provideContext(host, context, next);
+      }
     },
     notify: (): void => {
       notifyContext(host, context);
@@ -218,33 +305,23 @@ export function provideContext<Value>(
       if (current === undefined) {
         return;
       }
+      // Answered here; no late-provider wake needed.
+      settlePending(context, event.contextTarget, event.callback);
       if (!event.subscribe) {
         // Protocol: non-subscribing callbacks must not be retained.
-        event.callback(current.get());
+        event.callback(current.value);
         return;
       }
-      const { callback: subscriber } = event;
-      const unsubscribe = (): void => {
-        current.subscribers.delete(subscriber);
-      };
-      current.subscribers.set(subscriber, {
-        unsubscribe,
-        host: event.contextTarget,
-        subscribe: event.subscribe,
-      });
-      subscriber(current.get(), unsubscribe);
+      subscribeConsumer(current, event);
     };
     host.addEventListener("context-request", listener, { signal: controller.signal });
-    slot = new ContextSlot(value, controller, listener);
+    slot = { value, controller, listener, subscribers: new Set() };
     byContext.set(context, slot);
     // Wake consumers that requested this context before the provider existed.
     host.dispatchEvent(createContextProviderEvent(context, host, true));
     return handle;
   }
-  if (!Object.is(slot.get(), value)) {
-    slot.set(value);
-    notifyContext(host, context);
-  }
+  publishValue(host, context, value);
   return handle;
 }
 

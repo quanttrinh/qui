@@ -152,6 +152,55 @@ describe("context-request protocol", () => {
     cleanup(provider);
   });
 
+  it("keeps the subscription when the same consumer requests again", () => {
+    const { provider, consumer } = createTree();
+    const key = makeContext();
+    const first = { name: "first" };
+    let unsubscribe: (() => void) | undefined;
+
+    // Track the latest unsubscribe, like a part does.
+    const callback = vi.fn(
+      (_value: TestContext | undefined, nextUnsubscribe?: () => void): void => {
+        if (nextUnsubscribe !== unsubscribe) {
+          unsubscribe?.();
+          unsubscribe = nextUnsubscribe;
+        }
+      },
+    );
+
+    provideContext(provider, key, first);
+    requestContext(consumer, key, callback, true);
+    expect(callback).toHaveBeenCalledOnce();
+
+    // A duplicate request must reuse the subscription.
+    requestContext(consumer, key, callback, true);
+    expect(callback).toHaveBeenCalledTimes(2);
+
+    notifyContext(provider, key);
+    expect(callback).toHaveBeenCalledTimes(3);
+    cleanup(provider);
+  });
+
+  it("does not re-deliver an answered request when another provider appears", () => {
+    const { provider, consumer } = createTree();
+    const key = makeContext();
+    const callback = vi.fn((): void => undefined);
+
+    // The first provider answers the pending request.
+    requestContext(consumer, key, callback, true);
+    provideContext(provider, key, { name: "first" });
+    expect(callback).toHaveBeenCalledOnce();
+
+    // It was settled, so another provider must not re-dispatch it.
+    const other = createTree();
+    provideContext(other.provider, key, { name: "other" });
+    expect(callback).toHaveBeenCalledOnce();
+
+    notifyContext(provider, key);
+    expect(callback).toHaveBeenCalledTimes(2);
+    cleanup(provider, other.provider);
+  });
+
   it("falls back to a more distant provider when the nearest one is cleared", () => {
     const outer = createElement();
     const inner = createElement();

@@ -101,6 +101,33 @@ describe("ContextPartController lifecycle", () => {
     source.cleanup();
   });
 
+  it("stays subscribed when another provider announces the same context", () => {
+    const { provider, consumer } = createTree();
+    const key = createContext<TestContext>(Symbol("late-provider"));
+    const update = vi.fn((): void => undefined);
+    const part = createPart({ context: key, update }, consumer);
+
+    // Request before a provider exists, so it stays pending.
+    part.hostWillLoad();
+    expect(part.context).toBeUndefined();
+
+    const first = createContextValue("first");
+    provideContext(provider, key, first);
+    expect(part.context).toBe(first);
+    expect(update).toHaveBeenCalledOnce();
+
+    // A second provider must not re-deliver the settled request.
+    const other = createTree();
+    provideContext(other.provider, key, createContextValue("other"));
+    expect(update).toHaveBeenCalledOnce();
+
+    notifyContext(provider, key);
+    expect(update).toHaveBeenCalledTimes(2);
+
+    part.hostDisconnected();
+    cleanup(provider, other.provider);
+  });
+
   it("reattaches and re-renders after a reconnect with a new provider", () => {
     const source = createSource(createContextValue("first"));
     const update = vi.fn((): void => undefined);
