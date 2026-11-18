@@ -153,8 +153,7 @@ function ensureRoot(host: Element): void {
 /** Notifies a live subscriber; prunes collected ones. */
 function notifySubscriber(slot: ContextSlot, subscriber: Subscriber, value: unknown): void {
   const notify = subscriber.callback.deref();
-  const subscriberHost = subscriber.host.deref();
-  if (notify === undefined || subscriberHost === undefined) {
+  if (notify === undefined) {
     // Weak refs keep forgotten consumers collectable.
     slot.subscribers.delete(subscriber);
     return;
