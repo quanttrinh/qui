@@ -155,7 +155,7 @@
     "@types/node": "^26.6.6",
     "@types/react": "^19",
     "@typescript/native": "npm:typescript@^7.0.2",
-    "@vitest/browser-playwright": "^5.1.0",
+    "@vitest/browser-playwright": "^5.1.1",
     "jiti": "^2.7.0",
     "oxc-parser": "^0.159.0",
     "playwright": "^1.65.1",
@@ -164,7 +164,7 @@
     "rollup": "^4.68.5",
     "solid-js": "^1",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.1"
   },
   "peerDependencies": {
     "@pandacss/dev": "^2.5.0",
