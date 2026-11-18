@@ -7,11 +7,11 @@ import { css } from "#styled-system/css";
 
 import type { TabsContext, TabsVariant } from "./context";
 
-import { createListenerStore } from "../shared/controllers";
+import type { ContextProviderHandle } from "../shared/context";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { nextId } from "../shared/helpers/dom/id";
 import { ContextProviderMixin, ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
-import { clearTabs, provideTabs } from "./context";
+import { provideTabs } from "./context";
 import { TabsController } from "./controller";
 
 const styles = {
@@ -67,8 +67,8 @@ export class QuiTabs extends Mixin(ShadowStylesMixin, ControllerHostMixin, Conte
   @Event({ eventName: "valuechange", bubbles: true, composed: true })
   valueChange!: EventEmitter<TabsValueChangeDetails>;
 
-  private readonly listeners = createListenerStore();
   private readonly generatedId = nextId("qui-tabs");
+  private provider?: ContextProviderHandle<TabsContext>;
   private idBase = "";
   private readonly controller = new TabsController(this, {
     getValue: (): string | undefined => this.value,
@@ -122,11 +122,10 @@ export class QuiTabs extends Mixin(ShadowStylesMixin, ControllerHostMixin, Conte
     listId: (): string => this.listId,
     triggerId: (value: string): string => this.triggerId(value),
     panelId: (value: string): string => this.panelId(value),
-    subscribe: this.listeners.subscribe,
   };
 
   protected onRequestUpdate(): void {
-    this.listeners.notify();
+    this.provider?.notify();
   }
 
   connectedCallback(): void {
@@ -134,19 +133,19 @@ export class QuiTabs extends Mixin(ShadowStylesMixin, ControllerHostMixin, Conte
     if (this.idBase === "") {
       this.idBase = this.host.id || this.generatedId;
     }
-    provideTabs(this.host, this.context);
+    this.provider = provideTabs(this.host, this.context);
   }
 
   componentWillLoad(): void {
     super.componentWillLoad();
     this.idBase = this.host.id || this.generatedId;
-    provideTabs(this.host, this.context);
+    this.provider = provideTabs(this.host, this.context);
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
-    clearTabs(this.host);
-    this.listeners.clear();
+    this.provider?.clear();
+    this.provider = undefined;
   }
 
   // Every prop read by the root template must be listed here.
@@ -162,7 +161,7 @@ export class QuiTabs extends Mixin(ShadowStylesMixin, ControllerHostMixin, Conte
   @Watch("loopFocus")
   @Watch("deselectable")
   private syncContext(): void {
-    this.listeners.notify();
+    this.provider?.notify();
   }
 
   private get rootId(): string {

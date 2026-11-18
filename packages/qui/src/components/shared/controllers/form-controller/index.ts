@@ -1,9 +1,11 @@
 import { Build } from "@stencil/core";
 
+import type { ContextCallback } from "../../context";
 import type { FieldApi } from "../../helpers/field/context";
 import type { FieldControlHandle } from "../../helpers/field/registry";
 import type { ReactiveControllerHost } from "../reactive-controller";
 
+import { requestContext } from "../../context";
 import { shallowEqual } from "../../helpers/equality";
 import { fieldContext } from "../../helpers/field/context";
 import { ReactiveControllerBase } from "../reactive-controller";
@@ -97,11 +99,11 @@ function defaultValidity(state: ResolvedFormState, form: FormState): FormValidit
 export class FormController extends ReactiveControllerBase {
   private readonly options: FormControllerOptions;
   private field?: FieldApi;
-  private loaded = false;
   private control?: FieldControlHandle;
   private unregisterControl?: () => void;
   private unsubscribe?: () => void;
-  private stopListening?: () => void;
+  private requested = false;
+  private starting = false;
   private formDisabled = false;
   private appliedValueKey?: readonly (string | boolean | undefined)[];
 
@@ -190,21 +192,14 @@ export class FormController extends ReactiveControllerBase {
   }
 
   hostConnected(): void {
-    this.listenForField();
-    const attached = this.attach();
-    if (attached && this.loaded) {
-      this.requestUpdate();
-    }
+    this.start();
   }
 
   hostWillLoad(): void {
-    this.listenForField();
-    this.attach();
+    this.start();
   }
 
   hostDidLoad(): void {
-    this.loaded = true;
-    this.attach();
     this.sync();
   }
 
@@ -213,43 +208,42 @@ export class FormController extends ReactiveControllerBase {
   }
 
   hostDisconnected(): void {
-    this.stopListening?.();
-    this.stopListening = undefined;
     this.unregisterControl?.();
     this.unregisterControl = undefined;
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     this.field = undefined;
+    this.requested = false;
   }
 
-  private listenForField(): void {
-    this.stopListening ??= fieldContext.onProvided(this.hostElement, () => {
-      if (this.attach()) {
-        this.options.onChange?.();
-        this.requestUpdate();
-      }
-    });
-  }
-
-  private attach(): boolean {
-    const field = fieldContext.consume(this.hostElement);
-    if (field === this.field) {
-      return false;
+  private start(): void {
+    if (this.requested) {
+      return;
     }
-    this.unsubscribe?.();
-    this.unsubscribe = undefined;
-    this.field = field;
-    this.registerControl();
-    if (field !== undefined) {
-      this.unsubscribe = field.subscribe(() => {
-        this.options.onChange?.();
-        this.requestUpdate();
-        this.sync();
-      });
+    this.requested = true;
+    this.starting = true;
+    requestContext(this.hostElement, fieldContext, this.handleField, true);
+    this.starting = false;
+  }
+
+  private readonly handleField: ContextCallback<FieldApi | undefined> = (field, unsubscribe) => {
+    if (unsubscribe !== this.unsubscribe) {
+      this.unsubscribe?.();
+      this.unsubscribe = unsubscribe;
+    }
+    if (!Object.is(field, this.field)) {
+      this.unregisterControl?.();
+      this.unregisterControl = undefined;
+      this.field = field;
+      this.registerControl();
     }
     this.sync();
-    return true;
-  }
+    // The first synchronous answer during `start()` is applied silently.
+    if (!this.starting) {
+      this.options.onChange?.();
+      this.requestUpdate();
+    }
+  };
 
   private registerControl(): void {
     this.unregisterControl?.();

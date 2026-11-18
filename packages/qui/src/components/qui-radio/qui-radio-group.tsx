@@ -21,7 +21,9 @@ import type { FormValidity } from "../shared/controllers";
 import type { FieldControlHandle } from "../shared/helpers/field";
 import type { RadioGroupContext, RadioItem, RadioItemState } from "./context";
 
-import { createListenerStore, FormController } from "../shared/controllers";
+import type { ContextProviderHandle } from "../shared/context";
+
+import { FormController } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { nextId } from "../shared/helpers/dom/id";
 import { applyFieldAria } from "../shared/helpers/field";
@@ -31,7 +33,7 @@ import {
   FormControlMixin,
   ShadowStylesMixin,
 } from "../shared/mixins";
-import { clearRadioGroup, provideRadioGroup } from "./context";
+import { provideRadioGroup } from "./context";
 import { RadioGroupController } from "./controller";
 
 const styles = {
@@ -89,8 +91,8 @@ export class QuiRadioGroup extends Mixin(
   valueChange!: EventEmitter<{ value: string | undefined }>;
 
   private rootEl?: HTMLDivElement;
+  private provider?: ContextProviderHandle<RadioGroupContext>;
   private idBase = "";
-  private readonly listeners = createListenerStore();
   private readonly generatedId = nextId("qui-radio-group");
   private readonly fieldControl: FieldControlHandle = {
     focus: (options): void => {
@@ -133,7 +135,7 @@ export class QuiRadioGroup extends Mixin(
       this.controller.restore(value);
     },
     onChange: (): void => {
-      this.listeners.notify();
+      this.provider?.notify();
     },
   });
   private readonly context: RadioGroupContext = {
@@ -170,7 +172,6 @@ export class QuiRadioGroup extends Mixin(
     inputId: (value: string): string => this.inputId(value),
     controlId: (value: string): string => this.controlId(value),
     labelId: (value: string): string => this.labelIdFor(value),
-    subscribe: this.listeners.subscribe,
   };
 
   constructor() {
@@ -179,7 +180,7 @@ export class QuiRadioGroup extends Mixin(
   }
 
   protected onRequestUpdate(): void {
-    this.listeners.notify();
+    this.provider?.notify();
   }
 
   connectedCallback(): void {
@@ -187,13 +188,13 @@ export class QuiRadioGroup extends Mixin(
     if (this.idBase === "") {
       this.idBase = this.host.id || this.generatedId;
     }
-    provideRadioGroup(this.host, this.context);
+    this.provider = provideRadioGroup(this.host, this.context);
   }
 
   componentWillLoad(): void {
     super.componentWillLoad();
     this.idBase = this.host.id || this.generatedId;
-    provideRadioGroup(this.host, this.context);
+    this.provider = provideRadioGroup(this.host, this.context);
   }
 
   componentDidRender(): void {
@@ -203,8 +204,8 @@ export class QuiRadioGroup extends Mixin(
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
-    clearRadioGroup(this.host);
-    this.listeners.clear();
+    this.provider?.clear();
+    this.provider = undefined;
   }
 
   /** Focuses the selected radio, or the first enabled radio as a fallback. */
@@ -236,7 +237,7 @@ export class QuiRadioGroup extends Mixin(
   @Watch("value")
   private syncContext(): void {
     this.form.sync();
-    this.listeners.notify();
+    this.provider?.notify();
   }
 
   @Watch("name")
@@ -248,7 +249,7 @@ export class QuiRadioGroup extends Mixin(
       this.host.setAttribute("name", this.name);
     }
     this.form.sync();
-    this.listeners.notify();
+    this.provider?.notify();
   }
 
   private get rootId(): string {

@@ -27,7 +27,7 @@ private renderRoot(): void {
 // Props that only feed controllers or child context.
 @Watch("value")
 private syncContext(): void {
-  this.listeners.notify();
+  this.provider?.notify();
 }
 ```
 
@@ -39,7 +39,7 @@ update path can still render a prop changed while disconnected.
 When adding a prop to a provider:
 
 1. If `render()` reads it, add it to a `renderRoot` watcher.
-2. Otherwise, add it to a context watcher and notify the listener store.
+2. Otherwise, add it to a context watcher and call `provider.notify()`.
 3. If it uses `reflect: true` and is context-only, reflect the attribute
    manually. Stencil reflects during the render pass, which these roots skip.
 
@@ -49,5 +49,5 @@ When adding a prop to a provider:
   `requestUpdate`.
 - Do not override `componentShouldUpdate` with a narrower signature; the mixin
   mirrors Stencil's three optional arguments.
-- The listener-store notification is deliberate; `notifyUpdate()` is equivalent
-  but calling the store directly keeps the watcher contract explicit.
+- Calling `provider.notify()` directly keeps the watcher contract explicit;
+  `notifyUpdate()` through the mixin is equivalent.

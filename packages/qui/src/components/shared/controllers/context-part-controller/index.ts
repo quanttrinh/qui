@@ -1,50 +1,36 @@
-import type { ContextSource } from "../../context/store";
+import type { Context, ContextCallback } from "../../context";
 import type { ReactiveControllerHost } from "../reactive-controller";
 
+import { requestContext } from "../../context";
 import { shallowEqual } from "../../helpers/equality";
 import { ReactiveControllerBase } from "../reactive-controller";
 
-/** A context object that can notify a subscribed part when it changes. */
-interface ContextPartSource {
-  subscribe: (listener: () => void) => () => void;
-}
-
-interface ContextPartOptions<TContext extends ContextPartSource, TSelection = unknown> {
-  /** The context family to consume. */
-  context: ContextSource<TContext>;
-  /** Optional side effect when a context is attached. Returns a teardown. */
+export interface ContextPartOptions<TContext, TSelection = unknown> {
+  /** The context key to request. */
+  context: Context<unknown, TContext>;
+  /** Side effect on attach; returns a teardown. */
   setup?: (context: TContext) => (() => void) | undefined;
-  /**
-   * Extension point for parts that need custom update behavior. Defaults to
-   * scheduling a host render when omitted.
-   */
+  /** Custom update handler; defaults to a host render. */
   update?: (context: TContext) => void;
-  /** Whether to re-render on context changes. Defaults to `true`. */
+  /** Whether to receive value updates. Defaults to `true`. */
   subscribe?: boolean;
-  /**
-   * Snapshot of the context values this part renders. When provided, provider
-   * notifications only re-render the part when the snapshot changes.
-   */
+  /** Rendered-value snapshot; updates only when it changes. */
   select?: (context: TContext) => TSelection;
-  /** Compare selector snapshots. Defaults to `shallowEqual`. */
+  /** Compare snapshots. Defaults to `shallowEqual`. */
   equals?: (previous: TSelection, next: TSelection) => boolean;
+  /** Runs on every provider notification, even if the selector filtered a render. */
+  onNotify?: (context: TContext) => void;
 }
 
-/**
- * Connects a part component to its nearest ancestor context and handles the
- * retry, subscription, and teardown lifecycle that every context part repeats.
- */
-class ContextPartController<
-  TContext extends ContextPartSource,
-  TSelection = unknown,
-> extends ReactiveControllerBase {
+/** Subscribes a part to its nearest provider via `context-request`. */
+class ContextPartController<TContext, TSelection = unknown> extends ReactiveControllerBase {
   private readonly options: ContextPartOptions<TContext, TSelection>;
   private attached: TContext | undefined;
   private unsubscribe?: () => void;
   private teardown?: () => void;
-  private stopListening?: () => void;
   private selection: { value: TSelection } | undefined;
-  private loaded = false;
+  private requested = false;
+  private starting = false;
 
   constructor(host: ReactiveControllerHost, options: ContextPartOptions<TContext, TSelection>) {
     super(host);
@@ -57,36 +43,49 @@ class ContextPartController<
   }
 
   hostConnected(): void {
-    const started = this.start();
-    if (started && this.loaded) {
-      this.updateAttached();
-    }
+    this.start(false);
   }
 
   hostWillLoad(): void {
-    this.start();
-  }
-
-  hostDidLoad(): void {
-    this.loaded = true;
-    if (this.attach()) {
-      this.updateAttached();
-    }
+    this.start(true);
   }
 
   hostDisconnected(): void {
-    this.stopListening?.();
-    this.stopListening = undefined;
-    this.detach();
-    this.attached = undefined;
-  }
-
-  private readonly detach = (): void => {
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     this.teardown?.();
     this.teardown = undefined;
+    this.attached = undefined;
     this.selection = undefined;
+    this.requested = false;
+  }
+
+  private readonly handleValue: ContextCallback<TContext | undefined> = (context, unsubscribe) => {
+    if (unsubscribe !== this.unsubscribe) {
+      this.unsubscribe?.();
+      this.unsubscribe = unsubscribe;
+    }
+    const changed = !Object.is(context, this.attached);
+    if (changed) {
+      this.teardown?.();
+      this.teardown = undefined;
+      this.attached = context;
+      this.teardown = context === undefined ? undefined : this.options.setup?.(context);
+      const { select, subscribe } = this.options;
+      this.selection =
+        context === undefined || select === undefined || subscribe === false
+          ? undefined
+          : { value: select(context) };
+    }
+    // Skip the synchronous answer before the first render.
+    if (!this.starting && this.attached !== undefined) {
+      // New contexts always notify; same-context updates use the selector.
+      if (changed) {
+        this.notify(this.attached);
+      } else {
+        this.handleNotification(this.attached);
+      }
+    }
   };
 
   private readonly notifySelected = (
@@ -102,59 +101,40 @@ class ContextPartController<
     this.notify(context);
   };
 
+  private handleNotification(context: TContext): void {
+    // Forward filtered notifications so nested providers can wake their subscribers.
+    this.options.onNotify?.(context);
+    const { select } = this.options;
+    if (select === undefined) {
+      this.notify(context);
+    } else {
+      this.notifySelected(context, select);
+    }
+  }
+
   private notify(context: TContext): void {
-    if (this.options.update === undefined) {
+    const { update } = this.options;
+    if (update === undefined) {
       this.requestUpdate();
     } else {
-      this.options.update(context);
+      update(context);
     }
   }
 
-  private attach(): boolean {
-    const next = this.options.context.consume(this.hostElement);
-    if (next === this.attached) {
-      return false;
+  private start(silent: boolean): void {
+    if (this.requested) {
+      return;
     }
-    this.detach();
-    this.attached = next;
-    if (next === undefined) {
-      return true;
-    }
-    this.teardown = this.options.setup?.(next);
-    if (this.options.subscribe !== false) {
-      const { select } = this.options;
-      if (select === undefined) {
-        this.unsubscribe = next.subscribe(() => {
-          this.notify(next);
-        });
-      } else {
-        this.selection = { value: select(next) };
-        this.unsubscribe = next.subscribe(() => {
-          this.notifySelected(next, select);
-        });
-      }
-    }
-    return true;
-  }
-
-  private updateAttached(): void {
-    if (this.attached === undefined) {
-      this.requestUpdate();
-    } else {
-      this.notify(this.attached);
-    }
-  }
-
-  private readonly handleProvided = (): void => {
-    if (this.attach()) {
-      this.updateAttached();
-    }
-  };
-
-  private start(): boolean {
-    this.stopListening ??= this.options.context.onProvided(this.hostElement, this.handleProvided);
-    return this.attach();
+    this.requested = true;
+    this.starting = silent;
+    requestContext(
+      this.hostElement,
+      this.options.context,
+      this.handleValue,
+      this.options.subscribe !== false,
+    );
+    this.starting = false;
   }
 }
 
-export { ContextPartController, type ContextPartOptions, type ContextPartSource };
+export { ContextPartController };

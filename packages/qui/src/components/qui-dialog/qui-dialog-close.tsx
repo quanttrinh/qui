@@ -5,6 +5,7 @@ import { Mixin, resolveVar, Component, Element, h, Host } from "@stencil/core";
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
+import { consumeOnce } from "../shared/context";
 import { ShadowStylesMixin } from "../shared/mixins";
 import { dialogButtonBase } from "../shared/styles";
 import { dialogContext } from "./context";
@@ -37,7 +38,7 @@ export class QuiDialogClose extends Mixin(ShadowStylesMixin) {
           part="close"
           type="button"
           onClick={() => {
-            dialogContext.consume(this.host)?.requestClose();
+            consumeOnce(this.host, dialogContext)?.requestClose();
           }}
         >
           <slot />

@@ -1,6 +1,8 @@
 import type { TabsTriggerRegistration } from "./controller";
 
-import { createContextStore } from "../shared/context";
+import type { ContextProviderHandle } from "../shared/context";
+
+import { clearContext, createContext, provideContext } from "../shared/context";
 
 export type TabsVariant = "primary" | "secondary";
 export type TabsOrientation = "horizontal" | "vertical";
@@ -40,11 +42,15 @@ export interface TabsContext {
   listId: () => string;
   triggerId: (value: string) => string;
   panelId: (value: string) => string;
-  subscribe: (listener: () => void) => () => void;
 }
 
-export const tabsContext = createContextStore<TabsContext>();
+export const tabsContext = createContext<TabsContext>();
 
-const { provide: provideTabs, clear: clearTabs } = tabsContext;
+export const provideTabs = (
+  host: Element,
+  context: TabsContext,
+): ContextProviderHandle<TabsContext> => provideContext(host, tabsContext, context);
 
-export { clearTabs, provideTabs };
+export const clearTabs = (host: Element): void => {
+  clearContext(host, tabsContext);
+};

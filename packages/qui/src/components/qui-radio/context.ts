@@ -1,4 +1,6 @@
-import { createContextStore } from "../shared/context";
+import type { ContextProviderHandle } from "../shared/context";
+
+import { clearContext, createContext, provideContext } from "../shared/context";
 
 /** A radio item's component-owned props. */
 export interface RadioItem {
@@ -37,11 +39,15 @@ export interface RadioGroupContext {
   inputId: (value: string) => string;
   controlId: (value: string) => string;
   labelId: (value: string) => string;
-  subscribe: (listener: () => void) => () => void;
 }
 
-export const radioGroupContext = createContextStore<RadioGroupContext>();
+export const radioGroupContext = createContext<RadioGroupContext>();
 
-const { provide: provideRadioGroup, clear: clearRadioGroup } = radioGroupContext;
+export const provideRadioGroup = (
+  host: Element,
+  context: RadioGroupContext,
+): ContextProviderHandle<RadioGroupContext> => provideContext(host, radioGroupContext, context);
 
-export { clearRadioGroup, provideRadioGroup };
+export const clearRadioGroup = (host: Element): void => {
+  clearContext(host, radioGroupContext);
+};

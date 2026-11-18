@@ -1,11 +1,11 @@
+import type { ContextProviderHandle } from "../../context";
 import type { FieldApi, FieldIds } from "../../helpers/field/context";
 import type { ReactiveControllerHost } from "../reactive-controller";
 
 import { dataAttr } from "../../helpers/aria/attr";
 import { nextId } from "../../helpers/dom/id";
-import { clearField, provideField } from "../../helpers/field/context";
+import { provideField } from "../../helpers/field/context";
 import { FieldPartRegistry } from "../../helpers/field/registry";
-import { createListenerStore } from "../listener-store";
 import { ReactiveControllerBase } from "../reactive-controller";
 
 export interface FieldControllerOptions {
@@ -27,7 +27,7 @@ export class FieldController extends ReactiveControllerBase {
   private readonly options: FieldControllerOptions;
   private readonly generatedId = nextId("qui-field");
   private readonly registry = new FieldPartRegistry();
-  private readonly listeners = createListenerStore();
+  private provider?: ContextProviderHandle<FieldApi>;
   private field?: FieldApi;
   private baseId?: string;
 
@@ -42,7 +42,7 @@ export class FieldController extends ReactiveControllerBase {
 
   /** Wakes descendants after a watched prop changes or a part registers. */
   notify(): void {
-    this.listeners.notify();
+    this.provider?.notify();
   }
 
   hostWillLoad(): void {
@@ -50,17 +50,18 @@ export class FieldController extends ReactiveControllerBase {
     // Generated part ids then stay stable across renders.
     this.baseId = this.hostElement.id || undefined;
     this.field = this.createFieldApi();
-    provideField(this.hostElement, this.field);
+    this.provider = provideField(this.hostElement, this.field);
   }
 
   hostConnected(): void {
     if (this.field !== undefined) {
-      provideField(this.hostElement, this.field);
+      this.provider = provideField(this.hostElement, this.field);
     }
   }
 
   hostDisconnected(): void {
-    clearField(this.hostElement);
+    this.provider?.clear();
+    this.provider = undefined;
   }
 
   private resolveIds(): FieldIds {
@@ -144,7 +145,6 @@ export class FieldController extends ReactiveControllerBase {
       clickControl: () => {
         this.registry.clickControl();
       },
-      subscribe: this.listeners.subscribe,
     };
   }
 

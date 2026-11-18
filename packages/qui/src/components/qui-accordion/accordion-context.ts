@@ -1,6 +1,8 @@
 import type { AccordionTriggerRegistration } from "./controller";
 
-import { createContextStore } from "../shared/context";
+import type { ContextProviderHandle } from "../shared/context";
+
+import { clearContext, createContext, provideContext } from "../shared/context";
 
 export interface AccordionItem {
   value: string;
@@ -35,7 +37,6 @@ export interface AccordionContext {
   itemId: (value: string) => string;
   triggerId: (value: string) => string;
   contentId: (value: string) => string;
-  subscribe: (listener: () => void) => () => void;
 }
 
 export interface AccordionItemContext extends AccordionContext {
@@ -44,10 +45,21 @@ export interface AccordionItemContext extends AccordionContext {
   isItemDisabled: () => boolean;
 }
 
-export const accordionContext = createContextStore<AccordionContext>();
-export const accordionItemContext = createContextStore<AccordionItemContext>();
+export const accordionContext = createContext<AccordionContext>();
+export const accordionItemContext = createContext<AccordionItemContext>();
 
-const { provide: provideAccordion, clear: clearAccordion } = accordionContext;
-const { provide: provideAccordionItem, clear: clearAccordionItem } = accordionItemContext;
+export const provideAccordion = (
+  host: Element,
+  context: AccordionContext,
+): ContextProviderHandle<AccordionContext> => provideContext(host, accordionContext, context);
+export const clearAccordion = (host: Element): void => {
+  clearContext(host, accordionContext);
+};
 
-export { clearAccordion, clearAccordionItem, provideAccordion, provideAccordionItem };
+export const provideAccordionItem = (
+  host: Element,
+  context: AccordionItemContext,
+): ContextProviderHandle<AccordionItemContext> => provideContext(host, accordionItemContext, context);
+export const clearAccordionItem = (host: Element): void => {
+  clearContext(host, accordionItemContext);
+};

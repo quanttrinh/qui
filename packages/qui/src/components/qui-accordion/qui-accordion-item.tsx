@@ -8,10 +8,12 @@ import { token } from "#styled-system/tokens";
 
 import type { AccordionContext, AccordionItem, AccordionItemContext } from "./accordion-context";
 
-import { ContextPartController, createListenerStore } from "../shared/controllers";
+import type { ContextProviderHandle } from "../shared/context";
+
+import { ContextPartController } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
-import { clearAccordionItem, accordionContext, provideAccordionItem } from "./accordion-context";
+import { accordionContext, provideAccordionItem } from "./accordion-context";
 
 const styles = {
   host: css({ display: "block" }),
@@ -41,7 +43,7 @@ export class QuiAccordionItem extends Mixin(ShadowStylesMixin, ControllerHostMix
   /** Disables this item. */
   @Prop() disabled = false;
 
-  private readonly listeners = createListenerStore();
+  private itemProvider?: ContextProviderHandle<AccordionItemContext>;
 
   protected readonly contextPart = new ContextPartController(this, {
     context: accordionContext,
@@ -55,17 +57,22 @@ export class QuiAccordionItem extends Mixin(ShadowStylesMixin, ControllerHostMix
       accordion.itemId(this.value),
     ],
     setup: (accordion): (() => void) => {
-      provideAccordionItem(this.host, this.context(accordion));
+      this.itemProvider = provideAccordionItem(this.host, this.context(accordion));
       return () => {
-        clearAccordionItem(this.host);
+        this.itemProvider?.clear();
+        this.itemProvider = undefined;
       };
+    },
+    // Item context spreads the root, so forward root changes to item subscribers.
+    onNotify: (): void => {
+      this.itemProvider?.notify();
     },
   });
 
   @Watch("disabled")
   @Watch("value")
   private notifyItem(): void {
-    this.listeners.notify();
+    this.itemProvider?.notify();
   }
 
   private isDisabled(accordion: AccordionContext): boolean {
@@ -84,14 +91,6 @@ export class QuiAccordionItem extends Mixin(ShadowStylesMixin, ControllerHostMix
       ...accordion,
       item: () => this.item(),
       isItemDisabled: () => this.isDisabled(accordion),
-      subscribe: (listener) => {
-        const stopItem = this.listeners.subscribe(listener);
-        const stopAccordion = accordion.subscribe(listener);
-        return () => {
-          stopItem();
-          stopAccordion();
-        };
-      },
     };
   }
 

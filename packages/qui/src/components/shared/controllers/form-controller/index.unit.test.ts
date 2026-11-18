@@ -1,54 +1,43 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { FieldApi } from "../../helpers/field/context";
 import type { FieldControlHandle } from "../../helpers/field/registry";
 
+import { contextDocument, createElement, cleanup } from "../../../../../tests/test-utils/context-dom";
 import { createTestControllerHost } from "../../../../../tests/test-utils/controller-host";
 import { clearField, provideField } from "../../helpers/field/context";
 import { FormController } from "./index";
 
-function FakeShadowRoot(this: { nodeType: number }): void {
-  this.nodeType = 11;
-}
-
-class FakeElement {
-  parentElement: FakeElement | undefined;
-  readonly root = {};
-  readonly getRootNode = (): object => this.root;
-}
-
-const globals = globalThis as Record<string, unknown>;
-const originalHTMLElement = globals.HTMLElement;
-const originalShadowRoot = globals.ShadowRoot;
-
-beforeAll(() => {
-  globals.HTMLElement = FakeElement;
-  globals.ShadowRoot = FakeShadowRoot;
-});
-
-afterAll(() => {
-  globals.HTMLElement = originalHTMLElement;
-  globals.ShadowRoot = originalShadowRoot;
-});
-
 function createFieldApi(): { field: FieldApi; registerControl: ReturnType<typeof vi.fn> } {
   const registerControl = vi.fn(() => vi.fn());
-  const field = {
+  const field: FieldApi = {
+    ids: { root: "field", control: "control", label: "label", errorText: "error", helperText: "helper" },
     registerControl,
-    subscribe: () => () => undefined,
+    registerLabel: () => (): void => undefined,
+    registerHelperText: () => (): void => undefined,
+    registerErrorText: () => (): void => undefined,
+    getLabelHost: () => undefined,
+    getHelperTextHosts: () => [],
+    getErrorTextHosts: () => [],
+    getInputProps: () => ({ id: "control", disabled: false, required: false, "data-scope": "field", "data-part": "input" }),
+    getLabelProps: () => ({ id: "label", htmlFor: "control", "data-scope": "field", "data-part": "label" }),
+    getHelperTextProps: () => ({ id: "helper", "data-scope": "field", "data-part": "helper-text" }),
+    getErrorTextProps: () => ({ id: "error", "data-scope": "field", "data-part": "error-text" }),
+    focusControl: (): void => undefined,
+    clickControl: (): void => undefined,
     disabled: () => false,
     readOnly: () => false,
     required: () => false,
     invalid: () => false,
-  } as unknown as FieldApi;
+  };
   return { field, registerControl };
 }
 
-function createController(host: FakeElement): FormController {
+function createController(host: HTMLElement): FormController {
   const setFormValue = vi.fn();
   const setValidity = vi.fn();
   const internals = { setFormValue, setValidity } as unknown as ElementInternals;
-  const controller = new FormController(createTestControllerHost(host as unknown as HTMLElement), {
+  const controller = new FormController(createTestControllerHost(host), {
     internals: () => internals,
     state: () => ({ name: "test", multiple: false, values: [] }),
     disabled: () => false,
@@ -61,10 +50,11 @@ function createController(host: FakeElement): FormController {
   return controller;
 }
 
-function appendToProvider(): { provider: FakeElement; host: FakeElement } {
-  const provider = new FakeElement();
-  const host = new FakeElement();
-  host.parentElement = provider;
+function appendToProvider(): { provider: HTMLElement; host: HTMLElement } {
+  const provider = createElement();
+  const host = createElement();
+  provider.appendChild(host);
+  contextDocument.body.appendChild(provider);
   return { provider, host };
 }
 
@@ -78,7 +68,7 @@ describe("FormController field control registration", () => {
     const { field, registerControl } = createFieldApi();
     const unregister = vi.fn();
     registerControl.mockReturnValue(unregister);
-    provideField(provider as unknown as HTMLElement, field);
+    provideField(provider, field);
     const controller = createController(host);
 
     controller.setControl(control);
@@ -89,13 +79,14 @@ describe("FormController field control registration", () => {
     controller.hostDisconnected();
 
     expect(unregister).toHaveBeenCalledOnce();
-    clearField(provider as unknown as HTMLElement);
+    clearField(provider);
+    cleanup(provider);
   });
 
   it("registers a control set after the field is already attached", () => {
     const { provider, host } = appendToProvider();
     const { field, registerControl } = createFieldApi();
-    provideField(provider as unknown as HTMLElement, field);
+    provideField(provider, field);
     const controller = createController(host);
     controller.hostConnected();
     expect(registerControl).not.toHaveBeenCalled();
@@ -104,7 +95,8 @@ describe("FormController field control registration", () => {
 
     expect(registerControl).toHaveBeenCalledWith(control);
     controller.hostDisconnected();
-    clearField(provider as unknown as HTMLElement);
+    clearField(provider);
+    cleanup(provider);
   });
 
   it("registers with a field that appears after connection", async () => {
@@ -115,17 +107,18 @@ describe("FormController field control registration", () => {
     controller.hostConnected();
     expect(registerControl).not.toHaveBeenCalled();
 
-    provideField(provider as unknown as HTMLElement, field);
+    provideField(provider, field);
     await Promise.resolve();
 
     expect(registerControl).toHaveBeenCalledWith(control);
 
     controller.hostDisconnected();
-    clearField(provider as unknown as HTMLElement);
+    clearField(provider);
+    cleanup(provider);
   });
 
   it("does not register a control when the host has no field", () => {
-    const host = new FakeElement();
+    const host = createElement();
     const { registerControl } = createFieldApi();
     const controller = createController(host);
 
@@ -160,7 +153,7 @@ function createSyncController(): {
   const setFormValue = vi.fn();
   const setValidity = vi.fn();
   const controller = new FormController(
-    createTestControllerHost(new FakeElement() as unknown as HTMLElement),
+    createTestControllerHost(createElement()),
     {
       internals: () => ({ setFormValue, setValidity }) as unknown as ElementInternals,
       state: () => ({ name, multiple, values, validationElement: element }),
@@ -230,7 +223,7 @@ describe("FormController sync", () => {
 
   it("writes validity on every sync, including a late anchor", () => {
     const { controller, setValidity, setElement, setRequired } = createSyncController();
-    const element = new FakeElement() as unknown as HTMLElement;
+    const element = createElement();
 
     setRequired(true);
     controller.sync();

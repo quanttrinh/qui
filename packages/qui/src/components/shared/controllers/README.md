@@ -68,6 +68,13 @@ reactive controllers themselves:
 | [`registration-reconciler`](./registration-reconciler/README.md) | Re-run a registration only when its signature changes          |
 | [`roving-focus`](./roving-focus/README.md)                       | Roving-focus registries, index movement, and edge handling     |
 
+## Related
+
+- [`../context`](../context/README.md) — event-based context protocol and
+  provider/consumer helpers
+- [`../mixins/context-provider`](../mixins/context-provider/README.md) —
+  render-on-demand provider roots
+
 ## Component-owned controllers
 
 Some controllers are specific to one component and live beside it:

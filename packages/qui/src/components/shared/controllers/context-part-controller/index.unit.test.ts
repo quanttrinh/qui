@@ -1,73 +1,49 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ContextSource } from "../../context/store";
 import type { ReactiveControllerHost } from "../reactive-controller";
-import type { ContextPartOptions, ContextPartSource } from "./index";
+import type { ContextPartOptions } from "./index";
 
+import { clearContext, createContext, notifyContext, provideContext } from "../../context";
+import { createTree, cleanup } from "../../../../../tests/test-utils/context-dom";
 import { ContextPartController } from "./index";
 
-interface TestContext extends ContextPartSource {
+interface TestContext {
   name: string;
-  notify: () => void;
-  listenerCount: () => number;
 }
 
-interface SourceState {
-  current?: TestContext;
+function createContextValue(name: string): TestContext {
+  return { name };
 }
 
-function createContext(name: string): TestContext {
-  const listeners = new Set<() => void>();
+function createSource(initial?: TestContext) {
+  const { provider, consumer } = createTree();
+  const key = createContext<TestContext>(Symbol("part-test"));
+  if (initial !== undefined) {
+    provideContext(provider, key, initial);
+  }
   return {
-    name,
-    subscribe: (listener: () => void) => {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-    notify: () => {
-      for (const listener of listeners) {
-        listener();
+    key,
+    host: consumer,
+    set(value: TestContext | undefined): void {
+      if (value === undefined) {
+        clearContext(provider, key);
+      } else {
+        provideContext(provider, key, value);
       }
     },
-    listenerCount: () => listeners.size,
+    notify(): void {
+      notifyContext(provider, key);
+    },
+    cleanup(): void {
+      cleanup(provider);
+    },
   };
 }
 
-function createSource(state: SourceState): ContextSource<TestContext> & {
-  notify: () => void;
-  listenerCount: () => number;
-} {
-  const listeners = new Set<() => void>();
-  return {
-    consume: () => state.current,
-    onProvided: (_host, listener) => {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-    notify: () => {
-      for (const listener of listeners) {
-        listener();
-      }
-    },
-    listenerCount: () => listeners.size,
-  };
-}
-
-function createHost(): HTMLElement {
-  return {
-    parentElement: null,
-    getRootNode: () => ({ nodeType: 1 }),
-  } as unknown as HTMLElement;
-}
-
-function createPart<TContext extends ContextPartSource>(
-  options: ContextPartOptions<TContext>,
-  hostElement: HTMLElement = createHost(),
-): ContextPartController<TContext> {
+function createPart<TContext, TSelection = unknown>(
+  options: ContextPartOptions<TContext, TSelection>,
+  hostElement: HTMLElement,
+): ContextPartController<TContext, TSelection> {
   const host: ReactiveControllerHost = {
     hostElement,
     addController: (): void => undefined,
@@ -79,329 +55,296 @@ function createPart<TContext extends ContextPartSource>(
 
 describe("ContextPartController lifecycle", () => {
   it("attaches, subscribes, and detaches", () => {
-    const context = createContext("field");
-    const state: SourceState = { current: context };
+    const source = createSource(createContextValue("field"));
     const update = vi.fn((): void => undefined);
-    const part = createPart({ context: createSource(state), update });
+    const part = createPart({ context: source.key, update }, source.host);
 
     part.hostWillLoad();
-    expect(part.context).toBe(context);
-    expect(context.listenerCount()).toBe(1);
+    expect(part.context?.name).toBe("field");
 
-    context.notify();
+    source.notify();
     expect(update).toHaveBeenCalledOnce();
 
     part.hostDisconnected();
     expect(part.context).toBeUndefined();
-    expect(context.listenerCount()).toBe(0);
 
-    context.notify();
+    source.notify();
     expect(update).toHaveBeenCalledOnce();
+    source.cleanup();
   });
 
   it("runs setup and teardown around the subscription", () => {
-    const context = createContext("field");
-    const state: SourceState = { current: context };
+    const value = createContextValue("field");
+    const source = createSource(value);
     const teardown = vi.fn();
     const setup = vi.fn(() => teardown);
-    const part = createPart({ context: createSource(state), setup });
+    const part = createPart({ context: source.key, setup }, source.host);
 
     part.hostWillLoad();
-    expect(setup).toHaveBeenCalledWith(context);
+    expect(setup).toHaveBeenCalledWith(value);
     part.hostDisconnected();
     expect(teardown).toHaveBeenCalledOnce();
+    source.cleanup();
   });
 
-  it("retries once after render when the context was not available", () => {
-    const context = createContext("field");
-    const state: SourceState = {};
-    const part = createPart({ context: createSource(state) });
+  it("retries after render when no context was available", () => {
+    const source = createSource();
+    const value = createContextValue("late");
+    const part = createPart({ context: source.key }, source.host);
 
     part.hostWillLoad();
     expect(part.context).toBeUndefined();
 
-    state.current = context;
-    part.hostDidLoad();
-    expect(part.context).toBe(context);
-    expect(context.listenerCount()).toBe(1);
+    source.set(value);
+    expect(part.context).toBe(value);
     part.hostDisconnected();
+    source.cleanup();
   });
 
   it("reattaches and re-renders after a reconnect with a new provider", () => {
-    const first = createContext("first");
-    const second = createContext("second");
-    const state: SourceState = { current: first };
+    const source = createSource(createContextValue("first"));
     const update = vi.fn((): void => undefined);
-    const part = createPart({ context: createSource(state), update });
+    const part = createPart({ context: source.key, update }, source.host);
 
     part.hostWillLoad();
-    part.hostDidLoad();
     part.hostDisconnected();
     expect(part.context).toBeUndefined();
-    expect(first.listenerCount()).toBe(0);
 
-    state.current = second;
+    const second = createContextValue("second");
+    source.set(second);
     part.hostConnected();
     expect(part.context).toBe(second);
-    expect(second.listenerCount()).toBe(1);
     expect(update).toHaveBeenCalledOnce();
     part.hostDisconnected();
+    source.cleanup();
   });
 
   it("can skip the subscription for one-shot consumers", () => {
-    const context = createContext("field");
-    const state: SourceState = { current: context };
+    const source = createSource(createContextValue("field"));
     const update = vi.fn((): void => undefined);
-    const part = createPart({ context: createSource(state), subscribe: false, update });
+    const part = createPart({ context: source.key, subscribe: false, update }, source.host);
 
     part.hostWillLoad();
-    context.notify();
+    source.notify();
     expect(update).not.toHaveBeenCalled();
-    expect(context.listenerCount()).toBe(0);
     part.hostDisconnected();
+    source.cleanup();
   });
 });
 
 describe("ContextPartController selector subscriptions", () => {
   it("notifies only when the selected snapshot changes", () => {
-    const context = createContext("field");
-    const state: SourceState = { current: context };
-    const source = createSource(state);
+    const value = createContextValue("original");
+    const source = createSource(value);
     const update = vi.fn((): void => undefined);
-    const part = createPart({
-      context: source,
-      select: () => context.name,
-      update,
-    });
+    const part = createPart({ context: source.key, select: () => value.name, update }, source.host);
 
     part.hostWillLoad();
     expect(update).not.toHaveBeenCalled();
 
-    context.notify();
+    source.notify();
     expect(update).not.toHaveBeenCalled();
 
-    context.name = "changed";
-    context.notify();
-    expect(update).toHaveBeenCalledOnce();
-
-    context.notify();
+    value.name = "changed";
+    source.notify();
     expect(update).toHaveBeenCalledOnce();
     part.hostDisconnected();
+    source.cleanup();
   });
 
   it("uses a custom equality for selected snapshots", () => {
-    const context = createContext("field");
-    const state: SourceState = { current: context };
-    const source = createSource(state);
+    const value = createContextValue("original");
+    const source = createSource(value);
     const update = vi.fn((): void => undefined);
-    const equals = vi.fn((previous: unknown, next: unknown): boolean => {
-      const left = previous as [string, number];
-      const right = next as [string, number];
-      return left[0] === right[0];
-    });
+    const equals = vi.fn(
+      (previous: readonly [string, number], next: readonly [string, number]): boolean =>
+        previous[0] === next[0],
+    );
     let revision = 1;
-    const part = createPart({
-      context: source,
-      select: () => [context.name, revision] as const,
-      equals,
-      update,
-    });
+    const part = createPart(
+      { context: source.key, select: (): readonly [string, number] => [value.name, revision], equals, update },
+      source.host,
+    );
 
     part.hostWillLoad();
     revision = 2;
-    context.notify();
+    source.notify();
     expect(update).not.toHaveBeenCalled();
 
-    context.name = "changed";
-    context.notify();
+    value.name = "changed";
+    source.notify();
     expect(update).toHaveBeenCalledOnce();
     part.hostDisconnected();
+    source.cleanup();
   });
 
   it("uses shallowEqual by default for flat array snapshots", () => {
-    const context = createContext("field");
-    const state: SourceState = { current: context };
-    const source = createSource(state);
+    const value = createContextValue("original");
+    const source = createSource(value);
     const update = vi.fn((): void => undefined);
-    const part = createPart({
-      context: source,
-      select: () => [context.name, true],
-      update,
-    });
+    const part = createPart(
+      { context: source.key, select: () => [value.name, true], update },
+      source.host,
+    );
 
     part.hostWillLoad();
-    context.notify();
+    source.notify();
     expect(update).not.toHaveBeenCalled();
 
-    context.name = "changed";
-    context.notify();
+    value.name = "changed";
+    source.notify();
     expect(update).toHaveBeenCalledOnce();
     part.hostDisconnected();
+    source.cleanup();
   });
 
   it("skips selector work when subscriptions are disabled", () => {
-    const context = createContext("field");
-    const state: SourceState = { current: context };
-    const source = createSource(state);
-    const select = vi.fn(() => [context.name]);
+    const value = createContextValue("field");
+    const source = createSource(value);
+    const select = vi.fn(() => [value.name]);
     const update = vi.fn((): void => undefined);
-    const part = createPart({
-      context: source,
-      select,
-      subscribe: false,
-      update,
-    });
+    const part = createPart(
+      { context: source.key, select, subscribe: false, update },
+      source.host,
+    );
 
     part.hostWillLoad();
-    context.notify();
-
+    source.notify();
     expect(select).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
     part.hostDisconnected();
+    source.cleanup();
   });
 
   it("applies selector filtering to custom update handlers", () => {
-    const context = createContext("field");
-    const state: SourceState = { current: context };
-    const source = createSource(state);
+    const value = createContextValue("original");
+    const source = createSource(value);
     const update = vi.fn((): void => undefined);
-    const part = createPart({
-      context: source,
-      select: () => context.name,
-      update,
-    });
+    const part = createPart({ context: source.key, select: () => value.name, update }, source.host);
 
     part.hostWillLoad();
-    context.notify();
+    source.notify();
     expect(update).not.toHaveBeenCalled();
 
-    context.name = "changed";
-    context.notify();
+    value.name = "changed";
+    source.notify();
     expect(update).toHaveBeenCalledOnce();
     part.hostDisconnected();
+    source.cleanup();
   });
 
   it("recaptures the snapshot after reattaching", () => {
-    const first = createContext("first");
-    const second = createContext("second");
-    const state: SourceState = { current: first };
-    const source = createSource(state);
+    const first = createContextValue("first");
+    const source = createSource(first);
     const update = vi.fn((): void => undefined);
-    const part = createPart({
-      context: source,
-      select: () => state.current?.name,
-      update,
-    });
+    let current = first;
+    const part = createPart(
+      { context: source.key, select: () => current.name, update },
+      source.host,
+    );
 
     part.hostWillLoad();
-    part.hostDidLoad();
     part.hostDisconnected();
 
-    state.current = second;
+    const second = createContextValue("second");
+    current = second;
+    source.set(second);
     part.hostConnected();
     expect(update).toHaveBeenCalledOnce();
 
-    second.notify();
+    source.notify();
     expect(update).toHaveBeenCalledOnce();
     part.hostDisconnected();
+    source.cleanup();
   });
 });
 
 describe("ContextPartController provider notifications", () => {
-  it("attaches when a provider is registered after the first render", () => {
-    const context = createContext("field");
-    const state: SourceState = {};
-    const source = createSource(state);
+  it("attaches when a provider appears after the first render", () => {
+    const source = createSource();
+    const value = createContextValue("field");
     const update = vi.fn((): void => undefined);
-    const part = createPart({ context: source, update });
+    const part = createPart({ context: source.key, update }, source.host);
 
     part.hostWillLoad();
-    part.hostDidLoad();
     expect(part.context).toBeUndefined();
 
-    state.current = context;
-    source.notify();
-
-    expect(part.context).toBe(context);
+    source.set(value);
+    expect(part.context).toBe(value);
     expect(update).toHaveBeenCalledOnce();
-    expect(context.listenerCount()).toBe(1);
-
-    source.notify();
-    expect(update).toHaveBeenCalledOnce();
-    expect(context.listenerCount()).toBe(1);
     part.hostDisconnected();
+    source.cleanup();
   });
 
   it("stops listening after disconnect", () => {
-    const context = createContext("field");
-    const state: SourceState = { current: context };
-    const source = createSource(state);
-    const part = createPart({ context: source });
+    const value = createContextValue("field");
+    const source = createSource(value);
+    const part = createPart({ context: source.key }, source.host);
 
     part.hostWillLoad();
     part.hostDisconnected();
-    expect(source.listenerCount()).toBe(0);
-
-    state.current = createContext("replacement");
-    source.notify();
+    source.set(createContextValue("replacement"));
     expect(part.context).toBeUndefined();
+    source.cleanup();
   });
 
   it("updates one-shot consumers when their provider appears", () => {
-    const context = createContext("field");
-    const state: SourceState = {};
-    const source = createSource(state);
+    const source = createSource();
+    const value = createContextValue("field");
     const update = vi.fn((): void => undefined);
-    const part = createPart({ context: source, subscribe: false, update });
+    const part = createPart({ context: source.key, subscribe: false, update }, source.host);
 
     part.hostWillLoad();
-    state.current = context;
-    source.notify();
-
-    expect(part.context).toBe(context);
+    source.set(value);
+    expect(part.context).toBe(value);
     expect(update).toHaveBeenCalledOnce();
-    expect(context.listenerCount()).toBe(0);
     part.hostDisconnected();
+    source.cleanup();
   });
 
   it("replaces the context and tears down the previous one", () => {
-    const first = createContext("first");
-    const second = createContext("second");
-    const state: SourceState = { current: first };
-    const source = createSource(state);
+    const first = createContextValue("first");
+    const source = createSource(first);
     const teardown = vi.fn();
     const setup = vi.fn(() => teardown);
-    const part = createPart({ context: source, setup });
+    const part = createPart({ context: source.key, setup }, source.host);
 
     part.hostWillLoad();
-    expect(first.listenerCount()).toBe(1);
 
-    state.current = second;
-    source.notify();
-
+    const second = createContextValue("second");
+    source.set(second);
     expect(part.context).toBe(second);
     expect(teardown).toHaveBeenCalledOnce();
-    expect(first.listenerCount()).toBe(0);
-    expect(second.listenerCount()).toBe(1);
     expect(setup).toHaveBeenLastCalledWith(second);
     part.hostDisconnected();
+    source.cleanup();
   });
 
   it("detaches when the provider disappears", () => {
-    const context = createContext("field");
-    const state: SourceState = { current: context };
-    const source = createSource(state);
+    const value = createContextValue("field");
+    const source = createSource(value);
     const teardown = vi.fn();
     const setup = vi.fn(() => teardown);
-    const part = createPart({ context: source, setup });
+    const part = createPart({ context: source.key, setup }, source.host);
 
     part.hostWillLoad();
-    state.current = undefined;
-    source.notify();
-
+    source.set(undefined);
     expect(part.context).toBeUndefined();
     expect(teardown).toHaveBeenCalledOnce();
-    expect(context.listenerCount()).toBe(0);
     part.hostDisconnected();
+    source.cleanup();
+  });
+
+  it("forwards notifications to a provider that needs to re-broadcast", () => {
+    const value = createContextValue("root");
+    const source = createSource(value);
+    const onNotify = vi.fn((): void => undefined);
+    const part = createPart({ context: source.key, onNotify }, source.host);
+
+    part.hostWillLoad();
+    source.notify();
+    expect(onNotify).toHaveBeenCalledOnce();
+    part.hostDisconnected();
+    source.cleanup();
   });
 });

@@ -8,10 +8,10 @@ import { token } from "#styled-system/tokens";
 
 import type { AccordionContext } from "./accordion-context";
 
-import { createListenerStore } from "../shared/controllers";
+import type { ContextProviderHandle } from "../shared/context";
 import { nextId } from "../shared/helpers/dom/id";
 import { ContextProviderMixin, ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
-import { clearAccordion, provideAccordion } from "./accordion-context";
+import { provideAccordion } from "./accordion-context";
 import { AccordionController } from "./controller";
 
 const styles = {
@@ -69,8 +69,8 @@ export class QuiAccordion extends Mixin(
   valueChange!: EventEmitter<AccordionValueChangeDetails>;
 
   private idBase = "";
-  private readonly listeners = createListenerStore();
   private readonly generatedId = nextId("qui-accordion");
+  private provider?: ContextProviderHandle<AccordionContext>;
   private readonly controller = new AccordionController(this, {
     getValue: (): string[] | undefined => this.value,
     getDefaultValue: (): string[] | undefined => this.defaultValue,
@@ -117,11 +117,10 @@ export class QuiAccordion extends Mixin(
     itemId: (value: string): string => this.itemId(value),
     triggerId: (value: string): string => this.triggerId(value),
     contentId: (value: string): string => this.contentId(value),
-    subscribe: this.listeners.subscribe,
   };
 
   protected onRequestUpdate(): void {
-    this.listeners.notify();
+    this.provider?.notify();
   }
 
   connectedCallback(): void {
@@ -129,19 +128,19 @@ export class QuiAccordion extends Mixin(
     if (this.idBase === "") {
       this.idBase = this.host.id || this.generatedId;
     }
-    provideAccordion(this.host, this.context);
+    this.provider = provideAccordion(this.host, this.context);
   }
 
   componentWillLoad(): void {
     super.componentWillLoad();
     this.idBase = this.host.id || this.generatedId;
-    provideAccordion(this.host, this.context);
+    this.provider = provideAccordion(this.host, this.context);
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
-    clearAccordion(this.host);
-    this.listeners.clear();
+    this.provider?.clear();
+    this.provider = undefined;
   }
 
   // Every prop read by the root template must be listed here.
@@ -156,7 +155,7 @@ export class QuiAccordion extends Mixin(
   @Watch("value")
   @Watch("disabled")
   private syncContext(): void {
-    this.listeners.notify();
+    this.provider?.notify();
   }
 
   private get rootId(): string {

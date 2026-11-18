@@ -1,6 +1,8 @@
 import type { FieldControlHandle } from "./registry";
 
-import { createContextStore } from "../../context";
+import type { ContextProviderHandle } from "../../context";
+
+import { clearContext, createContext, provideContext } from "../../context";
 
 /** Resolved ids for the parts of a field. */
 export interface FieldIds {
@@ -76,12 +78,13 @@ export interface FieldApi {
   focusControl: (options?: FocusOptions) => void;
   /** Click the registered control, if any. */
   clickControl: () => void;
-  /** Subscribe to field state changes. Returns an unsubscribe function. */
-  subscribe: (listener: () => void) => () => void;
 }
 
-export const fieldContext = createContextStore<FieldApi>();
+export const fieldContext = createContext<FieldApi>();
 
-const { provide: provideField, clear: clearField } = fieldContext;
+export const provideField = (host: Element, field: FieldApi): ContextProviderHandle<FieldApi> =>
+  provideContext(host, fieldContext, field);
 
-export { clearField, provideField };
+export const clearField = (host: Element): void => {
+  clearContext(host, fieldContext);
+};

@@ -3,9 +3,19 @@
 // This includes Components, prop unions, and custom event types.
 export type * from "./components";
 
+export { consumeOnce, createContext, provideContext } from "./components/shared/context";
+export type {
+  Context,
+  ContextCallback,
+  ContextProviderHandle,
+  ContextType,
+} from "./components/shared/context";
+
 export { ControllerHostMixin, FormControlMixin } from "./components/shared/mixins";
 export {
+  ContextPartController,
   ReactiveControllerBase,
+  type ContextPartOptions,
   type ReactiveController,
   type ReactiveControllerHost,
 } from "./components/shared/controllers";

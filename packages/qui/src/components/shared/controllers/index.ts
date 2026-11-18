@@ -1,9 +1,5 @@
 export { ControllerHostMixin } from "../mixins/controller-host";
-export {
-  ContextPartController,
-  type ContextPartOptions,
-  type ContextPartSource,
-} from "./context-part-controller";
+export { ContextPartController, type ContextPartOptions } from "./context-part-controller";
 export {
   CheckableController,
   type CheckableState,

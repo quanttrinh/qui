@@ -18,10 +18,10 @@ import { css } from "#styled-system/css";
 
 import type { DialogContext, DialogControl, DialogIds } from "./context";
 
-import { createListenerStore } from "../shared/controllers";
+import type { ContextProviderHandle } from "../shared/context";
 import { nextId } from "../shared/helpers/dom/id";
 import { lockDocumentScroll } from "../shared/helpers/dom/scroll-lock";
-import { clearDialog, provideDialog } from "./context";
+import { provideDialog } from "./context";
 import { createDialogHostRegistry } from "./dialog-aria";
 
 const styles = {
@@ -72,7 +72,7 @@ export class QuiDialog {
   private currentReturnValue = "";
 
   private control?: DialogControl;
-  private readonly listeners = createListenerStore();
+  private provider?: ContextProviderHandle<DialogContext>;
   private readonly hosts = createDialogHostRegistry(() => {
     this.notifyParts();
   });
@@ -93,20 +93,20 @@ export class QuiDialog {
   }
 
   componentWillLoad(): void {
-    provideDialog(this.host, this.context);
+    this.provider = provideDialog(this.host, this.context);
   }
 
   connectedCallback(): void {
-    provideDialog(this.host, this.context);
+    this.provider = provideDialog(this.host, this.context);
     this.syncScrollLock();
   }
 
   disconnectedCallback(): void {
-    clearDialog(this.host);
+    this.provider?.clear();
+    this.provider = undefined;
     this.hosts.clear();
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
-    this.listeners.clear();
   }
 
   @Watch("open")
@@ -200,7 +200,6 @@ export class QuiDialog {
         }
       };
     },
-    subscribe: this.listeners.subscribe,
   };
 
   private requestOpen(): void {
@@ -228,7 +227,7 @@ export class QuiDialog {
 
   /** Wakes subscribed parts after the title or description registration changes. */
   private notifyParts(): void {
-    this.listeners.notify();
+    this.provider?.notify();
   }
 
   private setOpenState(open: boolean, returnValue: string): void {
@@ -238,7 +237,7 @@ export class QuiDialog {
     this.syncScrollLock();
     if (changed) {
       this.openChange.emit({ open, returnValue });
-      this.listeners.notify();
+      this.provider?.notify();
     }
   }
 

@@ -108,7 +108,7 @@ export default defineConfig({
     // entries are pure factory/lookup helpers.
     "stencil/ban-side-effects": [
       "error",
-      ["css", "token", "createContextStore", "createGlobalHrefKey"],
+      ["css", "token", "createContext", "createGlobalHrefKey"],
     ],
     "stencil/decorators-style": [
       "error",

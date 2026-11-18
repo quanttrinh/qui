@@ -35,7 +35,9 @@ Reactive controller. Extends `ReactiveControllerBase`.
 | `getLabelHost` / `getHelperTextHosts` / `getErrorTextHosts`                      | Cross-shadow ARIA targets            |
 | `registerLabel` / `registerHelperText` / `registerErrorText` / `registerControl` | Part registration                    |
 | `focusControl` / `clickControl`                                                  | Label-click routing                  |
-| `subscribe`                                                                      | State and registration notifications |
+
+Notifications are delivered by the context provider (`FieldController.notify()`),
+not by a method on `FieldApi`.
 
 ## Lifecycle
 

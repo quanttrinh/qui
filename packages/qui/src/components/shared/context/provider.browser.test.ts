@@ -4,7 +4,7 @@ import type { AccordionContext, AccordionItemContext } from "../../qui-accordion
 import type { DialogContext } from "../../qui-dialog/context";
 import type { RadioGroupContext } from "../../qui-radio/context";
 import type { TabsContext } from "../../qui-tabs/context";
-import type { ContextPartOptions, ContextPartSource } from "../controllers";
+import type { ContextPartOptions } from "../controllers";
 import type { FieldApi } from "../helpers/field";
 
 import {
@@ -66,7 +66,6 @@ function createFieldApi(): FieldApi {
     registerControl: () => () => undefined,
     focusControl: () => undefined,
     clickControl: () => undefined,
-    subscribe: () => () => undefined,
   };
 }
 
@@ -104,7 +103,6 @@ function createAccordionContext(): AccordionContext {
     itemId: (value) => `accordion-item-${value}`,
     triggerId: (value) => `accordion-trigger-${value}`,
     contentId: (value) => `accordion-content-${value}`,
-    subscribe: () => () => undefined,
   };
 }
 
@@ -124,7 +122,7 @@ function createTree(): { provider: HTMLElement; consumer: HTMLElement } {
   return { provider, consumer };
 }
 
-function createPart<TContext extends ContextPartSource>(
+function createPart<TContext>(
   hostElement: HTMLElement,
   options: ContextPartOptions<TContext>,
 ): ContextPartController<TContext> {

@@ -1,6 +1,8 @@
 import type { DialogHostRegistration } from "./dialog-aria";
 
-import { createContextStore } from "../shared/context";
+import type { ContextProviderHandle } from "../shared/context";
+
+import { clearContext, createContext, provideContext } from "../shared/context";
 
 export interface DialogIds {
   title: string;
@@ -29,11 +31,15 @@ export interface DialogContext extends DialogHostRegistration {
   notifyOpen: (open: boolean, returnValue: string) => void;
   notifyCancel: () => void;
   register: (control: DialogControl) => () => void;
-  subscribe: (listener: () => void) => () => void;
 }
 
-export const dialogContext = createContextStore<DialogContext>();
+export const dialogContext = createContext<DialogContext>();
 
-const { provide: provideDialog, clear: clearDialog } = dialogContext;
+export const provideDialog = (
+  host: Element,
+  context: DialogContext,
+): ContextProviderHandle<DialogContext> => provideContext(host, dialogContext, context);
 
-export { clearDialog, provideDialog };
+export const clearDialog = (host: Element): void => {
+  clearContext(host, dialogContext);
+};

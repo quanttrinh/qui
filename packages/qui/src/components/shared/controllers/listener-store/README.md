@@ -1,6 +1,6 @@
 # ListenerStore
 
-Set of change listeners used by context providers and appliers.
+Set of change listeners for local provider-style state notifications.
 
 ## Role
 
@@ -24,8 +24,8 @@ None — notifications are synchronous and caller-driven.
 
 ## Notes
 
-- Providers notify unconditionally. Parts decide whether the notification
-  changes their rendered state through `ContextPartController` selectors.
+- Owners notify unconditionally. Consumers decide whether a notification
+  changes rendered state.
 - Iteration matches `Set` semantics: listeners added during a notification are
   visited, listeners removed before their turn are skipped, errors propagate
   synchronously.
