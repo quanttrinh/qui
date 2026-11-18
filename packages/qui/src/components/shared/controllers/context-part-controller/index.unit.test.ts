@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import type { ReactiveControllerHost } from "../reactive-controller";
 import type { ContextPartOptions } from "./index";
 
-import { clearContext, createContext, notifyContext, provideContext } from "../../context";
 import { createTree, cleanup } from "../../../../../tests/test-utils/context-dom";
+import { clearContext, createContext, notifyContext, provideContext } from "../../context";
 import { ContextPartController } from "./index";
 
 interface TestContext {
@@ -189,7 +189,12 @@ describe("ContextPartController selector subscriptions", () => {
     );
     let revision = 1;
     const part = createPart(
-      { context: source.key, select: (): readonly [string, number] => [value.name, revision], equals, update },
+      {
+        context: source.key,
+        select: (): readonly [string, number] => [value.name, revision],
+        equals,
+        update,
+      },
       source.host,
     );
 
@@ -230,10 +235,7 @@ describe("ContextPartController selector subscriptions", () => {
     const source = createSource(value);
     const select = vi.fn(() => [value.name]);
     const update = vi.fn((): void => undefined);
-    const part = createPart(
-      { context: source.key, select, subscribe: false, update },
-      source.host,
-    );
+    const part = createPart({ context: source.key, select, subscribe: false, update }, source.host);
 
     part.hostWillLoad();
     source.notify();

@@ -15,14 +15,14 @@ method is needed — the browser's bubbling/composed events do that work.
 
 Public exports (package root):
 
-| Member                             | Description                                                     |
-| ---------------------------------- | --------------------------------------------------------------- |
-| `createContext<Value>()`           | Creates a unique typed key; an explicit key enables interop      |
-| `provideContext(host, key, value)` | Publishes a value; returns a `ContextProviderHandle`             |
-| `consumeOnce(host, key)`           | Synchronous one-shot read for imperative consumers               |
-| `ContextProviderHandle`            | `setValue(value)`, `notify()`, `clear()`                          |
-| `ContextPartController`            | Part-side controller (from the controllers entry)                 |
-| `Context`, `ContextType`, `ContextCallback`, `ContextPartOptions` | Types for keys, callbacks, and parts         |
+| Member                                                            | Description                                                 |
+| ----------------------------------------------------------------- | ----------------------------------------------------------- |
+| `createContext<Value>()`                                          | Creates a unique typed key; an explicit key enables interop |
+| `provideContext(host, key, value)`                                | Publishes a value; returns a `ContextProviderHandle`        |
+| `consumeOnce(host, key)`                                          | Synchronous one-shot read for imperative consumers          |
+| `ContextProviderHandle`                                           | `setValue(value)`, `notify()`, `clear()`                    |
+| `ContextPartController`                                           | Part-side controller (from the controllers entry)           |
+| `Context`, `ContextType`, `ContextCallback`, `ContextPartOptions` | Types for keys, callbacks, and parts                        |
 
 Internal exports (used by controllers and family modules): `requestContext`,
 `notifyContext`, `clearContext`, and the event factories.
@@ -34,7 +34,7 @@ Each family defines a key and thin wrappers in its own `context.ts`, e.g.
 
 | Event              | Fired by | Fields                                              |
 | ------------------ | -------- | --------------------------------------------------- |
-| `context-request`  | Consumer | `context`, `callback`, `subscribe`, `contextTarget`  |
+| `context-request`  | Consumer | `context`, `callback`, `subscribe`, `contextTarget` |
 | `context-provider` | Provider | `context`, `contextTarget`, `available`             |
 
 Both events bubble and are composed. Matching is strict equality on the key.

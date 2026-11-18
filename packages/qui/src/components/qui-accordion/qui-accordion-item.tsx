@@ -6,9 +6,8 @@ import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 import { token } from "#styled-system/tokens";
 
-import type { AccordionContext, AccordionItem, AccordionItemContext } from "./accordion-context";
-
 import type { ContextProviderHandle } from "../shared/context";
+import type { AccordionContext, AccordionItem, AccordionItemContext } from "./accordion-context";
 
 import { ContextPartController } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";

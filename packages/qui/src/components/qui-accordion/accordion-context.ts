@@ -1,6 +1,5 @@
-import type { AccordionTriggerRegistration } from "./controller";
-
 import type { ContextProviderHandle } from "../shared/context";
+import type { AccordionTriggerRegistration } from "./controller";
 
 import { clearContext, createContext, provideContext } from "../shared/context";
 
@@ -59,7 +58,8 @@ export const clearAccordion = (host: Element): void => {
 export const provideAccordionItem = (
   host: Element,
   context: AccordionItemContext,
-): ContextProviderHandle<AccordionItemContext> => provideContext(host, accordionItemContext, context);
+): ContextProviderHandle<AccordionItemContext> =>
+  provideContext(host, accordionItemContext, context);
 export const clearAccordionItem = (host: Element): void => {
   clearContext(host, accordionItemContext);
 };

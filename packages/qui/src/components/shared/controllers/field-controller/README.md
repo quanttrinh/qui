@@ -27,14 +27,14 @@ Reactive controller. Extends `ReactiveControllerBase`.
 
 `FieldApi`, published through context:
 
-| Member                                                                           | Description                          |
-| -------------------------------------------------------------------------------- | ------------------------------------ |
-| `ids`                                                                            | Current ids                          |
-| `invalid` / `disabled` / `readOnly` / `required`                                 | State getters                        |
-| `getInputProps` / `getLabelProps` / `getHelperTextProps` / `getErrorTextProps`   | Prop builders                        |
-| `getLabelHost` / `getHelperTextHosts` / `getErrorTextHosts`                      | Cross-shadow ARIA targets            |
-| `registerLabel` / `registerHelperText` / `registerErrorText` / `registerControl` | Part registration                    |
-| `focusControl` / `clickControl`                                                  | Label-click routing                  |
+| Member                                                                           | Description               |
+| -------------------------------------------------------------------------------- | ------------------------- |
+| `ids`                                                                            | Current ids               |
+| `invalid` / `disabled` / `readOnly` / `required`                                 | State getters             |
+| `getInputProps` / `getLabelProps` / `getHelperTextProps` / `getErrorTextProps`   | Prop builders             |
+| `getLabelHost` / `getHelperTextHosts` / `getErrorTextHosts`                      | Cross-shadow ARIA targets |
+| `registerLabel` / `registerHelperText` / `registerErrorText` / `registerControl` | Part registration         |
+| `focusControl` / `clickControl`                                                  | Label-click routing       |
 
 Notifications are delivered by the context provider (`FieldController.notify()`),
 not by a method on `FieldApi`.

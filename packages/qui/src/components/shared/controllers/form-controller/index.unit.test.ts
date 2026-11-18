@@ -3,7 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import type { FieldApi } from "../../helpers/field/context";
 import type { FieldControlHandle } from "../../helpers/field/registry";
 
-import { contextDocument, createElement, cleanup } from "../../../../../tests/test-utils/context-dom";
+import {
+  contextDocument,
+  createElement,
+  cleanup,
+} from "../../../../../tests/test-utils/context-dom";
 import { createTestControllerHost } from "../../../../../tests/test-utils/controller-host";
 import { clearField, provideField } from "../../helpers/field/context";
 import { FormController } from "./index";
@@ -11,7 +15,13 @@ import { FormController } from "./index";
 function createFieldApi(): { field: FieldApi; registerControl: ReturnType<typeof vi.fn> } {
   const registerControl = vi.fn(() => vi.fn());
   const field: FieldApi = {
-    ids: { root: "field", control: "control", label: "label", errorText: "error", helperText: "helper" },
+    ids: {
+      root: "field",
+      control: "control",
+      label: "label",
+      errorText: "error",
+      helperText: "helper",
+    },
     registerControl,
     registerLabel: () => (): void => undefined,
     registerHelperText: () => (): void => undefined,
@@ -19,8 +29,19 @@ function createFieldApi(): { field: FieldApi; registerControl: ReturnType<typeof
     getLabelHost: () => undefined,
     getHelperTextHosts: () => [],
     getErrorTextHosts: () => [],
-    getInputProps: () => ({ id: "control", disabled: false, required: false, "data-scope": "field", "data-part": "input" }),
-    getLabelProps: () => ({ id: "label", htmlFor: "control", "data-scope": "field", "data-part": "label" }),
+    getInputProps: () => ({
+      id: "control",
+      disabled: false,
+      required: false,
+      "data-scope": "field",
+      "data-part": "input",
+    }),
+    getLabelProps: () => ({
+      id: "label",
+      htmlFor: "control",
+      "data-scope": "field",
+      "data-part": "label",
+    }),
     getHelperTextProps: () => ({ id: "helper", "data-scope": "field", "data-part": "helper-text" }),
     getErrorTextProps: () => ({ id: "error", "data-scope": "field", "data-part": "error-text" }),
     focusControl: (): void => undefined,
@@ -152,19 +173,16 @@ function createSyncController(): {
   let element: HTMLElement | undefined;
   const setFormValue = vi.fn();
   const setValidity = vi.fn();
-  const controller = new FormController(
-    createTestControllerHost(createElement()),
-    {
-      internals: () => ({ setFormValue, setValidity }) as unknown as ElementInternals,
-      state: () => ({ name, multiple, values, validationElement: element }),
-      disabled: () => disabled,
-      readOnly: () => false,
-      required: () => required,
-      invalid: () => invalid,
-      onReset: (): void => undefined,
-      onRestore: (): void => undefined,
-    },
-  );
+  const controller = new FormController(createTestControllerHost(createElement()), {
+    internals: () => ({ setFormValue, setValidity }) as unknown as ElementInternals,
+    state: () => ({ name, multiple, values, validationElement: element }),
+    disabled: () => disabled,
+    readOnly: () => false,
+    required: () => required,
+    invalid: () => invalid,
+    onReset: (): void => undefined,
+    onRestore: (): void => undefined,
+  });
   return {
     controller,
     setFormValue,

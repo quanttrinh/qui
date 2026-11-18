@@ -1,6 +1,5 @@
-import type { DialogHostRegistration } from "./dialog-aria";
-
 import type { ContextProviderHandle } from "../shared/context";
+import type { DialogHostRegistration } from "./dialog-aria";
 
 import { clearContext, createContext, provideContext } from "../shared/context";
 

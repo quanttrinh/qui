@@ -1,6 +1,5 @@
-import type { FieldControlHandle } from "./registry";
-
 import type { ContextProviderHandle } from "../../context";
+import type { FieldControlHandle } from "./registry";
 
 import { clearContext, createContext, provideContext } from "../../context";
 

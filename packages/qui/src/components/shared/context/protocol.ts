@@ -15,16 +15,15 @@ function brandContext<ValueType>(_key: unknown): asserts _key is Context<unknown
 }
 
 /** Fresh symbol by default; pass an explicit key to match another library's provider. */
-export function createContext<ValueType>(key: unknown = Symbol("qui-context")): Context<unknown, ValueType> {
+export function createContext<ValueType>(
+  key: unknown = Symbol("qui-context"),
+): Context<unknown, ValueType> {
   brandContext<ValueType>(key);
   return key;
 }
 
 /** Callback a provider invokes with a context value. */
-export type ContextCallback<ValueType> = (
-  value: ValueType,
-  unsubscribe?: () => void,
-) => void;
+export type ContextCallback<ValueType> = (value: ValueType, unsubscribe?: () => void) => void;
 
 /** A request for a context value, fired by a consumer. */
 export interface ContextRequestEvent<ValueType = unknown> extends Event {

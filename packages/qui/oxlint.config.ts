@@ -106,10 +106,7 @@ export default defineConfig({
     // --- Stencil -------------------------------------------------------
     // Panda's `css()` and `token()` are pure build-time helpers, and the other
     // entries are pure factory/lookup helpers.
-    "stencil/ban-side-effects": [
-      "error",
-      ["css", "token", "createContext", "createGlobalHrefKey"],
-    ],
+    "stencil/ban-side-effects": ["error", ["css", "token", "createContext", "createGlobalHrefKey"]],
     "stencil/decorators-style": [
       "error",
       {

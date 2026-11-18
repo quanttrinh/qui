@@ -16,9 +16,9 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
+import type { ContextProviderHandle } from "../shared/context";
 import type { DialogContext, DialogControl, DialogIds } from "./context";
 
-import type { ContextProviderHandle } from "../shared/context";
 import { nextId } from "../shared/helpers/dom/id";
 import { lockDocumentScroll } from "../shared/helpers/dom/scroll-lock";
 import { provideDialog } from "./context";

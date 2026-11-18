@@ -1,8 +1,4 @@
-import type {
-  Context,
-  ContextCallback,
-  UnknownContext,
-} from "./protocol";
+import type { Context, ContextCallback, UnknownContext } from "./protocol";
 
 import { createContextProviderEvent, createContextRequestEvent } from "./protocol";
 
@@ -22,10 +18,7 @@ interface ContextSlot {
 const providers = new WeakMap<Element, Map<UnknownContext, ContextSlot>>();
 
 /** Adds or reuses a subscription. */
-function subscribeConsumer(
-  slot: ContextSlot,
-  event: ElementEventMap["context-request"],
-): void {
+function subscribeConsumer(slot: ContextSlot, event: ElementEventMap["context-request"]): void {
   const { callback: subscriber } = event;
   let entry: Subscriber | undefined;
   for (const candidate of slot.subscribers) {
@@ -170,10 +163,7 @@ function notifySubscriber(slot: ContextSlot, subscriber: Subscriber, value: unkn
 }
 
 /** Invalidates a subscriber and requests a fallback provider. */
-function invalidateSubscriber(
-  context: UnknownContext,
-  subscriber: Subscriber,
-): void {
+function invalidateSubscriber(context: UnknownContext, subscriber: Subscriber): void {
   const notify = subscriber.callback.deref();
   const subscriberHost = subscriber.host.deref();
   if (notify === undefined) {

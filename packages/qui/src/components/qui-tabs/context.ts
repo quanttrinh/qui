@@ -1,6 +1,5 @@
-import type { TabsTriggerRegistration } from "./controller";
-
 import type { ContextProviderHandle } from "../shared/context";
+import type { TabsTriggerRegistration } from "./controller";
 
 import { clearContext, createContext, provideContext } from "../shared/context";
 

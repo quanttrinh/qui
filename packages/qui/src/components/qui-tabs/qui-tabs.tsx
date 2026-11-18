@@ -5,9 +5,9 @@ import { Mixin, resolveVar, Component, Element, Event, h, Host, Prop, Watch } fr
 import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 
+import type { ContextProviderHandle } from "../shared/context";
 import type { TabsContext, TabsVariant } from "./context";
 
-import type { ContextProviderHandle } from "../shared/context";
 import { dataAttr } from "../shared/helpers/aria/attr";
 import { nextId } from "../shared/helpers/dom/id";
 import { ContextProviderMixin, ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";

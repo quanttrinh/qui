@@ -6,9 +6,9 @@ import { styleUrls } from "#qui-style-url";
 import { css } from "#styled-system/css";
 import { token } from "#styled-system/tokens";
 
+import type { ContextProviderHandle } from "../shared/context";
 import type { AccordionContext } from "./accordion-context";
 
-import type { ContextProviderHandle } from "../shared/context";
 import { nextId } from "../shared/helpers/dom/id";
 import { ContextProviderMixin, ControllerHostMixin, ShadowStylesMixin } from "../shared/mixins";
 import { provideAccordion } from "./accordion-context";

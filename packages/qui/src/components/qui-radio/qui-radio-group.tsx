@@ -17,11 +17,10 @@ import {
 import { styleUrls } from "#qui-style-url";
 import { css, cx } from "#styled-system/css";
 
+import type { ContextProviderHandle } from "../shared/context";
 import type { FormValidity } from "../shared/controllers";
 import type { FieldControlHandle } from "../shared/helpers/field";
 import type { RadioGroupContext, RadioItem, RadioItemState } from "./context";
-
-import type { ContextProviderHandle } from "../shared/context";
 
 import { FormController } from "../shared/controllers";
 import { dataAttr } from "../shared/helpers/aria/attr";

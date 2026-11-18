@@ -3,6 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 import type { ContextCallback } from "./index";
 
 import {
+  cleanup,
+  createElement,
+  createShadowTree,
+  createTree,
+} from "../../../../tests/test-utils/context-dom";
+import {
   clearContext,
   consumeOnce,
   createContext,
@@ -10,12 +16,6 @@ import {
   provideContext,
   requestContext,
 } from "./index";
-import {
-  cleanup,
-  createElement,
-  createShadowTree,
-  createTree,
-} from "../../../../tests/test-utils/context-dom";
 
 interface TestContext {
   name: string;
@@ -92,11 +92,16 @@ describe("context-request protocol", () => {
     const value = { name: "original" };
     const seen: string[] = [];
     provideContext(provider, key, value);
-    requestContext(consumer, key, (next) => {
-      if (next !== undefined) {
-        seen.push(next.name);
-      }
-    }, true);
+    requestContext(
+      consumer,
+      key,
+      (next) => {
+        if (next !== undefined) {
+          seen.push(next.name);
+        }
+      },
+      true,
+    );
     value.name = "changed";
     notifyContext(provider, key);
     expect(seen).toEqual(["original", "changed"]);
@@ -110,10 +115,15 @@ describe("context-request protocol", () => {
     let calls = 0;
     let unsubscribe: (() => void) | undefined;
     provideContext(provider, key, value);
-    requestContext(consumer, key, (_next, stop) => {
-      calls += 1;
-      unsubscribe = stop;
-    }, true);
+    requestContext(
+      consumer,
+      key,
+      (_next, stop) => {
+        calls += 1;
+        unsubscribe = stop;
+      },
+      true,
+    );
     unsubscribe?.();
     notifyContext(provider, key);
 
@@ -126,11 +136,16 @@ describe("context-request protocol", () => {
     const key = makeContext();
     const value = { name: "late provider" };
     const seen: TestContext[] = [];
-    requestContext(consumer, key, (next) => {
-      if (next !== undefined) {
-        seen.push(next);
-      }
-    }, true);
+    requestContext(
+      consumer,
+      key,
+      (next) => {
+        if (next !== undefined) {
+          seen.push(next);
+        }
+      },
+      true,
+    );
 
     provideContext(provider, key, value);
     expect(seen).toEqual([value]);
@@ -213,9 +228,14 @@ describe("context-request protocol", () => {
     const seen: (TestContext | undefined)[] = [];
     provideContext(outer, key, outerValue);
     provideContext(inner, key, innerValue);
-    requestContext(consumer, key, (next): void => {
-      seen.push(next);
-    }, true);
+    requestContext(
+      consumer,
+      key,
+      (next): void => {
+        seen.push(next);
+      },
+      true,
+    );
 
     clearContext(inner, key);
     expect(seen.at(-1)).toBe(outerValue);
@@ -235,11 +255,16 @@ describe("context-request protocol", () => {
     provideContext(outer, key, outerValue);
     provideContext(inner, key, innerValue);
 
-    requestContext(consumer, key, (next) => {
-      if (next !== undefined) {
-        seen.push(next);
-      }
-    }, true);
+    requestContext(
+      consumer,
+      key,
+      (next) => {
+        if (next !== undefined) {
+          seen.push(next);
+        }
+      },
+      true,
+    );
     expect(seen).toEqual([innerValue]);
     cleanup(outer);
   });
@@ -275,10 +300,15 @@ describe("context-request protocol", () => {
     let calls = 0;
     let unsubscribe: (() => void) | undefined;
     provideContext(provider, key, value);
-    requestContext(consumer, key, (_next, stop) => {
-      calls += 1;
-      unsubscribe = stop;
-    }, true);
+    requestContext(
+      consumer,
+      key,
+      (_next, stop) => {
+        calls += 1;
+        unsubscribe = stop;
+      },
+      true,
+    );
     unsubscribe?.();
     unsubscribe?.();
 
