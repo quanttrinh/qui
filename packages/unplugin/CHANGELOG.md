@@ -1,5 +1,13 @@
 # @quanttrinh/qui-unplugin
 
+## 0.5.0
+
+### Minor Changes
+
+- Dependency updates:
+  
+  - `packages/unplugin/package.json`: `oxc-parser`: `^0.158.0` -> `^0.159.0`
+
 ## 0.4.2
 
 ### Patch Changes
