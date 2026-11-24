@@ -32,7 +32,7 @@
         "@pandacss/preset-base": "^2.6.0",
         "@pandacss/preset-panda": "^2.6.0",
         "@pandacss/transformer": "2.6.0",
-        "@stencil/eslint-plugin": "^1.4.1",
+        "@stencil/eslint-plugin": "^1.4.2",
         "@stencil/types-output-target": "^1.1.0",
         "@stencil/vitest": "^1.16.2",
         "@types/node": "^26.6.6",
@@ -526,7 +526,7 @@
 
     "@stencil/core": ["@stencil/core@4.45.5", "", { "optionalDependencies": { "@rollup/rollup-darwin-arm64": "4.44.0", "@rollup/rollup-darwin-x64": "4.44.0", "@rollup/rollup-linux-arm64-gnu": "4.44.0", "@rollup/rollup-linux-arm64-musl": "4.44.0", "@rollup/rollup-linux-x64-gnu": "4.44.0", "@rollup/rollup-linux-x64-musl": "4.44.0", "@rollup/rollup-win32-arm64-msvc": "4.44.0", "@rollup/rollup-win32-x64-msvc": "4.44.0" }, "bin": { "stencil": "bin/stencil" } }, "sha512-tz6h9MI/s0WwNsfGbSguo9+xnerWam8NI8/U3VUS9MNMviTYyg3Ymz5XniSM9PGFnbd2xhhmyJhHHaFmy9mYog=="],
 
-    "@stencil/eslint-plugin": ["@stencil/eslint-plugin@1.4.1", "", { "dependencies": { "eslint-utils": "^3.0.0", "jsdom": "^27.0.1", "tsutils": "^3.21.0" }, "peerDependencies": { "@stencil/core": "^4.0.0 || ^5.0.0-alpha.19", "@typescript-eslint/eslint-plugin": "^7.0.0 || ^8.0.0", "@typescript-eslint/parser": "^7.0.0 || ^8.0.0", "eslint": "^8.0.0 || ^9.0.0 || ^10.0.0", "eslint-plugin-react": "^7.37.4", "oxlint": "^1.73.0", "typescript": "^4.9.4 || ^5.0.0 || ^6.0.0" }, "optionalPeers": ["@typescript-eslint/eslint-plugin", "@typescript-eslint/parser", "eslint", "eslint-plugin-react", "oxlint"] }, "sha512-0o6BQqO9pXfE6kIE1rXOlt0E7d2qLW4cBkFuDbByo0JvejaGMljdOlUCVQfrL58qqrH38weRrW3ygrHm7I1IRQ=="],
+    "@stencil/eslint-plugin": ["@stencil/eslint-plugin@1.4.2", "", { "dependencies": { "eslint-utils": "^3.0.0", "jsdom": "^27.0.1", "tsutils": "^3.21.0" }, "peerDependencies": { "@stencil/core": "^4.0.0 || ^5.0.0-alpha.19", "@typescript-eslint/eslint-plugin": "^7.0.0 || ^8.0.0", "@typescript-eslint/parser": "^7.0.0 || ^8.0.0", "eslint": "^8.0.0 || ^9.0.0 || ^10.0.0", "eslint-plugin-react": "^7.37.4", "oxlint": "^1.73.0", "typescript": "^4.9.4 || ^5.0.0 || ^6.0.0" }, "optionalPeers": ["@typescript-eslint/eslint-plugin", "@typescript-eslint/parser", "eslint", "eslint-plugin-react", "oxlint"] }, "sha512-nl7dfGrQjsKh40+EP5nTT18p38wnON7zSY1Z3+3tbbD5Vmb+UhpAC+RW2ytnUTZcvvMuJSRqlM+pO4pxOYNF+w=="],
 
     "@stencil/types-output-target": ["@stencil/types-output-target@1.1.0", "", { "peerDependencies": { "@stencil/core": ">=3 || >=4.0.0 || ^5.0.0 || >=5.0.0-beta.16" } }, "sha512-SwBvAZCvt0hP4qeIdYn6HRs8FpSbyoK/lO/e9ojOnWTpQyGbyiEr5EHiSTlSIWvDz/ZqBhpqb2Aykb01J/3Xpg=="],
 

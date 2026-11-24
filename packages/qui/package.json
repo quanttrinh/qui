@@ -149,7 +149,7 @@
     "@pandacss/preset-base": "^2.6.0",
     "@pandacss/preset-panda": "^2.6.0",
     "@pandacss/transformer": "2.6.0",
-    "@stencil/eslint-plugin": "^1.4.1",
+    "@stencil/eslint-plugin": "^1.4.2",
     "@stencil/types-output-target": "^1.1.0",
     "@stencil/vitest": "^1.16.2",
     "@types/node": "^26.6.6",
